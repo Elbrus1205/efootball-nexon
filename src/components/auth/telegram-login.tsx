@@ -14,6 +14,7 @@ export function TelegramLogin({ botUsername }: { botUsername?: string }) {
 
   useEffect(() => {
     if (!botUsername || !containerRef.current) return;
+    const container = containerRef.current;
 
     window.onTelegramAuth = async (user) => {
       await signIn("telegram", {
@@ -30,10 +31,10 @@ export function TelegramLogin({ botUsername }: { botUsername?: string }) {
     script.setAttribute("data-radius", "12");
     script.setAttribute("data-request-access", "write");
     script.setAttribute("data-onauth", "onTelegramAuth(user)");
-    containerRef.current.appendChild(script);
+    container.appendChild(script);
 
     return () => {
-      containerRef.current?.replaceChildren();
+      container.replaceChildren();
     };
   }, [botUsername]);
 
