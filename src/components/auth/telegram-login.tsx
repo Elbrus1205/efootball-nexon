@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { Send } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AlertCircle, Send } from "lucide-react";
 import { signIn } from "next-auth/react";
 
 declare global {
@@ -10,12 +10,28 @@ declare global {
   }
 }
 
+function normalizeTelegramBotUsername(value?: string) {
+  if (!value) return "";
+
+  return value
+    .trim()
+    .replace(/^https?:\/\/t\.me\//i, "")
+    .replace(/^@/, "")
+    .replace(/\/$/, "");
+}
+
 export function TelegramLogin({ botUsername }: { botUsername?: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [widgetError, setWidgetError] = useState<string | null>(null);
+  const normalizedBotUsername = useMemo(() => normalizeTelegramBotUsername(botUsername), [botUsername]);
+  const isValidUsername = /^[A-Za-z0-9_]{5,32}$/.test(normalizedBotUsername);
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!botUsername || !container) return;
+    if (!normalizedBotUsername || !container || !isValidUsername) return;
+
+    setWidgetError(null);
+    container.replaceChildren();
 
     window.onTelegramAuth = async (user) => {
       await signIn("telegram", {
@@ -27,34 +43,61 @@ export function TelegramLogin({ botUsername }: { botUsername?: string }) {
     const script = document.createElement("script");
     script.src = "https://telegram.org/js/telegram-widget.js?22";
     script.async = true;
-    script.setAttribute("data-telegram-login", botUsername);
+    script.setAttribute("data-telegram-login", normalizedBotUsername);
     script.setAttribute("data-size", "large");
     script.setAttribute("data-radius", "12");
     script.setAttribute("data-request-access", "write");
     script.setAttribute("data-onauth", "onTelegramAuth(user)");
+    script.onerror = () => {
+      setWidgetError("Не удалось загрузить Telegram Login Widget.");
+    };
+
     container.appendChild(script);
 
+    const timeout = window.setTimeout(() => {
+      if (container.textContent?.toLowerCase().includes("username invalid")) {
+        setWidgetError("Указан неверный username Telegram-бота. Используйте имя без @, например my_auth_bot.");
+        container.replaceChildren();
+      }
+    }, 1500);
+
     return () => {
+      window.clearTimeout(timeout);
       container.replaceChildren();
     };
-  }, [botUsername]);
+  }, [isValidUsername, normalizedBotUsername]);
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#229ED9]/10 p-4">
-      <div className="mb-3 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#229ED9] text-white">
+    <div className="rounded-3xl border border-[#229ED9]/25 bg-[linear-gradient(180deg,rgba(34,158,217,0.16),rgba(34,158,217,0.06))] p-4 shadow-[0_12px_30px_rgba(34,158,217,0.08)]">
+      <div className="mb-4 flex items-start gap-3">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#229ED9] text-white shadow-lg shadow-[#229ED9]/20">
           <Send className="h-5 w-5" />
         </div>
-        <div>
-          <div className="font-medium text-white">Вход через Telegram</div>
-          <div className="text-xs text-zinc-400">Подтвердите вход через Telegram Login Widget.</div>
+        <div className="space-y-1">
+          <div className="text-lg font-semibold text-white">Вход через Telegram</div>
+          <div className="text-sm text-zinc-300">Быстрый вход без пароля через официальный Telegram Login Widget.</div>
         </div>
       </div>
 
-      {botUsername ? (
-        <div ref={containerRef} className="min-h-11" />
+      {normalizedBotUsername && isValidUsername ? (
+        <div className="rounded-2xl bg-black/20 p-3">
+          <div ref={containerRef} className="flex min-h-12 items-center justify-center" />
+          {widgetError ? (
+            <div className="mt-3 flex items-start gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-3 text-sm text-amber-200">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{widgetError}</span>
+            </div>
+          ) : null}
+        </div>
+      ) : botUsername ? (
+        <div className="flex items-start gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` заполнен неверно. Укажи username бота без `@` и без ссылки, например `my_auth_bot`.
+          </span>
+        </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-white/10 px-4 py-3 text-sm text-zinc-400">
+        <div className="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm text-zinc-400">
           Добавьте `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`, чтобы показать Telegram-кнопку.
         </div>
       )}
