@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -77,12 +77,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String?
-  access_token      String?
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String?
+  id_token          String? @db.Text
   session_state     String?
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -120,8 +120,8 @@ model Tournament {
   id                   String                   @id @default(cuid())
   slug                 String                   @unique
   title                String
-  description          String
-  rules                String
+  description          String                   @db.Text
+  rules                String                   @db.Text
   coverImage           String?
   prizePool            String?
   format               TournamentFormat
@@ -164,7 +164,7 @@ model Match {
   player1Score       Int?
   player2Score       Int?
   status             MatchStatus            @default(PENDING)
-  notes              String?
+  notes              String?                @db.Text
   nextMatchId        String?
   nextMatchSlot      Int?
   loserNextMatchId   String?
@@ -185,10 +185,10 @@ model MatchResultSubmission {
   matchId          String
   submittedById    String
   screenshotUrl    String?
-  comment          String?
+  comment          String?   @db.Text
   player1Score     Int
   player2Score     Int
-  moderatorComment String?
+  moderatorComment String?   @db.Text
   createdAt        DateTime  @default(now())
   reviewedAt       DateTime?
   match            Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
@@ -200,7 +200,7 @@ model Notification {
   userId    String
   type      NotificationType
   title     String
-  body      String
+  body      String           @db.Text
   link      String?
   isRead    Boolean          @default(false)
   createdAt DateTime         @default(now())
