@@ -1,10 +1,13 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import { UserRole } from "@prisma/client";
 import { compare } from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import VkProvider from "next-auth/providers/vk";
 import { db } from "@/lib/db";
 import { verifyTelegramAuth } from "@/lib/auth/telegram";
+
+const TELEGRAM_ADMIN_ID = "6595067194";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db) as never,
@@ -77,6 +80,7 @@ export const authOptions: NextAuthOptions = {
         if (!verified) return null;
 
         const displayName = [credentials.first_name, credentials.last_name].filter(Boolean).join(" ");
+        const role = credentials.id === TELEGRAM_ADMIN_ID ? UserRole.ADMIN : UserRole.PLAYER;
 
         const user = await db.user.upsert({
           where: { telegramId: credentials.id },
@@ -84,12 +88,14 @@ export const authOptions: NextAuthOptions = {
             name: displayName || credentials.username || "Telegram Player",
             telegramUsername: credentials.username,
             image: credentials.photo_url,
+            role,
           },
           create: {
             telegramId: credentials.id,
             telegramUsername: credentials.username,
             image: credentials.photo_url,
             name: displayName || credentials.username || "Telegram Player",
+            role,
           },
         });
 
