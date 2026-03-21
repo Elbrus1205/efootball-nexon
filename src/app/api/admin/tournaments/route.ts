@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     format: formData.get("format"),
   });
 
-  const tournament = await db.tournament.create({
+  await db.tournament.create({
     data: {
       title: body.title,
       slug: `${slugify(body.title)}-${Date.now()}`,

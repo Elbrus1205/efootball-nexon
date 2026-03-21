@@ -13,8 +13,8 @@ export function TelegramLogin({ botUsername }: { botUsername?: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!botUsername || !containerRef.current) return;
     const container = containerRef.current;
+    if (!botUsername || !container) return;
 
     window.onTelegramAuth = async (user) => {
       await signIn("telegram", {
