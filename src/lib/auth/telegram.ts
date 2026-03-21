@@ -10,16 +10,25 @@ export type TelegramPayload = {
   hash: string;
 };
 
+const TELEGRAM_AUTH_FIELDS = [
+  "id",
+  "first_name",
+  "last_name",
+  "username",
+  "photo_url",
+  "auth_date",
+] as const;
+
 export function verifyTelegramAuth(payload: TelegramPayload, botToken: string) {
-  const { hash, ...data } = payload;
-  const checkString = Object.entries(data)
+  const checkString = TELEGRAM_AUTH_FIELDS
+    .map((key) => [key, payload[key]] as const)
     .filter(([, value]) => value)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, value]) => `${key}=${value}`)
+    .map(([key, value]) => `${key}=${String(value)}`)
     .join("\n");
 
   const secret = crypto.createHash("sha256").update(botToken).digest();
   const signature = crypto.createHmac("sha256", secret).update(checkString).digest("hex");
 
-  return signature === hash;
+  return signature === payload.hash;
 }
