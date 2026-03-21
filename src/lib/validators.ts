@@ -16,7 +16,13 @@ export const profileSchema = z.object({
   nickname: z.string().min(2),
   efootballUid: z.string().min(4),
   favoriteTeam: z.string().optional().or(z.literal("")),
-  image: z.string().url().optional().or(z.literal("")),
+  image: z
+    .string()
+    .refine((value) => !value || value.startsWith("data:image/") || value.startsWith("http://") || value.startsWith("https://"), {
+      message: "Avatar must be an image data URL or image URL",
+    })
+    .optional()
+    .or(z.literal("")),
 });
 
 export const tournamentSchema = z.object({

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AlertCircle, Send } from "lucide-react";
 import { signIn } from "next-auth/react";
 
@@ -25,6 +26,7 @@ export function TelegramLogin({ botUsername }: { botUsername?: string }) {
   const [widgetError, setWidgetError] = useState<string | null>(null);
   const normalizedBotUsername = useMemo(() => normalizeTelegramBotUsername(botUsername), [botUsername]);
   const isValidUsername = /^[A-Za-z0-9_]{5,32}$/.test(normalizedBotUsername);
+  const router = useRouter();
 
   useEffect(() => {
     const container = containerRef.current;
@@ -34,10 +36,19 @@ export function TelegramLogin({ botUsername }: { botUsername?: string }) {
     container.replaceChildren();
 
     window.onTelegramAuth = async (user) => {
-      await signIn("telegram", {
+      const result = await signIn("telegram", {
         ...user,
         callbackUrl: "/dashboard",
+        redirect: false,
       });
+
+      if (result?.error) {
+        setWidgetError("Не удалось завершить вход через Telegram. Проверьте токен бота и домен.");
+        return;
+      }
+
+      router.refresh();
+      router.push(result?.url ?? "/dashboard");
     };
 
     const script = document.createElement("script");
@@ -59,13 +70,18 @@ export function TelegramLogin({ botUsername }: { botUsername?: string }) {
         setWidgetError("Указан неверный username Telegram-бота. Используйте имя без @, например my_auth_bot.");
         container.replaceChildren();
       }
+
+      if (container.textContent?.toLowerCase().includes("bot domain invalid")) {
+        setWidgetError("Для бота не настроен домен. Укажите домен сайта в BotFather через /setdomain.");
+        container.replaceChildren();
+      }
     }, 1500);
 
     return () => {
       window.clearTimeout(timeout);
       container.replaceChildren();
     };
-  }, [isValidUsername, normalizedBotUsername]);
+  }, [isValidUsername, normalizedBotUsername, router]);
 
   return (
     <div className="rounded-3xl border border-[#229ED9]/25 bg-[linear-gradient(180deg,rgba(34,158,217,0.16),rgba(34,158,217,0.06))] p-4 shadow-[0_12px_30px_rgba(34,158,217,0.08)]">

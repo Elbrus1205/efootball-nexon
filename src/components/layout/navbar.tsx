@@ -1,12 +1,9 @@
 import Link from "next/link";
-import { Bell, Shield, Trophy } from "lucide-react";
+import { Trophy } from "lucide-react";
 import { getCurrentSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MobileMenu } from "@/components/layout/mobile-menu";
-import { NotificationMenu } from "@/components/layout/notification-menu";
+import { AuthNav } from "@/components/layout/auth-nav";
 
 const links = [
   { href: "/", label: "Главная" },
@@ -45,59 +42,7 @@ export async function Navbar() {
         </nav>
 
         <div className="flex items-center gap-2">
-          {session?.user ? (
-            <>
-              <NotificationMenu unreadCount={unread} userId={session.user.id}>
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-5 w-5" />
-                  {unread > 0 ? (
-                    <span className="absolute right-2 top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-black">
-                      {unread}
-                    </span>
-                  ) : null}
-                </Button>
-              </NotificationMenu>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-3 rounded-full border border-white/10 px-2 py-1 hover:bg-white/5">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={session.user.image ?? undefined} alt={session.user.name ?? "Avatar"} />
-                      <AvatarFallback>{session.user.name}</AvatarFallback>
-                    </Avatar>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <div className="px-3 py-2">
-                    <div className="text-sm font-medium">{session.user.nickname ?? session.user.name}</div>
-                    <div className="text-xs text-zinc-500">{session.user.email ?? "Telegram/VK"}</div>
-                  </div>
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard">Личный кабинет</Link>
-                  </DropdownMenuItem>
-                  {(session.user.role === "ADMIN" || session.user.role === "MODERATOR") && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin" className="flex items-center gap-2">
-                        <Shield className="h-4 w-4" />
-                        Админ-панель
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem asChild>
-                    <Link href="/api/auth/signout">Выйти</Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
-          ) : (
-            <>
-              <Button asChild variant="ghost" className="hidden sm:inline-flex">
-                <Link href="/login">Войти</Link>
-              </Button>
-              <Button asChild variant="accent">
-                <Link href="/register">Регистрация</Link>
-              </Button>
-            </>
-          )}
+          <AuthNav unread={unread} />
         </div>
       </div>
     </header>
