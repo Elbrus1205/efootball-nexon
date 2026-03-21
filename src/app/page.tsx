@@ -23,31 +23,47 @@ export default async function HomePage() {
     <div className="page-shell space-y-16 py-10 sm:py-16">
       <section className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
         <div className="space-y-6">
-          <Badge variant="primary">Турниры eFootball Mobile • Mobile First</Badge>
+          <Badge variant="primary">Турниры eFootball Mobile • Формат для игроков</Badge>
+
           <div className="space-y-4">
             <h1 className="font-display text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
-              Проводите, модерируйте и выигрывайте турниры по eFootball Mobile в одном месте.
+              Платформа для игроков eFootball Mobile, где проходят матчи, турнирные сетки и сезонные розыгрыши.
             </h1>
+
             <p className="max-w-2xl text-lg text-zinc-400">
-              Регистрация игроков, турнирные сетки, загрузка скриншотов, модерация результатов и realtime-уведомления под мобильную аудиторию.
+              На площадке собраны регистрация участников, расписание матчей, подтверждение результатов и актуальные турнирные таблицы в удобном мобильном формате.
             </p>
           </div>
+
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button asChild size="lg">
               <Link href="/register">
-                Начать участие
+                Присоединиться к турнирам
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button asChild variant="secondary" size="lg">
-              <Link href="/tournaments">Смотреть турниры</Link>
+              <Link href="/tournaments">Открыть список турниров</Link>
             </Button>
           </div>
+
           <div className="grid gap-4 sm:grid-cols-3">
             {[
-              { icon: Trophy, title: "Сетка турнира", description: "Single, Double Elimination и Round Robin" },
-              { icon: Smartphone, title: "Mobile first", description: "Удобно играть и отправлять результаты с телефона" },
-              { icon: ShieldCheck, title: "Модерация", description: "Проверка скриншотов и спорных матчей" },
+              {
+                icon: Trophy,
+                title: "Турнирные сетки",
+                description: "Single Elimination, Double Elimination и круговой формат для игроков разных уровней.",
+              },
+              {
+                icon: Smartphone,
+                title: "Удобно с телефона",
+                description: "Регистрация, просмотр матчей и отправка результатов рассчитаны на мобильный сценарий.",
+              },
+              {
+                icon: ShieldCheck,
+                title: "Проверка результатов",
+                description: "Скриншоты и спорные результаты проходят модерацию, чтобы турнир шёл честно и прозрачно.",
+              },
             ].map((item) => (
               <div key={item.title} className="glass-panel rounded-3xl p-4">
                 <item.icon className="mb-3 h-5 w-5 text-primary" />
@@ -57,14 +73,16 @@ export default async function HomePage() {
             ))}
           </div>
         </div>
+
         <div className="glass-panel rounded-[2rem] p-6">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <div className="text-sm uppercase tracking-[0.2em] text-primary">Live Preview</div>
-              <div className="mt-2 font-display text-2xl font-semibold">Ближайший матчдей</div>
+              <div className="text-sm uppercase tracking-[0.2em] text-primary">Актуально сейчас</div>
+              <div className="mt-2 font-display text-2xl font-semibold">Ближайшие события</div>
             </div>
             <Users className="h-6 w-6 text-accent" />
           </div>
+
           <div className="space-y-4">
             {tournaments.slice(0, 2).map((tournament) => (
               <div key={tournament.id} className="rounded-3xl border border-white/10 bg-black/30 p-4">
@@ -83,9 +101,10 @@ export default async function HomePage() {
       <section className="space-y-6">
         <SectionHeader
           eyebrow="Турниры"
-          title="Ближайшие события"
-          description="Открытые и активные турниры, на которые можно зарегистрироваться прямо сейчас."
+          title="Ближайшие турниры"
+          description="Открытые и активные соревнования, в которых игроки уже сейчас могут подать заявку на участие."
         />
+
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {tournaments.map((tournament) => (
             <TournamentCard key={tournament.id} tournament={tournament} participantsCount={tournament._count.participants} />

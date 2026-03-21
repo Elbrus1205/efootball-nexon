@@ -30,12 +30,12 @@ export function ProfileForm({
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      toast.error("Выберите изображение для аватара");
+      toast.error("Для аватара нужно выбрать изображение");
       return;
     }
 
     if (file.size > 4 * 1024 * 1024) {
-      toast.error("Максимальный размер аватара: 4MB");
+      toast.error("Максимальный размер изображения: 4MB");
       return;
     }
 
@@ -63,13 +63,13 @@ export function ProfileForm({
       });
 
       if (!res.ok) {
-        toast.error("Не удалось обновить профиль");
+        toast.error("Не удалось сохранить изменения профиля");
         return;
       }
 
       setValues(draft);
       setIsEditing(false);
-      toast.success("Профиль обновлён");
+      toast.success("Профиль игрока обновлён");
     });
   };
 
@@ -79,7 +79,9 @@ export function ProfileForm({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle>Профиль игрока</CardTitle>
-            <p className="mt-2 text-sm text-zinc-400">Держите данные профиля аккуратными, чтобы вас легко находили в турнирах и матчах.</p>
+            <p className="mt-2 text-sm text-zinc-400">
+              В этом разделе отображаются основные данные игрока, которые используются в турнирных списках и матчах.
+            </p>
           </div>
 
           {!isEditing ? (
@@ -113,18 +115,20 @@ export function ProfileForm({
                     Профиль активен
                   </div>
                 </div>
-                <div className="text-sm text-zinc-400">Фото из Telegram подхватывается автоматически при первом входе. При желании его можно заменить своим изображением.</div>
+                <div className="text-sm text-zinc-400">
+                  Если игрок вошёл через Telegram, фото профиля подхватывается автоматически. При необходимости его можно заменить вручную.
+                </div>
               </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
                 <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Никнейм</div>
-                <div className="mt-2 text-sm font-medium text-white">{values.nickname || "Не заполнен"}</div>
+                <div className="mt-2 text-sm font-medium text-white">{values.nickname || "Не указан"}</div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
                 <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">UID</div>
-                <div className="mt-2 text-sm font-medium text-white">{values.efootballUid || "Не заполнен"}</div>
+                <div className="mt-2 text-sm font-medium text-white">{values.efootballUid || "Не указан"}</div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
                 <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Команда</div>
@@ -142,7 +146,7 @@ export function ProfileForm({
               </div>
               <div>
                 <div className="text-lg font-semibold text-white">Редактор профиля</div>
-                <div className="text-sm text-zinc-400">Изменения будут применены после сохранения.</div>
+                <div className="text-sm text-zinc-400">Изменения применяются после сохранения и сразу отображаются в кабинете игрока.</div>
               </div>
             </div>
 
@@ -155,7 +159,9 @@ export function ProfileForm({
                   </Avatar>
 
                   <div className="space-y-3">
-                    <div className="text-sm text-zinc-300">Выберите новое фото для профиля. Загруженное изображение сохранится в аккаунте.</div>
+                    <div className="text-sm text-zinc-300">
+                      Для профиля можно выбрать новое изображение. Загруженное фото сохранится как часть аккаунта игрока.
+                    </div>
                     <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white hover:bg-white/10">
                       <ImagePlus className="h-4 w-4 text-primary" />
                       Загрузить фото
@@ -182,13 +188,13 @@ export function ProfileForm({
                   <Input value={draft.favoriteTeam} onChange={(e) => setDraft((v) => ({ ...v, favoriteTeam: e.target.value }))} />
                 </div>
                 <div className="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm text-zinc-400">
-                  Здесь редактируются только личные данные. Публичное отображение обновится сразу после сохранения.
+                  Редактор меняет только данные игрока. Системные настройки и роли в этом разделе не изменяются.
                 </div>
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Button onClick={saveProfile} disabled={pending} className="sm:min-w-48">
-                  {pending ? "Сохраняем..." : "Сохранить изменения"}
+                  {pending ? "Сохранение..." : "Сохранить изменения"}
                 </Button>
                 <Button variant="outline" onClick={cancelEditing}>
                   Отменить
