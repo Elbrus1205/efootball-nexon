@@ -29,11 +29,50 @@ const features = [
 ];
 
 export default async function HomePage() {
-  const tournamentsCount = await db.tournament.count({
-    where: {
-      status: { in: [TournamentStatus.REGISTRATION_OPEN, TournamentStatus.IN_PROGRESS] },
+  const now = new Date();
+
+  const [tournamentsCount, totalUsers, activeSessions, totalTournaments, prizePoolTournaments] = await db.$transaction([
+    db.tournament.count({
+      where: {
+        status: { in: [TournamentStatus.REGISTRATION_OPEN, TournamentStatus.IN_PROGRESS] },
+      },
+    }),
+    db.user.count(),
+    db.session.findMany({
+      where: { expires: { gt: now } },
+      select: { userId: true },
+      distinct: ["userId"],
+    }),
+    db.tournament.count(),
+    db.tournament.findMany({
+      where: { prizePool: { not: null } },
+      select: { prizePool: true },
+    }),
+  ]);
+
+  const totalPrizePool = prizePoolTournaments.reduce((sum, tournament) => {
+    const value = tournament.prizePool?.replace(/[^\d]/g, "") ?? "";
+    return sum + (value ? Number(value) : 0);
+  }, 0);
+
+  const highlights = [
+    {
+      value: activeSessions.length,
+      label: "сейчас онлайн",
     },
-  });
+    {
+      value: totalUsers,
+      label: "всего игроков",
+    },
+    {
+      value: totalPrizePool > 0 ? `${new Intl.NumberFormat("ru-RU").format(totalPrizePool)} ₽` : "Скоро",
+      label: "разыграно призов",
+    },
+    {
+      value: totalTournaments,
+      label: "проведено турниров",
+    },
+  ];
 
   return (
     <div className="page-shell space-y-16 py-0 sm:space-y-20">
@@ -66,6 +105,19 @@ export default async function HomePage() {
 
           <div className="mt-10 text-xs uppercase tracking-[0.26em] text-zinc-500">
             {tournamentsCount > 0 ? `${tournamentsCount} активных турниров` : "новый сезон готовится"}
+          </div>
+
+          <div className="mt-8 grid w-full max-w-5xl gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {highlights.map((item, index) => (
+              <div
+                key={item.label}
+                className="rounded-[1.5rem] border border-white/10 bg-white/[0.05] px-4 py-4 text-left backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-[0_18px_40px_rgba(59,130,246,0.14)]"
+                style={{ animationDelay: `${index * 80}ms` }}
+              >
+                <div className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{item.value}</div>
+                <div className="mt-1 text-xs uppercase tracking-[0.22em] text-zinc-400">{item.label}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
