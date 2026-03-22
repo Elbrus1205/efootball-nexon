@@ -75,7 +75,7 @@ export default async function HomePage() {
   ];
 
   return (
-    <div className="page-shell space-y-16 py-0 sm:space-y-20">
+    <div className="page-shell space-y-16 py-0 pb-12 sm:space-y-20 sm:pb-16">
       <section className="relative flex min-h-[calc(100svh-5rem)] items-center overflow-hidden">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.18),transparent_28%),radial-gradient(circle_at_80%_20%,rgba(34,197,94,0.14),transparent_20%),linear-gradient(180deg,#05070b_0%,#08111c_48%,#05070b_100%)]" />
         <div className="absolute inset-0 -z-10 opacity-30 [background-image:linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:52px_52px]" />
