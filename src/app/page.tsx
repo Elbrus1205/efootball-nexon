@@ -86,10 +86,10 @@ export default async function HomePage() {
           <div className="rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-[11px] font-medium uppercase tracking-[0.28em] text-blue-200">
             eFootball Mobile
           </div>
-          <h1 className="mt-6 font-display text-5xl font-semibold tracking-[-0.06em] text-white sm:text-6xl lg:text-7xl">
+          <h1 className="mt-6 font-display text-4xl font-semibold tracking-[-0.06em] text-white sm:text-5xl lg:text-6xl">
             eFootball Nexon
           </h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-zinc-300 sm:text-lg">
+          <p className="mt-4 max-w-2xl text-sm leading-7 text-zinc-300 sm:text-base">
             Платформа турнирных сезонов по eFootball.
           </p>
           <Button
@@ -115,7 +115,7 @@ export default async function HomePage() {
                 style={{ animationDelay: `${index * 80}ms` }}
               >
                 <div className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{item.value}</div>
-                <div className="mt-1 text-xs uppercase tracking-[0.22em] text-zinc-400">{item.label}</div>
+                <div className="mt-2 text-[11px] uppercase tracking-[0.2em] text-zinc-400">{item.label}</div>
               </div>
             ))}
           </div>
