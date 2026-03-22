@@ -19,8 +19,8 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   metadataBase: new URL("https://efoottourney.example.com"),
   title: {
-    default: "eFootTourney | Турниры по eFootball Mobile",
-    template: "%s | eFootTourney",
+    default: "eFootball Nexon | Турниры по eFootball Mobile",
+    template: "%s | eFootball Nexon",
   },
   description:
     "Платформа для турниров по eFootball Mobile с регистрацией, профилями, турнирными сетками, модерацией результатов и realtime-уведомлениями.",

@@ -1,4 +1,4 @@
-# eFootTourney
+# eFootball Nexon
 
 Tournament platform for eFootball Mobile on `Next.js 14`, `Prisma`, `PostgreSQL`, `NextAuth.js`, `Uploadthing`, and `Pusher`.
 

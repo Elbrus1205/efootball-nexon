@@ -53,7 +53,7 @@ export function AuthForm({ type }: { type: "login" | "register" }) {
   return (
     <Card className="mx-auto w-full max-w-md">
       <CardHeader>
-        <CardTitle>{type === "login" ? "Вход в eFootTourney" : "Регистрация игрока"}</CardTitle>
+        <CardTitle>{type === "login" ? "Вход в eFootball Nexon" : "Регистрация игрока"}</CardTitle>
         <CardDescription>
           {type === "login"
             ? "Войдите через email, VK или Telegram."

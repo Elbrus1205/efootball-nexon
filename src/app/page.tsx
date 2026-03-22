@@ -48,7 +48,7 @@ export default async function HomePage() {
             eFootball Mobile
           </div>
           <h1 className="mt-6 font-display text-5xl font-semibold tracking-[-0.06em] text-white sm:text-6xl lg:text-7xl">
-            AI Football Nexon
+            eFootball Nexon
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-zinc-300 sm:text-lg">
             Платформа турнирных сезонов по eFootball.
@@ -75,7 +75,7 @@ export default async function HomePage() {
           <div className="text-sm font-semibold uppercase tracking-[0.3em] text-primary">О платформе</div>
           <h2 className="mt-4 font-display text-3xl font-semibold text-white sm:text-4xl">Турнирная система без лишнего шума</h2>
           <p className="mt-4 text-base leading-7 text-zinc-400 sm:text-lg">
-            AI Football Nexon объединяет матчи, сетки и подтверждение результатов в одном мобильном пространстве. Игрок быстро понимает статус сезона и ближайший следующий шаг.
+            eFootball Nexon объединяет матчи, сетки и подтверждение результатов в одном мобильном пространстве. Игрок быстро понимает статус сезона и ближайший следующий шаг.
           </p>
         </section>
       </Reveal>

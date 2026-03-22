@@ -27,8 +27,8 @@ export async function Navbar() {
               <Trophy className="h-5 w-5" />
             </div>
             <div>
-              <div className="font-display text-lg font-semibold text-white">eFootTourney</div>
-              <div className="text-xs text-zinc-400">Mobile eFootball Portal</div>
+              <div className="font-display text-lg font-semibold text-white">eFootball Nexon</div>
+              <div className="text-xs text-zinc-400">eFootball Mobile Tournaments</div>
             </div>
           </Link>
         </div>
