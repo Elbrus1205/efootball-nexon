@@ -127,7 +127,7 @@ export default async function HomePage() {
       <Reveal>
         <section className="mx-auto max-w-3xl text-center">
           <div className="text-sm font-semibold uppercase tracking-[0.3em] text-primary">О платформе</div>
-          <h2 className="mt-4 font-display text-3xl font-semibold text-white sm:text-4xl">Турнирная система без лишнего шума</h2>
+          <h2 className="mt-4 font-display text-3xl font-thin text-white sm:text-4xl">Турнирная система без лишнего шума</h2>
           <p className="mt-4 text-base leading-7 text-zinc-400 sm:text-lg">
             eFootball Nexon объединяет матчи, сетки и подтверждение результатов в одном мобильном пространстве. Игрок быстро понимает статус сезона и ближайший следующий шаг.
           </p>
@@ -141,7 +141,7 @@ export default async function HomePage() {
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 via-blue-500/20 to-emerald-400/10 text-primary shadow-[0_0_24px_rgba(59,130,246,0.16)] transition group-hover:scale-105">
                 <item.icon className="h-5 w-5" />
               </div>
-              <div className="mt-5 font-display text-xl font-semibold text-white">{item.title}</div>
+              <div className="mt-5 font-display text-xl font-thin text-white">{item.title}</div>
               <p className="mt-2 text-sm leading-6 text-zinc-400">{item.description}</p>
             </div>
           </Reveal>

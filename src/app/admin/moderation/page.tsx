@@ -18,7 +18,7 @@ export default async function AdminModerationPage() {
 
   return (
     <div className="page-shell space-y-6">
-      <h1 className="font-display text-3xl font-semibold text-white">Модерация результатов</h1>
+      <h1 className="font-display text-3xl font-thin text-white">Модерация результатов</h1>
       <div className="grid gap-4">
         {submissions.map((submission) => (
           <Card key={submission.id} className="space-y-4 p-5">

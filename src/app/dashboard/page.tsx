@@ -34,7 +34,7 @@ export default async function DashboardPage() {
     <div className="page-shell space-y-8">
       <div className="space-y-3">
         <Badge variant="primary">Личный кабинет игрока</Badge>
-        <h1 className="font-display text-3xl font-semibold text-white">Профиль игрока {user.nickname || user.name || "eFootball Mobile"}.</h1>
+        <h1 className="font-display text-3xl font-thin text-white">Профиль игрока {user.nickname || user.name || "eFootball Mobile"}.</h1>
         <p className="max-w-2xl text-zinc-400">
           В кабинете игрока собраны личные данные, ближайшие матчи и список турниров, в которых он участвует.
         </p>

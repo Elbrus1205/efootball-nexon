@@ -15,7 +15,7 @@ export default async function AdminPage() {
   return (
     <div className="page-shell space-y-8">
       <div className="space-y-3">
-        <h1 className="font-display text-3xl font-semibold text-white">Админ-панель</h1>
+        <h1 className="font-display text-3xl font-thin text-white">Админ-панель</h1>
         <p className="text-zinc-400">Роль: {session.user.role}. Здесь доступны разделы управления платформой и модерации.</p>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
@@ -25,7 +25,7 @@ export default async function AdminPage() {
             <Link key={card.href} href={card.href}>
               <Card className="p-6 transition hover:-translate-y-1">
                 <card.icon className="mb-4 h-6 w-6 text-primary" />
-                <div className="font-display text-xl text-white">{card.title}</div>
+                <div className="font-display text-xl font-thin text-white">{card.title}</div>
               </Card>
             </Link>
           ))}

@@ -10,7 +10,7 @@ export default async function AdminTournamentsPage() {
 
   return (
     <div className="page-shell space-y-6">
-      <h1 className="font-display text-3xl font-semibold text-white">Управление турнирами</h1>
+      <h1 className="font-display text-3xl font-thin text-white">Управление турнирами</h1>
       <form action="/api/admin/tournaments" method="post" className="grid gap-3 rounded-3xl border border-white/10 bg-white/5 p-5 md:grid-cols-2">
         <input name="title" placeholder="Название" className="h-11 rounded-xl bg-black/30 px-4 text-white" />
         <input name="prizePool" placeholder="Призовой фонд" className="h-11 rounded-xl bg-black/30 px-4 text-white" />

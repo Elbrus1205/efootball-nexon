@@ -54,7 +54,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
             <Badge variant="primary">{tournament.status}</Badge>
             <Badge variant="accent">{tournament.format}</Badge>
           </div>
-          <h1 className="font-display text-4xl font-semibold text-white">{tournament.title}</h1>
+          <h1 className="font-display text-4xl font-thin text-white">{tournament.title}</h1>
           <p className="max-w-3xl text-zinc-400">{tournament.description}</p>
           <div className="flex flex-wrap gap-6 text-sm text-zinc-400">
             <span>Старт: {formatDate(tournament.startsAt)}</span>

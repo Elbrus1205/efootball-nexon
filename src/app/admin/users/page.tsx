@@ -9,7 +9,7 @@ export default async function AdminUsersPage() {
 
   return (
     <div className="page-shell space-y-6">
-      <h1 className="font-display text-3xl font-semibold text-white">Пользователи</h1>
+      <h1 className="font-display text-3xl font-thin text-white">Пользователи</h1>
       <div className="grid gap-4">
         {users.map((user) => (
           <Card key={user.id} className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
