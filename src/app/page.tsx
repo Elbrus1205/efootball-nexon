@@ -40,6 +40,18 @@ export default async function HomePage() {
       <section className="relative flex min-h-[calc(100svh-5rem)] items-center overflow-hidden">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.18),transparent_28%),radial-gradient(circle_at_80%_20%,rgba(34,197,94,0.14),transparent_20%),linear-gradient(180deg,#05070b_0%,#08111c_48%,#05070b_100%)]" />
         <div className="absolute inset-0 -z-10 opacity-30 [background-image:linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:52px_52px]" />
+        <div className="neon-pitch absolute inset-x-[3%] bottom-[-14%] top-[8%] -z-10 hidden md:block">
+          <div className="pitch-outline" />
+          <div className="pitch-halfway" />
+          <div className="pitch-center-circle" />
+          <div className="pitch-penalty-top" />
+          <div className="pitch-penalty-bottom" />
+          <div className="pitch-goal-top" />
+          <div className="pitch-goal-bottom" />
+          <span className="pitch-light pitch-light-left" />
+          <span className="pitch-light pitch-light-right" />
+          <span className="pitch-light pitch-light-top" />
+        </div>
         <div className="float-orb absolute -left-10 top-24 -z-10 h-36 w-36 rounded-full bg-primary/20 blur-3xl" />
         <div className="float-orb absolute bottom-16 right-0 -z-10 h-40 w-40 rounded-full bg-emerald-400/10 blur-3xl" />
 

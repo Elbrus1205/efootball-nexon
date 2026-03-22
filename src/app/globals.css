@@ -58,6 +58,121 @@ body {
   .float-orb {
     animation: float-orb 10s ease-in-out infinite;
   }
+
+  .neon-pitch {
+    pointer-events: none;
+    transform: perspective(1400px) rotateX(69deg);
+    transform-origin: center center;
+    filter: drop-shadow(0 0 22px rgba(34, 211, 238, 0.2));
+  }
+
+  .pitch-outline,
+  .pitch-halfway,
+  .pitch-center-circle,
+  .pitch-penalty-top,
+  .pitch-penalty-bottom,
+  .pitch-goal-top,
+  .pitch-goal-bottom {
+    position: absolute;
+    border-color: rgba(94, 234, 212, 0.7);
+    box-shadow:
+      0 0 10px rgba(34, 211, 238, 0.55),
+      0 0 24px rgba(16, 185, 129, 0.22);
+  }
+
+  .pitch-outline {
+    inset: 0;
+    border: 2px solid rgba(94, 234, 212, 0.72);
+    border-radius: 18px;
+    background:
+      radial-gradient(circle at center, rgba(34, 211, 238, 0.08), transparent 42%),
+      linear-gradient(180deg, rgba(8, 16, 30, 0.08), rgba(8, 16, 30, 0.28));
+  }
+
+  .pitch-halfway {
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-top: 2px solid rgba(94, 234, 212, 0.72);
+  }
+
+  .pitch-center-circle {
+    left: 50%;
+    top: 50%;
+    width: 18%;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border: 2px solid rgba(94, 234, 212, 0.72);
+    border-radius: 999px;
+  }
+
+  .pitch-penalty-top,
+  .pitch-penalty-bottom {
+    left: 26%;
+    width: 48%;
+    height: 18%;
+    border: 2px solid rgba(94, 234, 212, 0.72);
+  }
+
+  .pitch-penalty-top {
+    top: 0;
+    border-bottom: none;
+    border-radius: 0 0 22px 22px;
+  }
+
+  .pitch-penalty-bottom {
+    bottom: 0;
+    border-top: none;
+    border-radius: 22px 22px 0 0;
+  }
+
+  .pitch-goal-top,
+  .pitch-goal-bottom {
+    left: 38%;
+    width: 24%;
+    height: 7%;
+    border: 2px solid rgba(94, 234, 212, 0.68);
+  }
+
+  .pitch-goal-top {
+    top: -1px;
+    border-bottom: none;
+    border-radius: 0 0 16px 16px;
+  }
+
+  .pitch-goal-bottom {
+    bottom: -1px;
+    border-top: none;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .pitch-light {
+    position: absolute;
+    display: block;
+    height: 14px;
+    width: 14px;
+    border-radius: 999px;
+    background: rgba(125, 211, 252, 0.95);
+    box-shadow:
+      0 0 16px rgba(56, 189, 248, 0.95),
+      0 0 44px rgba(16, 185, 129, 0.35);
+  }
+
+  .pitch-light-left {
+    left: 7%;
+    top: 34%;
+  }
+
+  .pitch-light-right {
+    right: 7%;
+    top: 30%;
+  }
+
+  .pitch-light-top {
+    left: 50%;
+    top: 10%;
+    transform: translateX(-50%);
+  }
 }
 
 @keyframes float-orb {
