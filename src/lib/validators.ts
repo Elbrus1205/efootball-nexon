@@ -85,7 +85,7 @@ export const resultSubmissionSchema = z.object({
 });
 
 export const reviewSchema = z.object({
-  action: z.enum(["approve", "reject"]),
+  action: z.enum(["approve", "reject", "dispute"]),
   moderatorComment: z.string().min(3),
 });
 
@@ -124,6 +124,35 @@ export const bracketSlotSchema = z.object({
   participantId: z.string().nullable().optional(),
   sourceType: z.string().optional().or(z.literal("")),
   sourceRef: z.string().optional().or(z.literal("")),
+});
+
+export const stageUpdateSchema = z.object({
+  stageId: z.string(),
+  name: z.string().min(2).optional(),
+  status: z.enum(["DRAFT", "PENDING", "ACTIVE", "COMPLETED"]).optional(),
+  startsAt: z.string().optional().or(z.literal("")),
+  endsAt: z.string().optional().or(z.literal("")),
+});
+
+export const standingUpdateSchema = z.object({
+  standingId: z.string(),
+  rank: z.coerce.number().min(1).optional(),
+  points: z.coerce.number().min(0).optional(),
+  goalDifference: z.coerce.number().optional(),
+  played: z.coerce.number().min(0).optional(),
+  wins: z.coerce.number().min(0).optional(),
+  draws: z.coerce.number().min(0).optional(),
+  losses: z.coerce.number().min(0).optional(),
+  goalsFor: z.coerce.number().min(0).optional(),
+  goalsAgainst: z.coerce.number().min(0).optional(),
+});
+
+export const scheduleUpdateSchema = z.object({
+  matchId: z.string(),
+  startsAt: z.string(),
+  endsAt: z.string().optional().or(z.literal("")),
+  slotLabel: z.string().optional().or(z.literal("")),
+  timezone: z.string().optional().or(z.literal("")),
 });
 
 export const roleSchema = z.object({

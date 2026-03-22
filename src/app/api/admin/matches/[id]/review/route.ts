@@ -49,10 +49,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
       where: { id: params.id },
       data: { status: MatchStatus.CONFIRMED },
     });
-  } else {
+  } else if (body.action === "reject") {
     await db.match.update({
       where: { id: params.id },
       data: { status: MatchStatus.REJECTED },
+    });
+  } else {
+    await db.match.update({
+      where: { id: params.id },
+      data: { status: MatchStatus.DISPUTED },
     });
   }
 
@@ -61,7 +66,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
     targets.map((userId) =>
       createNotification({
         userId,
-        title: body.action === "approve" ? "Результат подтверждён" : "Результат отклонён",
+        title:
+          body.action === "approve"
+            ? "Результат подтверждён"
+            : body.action === "reject"
+              ? "Результат отклонён"
+              : "Матч отправлен в спор",
         body: body.moderatorComment,
         type: NotificationType.RESULT,
         link: `/tournaments/${match.tournamentId}`,

@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type ParticipantOption = {
   id: string;
@@ -43,11 +44,13 @@ export function BracketEditor({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [draggedParticipantId, setDraggedParticipantId] = useState<string | null>(null);
 
-  const slotMap = new Map(slots.map((slot) => [`${slot.round}-${slot.matchNumber}-${slot.slotNumber}`, slot]));
+  const participantMap = useMemo(() => new Map(participants.map((participant) => [participant.id, participant])), [participants]);
+  const slotMap = useMemo(() => new Map(slots.map((slot) => [`${slot.round}-${slot.matchNumber}-${slot.slotNumber}`, slot])), [slots]);
   const rounds = Array.from(new Set(matches.map((match) => match.round))).sort((a, b) => a - b);
 
-  const saveSlot = (round: number, matchNumber: number, slotNumber: number, participantId: string) => {
+  const saveSlot = (round: number, matchNumber: number, slotNumber: number, participantId: string | null) => {
     startTransition(async () => {
       await fetch(`/api/admin/tournaments/${tournamentId}/bracket/slots`, {
         method: "POST",
@@ -57,7 +60,7 @@ export function BracketEditor({
           round,
           matchNumber,
           slotNumber,
-          participantId: participantId || null,
+          participantId,
         }),
       });
       router.refresh();
@@ -73,48 +76,90 @@ export function BracketEditor({
     });
   };
 
+  const usedParticipantIds = new Set(slots.map((slot) => slot.participantId).filter(Boolean));
+  const availableParticipants = participants.filter((participant) => !usedParticipantIds.has(participant.id));
+
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button variant="secondary" disabled={pending} onClick={generateFromGroups}>
           Заполнить из групп
         </Button>
+        <div className="text-sm text-zinc-500">Участника можно перетащить из пула слева в любой слот сетки.</div>
       </div>
 
-      <div className="overflow-x-auto">
-        <div className="flex min-w-max gap-4 pb-3">
-          {rounds.map((round) => (
-            <div key={round} className="w-72 space-y-3">
-              <div className="text-sm font-semibold uppercase tracking-[0.24em] text-zinc-500">Раунд {round}</div>
-              {matches
-                .filter((match) => match.round === round)
-                .map((match) => (
-                  <div key={match.id} className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
-                    <div className="mb-3 text-sm text-zinc-400">Матч {match.matchNumber}</div>
-                    {[1, 2].map((slotNumber) => {
-                      const key = `${round}-${match.matchNumber}-${slotNumber}`;
-                      const slot = slotMap.get(key);
-                      return (
-                        <select
-                          key={key}
-                          defaultValue={slot?.participantId ?? ""}
-                          disabled={pending}
-                          onChange={(event) => saveSlot(round, match.matchNumber, slotNumber, event.target.value)}
-                          className="mb-2 h-11 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-sm text-white"
-                        >
-                          <option value="">Слот {slotNumber}</option>
-                          {participants.map((participant) => (
-                            <option key={participant.id} value={participant.id}>
-                              {participant.user.nickname ?? participant.user.name ?? participant.id}
-                            </option>
-                          ))}
-                        </select>
-                      );
-                    })}
-                  </div>
-                ))}
-            </div>
-          ))}
+      <div className="grid gap-4 xl:grid-cols-[260px_1fr]">
+        <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-4">
+          <div className="mb-3 text-sm font-semibold uppercase tracking-[0.24em] text-zinc-500">Пул участников</div>
+          <div className="space-y-2">
+            {availableParticipants.length ? (
+              availableParticipants.map((participant) => (
+                <button
+                  key={participant.id}
+                  draggable
+                  onDragStart={() => setDraggedParticipantId(participant.id)}
+                  className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-left text-sm text-white transition hover:border-primary/30"
+                >
+                  {participant.user.nickname ?? participant.user.name ?? participant.id}
+                </button>
+              ))
+            ) : (
+              <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 px-4 py-6 text-sm text-zinc-500">
+                Все участники уже распределены по слотам.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <div className="flex min-w-max gap-4 pb-3">
+            {rounds.map((round) => (
+              <div key={round} className="w-72 space-y-3">
+                <div className="text-sm font-semibold uppercase tracking-[0.24em] text-zinc-500">Раунд {round}</div>
+                {matches
+                  .filter((match) => match.round === round)
+                  .map((match) => (
+                    <div key={match.id} className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
+                      <div className="mb-3 text-sm text-zinc-400">Матч {match.matchNumber}</div>
+                      {[1, 2].map((slotNumber) => {
+                        const key = `${round}-${match.matchNumber}-${slotNumber}`;
+                        const slot = slotMap.get(key);
+                        const participant = slot?.participantId ? participantMap.get(slot.participantId) : null;
+
+                        return (
+                          <div
+                            key={key}
+                            onDragOver={(event) => event.preventDefault()}
+                            onDrop={(event) => {
+                              event.preventDefault();
+                              if (!draggedParticipantId) return;
+                              saveSlot(round, match.matchNumber, slotNumber, draggedParticipantId);
+                              setDraggedParticipantId(null);
+                            }}
+                            className={cn(
+                              "mb-2 rounded-2xl border px-4 py-3 text-sm transition",
+                              participant ? "border-primary/20 bg-primary/10 text-white" : "border-dashed border-white/10 bg-black/20 text-zinc-500",
+                            )}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div>{participant ? participant.user.nickname ?? participant.user.name ?? participant.id : `Слот ${slotNumber}`}</div>
+                              {participant ? (
+                                <button
+                                  className="text-xs text-zinc-400 hover:text-white"
+                                  onClick={() => saveSlot(round, match.matchNumber, slotNumber, null)}
+                                >
+                                  Очистить
+                                </button>
+                              ) : null}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

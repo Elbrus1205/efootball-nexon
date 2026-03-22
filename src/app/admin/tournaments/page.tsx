@@ -95,6 +95,12 @@ export default async function AdminTournamentsPage() {
                   <Link href={`/admin/tournaments/${tournament.id}/participants`}>Участники</Link>
                 </Button>
                 <Button asChild variant="outline">
+                  <Link href={`/admin/tournaments/${tournament.id}/stages`}>Стадии</Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href={`/admin/tournaments/${tournament.id}/standings`}>Таблицы</Link>
+                </Button>
+                <Button asChild variant="outline">
                   <Link href={`/admin/tournaments/${tournament.id}/bracket`}>Сетка</Link>
                 </Button>
               </div>
