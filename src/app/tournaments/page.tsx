@@ -11,6 +11,11 @@ export default async function TournamentsPage({
   searchParams: { status?: string };
 }) {
   const status = searchParams.status as TournamentStatus | undefined;
+  const filters = [
+    { value: "REGISTRATION_OPEN", label: "Открыта регистрация" },
+    { value: "IN_PROGRESS", label: "Идут сейчас" },
+    { value: "COMPLETED", label: "Завершённые" },
+  ];
 
   const tournaments = await db.tournament.findMany({
     where: status ? { status } : undefined,
@@ -23,14 +28,14 @@ export default async function TournamentsPage({
   return (
     <div className="page-shell space-y-8">
       <SectionHeader
-        eyebrow="Каталог"
+        eyebrow="Турниры"
         title="Все турниры"
-        description="Фильтруйте соревнования по статусу и переходите к сетке, правилам и участникам."
+        description="В этом разделе собраны актуальные турниры, стадии сезона и быстрый переход к карточке каждого события."
       />
       <div className="flex flex-wrap gap-3 text-sm text-zinc-400">
-        {["REGISTRATION_OPEN", "IN_PROGRESS", "COMPLETED"].map((item) => (
-          <a key={item} href={`/tournaments?status=${item}`} className="rounded-full border border-white/10 px-4 py-2 hover:border-primary/40 hover:text-white">
-            {item}
+        {filters.map((item) => (
+          <a key={item.value} href={`/tournaments?status=${item.value}`} className="rounded-full border border-white/10 px-4 py-2 hover:border-primary/40 hover:text-white">
+            {item.label}
           </a>
         ))}
       </div>
