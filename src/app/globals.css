@@ -40,4 +40,32 @@ body {
   .section-title {
     @apply font-display text-2xl font-semibold tracking-tight text-white sm:text-3xl;
   }
+
+  .reveal-base {
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+      opacity 700ms ease,
+      transform 700ms ease;
+    will-change: opacity, transform;
+  }
+
+  .reveal-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .float-orb {
+    animation: float-orb 10s ease-in-out infinite;
+  }
+}
+
+@keyframes float-orb {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -14px, 0);
+  }
 }
