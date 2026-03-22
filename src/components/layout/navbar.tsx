@@ -19,16 +19,16 @@ export async function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-black/60 backdrop-blur-xl">
-      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-3">
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+        <div className="min-w-0 flex items-center gap-3">
           <MobileMenu links={links} />
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+          <Link href="/" className="min-w-0 flex items-center gap-2 sm:gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary sm:h-11 sm:w-11">
               <Trophy className="h-5 w-5" />
             </div>
-            <div>
-              <div className="font-display text-lg font-semibold text-white">eFootball Nexon</div>
-              <div className="text-xs text-zinc-400">eFootball Mobile Tournaments</div>
+            <div className="min-w-0">
+              <div className="truncate font-display text-base font-semibold leading-none text-white sm:text-lg">eFootball Nexon</div>
+              <div className="mt-1 hidden text-xs leading-tight text-zinc-400 sm:block">eFootball Mobile Tournaments</div>
             </div>
           </Link>
         </div>
@@ -41,7 +41,7 @@ export async function Navbar() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="shrink-0 flex items-center gap-1 sm:gap-2">
           <AuthNav unread={unread} />
         </div>
       </div>

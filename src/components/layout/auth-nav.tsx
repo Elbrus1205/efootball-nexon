@@ -31,7 +31,7 @@ export function AuthNav({ unread = 0 }: { unread?: number }) {
 
   return (
     <>
-      <Button variant="ghost" size="icon" className="relative">
+      <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full sm:h-11 sm:w-11">
         <Bell className="h-5 w-5" />
         {unread > 0 ? (
           <span className="absolute right-2 top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-black">
@@ -42,8 +42,8 @@ export function AuthNav({ unread = 0 }: { unread?: number }) {
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-3 rounded-full border border-white/10 px-2 py-1 hover:bg-white/5">
-            <Avatar className="h-10 w-10">
+          <button className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 p-0 hover:bg-white/5">
+            <Avatar className="h-10 w-10 sm:h-10 sm:w-10">
               <AvatarImage src={session.user.image ?? undefined} alt={session.user.name ?? "Avatar"} />
               <AvatarFallback>{session.user.name}</AvatarFallback>
             </Avatar>
