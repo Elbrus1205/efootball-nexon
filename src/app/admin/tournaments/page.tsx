@@ -1,52 +1,111 @@
-import { UserRole } from "@prisma/client";
+import Link from "next/link";
+import { TournamentStatus, UserRole } from "@prisma/client";
+import { Eye, Layers3, Plus } from "lucide-react";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDate } from "@/lib/utils";
+
+const statusVariant: Record<TournamentStatus, "primary" | "accent" | "neutral" | "success" | "danger"> = {
+  DRAFT: "neutral",
+  REGISTRATION_OPEN: "primary",
+  REGISTRATION_CLOSED: "accent",
+  IN_PROGRESS: "success",
+  COMPLETED: "neutral",
+};
 
 export default async function AdminTournamentsPage() {
   await requireRole([UserRole.ADMIN]);
-  const tournaments = await db.tournament.findMany({ orderBy: { createdAt: "desc" } });
+  const tournaments = await db.tournament.findMany({
+    include: {
+      _count: { select: { participants: true, stages: true, matches: true } },
+      season: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
 
   return (
-    <div className="page-shell space-y-6">
-      <h1 className="font-display text-3xl font-thin text-white">Управление турнирами</h1>
-      <form action="/api/admin/tournaments" method="post" className="grid gap-3 rounded-3xl border border-white/10 bg-white/5 p-5 md:grid-cols-2">
-        <input name="title" placeholder="Название" className="h-11 rounded-xl bg-black/30 px-4 text-white" />
-        <input name="prizePool" placeholder="Призовой фонд" className="h-11 rounded-xl bg-black/30 px-4 text-white" />
-        <textarea name="description" placeholder="Описание" className="min-h-28 rounded-xl bg-black/30 px-4 py-3 text-white md:col-span-2" />
-        <textarea name="rules" placeholder="Правила" className="min-h-28 rounded-xl bg-black/30 px-4 py-3 text-white md:col-span-2" />
-        <input name="startsAt" type="datetime-local" className="h-11 rounded-xl bg-black/30 px-4 text-white" />
-        <input name="registrationEndsAt" type="datetime-local" className="h-11 rounded-xl bg-black/30 px-4 text-white" />
-        <input name="maxParticipants" type="number" placeholder="Макс. участников" className="h-11 rounded-xl bg-black/30 px-4 text-white" />
-        <select name="format" className="h-11 rounded-xl bg-black/30 px-4 text-white">
-          <option value="SINGLE_ELIMINATION">Single Elimination</option>
-          <option value="DOUBLE_ELIMINATION">Double Elimination</option>
-          <option value="ROUND_ROBIN">Round Robin</option>
-        </select>
-        <Button className="md:col-span-2">Создать турнир</Button>
-      </form>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <CardTitle>Турниры и форматы</CardTitle>
+            <CardDescription>Единый список турниров, стадий и операционных переходов между регистрацией, группами и плей-офф.</CardDescription>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button asChild variant="secondary">
+              <Link href="/admin/tournaments/builder">
+                <Layers3 className="mr-2 h-4 w-4" />
+                Конструктор турнира
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/admin/tournaments/builder">
+                <Plus className="mr-2 h-4 w-4" />
+                Создать турнир
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+      </Card>
 
       <div className="grid gap-4">
         {tournaments.map((tournament) => (
-          <Card key={tournament.id} className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="font-medium text-white">{tournament.title}</div>
-              <div className="text-sm text-zinc-500">{tournament.status}</div>
-            </div>
-            <div className="flex gap-2">
-              <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
-                <input type="hidden" name="_method" value="close" />
-                <Button variant="secondary">Закрыть регистрацию</Button>
-              </form>
-              <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
-                <input type="hidden" name="_method" value="delete" />
-                <Button variant="outline">Удалить</Button>
-              </form>
+          <Card key={tournament.id} className="p-5">
+            <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="font-medium text-white">{tournament.title}</div>
+                  <Badge variant={statusVariant[tournament.status]}>{tournament.status}</Badge>
+                  <Badge variant="neutral">{tournament.format}</Badge>
+                  {tournament.playoffType ? <Badge variant="accent">{tournament.playoffType}</Badge> : null}
+                </div>
+                <p className="max-w-3xl text-sm leading-6 text-zinc-400">{tournament.description}</p>
+                <div className="flex flex-wrap gap-4 text-sm text-zinc-500">
+                  <span>Старт: {formatDate(tournament.startsAt)}</span>
+                  <span>Регистрация до: {formatDate(tournament.registrationEndsAt)}</span>
+                  <span>Участники: {tournament._count.participants}/{tournament.maxParticipants}</span>
+                  <span>Стадии: {tournament._count.stages}</span>
+                  <span>Матчи: {tournament._count.matches}</span>
+                  <span>Сезон: {tournament.season?.name ?? "Без сезона"}</span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button asChild variant="secondary">
+                  <Link href={`/tournaments/${tournament.id}`}>
+                    <Eye className="mr-2 h-4 w-4" />
+                    Страница турнира
+                  </Link>
+                </Button>
+                <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
+                  <input type="hidden" name="_method" value="generate-stages" />
+                  <Button variant="outline">Сгенерировать стадии</Button>
+                </form>
+                <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
+                  <input type="hidden" name="_method" value="generate-matches" />
+                  <Button variant="outline">Сгенерировать матчи</Button>
+                </form>
+                <Button asChild variant="outline">
+                  <Link href={`/admin/tournaments/${tournament.id}/edit`}>Редактировать</Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href={`/admin/tournaments/${tournament.id}/participants`}>Участники</Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href={`/admin/tournaments/${tournament.id}/bracket`}>Сетка</Link>
+                </Button>
+              </div>
             </div>
           </Card>
         ))}
       </div>
+
+      {!tournaments.length ? (
+        <Card className="p-6 text-sm text-zinc-500">Первый турнир можно собрать через конструктор: формат, стадии, участники и расписание.</Card>
+      ) : null}
     </div>
   );
 }

@@ -2,15 +2,13 @@ import { NextResponse } from "next/server";
 import { UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { generateTournamentStages } from "@/lib/services/tournaments";
 import { tournamentBuilderSchema } from "@/lib/validators";
-import { slugify } from "@/lib/utils";
 
 function checkboxValue(value: FormDataEntryValue | null) {
   return value === "true" || value === "on";
 }
 
-export async function POST(request: Request) {
+export async function POST(request: Request, { params }: { params: { id: string } }) {
   await requireRole([UserRole.ADMIN]);
 
   const formData = await request.formData();
@@ -45,10 +43,10 @@ export async function POST(request: Request) {
     sortRules: formData.getAll("sortRules"),
   });
 
-  const tournament = await db.tournament.create({
+  await db.tournament.update({
+    where: { id: params.id },
     data: {
       title: body.title,
-      slug: `${slugify(body.title)}-${Date.now()}`,
       description: body.description,
       rules: body.rules,
       startsAt: new Date(body.startsAt),
@@ -78,10 +76,6 @@ export async function POST(request: Request) {
       sortRules: body.sortRules,
     },
   });
-
-  if (body.autoCreateStages) {
-    await generateTournamentStages(tournament.id);
-  }
 
   return NextResponse.redirect(new URL(`/admin/tournaments`, process.env.NEXTAUTH_URL));
 }

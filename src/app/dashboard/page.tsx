@@ -1,4 +1,5 @@
-import { CalendarDays, Trophy } from "lucide-react";
+import Link from "next/link";
+import { CalendarDays, ChevronRight, Trophy } from "lucide-react";
 import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
@@ -81,6 +82,11 @@ export default async function DashboardPage() {
             ) : (
               <p className="text-sm text-zinc-500">На данный момент у игрока нет назначенных матчей.</p>
             )}
+
+            <Link href="/dashboard/matches" className="inline-flex items-center gap-2 text-sm text-primary transition hover:text-white">
+              Открыть все матчи
+              <ChevronRight className="h-4 w-4" />
+            </Link>
           </CardContent>
         </Card>
       </div>
