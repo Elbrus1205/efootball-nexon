@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { ArrowRight, ShieldCheck, Smartphone, Sparkles, Trophy } from "lucide-react";
 import { TournamentStatus } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -74,6 +75,8 @@ export default async function HomePage() {
     },
   ];
 
+  const heroTitle = Array.from("eFootball Nexon");
+
   return (
     <div className="page-shell space-y-16 py-0 pb-12 sm:space-y-20 sm:pb-16">
       <section className="relative flex min-h-[calc(100svh-5rem)] items-center overflow-hidden">
@@ -83,19 +86,30 @@ export default async function HomePage() {
         <div className="float-orb absolute bottom-16 right-0 -z-10 h-40 w-40 rounded-full bg-emerald-400/10 blur-3xl" />
 
         <div className="mx-auto flex w-full max-w-4xl flex-col items-center text-center">
-          <div className="rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-[11px] font-medium uppercase tracking-[0.28em] text-blue-200">
+          <div className="hero-label rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-[11px] font-medium uppercase tracking-[0.28em] text-blue-200">
             eFootball Mobile
           </div>
-          <h1 className="mt-6 font-display text-4xl font-thin tracking-[0.02em] text-white sm:text-5xl lg:text-6xl">
-            eFootball Nexon
+          <h1 className="hero-title mt-6 font-display text-4xl font-thin tracking-[0.02em] text-white sm:text-5xl lg:text-6xl" aria-label="eFootball Nexon">
+            <span className="sr-only">eFootball Nexon</span>
+            <span aria-hidden="true">
+              {heroTitle.map((char, index) => (
+                <span
+                  key={`${char}-${index}`}
+                  className="hero-char"
+                  style={{ animationDelay: `${0.35 + index * 0.045}s` } as CSSProperties}
+                >
+                  {char === " " ? "\u00A0" : char}
+                </span>
+              ))}
+            </span>
           </h1>
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-zinc-300 sm:text-base">
+          <p className="hero-subtitle mt-4 max-w-2xl text-sm leading-7 text-zinc-300 sm:text-base">
             Платформа турнирных сезонов по eFootball.
           </p>
           <Button
             asChild
             size="lg"
-            className="mt-8 h-12 rounded-full bg-gradient-to-r from-primary via-blue-500 to-cyan-400 px-8 text-base text-white shadow-[0_0_30px_rgba(59,130,246,0.32)] transition hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(59,130,246,0.45)]"
+            className="hero-cta mt-8 h-12 rounded-full bg-gradient-to-r from-primary via-blue-500 to-cyan-400 px-8 text-base text-white shadow-[0_0_30px_rgba(59,130,246,0.32)] transition hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(59,130,246,0.45)]"
           >
             <Link href="/register">
               Принять участие
@@ -103,7 +117,7 @@ export default async function HomePage() {
             </Link>
           </Button>
 
-          <div className="mt-10 text-xs uppercase tracking-[0.26em] text-zinc-500">
+          <div className="hero-kicker mt-10 text-xs uppercase tracking-[0.26em] text-zinc-500">
             {tournamentsCount > 0 ? `${tournamentsCount} активных турниров` : "новый сезон готовится"}
           </div>
 
