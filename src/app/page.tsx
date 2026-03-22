@@ -21,24 +21,24 @@ export default async function HomePage() {
 
   return (
     <div className="page-shell space-y-16 py-10 sm:py-16">
-      <section className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+      <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div className="space-y-6">
-          <Badge variant="primary">Турниры eFootball Mobile • Площадка для игроков</Badge>
+          <Badge variant="primary">eFootball Mobile • Турниры для игроков</Badge>
 
           <div className="space-y-4">
-            <h1 className="font-display text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
-              Турнирная платформа eFootball Mobile, где игроки следят за матчами, сетками и сезонными розыгрышами.
+            <h1 className="max-w-4xl font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
+              Турниры eFootball Mobile в одном месте.
             </h1>
 
-            <p className="max-w-2xl text-lg text-zinc-400">
-              На платформе доступны регистрация участников, турнирные сетки, подтверждение результатов, история матчей и удобный мобильный интерфейс для игроков.
+            <p className="max-w-2xl text-base leading-7 text-zinc-400 sm:text-lg">
+              Участники следят за матчами, подают результаты и проходят по сетке в удобном мобильном формате.
             </p>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button asChild size="lg">
               <Link href="/register">
-                Принять участие
+                Начать участие
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -52,17 +52,17 @@ export default async function HomePage() {
               {
                 icon: Trophy,
                 title: "Турнирные сетки",
-                description: "Single Elimination, Double Elimination и круговой формат для разных турнирных сценариев.",
+                description: "Single, double elimination и круговой формат для разных стадий сезона.",
               },
               {
                 icon: Smartphone,
-                title: "Мобильный формат",
-                description: "Регистрация, просмотр матчей и отправка результатов удобно работают с телефона.",
+                title: "Mobile first",
+                description: "Регистрация, матчи и результаты удобно открываются с телефона.",
               },
               {
                 icon: ShieldCheck,
-                title: "Честная модерация",
-                description: "Скриншоты и результаты матчей проходят проверку, чтобы турнир оставался прозрачным.",
+                title: "Проверка матчей",
+                description: "Скриншоты и спорные результаты проходят модерацию перед подтверждением.",
               },
             ].map((item) => (
               <div key={item.title} className="glass-panel rounded-3xl p-4">
@@ -77,8 +77,8 @@ export default async function HomePage() {
         <div className="glass-panel rounded-[2rem] p-6">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <div className="text-sm uppercase tracking-[0.2em] text-primary">Актуально сейчас</div>
-              <div className="mt-2 font-display text-2xl font-semibold">Ближайшие турниры</div>
+              <div className="text-sm uppercase tracking-[0.2em] text-primary">Live Preview</div>
+              <div className="mt-2 font-display text-2xl font-semibold">Ближайший матчдей</div>
             </div>
             <Users className="h-6 w-6 text-accent" />
           </div>
@@ -102,7 +102,7 @@ export default async function HomePage() {
         <SectionHeader
           eyebrow="Турниры"
           title="Открытые события"
-          description="Список активных турниров, в которых игроки уже сейчас могут зарегистрироваться и следить за сеткой."
+          description="Актуальные турниры, в которых игроки уже сейчас могут зарегистрироваться и следить за сеткой."
         />
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
