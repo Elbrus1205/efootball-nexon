@@ -111,11 +111,11 @@ export default async function HomePage() {
             {highlights.map((item, index) => (
               <div
                 key={item.label}
-                className="rounded-[1.15rem] border border-white/10 bg-white/[0.05] px-3 py-3 text-left backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-[0_18px_40px_rgba(59,130,246,0.14)] sm:rounded-[1.5rem] sm:px-4 sm:py-4"
+                className="rounded-[1.15rem] border border-white/10 bg-white/[0.05] px-3 py-3 text-center backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-[0_18px_40px_rgba(59,130,246,0.14)] sm:rounded-[1.5rem] sm:px-4 sm:py-4"
                 style={{ animationDelay: `${index * 80}ms` }}
               >
                 <div className="text-lg font-semibold tracking-tight text-white sm:text-3xl">{item.value}</div>
-                <div className="mt-1.5 text-[9px] uppercase tracking-[0.16em] text-zinc-400 sm:mt-2 sm:text-[11px] sm:tracking-[0.2em]">
+                <div className="mt-1.5 text-[8px] uppercase tracking-[0.14em] text-zinc-400 sm:mt-2 sm:text-[11px] sm:tracking-[0.2em]">
                   {item.label}
                 </div>
               </div>
