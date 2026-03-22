@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { MatchStatus, NotificationType, UserRole } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/session";
+import { logAdminAction } from "@/lib/services/admin-actions";
 import { advanceMatch } from "@/lib/services/tournaments";
 import { createNotification } from "@/lib/services/notifications";
 import { reviewSchema } from "@/lib/validators";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
+  const session = await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
 
   const formData = await request.formData();
   const body = reviewSchema.parse({
@@ -78,6 +79,19 @@ export async function POST(request: Request, { params }: { params: { id: string 
       }),
     ),
   );
+
+  await logAdminAction({
+    adminId: session.user.id,
+    tournamentId: match.tournamentId,
+    entityType: "MATCH_REVIEW",
+    entityId: match.id,
+    actionType: body.action === "approve" ? "APPROVE" : body.action === "reject" ? "REJECT" : "UPDATE",
+    afterJson: {
+      action: body.action,
+      moderatorComment: body.moderatorComment,
+      matchStatus: body.action === "approve" ? MatchStatus.CONFIRMED : body.action === "reject" ? MatchStatus.REJECTED : MatchStatus.DISPUTED,
+    },
+  });
 
   return NextResponse.redirect(new URL("/admin/moderation", process.env.NEXTAUTH_URL));
 }

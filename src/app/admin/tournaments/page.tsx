@@ -75,10 +75,13 @@ export default async function AdminTournamentsPage() {
 
               <div className="flex flex-wrap gap-2">
                 <Button asChild variant="secondary">
-                  <Link href={`/tournaments/${tournament.id}`}>
+                  <Link href={`/admin/tournaments/${tournament.id}`}>
                     <Eye className="mr-2 h-4 w-4" />
-                    Страница турнира
+                    Workspace
                   </Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href={`/tournaments/${tournament.id}`}>Публичная страница</Link>
                 </Button>
                 <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
                   <input type="hidden" name="_method" value="generate-stages" />

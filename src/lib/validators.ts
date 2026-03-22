@@ -155,6 +155,18 @@ export const scheduleUpdateSchema = z.object({
   timezone: z.string().optional().or(z.literal("")),
 });
 
+export const matchUpdateSchema = z.object({
+  player1Id: z.string().optional().or(z.literal("")),
+  player2Id: z.string().optional().or(z.literal("")),
+  participant1EntryId: z.string().optional().or(z.literal("")),
+  participant2EntryId: z.string().optional().or(z.literal("")),
+  scheduledAt: z.string().optional().or(z.literal("")),
+  player1Score: z.coerce.number().min(0).max(99).optional(),
+  player2Score: z.coerce.number().min(0).max(99).optional(),
+  status: z.string().optional().or(z.literal("")),
+  notes: z.string().max(1000).optional().or(z.literal("")),
+});
+
 export const roleSchema = z.object({
   role: z.nativeEnum(UserRole),
 });
