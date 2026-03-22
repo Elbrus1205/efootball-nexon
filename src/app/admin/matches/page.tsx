@@ -7,17 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils";
 
-const statusVariant: Record<MatchStatus, "primary" | "accent" | "neutral" | "success" | "danger"> = {
+const statusVariant: Partial<Record<MatchStatus, "primary" | "accent" | "neutral" | "success" | "danger">> = {
   PENDING: "neutral",
   READY: "primary",
   RESULT_SUBMITTED: "accent",
   CONFIRMED: "success",
   REJECTED: "danger",
   FORFEIT: "danger",
-  SCHEDULED: "primary",
-  LIVE: "accent",
-  DISPUTED: "danger",
-  FINISHED: "success",
 };
 
 export default async function AdminMatchesPage() {
@@ -52,7 +48,7 @@ export default async function AdminMatchesPage() {
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="font-medium text-white">{match.tournament.title}</div>
-                    <Badge variant={statusVariant[match.status]}>{match.status}</Badge>
+                    <Badge variant={statusVariant[match.status] ?? "neutral"}>{match.status}</Badge>
                     {match.stage ? <Badge>{match.stage.name}</Badge> : null}
                     {match.group ? <Badge variant="neutral">{match.group.name}</Badge> : null}
                   </div>
