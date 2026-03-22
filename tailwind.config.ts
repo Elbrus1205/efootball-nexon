@@ -20,8 +20,8 @@ const config: Config = {
         muted: "#A1A1AA",
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "sans-serif"],
-        display: ["var(--font-poppins)", "sans-serif"],
+        sans: ["var(--font-efootball-sans)", "sans-serif"],
+        display: ["var(--font-efootball-stencil)", "var(--font-efootball-sans)", "sans-serif"],
       },
       boxShadow: {
         glow: "0 0 0 1px rgba(59,130,246,0.18), 0 20px 60px rgba(59,130,246,0.12)",
