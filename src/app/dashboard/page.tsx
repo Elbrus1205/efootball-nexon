@@ -34,11 +34,9 @@ export default async function DashboardPage() {
     <div className="page-shell space-y-8">
       <div className="space-y-3">
         <Badge variant="primary">Личный кабинет игрока</Badge>
-        <h1 className="font-display text-3xl font-semibold text-white">
-          Профиль игрока {user.nickname || user.name || "eFootTourney"}.
-        </h1>
+        <h1 className="font-display text-3xl font-semibold text-white">Профиль игрока {user.nickname || user.name || "eFootball Mobile"}.</h1>
         <p className="max-w-2xl text-zinc-400">
-          Здесь собраны личные данные игрока, ближайшие матчи и список турниров, в которых он принимает участие.
+          В кабинете игрока собраны личные данные, ближайшие матчи и список турниров, в которых он участвует.
         </p>
       </div>
 
@@ -71,17 +69,17 @@ export default async function DashboardPage() {
                     <div className="font-medium text-white">{match.tournament.title}</div>
                     <div className="mt-2 flex items-center gap-2 text-zinc-400">
                       <Trophy className="h-4 w-4 text-accent" />
-                      <span>Соперник: {opponent?.nickname ?? opponent?.name ?? "Ожидается определение"}</span>
+                      <span>Соперник: {opponent?.nickname ?? opponent?.name ?? "Будет определён позже"}</span>
                     </div>
                     <div className="mt-2 flex items-center gap-2 text-zinc-400">
                       <CalendarDays className="h-4 w-4 text-primary" />
-                      <span>{match.scheduledAt ? formatDate(match.scheduledAt) : "Время матча будет объявлено позже"}</span>
+                      <span>{match.scheduledAt ? formatDate(match.scheduledAt) : "Дата и время будут назначены позже"}</span>
                     </div>
                   </div>
                 );
               })
             ) : (
-              <p className="text-sm text-zinc-500">На текущий момент у этого игрока нет назначенных матчей.</p>
+              <p className="text-sm text-zinc-500">На данный момент у игрока нет назначенных матчей.</p>
             )}
           </CardContent>
         </Card>
@@ -96,7 +94,7 @@ export default async function DashboardPage() {
             user.tournamentEntries.map((entry) => (
               <div key={entry.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
                 <div className="font-medium text-white">{entry.tournament.title}</div>
-                <div className="mt-2 text-sm text-zinc-400">Старт турнира: {formatDate(entry.tournament.startsAt)}</div>
+                <div className="mt-2 text-sm text-zinc-400">Дата старта: {formatDate(entry.tournament.startsAt)}</div>
               </div>
             ))
           ) : (
