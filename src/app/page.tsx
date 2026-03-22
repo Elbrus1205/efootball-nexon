@@ -94,23 +94,6 @@ export default async function HomePage() {
         ))}
       </section>
 
-      <Reveal>
-        <section className="relative overflow-hidden rounded-[2rem] border border-primary/20 bg-gradient-to-r from-primary/10 via-[#0d1422] to-emerald-400/10 px-6 py-8 text-center shadow-[0_30px_80px_rgba(0,0,0,0.25)] sm:px-8">
-          <div className="absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/20 blur-3xl" />
-          <div className="relative mx-auto max-w-2xl">
-            <div className="text-sm font-semibold uppercase tracking-[0.28em] text-blue-200">Season Access</div>
-            <h2 className="mt-4 font-display text-3xl font-semibold text-white sm:text-4xl">Вход в сезон открыт</h2>
-            <p className="mt-3 text-base leading-7 text-zinc-300">Актуальные турниры доступны для просмотра, регистрации и быстрого перехода к матчам.</p>
-            <Button
-              asChild
-              size="lg"
-              className="mt-7 h-12 rounded-full bg-white px-8 text-base text-zinc-950 transition hover:bg-zinc-100"
-            >
-              <Link href="/register">Принять участие</Link>
-            </Button>
-          </div>
-        </section>
-      </Reveal>
     </div>
   );
 }
