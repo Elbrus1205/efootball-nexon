@@ -9,6 +9,19 @@ import {
 } from "@prisma/client";
 import { z } from "zod";
 
+const optionalIntField = (minimum: number, maximum: number, message?: string) =>
+  z.preprocess(
+    (value) => {
+      if (value === "" || value === null || value === undefined) return undefined;
+      return value;
+    },
+    z.coerce
+      .number()
+      .min(minimum, message ?? `Значение должно быть не меньше ${minimum}.`)
+      .max(maximum, `Значение должно быть не больше ${maximum}.`)
+      .optional(),
+  );
+
 export const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
@@ -47,23 +60,23 @@ export const tournamentSchema = z.object({
 });
 
 export const tournamentBuilderSchema = z.object({
-  title: z.string().min(3),
-  description: z.string().min(20),
-  rules: z.string().min(20),
+  title: z.string().min(3, "Название турнира должно быть не короче 3 символов."),
+  description: z.string().min(20, "Описание турнира должно быть не короче 20 символов."),
+  rules: z.string().min(20, "Правила турнира должны быть не короче 20 символов."),
   startsAt: z.string(),
   registrationEndsAt: z.string(),
   endsAt: z.string().optional().or(z.literal("")),
-  maxParticipants: z.coerce.number().min(2).max(256),
+  maxParticipants: z.coerce.number().min(2, "Минимум 2 участника.").max(256, "Максимум 256 участников."),
   prizePool: z.string().optional().or(z.literal("")),
   format: z.nativeEnum(TournamentFormat),
   status: z.nativeEnum(TournamentStatus).default(TournamentStatus.DRAFT),
   coverImage: z.string().url().optional().or(z.literal("")),
   playoffType: z.nativeEnum(PlayoffType).optional().nullable(),
   seedingMethod: z.nativeEnum(SeedingMethod).default(SeedingMethod.MANUAL),
-  roundsInLeague: z.coerce.number().min(1).max(4).default(1),
-  groupsCount: z.coerce.number().min(1).max(16).optional().nullable(),
-  participantsPerGroup: z.coerce.number().min(2).max(32).optional().nullable(),
-  playoffTeamsPerGroup: z.coerce.number().min(1).max(8).optional().nullable(),
+  roundsInLeague: z.coerce.number().min(1, "В лиге должен быть минимум 1 круг.").max(4, "Максимум 4 круга в лиге.").default(1),
+  groupsCount: optionalIntField(1, 16, "Количество групп должно быть от 1 до 16."),
+  participantsPerGroup: optionalIntField(2, 32, "В группе должно быть от 2 до 32 участников."),
+  playoffTeamsPerGroup: optionalIntField(1, 8, "Из группы должно выходить от 1 до 8 участников."),
   pointsForWin: z.coerce.number().min(0).max(10).default(3),
   pointsForDraw: z.coerce.number().min(0).max(10).default(1),
   pointsForLoss: z.coerce.number().min(0).max(10).default(0),
