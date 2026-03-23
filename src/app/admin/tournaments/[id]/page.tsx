@@ -2,12 +2,13 @@ import Link from "next/link";
 import { StageType, UserRole } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { Activity, CalendarDays, GitBranch, History, ShieldCheck, Swords, Users } from "lucide-react";
-import { requireRole } from "@/lib/auth/session";
-import { db } from "@/lib/db";
+import { AuditDiff } from "@/components/admin/audit-diff";
 import { MatchManager } from "@/components/admin/match-manager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { requireRole } from "@/lib/auth/session";
+import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 
 export default async function AdminTournamentWorkspacePage({ params }: { params: { id: string } }) {
@@ -45,11 +46,13 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
 
   const groupStage = tournament.stages.find((stage) => stage.type === StageType.GROUP_STAGE);
   const playoffStage = tournament.stages.find((stage) => stage.type === StageType.PLAYOFF);
+  const nextScheduledMatch = tournament.matches.find((match) => match.scheduledAt);
+
   const stats = [
     { label: "Участники", value: tournament.participants.length, icon: Users },
     { label: "Матчи", value: tournament.matches.length, icon: Swords },
     { label: "Этапы", value: tournament.stages.length, icon: GitBranch },
-    { label: "Ближайший слот", value: tournament.matches.find((match) => match.scheduledAt)?.scheduledAt ? formatDate(tournament.matches.find((match) => match.scheduledAt)!.scheduledAt!) : "—", icon: CalendarDays },
+    { label: "Ближайший слот", value: nextScheduledMatch?.scheduledAt ? formatDate(nextScheduledMatch.scheduledAt) : "—", icon: CalendarDays },
   ];
 
   return (
@@ -102,7 +105,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
         <Card>
           <CardHeader>
             <CardTitle>Ручной редактор матчей</CardTitle>
-            <CardDescription>Изменение участников, времени, результата и статуса матча прямо в workspace турнира.</CardDescription>
+            <CardDescription>Live search, фильтры и drag-and-drop карточек внутри раунда прямо в tournament workspace.</CardDescription>
           </CardHeader>
           <CardContent>
             <MatchManager
@@ -144,6 +147,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
                 <History className="h-5 w-5 text-primary" />
                 История действий
               </CardTitle>
+              <CardDescription>Последние admin actions с before/after diff по ключевым изменениям.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {tournament.actions.length ? (
@@ -157,6 +161,9 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
                       {action.admin.nickname ?? action.admin.name ?? action.admin.email ?? "Администратор"}
                     </div>
                     <div className="mt-2 text-sm text-zinc-500">{formatDate(action.createdAt)}</div>
+                    <div className="mt-3">
+                      <AuditDiff before={action.beforeJson} after={action.afterJson} />
+                    </div>
                   </div>
                 ))
               ) : (

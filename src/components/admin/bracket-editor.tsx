@@ -30,6 +30,19 @@ type MatchItem = {
   participant2EntryId: string | null;
 };
 
+type DragPayload =
+  | {
+      type: "pool";
+      participantId: string;
+    }
+  | {
+      type: "slot";
+      participantId: string | null;
+      round: number;
+      matchNumber: number;
+      slotNumber: number;
+    };
+
 export function BracketEditor({
   tournamentId,
   bracketId,
@@ -45,25 +58,42 @@ export function BracketEditor({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [draggedParticipantId, setDraggedParticipantId] = useState<string | null>(null);
+  const [draggedItem, setDraggedItem] = useState<DragPayload | null>(null);
 
   const participantMap = useMemo(() => new Map(participants.map((participant) => [participant.id, participant])), [participants]);
   const slotMap = useMemo(() => new Map(slots.map((slot) => [`${slot.round}-${slot.matchNumber}-${slot.slotNumber}`, slot])), [slots]);
   const rounds = Array.from(new Set(matches.map((match) => match.round))).sort((a, b) => a - b);
 
   const saveSlot = (round: number, matchNumber: number, slotNumber: number, participantId: string | null) => {
+    return fetch(`/api/admin/tournaments/${tournamentId}/bracket/slots`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        bracketId,
+        round,
+        matchNumber,
+        slotNumber,
+        participantId,
+      }),
+    });
+  };
+
+  const handleDrop = (round: number, matchNumber: number, slotNumber: number) => {
+    if (!draggedItem) return;
+
+    const targetKey = `${round}-${matchNumber}-${slotNumber}`;
+    const targetSlot = slotMap.get(targetKey);
+    const targetParticipantId = targetSlot?.participantId ?? null;
+
     startTransition(async () => {
-      await fetch(`/api/admin/tournaments/${tournamentId}/bracket/slots`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bracketId,
-          round,
-          matchNumber,
-          slotNumber,
-          participantId,
-        }),
-      });
+      if (draggedItem.type === "pool") {
+        await saveSlot(round, matchNumber, slotNumber, draggedItem.participantId);
+      } else {
+        await saveSlot(round, matchNumber, slotNumber, draggedItem.participantId);
+        await saveSlot(draggedItem.round, draggedItem.matchNumber, draggedItem.slotNumber, targetParticipantId);
+      }
+
+      setDraggedItem(null);
       router.refresh();
     });
   };
@@ -86,7 +116,7 @@ export function BracketEditor({
         <Button variant="secondary" disabled={pending} onClick={generateFromGroups}>
           Заполнить из групп
         </Button>
-        <div className="text-sm text-zinc-500">Участника можно перетащить из пула слева в любой слот сетки или очистить слот вручную.</div>
+        <div className="text-sm text-zinc-500">Участников можно перетаскивать не только из пула, но и между самими слотами сетки для быстрого ручного посева.</div>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[260px_1fr]">
@@ -98,7 +128,12 @@ export function BracketEditor({
                 <button
                   key={participant.id}
                   draggable
-                  onDragStart={() => setDraggedParticipantId(participant.id)}
+                  onDragStart={() =>
+                    setDraggedItem({
+                      type: "pool",
+                      participantId: participant.id,
+                    })
+                  }
                   className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-left text-sm text-white transition hover:border-primary/30"
                 >
                   {participant.user.nickname ?? participant.user.name ?? participant.id}
@@ -130,16 +165,24 @@ export function BracketEditor({
                         return (
                           <div
                             key={key}
+                            draggable={Boolean(participant)}
+                            onDragStart={() =>
+                              setDraggedItem({
+                                type: "slot",
+                                participantId: slot?.participantId ?? null,
+                                round,
+                                matchNumber: match.matchNumber,
+                                slotNumber,
+                              })
+                            }
                             onDragOver={(event) => event.preventDefault()}
                             onDrop={(event) => {
                               event.preventDefault();
-                              if (!draggedParticipantId) return;
-                              saveSlot(round, match.matchNumber, slotNumber, draggedParticipantId);
-                              setDraggedParticipantId(null);
+                              handleDrop(round, match.matchNumber, slotNumber);
                             }}
                             className={cn(
                               "mb-2 rounded-2xl border px-4 py-3 text-sm transition",
-                              participant ? "border-primary/20 bg-primary/10 text-white" : "border-dashed border-white/10 bg-black/20 text-zinc-500",
+                              participant ? "cursor-move border-primary/20 bg-primary/10 text-white" : "border-dashed border-white/10 bg-black/20 text-zinc-500",
                             )}
                           >
                             <div className="flex items-center justify-between gap-2">
@@ -150,7 +193,12 @@ export function BracketEditor({
                               {participant ? (
                                 <button
                                   className="text-xs text-zinc-400 hover:text-white"
-                                  onClick={() => saveSlot(round, match.matchNumber, slotNumber, null)}
+                                  onClick={() => {
+                                    startTransition(async () => {
+                                      await saveSlot(round, match.matchNumber, slotNumber, null);
+                                      router.refresh();
+                                    });
+                                  }}
                                 >
                                   Очистить
                                 </button>

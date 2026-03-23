@@ -1,12 +1,12 @@
 "use client";
 
 import { MatchStatus } from "@prisma/client";
-import { GripVertical } from "lucide-react";
+import { GripVertical, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 type ParticipantOption = {
@@ -66,8 +66,34 @@ export function MatchManager({
   const [pending, startTransition] = useTransition();
   const [draggedMatchId, setDraggedMatchId] = useState<string | null>(null);
   const [orderedMatches, setOrderedMatches] = useState(matches);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [roundFilter, setRoundFilter] = useState<string>("all");
 
   const rounds = useMemo(() => Array.from(new Set(orderedMatches.map((match) => match.round))).sort((a, b) => a - b), [orderedMatches]);
+
+  const visibleMatches = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return orderedMatches.filter((match) => {
+      const haystack = [
+        match.player1?.nickname,
+        match.player1?.name,
+        match.player2?.nickname,
+        match.player2?.name,
+        match.stage?.name,
+        match.group?.name,
+        match.notes,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      if (statusFilter !== "all" && match.status !== statusFilter) return false;
+      if (roundFilter !== "all" && String(match.round) !== roundFilter) return false;
+      if (normalized && !haystack.includes(normalized) && !`match ${match.matchNumber}`.includes(normalized)) return false;
+      return true;
+    });
+  }, [orderedMatches, query, statusFilter, roundFilter]);
 
   const saveMatch = (matchId: string, payload: Record<string, unknown>) => {
     startTransition(async () => {
@@ -94,8 +120,10 @@ export function MatchManager({
 
     const merged = orderedMatches.map((match) => {
       if (match.round !== round) return match;
-      const next = moved.find((candidate) => candidate.id === match.id);
-      return next ? { ...match, matchNumber: moved.findIndex((candidate) => candidate.id === match.id) + 1 } : match;
+      return {
+        ...match,
+        matchNumber: moved.findIndex((candidate) => candidate.id === match.id) + 1,
+      };
     });
 
     setOrderedMatches(
@@ -119,12 +147,34 @@ export function MatchManager({
 
   return (
     <div className="space-y-5">
-      <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-4 text-sm text-zinc-400">
-        Карточки матчей можно перетаскивать внутри раунда, чтобы быстро менять порядок board и нумерацию пар.
+      <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-4">
+        <div className="grid gap-3 lg:grid-cols-[1fr_220px_180px]">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+            <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по игроку, группе, стадии или заметке" className="pl-10" />
+          </div>
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-11 rounded-xl border border-white/10 bg-white/5 px-4 text-sm text-white">
+            <option value="all">Все статусы</option>
+            {Object.values(MatchStatus).map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
+          </select>
+          <select value={roundFilter} onChange={(event) => setRoundFilter(event.target.value)} className="h-11 rounded-xl border border-white/10 bg-white/5 px-4 text-sm text-white">
+            <option value="all">Все раунды</option>
+            {rounds.map((round) => (
+              <option key={round} value={round}>
+                Раунд {round}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {rounds.map((round) => {
-        const roundMatches = orderedMatches.filter((match) => match.round === round).sort((a, b) => a.matchNumber - b.matchNumber);
+        const roundMatches = visibleMatches.filter((match) => match.round === round).sort((a, b) => a.matchNumber - b.matchNumber);
+        if (!roundMatches.length) return null;
 
         return (
           <div key={round} className="space-y-4">
@@ -269,6 +319,10 @@ export function MatchManager({
           </div>
         );
       })}
+
+      {!visibleMatches.length ? (
+        <div className="rounded-[2rem] border border-dashed border-white/10 bg-black/10 p-5 text-sm text-zinc-500">По текущим фильтрам матчи не найдены.</div>
+      ) : null}
     </div>
   );
 }

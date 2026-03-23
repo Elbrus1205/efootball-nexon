@@ -2,6 +2,7 @@ import { MatchResultStatus, UserRole } from "@prisma/client";
 import { AlertTriangle, CheckCircle2, Eye, FileClock, History, XCircle } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AuditDiff } from "@/components/admin/audit-diff";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,10 +34,7 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
 
   const actions = await db.adminAction.findMany({
     where: {
-      OR: [
-        { entityId: match.id },
-        { tournamentId: match.tournamentId, entityType: "MATCH_REVIEW" },
-      ],
+      OR: [{ entityId: match.id }, { tournamentId: match.tournamentId, entityType: "MATCH_REVIEW" }],
     },
     include: {
       admin: true,
@@ -198,7 +196,7 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
                 <History className="h-5 w-5 text-primary" />
                 Audit Timeline
               </CardTitle>
-              <CardDescription>Все действия администраторов по этому матчу и ближайшим решениям модерации.</CardDescription>
+              <CardDescription>История действий модераторов с before/after diff по решениям.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {actions.length ? (
@@ -210,6 +208,9 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
                     </div>
                     <div className="mt-2 text-sm text-zinc-400">{action.admin.nickname ?? action.admin.name ?? action.admin.email ?? "Администратор"}</div>
                     <div className="mt-1 text-xs uppercase tracking-[0.18em] text-zinc-500">{formatDate(action.createdAt)}</div>
+                    <div className="mt-3">
+                      <AuditDiff before={action.beforeJson} after={action.afterJson} />
+                    </div>
                   </div>
                 ))
               ) : (
