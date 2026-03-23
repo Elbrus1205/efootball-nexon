@@ -1,20 +1,13 @@
 import Link from "next/link";
-import { TournamentStatus, UserRole } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 import { Eye, Layers3, Plus } from "lucide-react";
-import { requireRole } from "@/lib/auth/session";
-import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { playoffTypeLabel, tournamentFormatLabel, tournamentStatusLabel, tournamentStatusVariant } from "@/lib/admin-display";
+import { requireRole } from "@/lib/auth/session";
+import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
-
-const statusVariant: Record<TournamentStatus, "primary" | "accent" | "neutral" | "success" | "danger"> = {
-  DRAFT: "neutral",
-  REGISTRATION_OPEN: "primary",
-  REGISTRATION_CLOSED: "accent",
-  IN_PROGRESS: "success",
-  COMPLETED: "neutral",
-};
 
 export default async function AdminTournamentsPage() {
   await requireRole([UserRole.ADMIN]);
@@ -58,9 +51,9 @@ export default async function AdminTournamentsPage() {
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="font-medium text-white">{tournament.title}</div>
-                  <Badge variant={statusVariant[tournament.status]}>{tournament.status}</Badge>
-                  <Badge variant="neutral">{tournament.format}</Badge>
-                  {tournament.playoffType ? <Badge variant="accent">{tournament.playoffType}</Badge> : null}
+                  <Badge variant={tournamentStatusVariant[tournament.status]}>{tournamentStatusLabel[tournament.status]}</Badge>
+                  <Badge variant="neutral">{tournamentFormatLabel[tournament.format]}</Badge>
+                  {tournament.playoffType ? <Badge variant="accent">{playoffTypeLabel[tournament.playoffType]}</Badge> : null}
                 </div>
                 <p className="max-w-3xl text-sm leading-6 text-zinc-400">{tournament.description}</p>
                 <div className="flex flex-wrap gap-4 text-sm text-zinc-500">
@@ -112,9 +105,7 @@ export default async function AdminTournamentsPage() {
         ))}
       </div>
 
-      {!tournaments.length ? (
-        <Card className="p-6 text-sm text-zinc-500">Первый турнир можно собрать через конструктор: формат, стадии, участники и расписание.</Card>
-      ) : null}
+      {!tournaments.length ? <Card className="p-6 text-sm text-zinc-500">Первый турнир можно собрать через конструктор: формат, стадии, участники и расписание.</Card> : null}
     </div>
   );
 }

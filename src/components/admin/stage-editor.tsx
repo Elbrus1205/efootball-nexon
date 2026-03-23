@@ -3,6 +3,7 @@
 import { GripVertical, MoveLeft, MoveRight } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { stageStatusLabel, stageTypeLabel } from "@/lib/admin-display";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,19 +19,6 @@ type StageItem = {
   participantsPerGroup: number | null;
   advancingPerGroup: number | null;
   roundsCount: number | null;
-};
-
-const statusLabels: Record<string, string> = {
-  DRAFT: "Черновик",
-  PENDING: "Ожидает",
-  ACTIVE: "Активен",
-  COMPLETED: "Завершён",
-};
-
-const stageTypeLabels: Record<string, string> = {
-  LEAGUE: "Лига",
-  GROUP_STAGE: "Группы",
-  PLAYOFF: "Плей-офф",
 };
 
 export function StageEditor({ tournamentId, stages }: { tournamentId: string; stages: StageItem[] }) {
@@ -127,12 +115,12 @@ export function StageEditor({ tournamentId, stages }: { tournamentId: string; st
                       </div>
                     </div>
                     <Badge variant={stage.status === "ACTIVE" ? "accent" : stage.status === "COMPLETED" ? "success" : "neutral"}>
-                      {statusLabels[stage.status] ?? stage.status}
+                      {stageStatusLabel[stage.status as keyof typeof stageStatusLabel] ?? stage.status}
                     </Badge>
                   </div>
 
                   <div className="flex flex-wrap gap-2 text-xs text-zinc-400">
-                    <Badge variant="primary">{stageTypeLabels[stage.type] ?? stage.type}</Badge>
+                    <Badge variant="primary">{stageTypeLabel[stage.type as keyof typeof stageTypeLabel] ?? stage.type}</Badge>
                     {stage.groupsCount ? <span>{stage.groupsCount} групп</span> : null}
                     {stage.participantsPerGroup ? <span>{stage.participantsPerGroup} в группе</span> : null}
                     {stage.advancingPerGroup ? <span>выходят {stage.advancingPerGroup}</span> : null}
@@ -154,7 +142,7 @@ export function StageEditor({ tournamentId, stages }: { tournamentId: string; st
               <div className="space-y-3">
                 <Input defaultValue={stage.name} disabled={pending} onBlur={(event) => updateStage(stage.id, { name: event.target.value })} />
                 <div className="flex flex-wrap gap-3 text-sm text-zinc-500">
-                  <span>{stageTypeLabels[stage.type] ?? stage.type}</span>
+                  <span>{stageTypeLabel[stage.type as keyof typeof stageTypeLabel] ?? stage.type}</span>
                   <span>Порядок: {orderedStages.findIndex((item) => item.id === stage.id) + 1}</span>
                   {stage.groupsCount ? <span>Групп: {stage.groupsCount}</span> : null}
                   {stage.participantsPerGroup ? <span>Игроков в группе: {stage.participantsPerGroup}</span> : null}
@@ -176,13 +164,8 @@ export function StageEditor({ tournamentId, stages }: { tournamentId: string; st
                 </div>
                 <div className="flex flex-wrap justify-end gap-2">
                   {["DRAFT", "PENDING", "ACTIVE", "COMPLETED"].map((status) => (
-                    <Button
-                      key={status}
-                      variant={stage.status === status ? "default" : "outline"}
-                      disabled={pending}
-                      onClick={() => updateStage(stage.id, { status })}
-                    >
-                      {statusLabels[status] ?? status}
+                    <Button key={status} variant={stage.status === status ? "default" : "outline"} disabled={pending} onClick={() => updateStage(stage.id, { status })}>
+                      {stageStatusLabel[status as keyof typeof stageStatusLabel] ?? status}
                     </Button>
                   ))}
                 </div>

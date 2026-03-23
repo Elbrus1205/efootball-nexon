@@ -3,6 +3,8 @@
 import { ParticipantStatus } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { participantStatusLabel } from "@/lib/admin-display";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 type ParticipantItem = {
@@ -74,11 +76,7 @@ export function ParticipantManager({
     <div className="space-y-6">
       <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
         <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
-          <select
-            value={selectedUserId}
-            onChange={(event) => setSelectedUserId(event.target.value)}
-            className="h-11 rounded-xl border border-white/10 bg-white/5 px-4 text-white"
-          >
+          <select value={selectedUserId} onChange={(event) => setSelectedUserId(event.target.value)} className="h-11 rounded-xl border border-white/10 bg-white/5 px-4 text-white">
             {users.map((user) => (
               <option key={user.id} value={user.id}>
                 {user.nickname ?? user.name ?? user.email ?? user.id}
@@ -100,8 +98,10 @@ export function ParticipantManager({
             <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
               <div>
                 <div className="font-medium text-white">{participant.user.nickname ?? participant.user.name ?? participant.user.email}</div>
-                <div className="mt-1 text-sm text-zinc-500">
-                  {participant.status} {participant.group ? `• ${participant.group.name}` : "• Без группы"} {participant.seed ? `• Seed ${participant.seed}` : ""}
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
+                  <Badge variant="neutral">{participantStatusLabel[participant.status]}</Badge>
+                  <span>{participant.group ? participant.group.name : "Без группы"}</span>
+                  {participant.seed ? <span>Seed {participant.seed}</span> : null}
                 </div>
               </div>
 
@@ -139,7 +139,7 @@ export function ParticipantManager({
                 >
                   {Object.values(ParticipantStatus).map((status) => (
                     <option key={status} value={status}>
-                      {status}
+                      {participantStatusLabel[status]}
                     </option>
                   ))}
                 </select>

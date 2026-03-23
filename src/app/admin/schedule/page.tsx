@@ -76,11 +76,7 @@ export default async function AdminSchedulePage() {
         </Card>
       </div>
 
-      {days.length ? (
-        <ScheduleCalendar days={days} />
-      ) : (
-        <Card className="p-5 text-sm text-zinc-500">После генерации расписания здесь появится drag-and-drop board по дням и слотам.</Card>
-      )}
+      {days.length ? <ScheduleCalendar days={days} /> : <Card className="p-5 text-sm text-zinc-500">После генерации расписания здесь появится drag-and-drop board по дням и слотам.</Card>}
     </div>
   );
 }

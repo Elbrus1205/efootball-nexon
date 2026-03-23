@@ -1,39 +1,39 @@
 import Link from "next/link";
-import { AdminActionType, MatchStatus, TournamentStatus, UserRole } from "@prisma/client";
+import { AdminActionType, TournamentStatus, UserRole } from "@prisma/client";
 import { Activity, CalendarDays, ShieldCheck, Swords, Trophy, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { adminActionLabel, matchStatusLabel, matchStatusVariant } from "@/lib/admin-display";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 
 export default async function AdminPage() {
   await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
 
   const now = new Date();
-  const [totalTournaments, activeTournaments, completedTournaments, totalParticipants, upcomingMatches, recentActions] =
-    await db.$transaction([
-      db.tournament.count(),
-      db.tournament.count({ where: { status: { in: [TournamentStatus.REGISTRATION_OPEN, TournamentStatus.IN_PROGRESS] } } }),
-      db.tournament.count({ where: { status: TournamentStatus.COMPLETED } }),
-      db.tournamentRegistration.count({ where: { status: "CONFIRMED" } }),
-      db.match.findMany({
-        where: { scheduledAt: { gte: now } },
-        include: {
-          tournament: true,
-          player1: true,
-          player2: true,
-        },
-        orderBy: { scheduledAt: "asc" },
-        take: 5,
-      }),
-      db.adminAction.findMany({
-        include: { admin: true, tournament: true },
-        orderBy: { createdAt: "desc" },
-        take: 6,
-      }),
-    ]);
+  const [totalTournaments, activeTournaments, completedTournaments, totalParticipants, upcomingMatches, recentActions] = await db.$transaction([
+    db.tournament.count(),
+    db.tournament.count({ where: { status: { in: [TournamentStatus.REGISTRATION_OPEN, TournamentStatus.IN_PROGRESS] } } }),
+    db.tournament.count({ where: { status: TournamentStatus.COMPLETED } }),
+    db.tournamentRegistration.count({ where: { status: "CONFIRMED" } }),
+    db.match.findMany({
+      where: { scheduledAt: { gte: now } },
+      include: {
+        tournament: true,
+        player1: true,
+        player2: true,
+      },
+      orderBy: { scheduledAt: "asc" },
+      take: 5,
+    }),
+    db.adminAction.findMany({
+      include: { admin: true, tournament: true },
+      orderBy: { createdAt: "desc" },
+      take: 6,
+    }),
+  ]);
 
   const stats = [
     { label: "Всего турниров", value: totalTournaments, icon: Trophy },
@@ -83,7 +83,7 @@ export default async function AdminPage() {
                         {(match.player1?.nickname ?? match.player1?.name ?? "TBD")} vs {(match.player2?.nickname ?? match.player2?.name ?? "TBD")}
                       </div>
                     </div>
-                    <Badge variant={match.status === MatchStatus.DISPUTED ? "accent" : "primary"}>{match.status}</Badge>
+                    <Badge variant={matchStatusVariant[match.status] ?? "neutral"}>{matchStatusLabel[match.status] ?? match.status}</Badge>
                   </div>
                   <div className="mt-3 flex items-center gap-2 text-sm text-zinc-400">
                     <CalendarDays className="h-4 w-4 text-primary" />
@@ -92,9 +92,7 @@ export default async function AdminPage() {
                 </div>
               ))
             ) : (
-              <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-4 text-sm text-zinc-500">
-                Ближайшие матчи появятся после генерации расписания.
-              </div>
+              <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-4 text-sm text-zinc-500">Ближайшие матчи появятся после генерации расписания.</div>
             )}
           </CardContent>
         </Card>
@@ -128,18 +126,14 @@ export default async function AdminPage() {
               <div key={action.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="font-medium text-white">{action.tournament?.title ?? action.entityType}</div>
-                  <Badge variant={action.actionType === AdminActionType.APPROVE ? "success" : "neutral"}>{action.actionType}</Badge>
+                  <Badge variant={action.actionType === AdminActionType.APPROVE ? "success" : "neutral"}>{adminActionLabel[action.actionType]}</Badge>
                 </div>
-                <div className="mt-2 text-sm text-zinc-400">
-                  {action.admin.nickname ?? action.admin.name ?? action.admin.email ?? "Администратор"}
-                </div>
+                <div className="mt-2 text-sm text-zinc-400">{action.admin.nickname ?? action.admin.name ?? action.admin.email ?? "Администратор"}</div>
                 <div className="mt-2 text-sm text-zinc-500">{formatDate(action.createdAt)}</div>
               </div>
             ))
           ) : (
-            <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-4 text-sm text-zinc-500">
-              Лента действий начнёт заполняться после операций с турнирами и матчами.
-            </div>
+            <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-4 text-sm text-zinc-500">Лента действий начнёт заполняться после операций с турнирами и матчами.</div>
           )}
         </CardContent>
       </Card>

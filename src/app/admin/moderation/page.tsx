@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { matchStatusLabel, matchStatusVariant, resultSubmissionLabel, resultSubmissionVariant } from "@/lib/admin-display";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
@@ -32,7 +33,10 @@ export default async function AdminModerationPage() {
             {submission.match.player1?.nickname ?? submission.match.player1?.name} vs {submission.match.player2?.nickname ?? submission.match.player2?.name}
           </div>
         </div>
-        <Badge variant={submission.match.status === "DISPUTED" ? "danger" : "accent"}>{submission.match.status}</Badge>
+        <div className="flex flex-col items-end gap-2">
+          <Badge variant={matchStatusVariant[submission.match.status] ?? "neutral"}>{matchStatusLabel[submission.match.status] ?? submission.match.status}</Badge>
+          <Badge variant={resultSubmissionVariant[submission.status]}>{resultSubmissionLabel[submission.status]}</Badge>
+        </div>
       </div>
 
       <div className="text-sm text-zinc-300">Счёт: {submission.player1Score} : {submission.player2Score}</div>

@@ -1,20 +1,12 @@
 import Link from "next/link";
-import { MatchStatus, UserRole } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 import { CalendarDays, Trophy } from "lucide-react";
-import { requireRole } from "@/lib/auth/session";
-import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { requireRole } from "@/lib/auth/session";
+import { matchStatusLabel, matchStatusVariant } from "@/lib/admin-display";
+import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
-
-const statusVariant: Partial<Record<MatchStatus, "primary" | "accent" | "neutral" | "success" | "danger">> = {
-  PENDING: "neutral",
-  READY: "primary",
-  RESULT_SUBMITTED: "accent",
-  CONFIRMED: "success",
-  REJECTED: "danger",
-  FORFEIT: "danger",
-};
 
 export default async function AdminMatchesPage() {
   await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
@@ -48,7 +40,7 @@ export default async function AdminMatchesPage() {
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="font-medium text-white">{match.tournament.title}</div>
-                    <Badge variant={statusVariant[match.status] ?? "neutral"}>{match.status}</Badge>
+                    <Badge variant={matchStatusVariant[match.status] ?? "neutral"}>{matchStatusLabel[match.status] ?? match.status}</Badge>
                     {match.stage ? <Badge>{match.stage.name}</Badge> : null}
                     {match.group ? <Badge variant="neutral">{match.group.name}</Badge> : null}
                   </div>
@@ -68,18 +60,15 @@ export default async function AdminMatchesPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
+                  <Link href={`/admin/matches/${match.id}`} className="inline-flex min-h-11 items-center rounded-xl bg-primary px-4 text-sm text-white transition hover:bg-primary/90">
+                    Workspace матча
+                  </Link>
                   <Link
                     href={`/tournaments/${match.tournamentId}`}
                     className="inline-flex min-h-11 items-center rounded-xl border border-white/10 px-4 text-sm text-zinc-300 transition hover:bg-white/5 hover:text-white"
                   >
                     Страница турнира
                   </Link>
-                  <button className="inline-flex min-h-11 items-center rounded-xl bg-primary px-4 text-sm text-white">
-                    Изменить матч
-                  </button>
-                  <button className="inline-flex min-h-11 items-center rounded-xl border border-white/10 px-4 text-sm text-zinc-300">
-                    Поставить результат
-                  </button>
                 </div>
               </div>
             </Card>

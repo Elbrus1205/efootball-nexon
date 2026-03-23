@@ -1,9 +1,9 @@
 import { StageType, UserRole } from "@prisma/client";
 import { notFound } from "next/navigation";
+import { ParticipantManager } from "@/components/admin/participant-manager";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ParticipantManager } from "@/components/admin/participant-manager";
 
 export default async function AdminTournamentParticipantsPage({ params }: { params: { id: string } }) {
   await requireRole([UserRole.ADMIN]);
@@ -42,12 +42,7 @@ export default async function AdminTournamentParticipantsPage({ params }: { para
         </CardHeader>
       </Card>
 
-      <ParticipantManager
-        tournamentId={tournament.id}
-        participants={tournament.participants}
-        groups={tournament.stages.flatMap((stage) => stage.groups)}
-        users={users}
-      />
+      <ParticipantManager tournamentId={tournament.id} participants={tournament.participants} groups={tournament.stages.flatMap((stage) => stage.groups)} users={users} />
     </div>
   );
 }
