@@ -19,6 +19,7 @@ type SlotItem = {
   matchNumber: number;
   slotNumber: number;
   participantId: string | null;
+  sourceRef?: string | null;
 };
 
 type MatchItem = {
@@ -85,7 +86,7 @@ export function BracketEditor({
         <Button variant="secondary" disabled={pending} onClick={generateFromGroups}>
           Заполнить из групп
         </Button>
-        <div className="text-sm text-zinc-500">Участника можно перетащить из пула слева в любой слот сетки.</div>
+        <div className="text-sm text-zinc-500">Участника можно перетащить из пула слева в любой слот сетки или очистить слот вручную.</div>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[260px_1fr]">
@@ -142,7 +143,10 @@ export function BracketEditor({
                             )}
                           >
                             <div className="flex items-center justify-between gap-2">
-                              <div>{participant ? participant.user.nickname ?? participant.user.name ?? participant.id : `Слот ${slotNumber}`}</div>
+                              <div className="space-y-1">
+                                <div>{participant ? participant.user.nickname ?? participant.user.name ?? participant.id : `Слот ${slotNumber}`}</div>
+                                {slot?.sourceRef ? <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-400">{slot.sourceRef}</div> : null}
+                              </div>
                               {participant ? (
                                 <button
                                   className="text-xs text-zinc-400 hover:text-white"

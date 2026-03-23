@@ -126,6 +126,18 @@ export const bracketSlotSchema = z.object({
   sourceRef: z.string().optional().or(z.literal("")),
 });
 
+export const playoffMappingSchema = z.object({
+  bracketId: z.string(),
+  mappings: z.array(
+    z.object({
+      round: z.coerce.number().min(1),
+      matchNumber: z.coerce.number().min(1),
+      slotNumber: z.coerce.number().min(1).max(2),
+      sourceRef: z.string().optional().or(z.literal("")),
+    }),
+  ),
+});
+
 export const stageUpdateSchema = z.object({
   stageId: z.string(),
   name: z.string().min(2).optional(),

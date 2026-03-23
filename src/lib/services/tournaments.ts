@@ -9,6 +9,10 @@ import {
   TournamentStatus,
 } from "@prisma/client";
 import { db } from "@/lib/db";
+
+function createGroupSourceRef(groupId: string, rank: number) {
+  return `group:${groupId}:rank:${rank}`;
+}
 import { createNotification } from "@/lib/services/notifications";
 
 function nextPowerOfTwo(value: number) {
@@ -617,23 +621,15 @@ export async function generatePlayoffFromGroups(tournamentId: string) {
   const playoffStage = tournament.stages.find((stage) => stage.type === StageType.PLAYOFF);
   if (!groupStage || !playoffStage?.bracket) throw new Error("Stages for groups/playoff are not configured");
 
-  const advancingPerGroup = groupStage.advancingPerGroup ?? 2;
-  const qualified = groupStage.groups.flatMap((group) =>
-    group.standings
-      .filter((standing) => (standing.rank ?? 999) <= advancingPerGroup)
-      .map((standing) => ({
-        groupOrder: group.orderIndex,
-        rank: standing.rank ?? 999,
-        participantId: standing.participantId,
-      })),
-  );
-
-  const ordered = qualified.sort((a, b) => {
-    if (a.rank !== b.rank) return a.rank - b.rank;
-    return a.groupOrder - b.groupOrder;
+  const roundOneMatches = await db.match.findMany({
+    where: {
+      bracketId: playoffStage.bracket.id,
+      round: 1,
+      bracket: "upper",
+    },
+    orderBy: { matchNumber: "asc" },
   });
 
-  await db.bracketSlot.deleteMany({ where: { bracketId: playoffStage.bracket.id } });
   await db.match.updateMany({
     where: { bracketId: playoffStage.bracket.id, round: 1 },
     data: {
@@ -644,16 +640,65 @@ export async function generatePlayoffFromGroups(tournamentId: string) {
     },
   });
 
+  const existingRoundOneMappings = await db.bracketSlot.findMany({
+    where: {
+      bracketId: playoffStage.bracket.id,
+      round: 1,
+      sourceType: "GROUP_RESULTS",
+      sourceRef: { not: null },
+    },
+    orderBy: [{ matchNumber: "asc" }, { slotNumber: "asc" }],
+  });
+
+  const mappedSlots =
+    existingRoundOneMappings.length > 0
+      ? existingRoundOneMappings.map((slot) => ({
+          round: slot.round,
+          matchNumber: slot.matchNumber,
+          slotNumber: slot.slotNumber,
+          sourceRef: slot.sourceRef!,
+        }))
+      : (() => {
+          const advancingPerGroup = groupStage.advancingPerGroup ?? 2;
+          const qualified = groupStage.groups.flatMap((group) =>
+            group.standings
+              .filter((standing) => (standing.rank ?? 999) <= advancingPerGroup)
+              .map((standing) => ({
+                groupId: group.id,
+                rank: standing.rank ?? 999,
+                participantId: standing.participantId,
+              })),
+          );
+
+          const ordered = qualified.sort((a, b) => a.rank - b.rank);
+
+          return ordered.map((item, index) => ({
+            round: 1,
+            matchNumber: Math.floor(index / 2) + 1,
+            slotNumber: (index % 2) + 1,
+            sourceRef: createGroupSourceRef(item.groupId, item.rank),
+          }));
+        })();
+
+  const standingMap = new Map(
+    groupStage.groups.flatMap((group) =>
+      group.standings.map((standing) => [createGroupSourceRef(group.id, standing.rank ?? 999), standing.participantId]),
+    ),
+  );
+
   await Promise.all(
-    ordered.map((item, index) =>
-      setBracketSlot({
-        bracketId: playoffStage.bracket!.id,
-        round: 1,
-        matchNumber: Math.floor(index / 2) + 1,
-        slotNumber: (index % 2) + 1,
-        participantId: item.participantId,
-        sourceType: "GROUP_RESULTS",
-        sourceRef: `group-rank-${item.groupOrder}-${item.rank}`,
+    roundOneMatches.flatMap((match) =>
+      [1, 2].map((slotNumber) => {
+        const mapping = mappedSlots.find((item) => item.matchNumber === match.matchNumber && item.slotNumber === slotNumber);
+        return setBracketSlot({
+          bracketId: playoffStage.bracket!.id,
+          round: 1,
+          matchNumber: match.matchNumber,
+          slotNumber,
+          participantId: mapping?.sourceRef ? standingMap.get(mapping.sourceRef) ?? null : null,
+          sourceType: mapping?.sourceRef ? "GROUP_RESULTS" : "MANUAL",
+          sourceRef: mapping?.sourceRef ?? undefined,
+        });
       }),
     ),
   );
@@ -662,6 +707,62 @@ export async function generatePlayoffFromGroups(tournamentId: string) {
     where: { id: playoffStage.bracket.id },
     include: { slots: { include: { participant: { include: { user: true } } } } },
   });
+}
+
+export async function savePlayoffMapping(input: {
+  tournamentId: string;
+  bracketId: string;
+  mappings: Array<{
+    round: number;
+    matchNumber: number;
+    slotNumber: number;
+    sourceRef?: string | null;
+  }>;
+}) {
+  const tournament = await db.tournament.findUnique({
+    where: { id: input.tournamentId },
+    include: {
+      stages: {
+        where: { type: StageType.GROUP_STAGE },
+        include: {
+          groups: {
+            include: {
+              standings: {
+                orderBy: { rank: "asc" },
+              },
+            },
+            orderBy: { orderIndex: "asc" },
+          },
+        },
+      },
+    },
+  });
+
+  if (!tournament) throw new Error("Tournament not found");
+  const groupStage = tournament.stages[0];
+  if (!groupStage) throw new Error("Group stage not found");
+
+  const standingMap = new Map(
+    groupStage.groups.flatMap((group) =>
+      group.standings.map((standing) => [createGroupSourceRef(group.id, standing.rank ?? 999), standing.participantId]),
+    ),
+  );
+
+  const saved = await Promise.all(
+    input.mappings.map((mapping) =>
+      setBracketSlot({
+        bracketId: input.bracketId,
+        round: mapping.round,
+        matchNumber: mapping.matchNumber,
+        slotNumber: mapping.slotNumber,
+        participantId: mapping.sourceRef ? standingMap.get(mapping.sourceRef) ?? null : null,
+        sourceType: mapping.sourceRef ? "GROUP_RESULTS" : "MANUAL",
+        sourceRef: mapping.sourceRef ?? undefined,
+      }),
+    ),
+  );
+
+  return saved;
 }
 
 export async function setBracketSlot(input: {
