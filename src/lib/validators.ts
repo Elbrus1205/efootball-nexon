@@ -184,6 +184,10 @@ export const matchUpdateSchema = z.object({
   notes: z.string().max(1000).optional().or(z.literal("")),
 });
 
+export const matchReorderSchema = z.object({
+  matchIds: z.array(z.string()).min(1),
+});
+
 export const roleSchema = z.object({
   role: z.nativeEnum(UserRole),
 });

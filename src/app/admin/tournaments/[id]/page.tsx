@@ -106,6 +106,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
           </CardHeader>
           <CardContent>
             <MatchManager
+              tournamentId={tournament.id}
               matches={tournament.matches.map((match) => ({
                 ...match,
                 scheduledAt: match.scheduledAt?.toISOString() ?? null,

@@ -1,5 +1,5 @@
 import { MatchResultStatus, UserRole } from "@prisma/client";
-import { AlertTriangle, CheckCircle2, Eye, FileClock, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Eye, FileClock, History, XCircle } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,20 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
 
   if (!match) notFound();
 
+  const actions = await db.adminAction.findMany({
+    where: {
+      OR: [
+        { entityId: match.id },
+        { tournamentId: match.tournamentId, entityType: "MATCH_REVIEW" },
+      ],
+    },
+    include: {
+      admin: true,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 12,
+  });
+
   const latestSubmission = match.submissions[0];
   const pendingCount = match.submissions.filter((submission) => submission.status === MatchResultStatus.PENDING).length;
 
@@ -60,7 +74,9 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
           <CardContent className="grid gap-4 md:grid-cols-3">
             <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
               <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Статус матча</div>
-              <div className="mt-2"><Badge variant={match.status === "DISPUTED" ? "danger" : "accent"}>{match.status}</Badge></div>
+              <div className="mt-2">
+                <Badge variant={match.status === "DISPUTED" ? "danger" : "accent"}>{match.status}</Badge>
+              </div>
             </div>
             <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
               <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Отправок результата</div>
@@ -93,7 +109,7 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
         </Card>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
         <Card>
           <CardHeader>
             <CardTitle>Таймлайн отправок</CardTitle>
@@ -173,6 +189,32 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
                   Перевести в спор
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5 text-primary" />
+                Audit Timeline
+              </CardTitle>
+              <CardDescription>Все действия администраторов по этому матчу и ближайшим решениям модерации.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {actions.length ? (
+                actions.map((action) => (
+                  <div key={action.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="font-medium text-white">{action.entityType}</div>
+                      <Badge variant="neutral">{action.actionType}</Badge>
+                    </div>
+                    <div className="mt-2 text-sm text-zinc-400">{action.admin.nickname ?? action.admin.name ?? action.admin.email ?? "Администратор"}</div>
+                    <div className="mt-1 text-xs uppercase tracking-[0.18em] text-zinc-500">{formatDate(action.createdAt)}</div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-4 text-sm text-zinc-500">Для этого матча ещё нет записей в audit panel.</div>
+              )}
             </CardContent>
           </Card>
 

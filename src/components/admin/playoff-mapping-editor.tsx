@@ -2,9 +2,11 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 type MappingSource = {
   groupId: string;
@@ -89,8 +91,7 @@ export function PlayoffMappingEditor({
           <Badge variant="accent">Group to Playoff</Badge>
           <CardTitle>Visual Mapping выхода в сетку</CardTitle>
           <CardDescription>
-            Администратор задаёт, кто именно попадает в каждый слот первого раунда. Схема сохраняется в виде
-            источников уровня A1 - B2 и затем используется при автозаполнении плей-офф.
+            Схема задаёт, какое место из каждой группы попадает в конкретный слот первого раунда. Это уже не просто список слотов, а визуальная связка между таблицами групп и bracket.
           </CardDescription>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -103,7 +104,7 @@ export function PlayoffMappingEditor({
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-6">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {sources.map((source) => (
             <div key={source.sourceRef} className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
@@ -116,30 +117,37 @@ export function PlayoffMappingEditor({
           ))}
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="grid gap-4">
           {matches.map((matchNumber) => {
             const slot1 = selection[`${matchNumber}-1`] ?? "";
             const slot2 = selection[`${matchNumber}-2`] ?? "";
-            const preview = [sourceMap.get(slot1)?.label, sourceMap.get(slot2)?.label].filter(Boolean).join(" vs ");
+            const source1 = sourceMap.get(slot1);
+            const source2 = sourceMap.get(slot2);
 
             return (
               <div key={matchNumber} className="rounded-[1.75rem] border border-white/10 bg-white/[0.04] p-5">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div>
                     <div className="text-sm uppercase tracking-[0.24em] text-zinc-500">Match {matchNumber}</div>
-                    <div className="mt-1 text-lg font-semibold text-white">{preview || "Слот для пары ещё не настроен"}</div>
+                    <div className="mt-1 text-lg font-semibold text-white">
+                      {(source1?.label && source2?.label ? `${source1.label} vs ${source2.label}` : "Пара ещё не собрана")}
+                    </div>
                   </div>
                   <Badge variant="neutral">Раунд 1</Badge>
                 </div>
 
-                <div className="space-y-3">
+                <div className="grid gap-4 xl:grid-cols-[1fr_auto_1fr]">
                   {[1, 2].map((slotNumber) => {
                     const key = `${matchNumber}-${slotNumber}`;
                     const currentValue = selection[key] ?? "";
+                    const currentSource = sourceMap.get(currentValue);
 
                     return (
-                      <label key={key} className="block space-y-2">
-                        <div className="text-sm text-zinc-400">Слот {slotNumber}</div>
+                      <div key={key} className={cn("space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4", currentSource && "border-primary/20 bg-primary/10")}>
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-sm text-zinc-400">Слот {slotNumber}</div>
+                          {currentSource ? <Badge variant="accent">{currentSource.label}</Badge> : null}
+                        </div>
                         <select
                           value={currentValue}
                           onChange={(event) =>
@@ -160,9 +168,22 @@ export function PlayoffMappingEditor({
                             );
                           })}
                         </select>
-                      </label>
+                        <div className="text-sm text-zinc-400">{currentSource?.participantName ?? "Игрок определится после завершения группы."}</div>
+                      </div>
                     );
                   })}
+
+                  <div className="flex items-center justify-center">
+                    <div className="flex min-w-[180px] flex-col items-center gap-3 rounded-[1.75rem] border border-primary/20 bg-primary/10 px-6 py-6 text-center">
+                      <div className="text-xs uppercase tracking-[0.22em] text-primary">Bracket Slot</div>
+                      <div className="text-base font-semibold text-white">Match {matchNumber}</div>
+                      <div className="flex items-center gap-2 text-zinc-300">
+                        <span>{source1?.label ?? "TBD"}</span>
+                        <ArrowRight className="h-4 w-4 text-primary" />
+                        <span>{source2?.label ?? "TBD"}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             );
