@@ -1,7 +1,7 @@
 "use client";
 
 import { GripVertical, MoveLeft, MoveRight } from "lucide-react";
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,8 +38,6 @@ export function StageEditor({ tournamentId, stages }: { tournamentId: string; st
   const [pending, startTransition] = useTransition();
   const [orderedStages, setOrderedStages] = useState(stages);
   const [draggedStageId, setDraggedStageId] = useState<string | null>(null);
-
-  const stageMap = useMemo(() => new Map(orderedStages.map((stage) => [stage.id, stage])), [orderedStages]);
 
   const updateStage = (stageId: string, payload: Record<string, unknown>) => {
     startTransition(async () => {
