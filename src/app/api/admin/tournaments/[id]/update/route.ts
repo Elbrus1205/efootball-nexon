@@ -77,5 +77,6 @@ export async function POST(request: Request, { params }: { params: { id: string 
     },
   });
 
-  return NextResponse.redirect(new URL(`/admin/tournaments`, process.env.NEXTAUTH_URL));
+  const origin = new URL(request.url).origin;
+  return NextResponse.redirect(new URL("/admin/tournaments?updated=1", origin), 303);
 }

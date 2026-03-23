@@ -1,6 +1,7 @@
 import { UserRole } from "@prisma/client";
 import { Blocks, CalendarDays, GitBranch, Settings2, Users } from "lucide-react";
 import { requireRole } from "@/lib/auth/session";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TournamentBuilderForm } from "@/components/admin/tournament-builder-form";
@@ -9,7 +10,7 @@ const steps = [
   {
     icon: Blocks,
     title: "1. Базовая информация",
-    description: "Название, описание, статус, даты, лимит участников, правила, обложка и сезон.",
+    description: "Название, описание, статус, даты, лимит участников, правила, обложка и общая подача турнира.",
   },
   {
     icon: GitBranch,
@@ -33,23 +34,37 @@ const steps = [
   },
 ];
 
-export default async function AdminTournamentBuilderPage() {
+export default async function AdminTournamentBuilderPage({
+  searchParams,
+}: {
+  searchParams?: { error?: string };
+}) {
   await requireRole([UserRole.ADMIN]);
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="primary">Tournament Builder</Badge>
+            <Badge variant="neutral">Admin Only</Badge>
+          </div>
           <CardTitle>Конструктор турнира</CardTitle>
-          <CardDescription>
-            Новый мастер создания под лигу, группы, плей-офф и комбинированные форматы. Это рабочий каркас под дальнейшее расширение форм и API.
-          </CardDescription>
+          <CardDescription>Новый мастер создания под лигу, группы, плей-офф и комбинированные форматы.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
-          <Button>Начать создание</Button>
-          <Button variant="secondary">Сохранить как черновик</Button>
+          <Button type="button">Новый сценарий</Button>
+          <Button type="button" variant="secondary">
+            Сохранить как черновик
+          </Button>
         </CardContent>
       </Card>
+
+      {searchParams?.error ? (
+        <Card className="border-danger/30 bg-danger/10">
+          <CardContent className="p-5 text-sm text-red-100">{searchParams.error}</CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {steps.map((step) => (
