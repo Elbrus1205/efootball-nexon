@@ -1,5 +1,5 @@
 import { MatchResultStatus, UserRole } from "@prisma/client";
-import { AlertTriangle, CheckCircle2, Eye, FileClock, History, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Eye, ExternalLink, FileClock, History, XCircle } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AuditDiff } from "@/components/admin/audit-diff";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { adminActionLabel, adminEntityLabel, matchStatusLabel, matchStatusVariant, resultSubmissionLabel, resultSubmissionVariant } from "@/lib/admin-display";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
@@ -50,15 +51,26 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-2">
-          <div className="text-sm uppercase tracking-[0.24em] text-primary">Dispute Workspace</div>
+          <div className="text-sm uppercase tracking-[0.24em] text-primary">Dispute workspace</div>
           <h1 className="font-display text-3xl font-thin text-white">Матч под модерацией</h1>
           <p className="max-w-3xl text-sm text-zinc-400">
-            Единое рабочее пространство для проверки доказательств, просмотра истории отправок и принятия решения по матчу.
+            Единое рабочее пространство для проверки доказательств, истории отправок и принятия решения по спорному матчу.
           </p>
         </div>
-        <Button variant="outline" asChild>
-          <Link href="/admin/moderation">Назад к очереди</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" asChild>
+            <Link href={`/admin/matches/${match.id}`}>Match workspace</Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href={`/tournaments/${match.tournamentId}`}>
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Турнир
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/admin/moderation">Назад к очереди</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
@@ -73,7 +85,7 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
             <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
               <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Статус матча</div>
               <div className="mt-2">
-                <Badge variant={match.status === "DISPUTED" ? "danger" : "accent"}>{match.status}</Badge>
+                <Badge variant={matchStatusVariant[match.status] ?? "neutral"}>{matchStatusLabel[match.status] ?? match.status}</Badge>
               </div>
             </div>
             <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
@@ -89,8 +101,8 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
 
         <Card>
           <CardHeader>
-            <CardTitle>Ближайший слот</CardTitle>
-            <CardDescription>Планирование и текущие привязки матча.</CardDescription>
+            <CardTitle>Ближайшие слоты</CardTitle>
+            <CardDescription>Планирование и текущие привязки матча к расписанию.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-zinc-400">
             {match.schedules.length ? (
@@ -111,7 +123,7 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
         <Card>
           <CardHeader>
             <CardTitle>Таймлайн отправок</CardTitle>
-            <CardDescription>Комментарии игроков, скриншоты и история пересмотра результата.</CardDescription>
+            <CardDescription>Комментарии игроков, скриншоты и история проверки результата.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {match.submissions.length ? (
@@ -122,9 +134,7 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
                       <div className="font-medium text-white">{submission.submittedBy.nickname ?? submission.submittedBy.name ?? "Игрок"}</div>
                       <div className="mt-1 text-sm text-zinc-500">{formatDate(submission.createdAt)}</div>
                     </div>
-                    <Badge variant={submission.status === MatchResultStatus.PENDING ? "accent" : submission.status === MatchResultStatus.REJECTED ? "danger" : "success"}>
-                      {submission.status}
-                    </Badge>
+                    <Badge variant={resultSubmissionVariant[submission.status]}>{resultSubmissionLabel[submission.status]}</Badge>
                   </div>
 
                   <div className="mt-4 grid gap-4 lg:grid-cols-[auto_1fr]">
@@ -134,9 +144,7 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
                     <div className="space-y-3">
                       {submission.comment ? <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-zinc-300">{submission.comment}</div> : null}
                       {submission.moderatorComment ? (
-                        <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4 text-sm text-zinc-200">
-                          Решение модератора: {submission.moderatorComment}
-                        </div>
+                        <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4 text-sm text-zinc-200">Решение модератора: {submission.moderatorComment}</div>
                       ) : null}
                       {submission.screenshotUrl ? (
                         <a href={submission.screenshotUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm text-primary">
@@ -163,7 +171,7 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
             <CardContent className="space-y-4">
               <form action={`/api/admin/matches/${match.id}/review`} method="post" className="space-y-3">
                 <input type="hidden" name="action" value="approve" />
-                <Textarea name="moderatorComment" placeholder="Комментарий модератора для подтверждения результата" defaultValue="Результат подтверждён после проверки отправки." />
+                <Textarea name="moderatorComment" placeholder="Комментарий для подтверждения результата" defaultValue="Результат подтверждён после проверки отправки." />
                 <Button className="w-full">
                   <CheckCircle2 className="mr-2 h-4 w-4" />
                   Подтвердить результат
@@ -194,7 +202,7 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <History className="h-5 w-5 text-primary" />
-                Audit Timeline
+                Audit timeline
               </CardTitle>
               <CardDescription>История действий модераторов с before/after diff по решениям.</CardDescription>
             </CardHeader>
@@ -203,8 +211,8 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
                 actions.map((action) => (
                   <div key={action.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
                     <div className="flex items-center justify-between gap-3">
-                      <div className="font-medium text-white">{action.entityType}</div>
-                      <Badge variant="neutral">{action.actionType}</Badge>
+                      <div className="font-medium text-white">{adminEntityLabel(action.entityType)}</div>
+                      <Badge variant="neutral">{adminActionLabel[action.actionType] ?? action.actionType}</Badge>
                     </div>
                     <div className="mt-2 text-sm text-zinc-400">{action.admin.nickname ?? action.admin.name ?? action.admin.email ?? "Администратор"}</div>
                     <div className="mt-1 text-xs uppercase tracking-[0.18em] text-zinc-500">{formatDate(action.createdAt)}</div>
@@ -214,7 +222,7 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
                   </div>
                 ))
               ) : (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-4 text-sm text-zinc-500">Для этого матча ещё нет записей в audit panel.</div>
+                <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-4 text-sm text-zinc-500">Для этого матча ещё нет записей в audit timeline.</div>
               )}
             </CardContent>
           </Card>

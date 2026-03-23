@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { UserRole } from "@prisma/client";
-import { CalendarDays, Trophy } from "lucide-react";
+import { CalendarDays, ExternalLink, ShieldAlert, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { requireRole } from "@/lib/auth/session";
 import { matchStatusLabel, matchStatusVariant } from "@/lib/admin-display";
+import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 
@@ -28,7 +29,7 @@ export default async function AdminMatchesPage() {
       <Card>
         <CardHeader>
           <CardTitle>Все матчи турниров</CardTitle>
-          <CardDescription>Единый операционный список по стадиям, группам, статусам и ближайшим слотам.</CardDescription>
+          <CardDescription>Единый операционный список по стадиям, группам, статусам и ближайшим слотам с быстрыми действиями прямо из очереди.</CardDescription>
         </CardHeader>
       </Card>
 
@@ -60,15 +61,21 @@ export default async function AdminMatchesPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <Link href={`/admin/matches/${match.id}`} className="inline-flex min-h-11 items-center rounded-xl bg-primary px-4 text-sm text-white transition hover:bg-primary/90">
-                    Workspace матча
-                  </Link>
-                  <Link
-                    href={`/tournaments/${match.tournamentId}`}
-                    className="inline-flex min-h-11 items-center rounded-xl border border-white/10 px-4 text-sm text-zinc-300 transition hover:bg-white/5 hover:text-white"
-                  >
-                    Страница турнира
-                  </Link>
+                  <Button asChild variant="secondary">
+                    <Link href={`/admin/moderation/${match.id}`}>
+                      <ShieldAlert className="mr-2 h-4 w-4" />
+                      Модерация
+                    </Link>
+                  </Button>
+                  <Button asChild>
+                    <Link href={`/admin/matches/${match.id}`}>Workspace матча</Link>
+                  </Button>
+                  <Button asChild variant="outline">
+                    <Link href={`/tournaments/${match.tournamentId}`}>
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      Страница турнира
+                    </Link>
+                  </Button>
                 </div>
               </div>
             </Card>

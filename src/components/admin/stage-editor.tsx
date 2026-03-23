@@ -3,7 +3,7 @@
 import { GripVertical, MoveLeft, MoveRight } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { stageStatusLabel, stageTypeLabel } from "@/lib/admin-display";
+import { stageStatusLabel, stageStatusVariant, stageTypeLabel } from "@/lib/admin-display";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -114,7 +114,7 @@ export function StageEditor({ tournamentId, stages }: { tournamentId: string; st
                         <div className="mt-1 text-lg font-semibold text-white">{stage.name}</div>
                       </div>
                     </div>
-                    <Badge variant={stage.status === "ACTIVE" ? "accent" : stage.status === "COMPLETED" ? "success" : "neutral"}>
+                    <Badge variant={stageStatusVariant[stage.status as keyof typeof stageStatusVariant] ?? "neutral"}>
                       {stageStatusLabel[stage.status as keyof typeof stageStatusLabel] ?? stage.status}
                     </Badge>
                   </div>

@@ -1,12 +1,14 @@
 "use client";
 
 import { MatchStatus } from "@prisma/client";
-import { GripVertical, Search } from "lucide-react";
+import { ExternalLink, GripVertical, Search, ShieldAlert } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { matchStatusLabel, matchStatusVariant } from "@/lib/admin-display";
 import { cn } from "@/lib/utils";
 
 type ParticipantOption = {
@@ -43,15 +45,6 @@ function toInputDate(value?: string | null) {
   const pad = (num: number) => String(num).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
-
-const statusVariant: Partial<Record<MatchStatus, "primary" | "accent" | "neutral" | "success" | "danger">> = {
-  SCHEDULED: "primary",
-  LIVE: "accent",
-  DISPUTED: "danger",
-  CONFIRMED: "success",
-  FINISHED: "success",
-  REJECTED: "danger",
-};
 
 export function MatchManager({
   tournamentId,
@@ -157,7 +150,7 @@ export function MatchManager({
             <option value="all">Все статусы</option>
             {Object.values(MatchStatus).map((status) => (
               <option key={status} value={status}>
-                {status}
+                {matchStatusLabel[status] ?? status}
               </option>
             ))}
           </select>
@@ -209,12 +202,13 @@ export function MatchManager({
                       <div>
                         <div className="font-medium text-white">Раунд {match.round} • Матч {match.matchNumber}</div>
                         <div className="mt-1 text-sm text-zinc-500">
-                          {match.stage?.name ?? "Без стадии"} {match.group?.name ? `• ${match.group.name}` : ""}
+                          {match.stage?.name ?? "Без стадии"}
+                          {match.group?.name ? ` • ${match.group.name}` : ""}
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Badge variant={statusVariant[match.status] ?? "neutral"}>{match.status}</Badge>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={matchStatusVariant[match.status] ?? "neutral"}>{matchStatusLabel[match.status] ?? match.status}</Badge>
                       <select
                         defaultValue={match.status}
                         disabled={pending}
@@ -223,7 +217,7 @@ export function MatchManager({
                       >
                         {Object.values(MatchStatus).map((status) => (
                           <option key={status} value={status}>
-                            {status}
+                            {matchStatusLabel[status] ?? status}
                           </option>
                         ))}
                       </select>
@@ -308,9 +302,19 @@ export function MatchManager({
                     </div>
                   </div>
 
-                  <div className="mt-4">
+                  <div className="mt-4 flex flex-wrap gap-2">
                     <Button disabled={pending} variant="secondary" onClick={() => saveMatch(match.id, { status: MatchStatus.CONFIRMED })}>
-                      Подтвердить матч
+                      Подтвердить
+                    </Button>
+                    <Button disabled={pending} variant="outline" onClick={() => saveMatch(match.id, { status: MatchStatus.DISPUTED })}>
+                      <ShieldAlert className="mr-2 h-4 w-4" />
+                      В спор
+                    </Button>
+                    <Button asChild variant="outline">
+                      <Link href={`/admin/matches/${match.id}`}>
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Workspace
+                      </Link>
                     </Button>
                   </div>
                 </div>

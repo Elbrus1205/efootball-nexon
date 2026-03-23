@@ -42,10 +42,7 @@ export function ScheduleCalendar({ days }: { days: ScheduleDay[] }) {
   const [pending, startTransition] = useTransition();
   const [draggedScheduleId, setDraggedScheduleId] = useState<string | null>(null);
 
-  const scheduleMap = useMemo(
-    () => new Map(days.flatMap((day) => day.items.map((item) => [item.id, item]))),
-    [days],
-  );
+  const scheduleMap = useMemo(() => new Map(days.flatMap((day) => day.items.map((item) => [item.id, item]))), [days]);
 
   const updateSchedule = (matchId: string, startsAt: string, slotLabel: string, endsAt?: string | null) => {
     startTransition(async () => {
@@ -63,12 +60,7 @@ export function ScheduleCalendar({ days }: { days: ScheduleDay[] }) {
     const schedule = scheduleMap.get(draggedScheduleId);
     if (!schedule) return;
 
-    updateSchedule(
-      schedule.match.id,
-      buildSlotDate(dayKey, slotIndex),
-      schedule.slotLabel ?? `Slot ${slotIndex + 1}`,
-      schedule.endsAt,
-    );
+    updateSchedule(schedule.match.id, buildSlotDate(dayKey, slotIndex), schedule.slotLabel ?? `Slot ${slotIndex + 1}`, schedule.endsAt);
     setDraggedScheduleId(null);
   };
 
@@ -104,8 +96,7 @@ export function ScheduleCalendar({ days }: { days: ScheduleDay[] }) {
                   <div>
                     <div className="font-medium text-white">{schedule.match.tournament.title}</div>
                     <div className="mt-1 text-sm text-zinc-400">
-                      {(schedule.match.player1?.nickname ?? schedule.match.player1?.name ?? "TBD")} vs{" "}
-                      {(schedule.match.player2?.nickname ?? schedule.match.player2?.name ?? "TBD")}
+                      {(schedule.match.player1?.nickname ?? schedule.match.player1?.name ?? "TBD")} vs {(schedule.match.player2?.nickname ?? schedule.match.player2?.name ?? "TBD")}
                     </div>
                   </div>
                   <button

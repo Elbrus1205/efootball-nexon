@@ -1,5 +1,5 @@
 import { MatchResultStatus, UserRole } from "@prisma/client";
-import { AlertTriangle, CheckCircle2, Eye, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Eye, ExternalLink, ShieldAlert, XCircle } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,7 @@ export default async function AdminModerationPage() {
         <div>
           <div className="font-medium text-white">{submission.match.tournament.title}</div>
           <div className="text-sm text-zinc-400">
-            {submission.match.player1?.nickname ?? submission.match.player1?.name} vs {submission.match.player2?.nickname ?? submission.match.player2?.name}
+            {submission.match.player1?.nickname ?? submission.match.player1?.name ?? "TBD"} vs {submission.match.player2?.nickname ?? submission.match.player2?.name ?? "TBD"}
           </div>
         </div>
         <div className="flex flex-col items-end gap-2">
@@ -50,11 +50,23 @@ export default async function AdminModerationPage() {
       ) : null}
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" asChild>
-          <Link href={`/admin/moderation/${submission.matchId}`}>Открыть workspace</Link>
+          <Link href={`/admin/moderation/${submission.matchId}`}>Dispute workspace</Link>
+        </Button>
+        <Button variant="outline" asChild>
+          <Link href={`/admin/matches/${submission.matchId}`}>
+            <ShieldAlert className="mr-2 h-4 w-4" />
+            Match workspace
+          </Link>
+        </Button>
+        <Button variant="outline" asChild>
+          <Link href={`/tournaments/${submission.match.tournamentId}`}>
+            <ExternalLink className="mr-2 h-4 w-4" />
+            Турнир
+          </Link>
         </Button>
         <form action={`/api/admin/matches/${submission.matchId}/review`} method="post">
           <input type="hidden" name="action" value="approve" />
-          <input type="hidden" name="moderatorComment" value="Результат подтверждён" />
+          <input type="hidden" name="moderatorComment" value="Результат подтверждён." />
           <Button>
             <CheckCircle2 className="mr-2 h-4 w-4" />
             Подтвердить
@@ -62,7 +74,7 @@ export default async function AdminModerationPage() {
         </form>
         <form action={`/api/admin/matches/${submission.matchId}/review`} method="post">
           <input type="hidden" name="action" value="reject" />
-          <input type="hidden" name="moderatorComment" value="Нужен корректный скриншот или комментарий" />
+          <input type="hidden" name="moderatorComment" value="Нужен корректный скриншот или уточнение по счёту." />
           <Button variant="outline">
             <XCircle className="mr-2 h-4 w-4" />
             Отклонить
@@ -84,7 +96,7 @@ export default async function AdminModerationPage() {
     <div className="space-y-8">
       <div className="space-y-2">
         <h1 className="font-display text-3xl font-thin text-white">Модерация результатов и споров</h1>
-        <p className="text-zinc-400">Очередь подтверждения, спорные матчи и быстрый переход в отдельный dispute workspace.</p>
+        <p className="text-zinc-400">Очередь проверки, спорные матчи и быстрый переход в отдельные workspace без лишних шагов.</p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">

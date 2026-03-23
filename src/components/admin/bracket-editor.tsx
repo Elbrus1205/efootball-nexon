@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+import { Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +43,10 @@ type DragPayload =
       matchNumber: number;
       slotNumber: number;
     };
+
+function participantName(participant?: ParticipantOption | null) {
+  return participant?.user.nickname ?? participant?.user.name ?? participant?.id ?? null;
+}
 
 export function BracketEditor({
   tournamentId,
@@ -114,12 +119,13 @@ export function BracketEditor({
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="secondary" disabled={pending} onClick={generateFromGroups}>
+          <Sparkles className="mr-2 h-4 w-4" />
           Заполнить из групп
         </Button>
-        <div className="text-sm text-zinc-500">Участников можно перетаскивать не только из пула, но и между самими слотами сетки для быстрого ручного посева.</div>
+        <div className="text-sm text-zinc-500">Слоты поддерживают drag-and-drop из пула участников и между всеми парами сетки.</div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[260px_1fr]">
+      <div className="grid gap-4 xl:grid-cols-[280px_1fr]">
         <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-4">
           <div className="mb-3 text-sm font-semibold uppercase tracking-[0.24em] text-zinc-500">Пул участников</div>
           <div className="space-y-2">
@@ -136,85 +142,101 @@ export function BracketEditor({
                   }
                   className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-left text-sm text-white transition hover:border-primary/30"
                 >
-                  {participant.user.nickname ?? participant.user.name ?? participant.id}
+                  {participantName(participant)}
                 </button>
               ))
             ) : (
-              <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 px-4 py-6 text-sm text-zinc-500">
-                Все участники уже распределены по слотам.
-              </div>
+              <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 px-4 py-6 text-sm text-zinc-500">Все участники уже распределены по слотам.</div>
             )}
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <div className="flex min-w-max gap-4 pb-3">
-            {rounds.map((round, roundIndex) => (
-              <div key={round} className="relative w-72 space-y-3">
-                <div className="text-sm font-semibold uppercase tracking-[0.24em] text-zinc-500">Раунд {round}</div>
-                {matches
-                  .filter((match) => match.round === round)
-                  .map((match) => (
-                    <div key={match.id} className="relative rounded-3xl border border-white/10 bg-white/[0.04] p-4">
-                      {roundIndex < rounds.length - 1 ? (
-                        <div className="pointer-events-none absolute -right-5 top-1/2 hidden h-px w-5 bg-gradient-to-r from-primary/60 to-transparent xl:block" />
-                      ) : null}
-                      <div className="mb-3 text-sm text-zinc-400">Матч {match.matchNumber}</div>
-                      <div className="pointer-events-none absolute left-5 top-[62px] hidden h-[54px] w-px bg-white/10 xl:block" />
-                      {[1, 2].map((slotNumber) => {
-                        const key = `${round}-${match.matchNumber}-${slotNumber}`;
-                        const slot = slotMap.get(key);
-                        const participant = slot?.participantId ? participantMap.get(slot.participantId) : null;
+          <div className="flex min-w-max gap-8 pb-3">
+            {rounds.map((round, roundIndex) => {
+              const isLastRound = roundIndex === rounds.length - 1;
 
-                        return (
-                          <div
-                            key={key}
-                            draggable={Boolean(participant)}
-                            onDragStart={() =>
-                              setDraggedItem({
-                                type: "slot",
-                                participantId: slot?.participantId ?? null,
-                                round,
-                                matchNumber: match.matchNumber,
-                                slotNumber,
-                              })
-                            }
-                            onDragOver={(event) => event.preventDefault()}
-                            onDrop={(event) => {
-                              event.preventDefault();
-                              handleDrop(round, match.matchNumber, slotNumber);
-                            }}
-                            className={cn(
-                              "mb-2 rounded-2xl border px-4 py-3 text-sm transition",
-                              participant ? "cursor-move border-primary/20 bg-primary/10 text-white" : "border-dashed border-white/10 bg-black/20 text-zinc-500",
-                            )}
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="space-y-1">
-                                <div>{participant ? participant.user.nickname ?? participant.user.name ?? participant.id : `Слот ${slotNumber}`}</div>
-                                {slot?.sourceRef ? <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-400">{slot.sourceRef}</div> : null}
+              return (
+                <div key={round} className="relative w-80 space-y-4">
+                  <div className="text-sm font-semibold uppercase tracking-[0.24em] text-zinc-500">Раунд {round}</div>
+
+                  {matches
+                    .filter((match) => match.round === round)
+                    .map((match) => (
+                      <div key={match.id} className="relative rounded-[2rem] border border-white/10 bg-white/[0.04] p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
+                        {!isLastRound ? (
+                          <>
+                            <div className="pointer-events-none absolute -right-8 top-1/2 hidden h-px w-8 -translate-y-1/2 bg-gradient-to-r from-primary/70 to-transparent xl:block" />
+                            <div className="pointer-events-none absolute right-[-2px] top-1/2 hidden h-px w-4 -translate-y-1/2 bg-primary/30 xl:block" />
+                          </>
+                        ) : null}
+
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                          <div className="text-sm text-zinc-400">Матч {match.matchNumber}</div>
+                          <div className="text-[11px] uppercase tracking-[0.2em] text-zinc-600">Round {round}</div>
+                        </div>
+
+                        <div className="relative space-y-3">
+                          <div className="pointer-events-none absolute left-6 top-[52px] hidden h-[58px] w-px bg-white/10 xl:block" />
+                          <div className="pointer-events-none absolute left-6 top-[81px] hidden h-px w-7 bg-white/10 xl:block" />
+
+                          {[1, 2].map((slotNumber) => {
+                            const key = `${round}-${match.matchNumber}-${slotNumber}`;
+                            const slot = slotMap.get(key);
+                            const participant = slot?.participantId ? participantMap.get(slot.participantId) : null;
+
+                            return (
+                              <div
+                                key={key}
+                                draggable={Boolean(participant)}
+                                onDragStart={() =>
+                                  setDraggedItem({
+                                    type: "slot",
+                                    participantId: slot?.participantId ?? null,
+                                    round,
+                                    matchNumber: match.matchNumber,
+                                    slotNumber,
+                                  })
+                                }
+                                onDragOver={(event) => event.preventDefault()}
+                                onDrop={(event) => {
+                                  event.preventDefault();
+                                  handleDrop(round, match.matchNumber, slotNumber);
+                                }}
+                                className={cn(
+                                  "relative rounded-2xl border px-4 py-3 text-sm transition",
+                                  participant ? "cursor-move border-primary/20 bg-primary/10 text-white shadow-[0_0_25px_rgba(59,130,246,0.12)]" : "border-dashed border-white/10 bg-black/20 text-zinc-500",
+                                )}
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="space-y-1">
+                                    <div>{participant ? participantName(participant) : `Слот ${slotNumber}`}</div>
+                                    {slot?.sourceRef ? <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-400">{slot.sourceRef}</div> : null}
+                                  </div>
+                                  {participant ? (
+                                    <button
+                                      type="button"
+                                      className="rounded-lg p-1 text-zinc-400 transition hover:bg-white/10 hover:text-white"
+                                      onClick={() => {
+                                        startTransition(async () => {
+                                          await saveSlot(round, match.matchNumber, slotNumber, null);
+                                          router.refresh();
+                                        });
+                                      }}
+                                    >
+                                      <X className="h-3.5 w-3.5" />
+                                    </button>
+                                  ) : null}
+                                </div>
                               </div>
-                              {participant ? (
-                                <button
-                                  className="text-xs text-zinc-400 hover:text-white"
-                                  onClick={() => {
-                                    startTransition(async () => {
-                                      await saveSlot(round, match.matchNumber, slotNumber, null);
-                                      router.refresh();
-                                    });
-                                  }}
-                                >
-                                  Очистить
-                                </button>
-                              ) : null}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ))}
-              </div>
-            ))}
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

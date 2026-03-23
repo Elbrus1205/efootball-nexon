@@ -56,7 +56,7 @@ export function StandingsManager({ groups }: { groups: GroupItem[] }) {
                   {[
                     ["rank", standing.rank ?? 0, "Место"],
                     ["points", standing.points, "Очки"],
-                    ["goalDifference", standing.goalDifference, "РМ"],
+                    ["goalDifference", standing.goalDifference, "Разница"],
                     ["played", standing.played, "Игры"],
                   ].map(([field, value, label]) => (
                     <label key={String(field)} className="text-xs text-zinc-500">

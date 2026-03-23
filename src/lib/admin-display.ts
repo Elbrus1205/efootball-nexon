@@ -1,9 +1,19 @@
-import { AdminActionType, MatchResultStatus, MatchStatus, ParticipantStatus, PlayoffType, StageStatus, StageType, TournamentFormat, TournamentStatus } from "@prisma/client";
+import {
+  AdminActionType,
+  MatchResultStatus,
+  MatchStatus,
+  ParticipantStatus,
+  PlayoffType,
+  StageStatus,
+  StageType,
+  TournamentFormat,
+  TournamentStatus,
+} from "@prisma/client";
 
 export const matchStatusLabel: Record<MatchStatus, string> = {
   PENDING: "Не назначен",
-  READY: "Готов",
-  RESULT_SUBMITTED: "Ожидает результат",
+  READY: "Готов к старту",
+  RESULT_SUBMITTED: "Ожидает проверки",
   CONFIRMED: "Подтверждён",
   REJECTED: "Отклонён",
   FORFEIT: "Техпоражение",
@@ -44,7 +54,7 @@ export const stageStatusLabel: Record<StageStatus, string> = {
 
 export const stageTypeLabel: Record<StageType, string> = {
   LEAGUE: "Лига",
-  GROUP_STAGE: "Группы",
+  GROUP_STAGE: "Групповой этап",
   PLAYOFF: "Плей-офф",
 };
 
@@ -72,7 +82,7 @@ export const resultSubmissionVariant: Record<MatchResultStatus, "primary" | "acc
 
 export const adminActionLabel: Record<AdminActionType, string> = {
   CREATE: "Создание",
-  UPDATE: "Обновление",
+  UPDATE: "Изменение",
   DELETE: "Удаление",
   PUBLISH: "Публикация",
   GENERATE: "Генерация",
@@ -102,3 +112,33 @@ export const tournamentStatusVariant: Record<TournamentStatus, "primary" | "acce
   IN_PROGRESS: "success",
   COMPLETED: "neutral",
 };
+
+export const stageStatusVariant: Record<StageStatus, "primary" | "accent" | "neutral" | "success" | "danger"> = {
+  DRAFT: "neutral",
+  PENDING: "accent",
+  ACTIVE: "primary",
+  COMPLETED: "success",
+};
+
+export const participantStatusVariant: Record<ParticipantStatus, "primary" | "accent" | "neutral" | "success" | "danger"> = {
+  PENDING: "accent",
+  CONFIRMED: "success",
+  WAITLIST: "neutral",
+  REJECTED: "danger",
+  REMOVED: "danger",
+};
+
+export function adminEntityLabel(entityType: string) {
+  const map: Record<string, string> = {
+    TOURNAMENT: "Турнир",
+    STAGE: "Этап",
+    MATCH: "Матч",
+    MATCH_REVIEW: "Проверка результата",
+    PARTICIPANT: "Участник",
+    BRACKET_SLOT: "Слот сетки",
+    SCHEDULE: "Слот расписания",
+    STANDING: "Таблица",
+  };
+
+  return map[entityType] ?? entityType;
+}
