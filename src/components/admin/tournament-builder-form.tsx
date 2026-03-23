@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { playoffTypeLabel, seedingMethodLabel, sortRuleLabel, tournamentFormatLabel, tournamentStatusLabel } from "@/lib/admin-display";
 
 type BuilderValues = {
   title?: string;
@@ -64,7 +65,7 @@ export function TournamentBuilderForm({
       <Card>
         <CardHeader>
           <CardTitle>Базовая информация</CardTitle>
-          <CardDescription>Название, статус, даты, лимиты, правила и визуальная обложка.</CardDescription>
+          <CardDescription>Название, статус, даты, лимиты, правила и визуальная подача турнира.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2 md:col-span-2">
@@ -81,7 +82,7 @@ export function TournamentBuilderForm({
             >
               {Object.values(TournamentStatus).map((status) => (
                 <option key={status} value={status}>
-                  {status}
+                  {tournamentStatusLabel[status]}
                 </option>
               ))}
             </select>
@@ -97,7 +98,7 @@ export function TournamentBuilderForm({
             >
               {Object.values(TournamentFormat).map((value) => (
                 <option key={value} value={value}>
-                  {value}
+                  {tournamentFormatLabel[value]}
                 </option>
               ))}
             </select>
@@ -112,25 +113,11 @@ export function TournamentBuilderForm({
           </div>
           <div className="space-y-2">
             <Label htmlFor="registrationEndsAt">Конец регистрации</Label>
-            <Input
-              id="registrationEndsAt"
-              name="registrationEndsAt"
-              type="datetime-local"
-              defaultValue={initialValues?.registrationEndsAt ?? ""}
-              required
-            />
+            <Input id="registrationEndsAt" name="registrationEndsAt" type="datetime-local" defaultValue={initialValues?.registrationEndsAt ?? ""} required />
           </div>
           <div className="space-y-2">
             <Label htmlFor="maxParticipants">Лимит участников</Label>
-            <Input
-              id="maxParticipants"
-              name="maxParticipants"
-              type="number"
-              min={2}
-              max={256}
-              defaultValue={initialValues?.maxParticipants ?? 16}
-              required
-            />
+            <Input id="maxParticipants" name="maxParticipants" type="number" min={2} max={256} defaultValue={initialValues?.maxParticipants ?? 16} required />
           </div>
           <div className="space-y-2">
             <Label htmlFor="prizePool">Призовой фонд</Label>
@@ -142,11 +129,11 @@ export function TournamentBuilderForm({
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="description">Описание</Label>
-            <Textarea id="description" name="description" placeholder="Ключевая информация о сезоне и формате." defaultValue={initialValues?.description ?? ""} required />
+            <Textarea id="description" name="description" placeholder="Краткая подача турнира, формат и атмосфера сезона." defaultValue={initialValues?.description ?? ""} required />
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="rules">Правила</Label>
-            <Textarea id="rules" name="rules" placeholder="Порядок матчей, подтверждение результатов, ограничения." defaultValue={initialValues?.rules ?? ""} required />
+            <Textarea id="rules" name="rules" placeholder="Порядок матчей, подтверждение результатов, ограничения и регламент." defaultValue={initialValues?.rules ?? ""} required />
           </div>
         </CardContent>
       </Card>
@@ -169,7 +156,7 @@ export function TournamentBuilderForm({
                 <option value="">Не использовать</option>
                 {Object.values(PlayoffType).map((type) => (
                   <option key={type} value={type}>
-                    {type}
+                    {playoffTypeLabel[type]}
                   </option>
                 ))}
               </select>
@@ -185,7 +172,7 @@ export function TournamentBuilderForm({
             >
               {Object.values(SeedingMethod).map((method) => (
                 <option key={method} value={method}>
-                  {method}
+                  {seedingMethodLabel[method]}
                 </option>
               ))}
             </select>
@@ -204,25 +191,11 @@ export function TournamentBuilderForm({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="participantsPerGroup">Игроков в группе</Label>
-                <Input
-                  id="participantsPerGroup"
-                  name="participantsPerGroup"
-                  type="number"
-                  min={2}
-                  max={32}
-                  defaultValue={initialValues?.participantsPerGroup ?? ""}
-                />
+                <Input id="participantsPerGroup" name="participantsPerGroup" type="number" min={2} max={32} defaultValue={initialValues?.participantsPerGroup ?? ""} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="playoffTeamsPerGroup">Выходят из группы</Label>
-                <Input
-                  id="playoffTeamsPerGroup"
-                  name="playoffTeamsPerGroup"
-                  type="number"
-                  min={1}
-                  max={8}
-                  defaultValue={initialValues?.playoffTeamsPerGroup ?? ""}
-                />
+                <Input id="playoffTeamsPerGroup" name="playoffTeamsPerGroup" type="number" min={1} max={8} defaultValue={initialValues?.playoffTeamsPerGroup ?? ""} />
               </div>
             </>
           ) : null}
@@ -248,7 +221,7 @@ export function TournamentBuilderForm({
               {Object.values(SortRule).map((rule) => (
                 <label key={rule} className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-sm text-zinc-300">
                   <input type="checkbox" name="sortRules" value={rule} defaultChecked={selectedSortRules.includes(rule)} />
-                  {rule}
+                  {sortRuleLabel[rule]}
                 </label>
               ))}
             </div>
@@ -259,7 +232,7 @@ export function TournamentBuilderForm({
       <Card>
         <CardHeader>
           <CardTitle>Автоматизация</CardTitle>
-          <CardDescription>Переключатели ручного и автоматического управления стадиями, матчами и календарём.</CardDescription>
+          <CardDescription>Переключатели ручного и автоматического управления стадиями, матчами и расписанием.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {[
@@ -281,7 +254,11 @@ export function TournamentBuilderForm({
 
       <div className="flex flex-wrap gap-3">
         <Button type="submit">{submitLabel}</Button>
-        {secondaryLabel ? <Button type="submit" name="status" value={TournamentStatus.DRAFT} variant="secondary">{secondaryLabel}</Button> : null}
+        {secondaryLabel ? (
+          <Button type="submit" name="status" value={TournamentStatus.DRAFT} variant="secondary">
+            {secondaryLabel}
+          </Button>
+        ) : null}
       </div>
     </form>
   );

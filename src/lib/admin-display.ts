@@ -4,6 +4,8 @@ import {
   MatchStatus,
   ParticipantStatus,
   PlayoffType,
+  SeedingMethod,
+  SortRule,
   StageStatus,
   StageType,
   TournamentFormat,
@@ -32,9 +34,9 @@ export const tournamentStatusLabel: Record<TournamentStatus, string> = {
 };
 
 export const tournamentFormatLabel: Record<TournamentFormat, string> = {
-  SINGLE_ELIMINATION: "Single Elimination",
+  SINGLE_ELIMINATION: "Плей-офф",
   DOUBLE_ELIMINATION: "Double Elimination",
-  ROUND_ROBIN: "Round Robin",
+  ROUND_ROBIN: "Круговая система",
   LEAGUE: "Лига",
   GROUPS: "Группы",
   GROUPS_PLAYOFF: "Группы + плей-офф",
@@ -43,6 +45,21 @@ export const tournamentFormatLabel: Record<TournamentFormat, string> = {
 export const playoffTypeLabel: Record<PlayoffType, string> = {
   SINGLE: "Single Elimination",
   DOUBLE: "Double Elimination",
+};
+
+export const seedingMethodLabel: Record<SeedingMethod, string> = {
+  MANUAL: "Ручной посев",
+  RANDOM: "Случайный посев",
+  RANKING: "По рейтингу",
+  GROUP_RESULTS: "По итогам групп",
+};
+
+export const sortRuleLabel: Record<SortRule, string> = {
+  POINTS: "Очки",
+  GOAL_DIFFERENCE: "Разница мячей",
+  GOALS_FOR: "Забитые мячи",
+  HEAD_TO_HEAD: "Личные встречи",
+  WINS: "Победы",
 };
 
 export const stageStatusLabel: Record<StageStatus, string> = {

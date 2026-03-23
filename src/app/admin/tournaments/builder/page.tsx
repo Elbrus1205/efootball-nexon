@@ -46,11 +46,11 @@ export default async function AdminTournamentBuilderPage({
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="primary">Tournament Builder</Badge>
-            <Badge variant="neutral">Admin Only</Badge>
+            <Badge variant="primary">Конструктор турнира</Badge>
+            <Badge variant="neutral">Только для администратора</Badge>
           </div>
-          <CardTitle>Конструктор турнира</CardTitle>
-          <CardDescription>Новый мастер создания под лигу, группы, плей-офф и комбинированные форматы.</CardDescription>
+          <CardTitle>Создание нового турнира</CardTitle>
+          <CardDescription>Пошаговая форма для лиги, групп, плей-офф и комбинированных сценариев.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
           <Button type="button">Новый сценарий</Button>
