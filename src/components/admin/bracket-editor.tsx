@@ -149,14 +149,18 @@ export function BracketEditor({
 
         <div className="overflow-x-auto">
           <div className="flex min-w-max gap-4 pb-3">
-            {rounds.map((round) => (
-              <div key={round} className="w-72 space-y-3">
+            {rounds.map((round, roundIndex) => (
+              <div key={round} className="relative w-72 space-y-3">
                 <div className="text-sm font-semibold uppercase tracking-[0.24em] text-zinc-500">Раунд {round}</div>
                 {matches
                   .filter((match) => match.round === round)
                   .map((match) => (
-                    <div key={match.id} className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
+                    <div key={match.id} className="relative rounded-3xl border border-white/10 bg-white/[0.04] p-4">
+                      {roundIndex < rounds.length - 1 ? (
+                        <div className="pointer-events-none absolute -right-5 top-1/2 hidden h-px w-5 bg-gradient-to-r from-primary/60 to-transparent xl:block" />
+                      ) : null}
                       <div className="mb-3 text-sm text-zinc-400">Матч {match.matchNumber}</div>
+                      <div className="pointer-events-none absolute left-5 top-[62px] hidden h-[54px] w-px bg-white/10 xl:block" />
                       {[1, 2].map((slotNumber) => {
                         const key = `${round}-${match.matchNumber}-${slotNumber}`;
                         const slot = slotMap.get(key);
