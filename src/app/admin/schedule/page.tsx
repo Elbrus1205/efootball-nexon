@@ -1,10 +1,10 @@
 import { UserRole } from "@prisma/client";
 import { CalendarDays, Clock3, Trophy } from "lucide-react";
+import { ScheduleCalendar } from "@/components/admin/schedule-calendar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils";
-import { ScheduleCalendar } from "@/components/admin/schedule-calendar";
 
 export default async function AdminSchedulePage() {
   await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
@@ -20,15 +20,27 @@ export default async function AdminSchedulePage() {
       },
     },
     orderBy: { startsAt: "asc" },
-    take: 18,
+    take: 24,
   });
 
   const grouped = schedules.reduce<Record<string, typeof schedules>>((acc, item) => {
-    const key = formatDate(item.startsAt, "d MMMM");
+    const key = item.startsAt.toISOString().slice(0, 10);
     acc[key] ??= [];
     acc[key].push(item);
     return acc;
   }, {});
+
+  const days = Object.entries(grouped).map(([key, value]) => ({
+    key,
+    label: formatDate(new Date(`${key}T00:00:00`), "d MMMM"),
+    items: value
+      .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+      .map((item) => ({
+        ...item,
+        startsAt: item.startsAt.toISOString(),
+        endsAt: item.endsAt?.toISOString() ?? null,
+      })),
+  }));
 
   return (
     <div className="space-y-6">
@@ -40,7 +52,7 @@ export default async function AdminSchedulePage() {
               Игровые дни
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-3xl font-semibold text-white">{Object.keys(grouped).length}</CardContent>
+          <CardContent className="text-3xl font-semibold text-white">{days.length}</CardContent>
         </Card>
         <Card>
           <CardHeader>
@@ -59,15 +71,15 @@ export default async function AdminSchedulePage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-zinc-400">
-            {schedules[0] ? `${schedules[0].match.tournament.title} • ${formatDate(schedules[0].startsAt)}` : "Сетка расписания пока не создана."}
+            {schedules[0] ? `${schedules[0].match.tournament.title} • ${formatDate(schedules[0].startsAt)}` : "Календарь появится после генерации расписания."}
           </CardContent>
         </Card>
       </div>
 
-      {Object.keys(grouped).length ? (
-        <ScheduleCalendar groups={Object.fromEntries(Object.entries(grouped).map(([key, value]) => [key, value.map((item) => ({ ...item, startsAt: item.startsAt.toISOString(), endsAt: item.endsAt?.toISOString() ?? null }))]))} />
+      {days.length ? (
+        <ScheduleCalendar days={days} />
       ) : (
-        <Card className="p-5 text-sm text-zinc-500">После генерации расписания здесь появится календарный board по дням и матчевым слотам.</Card>
+        <Card className="p-5 text-sm text-zinc-500">После генерации расписания здесь появится drag-and-drop board по дням и слотам.</Card>
       )}
     </div>
   );

@@ -1,9 +1,9 @@
 import { UserRole } from "@prisma/client";
 import { notFound } from "next/navigation";
-import { requireRole } from "@/lib/auth/session";
-import { db } from "@/lib/db";
 import { StageEditor } from "@/components/admin/stage-editor";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { requireRole } from "@/lib/auth/session";
+import { db } from "@/lib/db";
 
 export default async function AdminTournamentStagesPage({ params }: { params: { id: string } }) {
   await requireRole([UserRole.ADMIN]);
@@ -24,11 +24,11 @@ export default async function AdminTournamentStagesPage({ params }: { params: { 
       <Card>
         <CardHeader>
           <CardTitle>Stage Editor</CardTitle>
-          <CardDescription>Управление порядком, статусом и структурой этапов турнира: лига, группы и плей-офф.</CardDescription>
+          <CardDescription>Управление порядком, статусом и visual pipeline этапов турнира: лига, группы и плей-офф.</CardDescription>
         </CardHeader>
       </Card>
 
-      <StageEditor stages={tournament.stages} />
+      <StageEditor tournamentId={tournament.id} stages={tournament.stages} />
     </div>
   );
 }

@@ -1,10 +1,11 @@
 import { MatchResultStatus, UserRole } from "@prisma/client";
 import { AlertTriangle, CheckCircle2, Eye, XCircle } from "lucide-react";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 
 export default async function AdminModerationPage() {
@@ -44,6 +45,9 @@ export default async function AdminModerationPage() {
         </a>
       ) : null}
       <div className="flex flex-wrap gap-2">
+        <Button variant="secondary" asChild>
+          <Link href={`/admin/moderation/${submission.matchId}`}>Открыть workspace</Link>
+        </Button>
         <form action={`/api/admin/matches/${submission.matchId}/review`} method="post">
           <input type="hidden" name="action" value="approve" />
           <input type="hidden" name="moderatorComment" value="Результат подтверждён" />
@@ -76,7 +80,7 @@ export default async function AdminModerationPage() {
     <div className="space-y-8">
       <div className="space-y-2">
         <h1 className="font-display text-3xl font-thin text-white">Модерация результатов и споров</h1>
-        <p className="text-zinc-400">Очередь подтверждения, спорные матчи и ручные решения по результатам турниров.</p>
+        <p className="text-zinc-400">Очередь подтверждения, спорные матчи и быстрый переход в отдельный dispute workspace.</p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">

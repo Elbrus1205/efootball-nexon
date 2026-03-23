@@ -146,6 +146,11 @@ export const stageUpdateSchema = z.object({
   endsAt: z.string().optional().or(z.literal("")),
 });
 
+export const stageReorderSchema = z.object({
+  tournamentId: z.string(),
+  stageIds: z.array(z.string()).min(1),
+});
+
 export const standingUpdateSchema = z.object({
   standingId: z.string(),
   rank: z.coerce.number().min(1).optional(),
