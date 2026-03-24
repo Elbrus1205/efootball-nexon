@@ -9,6 +9,170 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BracketView } from "@/components/tournaments/bracket-view";
 import { formatDate } from "@/lib/utils";
 
+type LeagueRow = {
+  id: string;
+  name: string;
+  played: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  goalDifference: number;
+  points: number;
+};
+
+function getDisplayName(name: string | null | undefined, fallback: string) {
+  return name?.trim() || fallback;
+}
+
+function buildLeagueTable(
+  participants: Array<{
+    userId: string;
+    user: { id: string; nickname: string | null; name: string | null };
+  }>,
+  matches: Array<{
+    player1Id: string | null;
+    player2Id: string | null;
+    player1Score: number | null;
+    player2Score: number | null;
+    status: string;
+  }>,
+) {
+  const table = new Map<string, LeagueRow>();
+
+  for (const entry of participants) {
+    table.set(entry.userId, {
+      id: entry.user.id,
+      name: getDisplayName(entry.user.nickname, entry.user.name ?? "Игрок"),
+      played: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      goalDifference: 0,
+      points: 0,
+    });
+  }
+
+  for (const match of matches) {
+    if (!match.player1Id || !match.player2Id) continue;
+    if (match.player1Score === null || match.player2Score === null) continue;
+
+    const player1 = table.get(match.player1Id);
+    const player2 = table.get(match.player2Id);
+    if (!player1 || !player2) continue;
+
+    player1.played += 1;
+    player2.played += 1;
+    player1.goalDifference += match.player1Score - match.player2Score;
+    player2.goalDifference += match.player2Score - match.player1Score;
+
+    if (match.player1Score > match.player2Score) {
+      player1.wins += 1;
+      player2.losses += 1;
+      player1.points += 3;
+    } else if (match.player1Score < match.player2Score) {
+      player2.wins += 1;
+      player1.losses += 1;
+      player2.points += 3;
+    } else {
+      player1.draws += 1;
+      player2.draws += 1;
+      player1.points += 1;
+      player2.points += 1;
+    }
+  }
+
+  return Array.from(table.values()).sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    return a.name.localeCompare(b.name, "ru");
+  });
+}
+
+function StandingsTable({
+  rows,
+}: {
+  rows: Array<{
+    id: string;
+    rank?: number | null;
+    name: string;
+    played: number;
+    wins: number;
+    draws: number;
+    losses: number;
+    goalDifference: number;
+    points: number;
+  }>;
+}) {
+  return (
+    <div className="overflow-x-auto rounded-[1.5rem]">
+      <table className="w-full min-w-[720px] text-left text-sm">
+        <thead className="text-zinc-300">
+          <tr>
+            <th className="sticky top-0 z-10 bg-[#141922]/95 px-4 py-3 backdrop-blur">№</th>
+            <th className="sticky top-0 z-10 bg-[#141922]/95 px-4 py-3 backdrop-blur">Команда</th>
+            <th className="sticky top-0 z-10 bg-[#141922]/95 px-4 py-3 backdrop-blur">И</th>
+            <th className="sticky top-0 z-10 bg-[#141922]/95 px-4 py-3 backdrop-blur">В</th>
+            <th className="sticky top-0 z-10 bg-[#141922]/95 px-4 py-3 backdrop-blur">Н</th>
+            <th className="sticky top-0 z-10 bg-[#141922]/95 px-4 py-3 backdrop-blur">П</th>
+            <th className="sticky top-0 z-10 bg-[#141922]/95 px-4 py-3 backdrop-blur">+/-</th>
+            <th className="sticky top-0 z-10 bg-[#141922]/95 px-4 py-3 backdrop-blur">Очки</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => (
+            <tr
+              key={row.id}
+              className={
+                index === 0
+                  ? "border-t border-primary/20 bg-primary/10"
+                  : index === 1
+                    ? "border-t border-emerald-400/10 bg-emerald-400/5"
+                    : index === 2
+                      ? "border-t border-amber-400/10 bg-amber-400/5"
+                      : "border-t border-white/10"
+              }
+            >
+              <td className="px-4 py-3 text-zinc-300">
+                <span
+                  className={
+                    index === 0
+                      ? "inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-primary/20 px-2 font-semibold text-primary"
+                      : index === 1
+                        ? "inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-emerald-400/15 px-2 font-semibold text-emerald-300"
+                        : index === 2
+                          ? "inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-amber-400/15 px-2 font-semibold text-amber-300"
+                          : "inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-white/5 px-2 font-medium text-zinc-300"
+                  }
+                >
+                  {row.rank ?? index + 1}
+                </span>
+              </td>
+              <td className="px-4 py-3 font-medium text-white">{row.name}</td>
+              <td className="px-4 py-3">{row.played}</td>
+              <td className="px-4 py-3">{row.wins}</td>
+              <td className="px-4 py-3">{row.draws}</td>
+              <td className="px-4 py-3">{row.losses}</td>
+              <td
+                className={
+                  row.goalDifference > 0
+                    ? "px-4 py-3 font-medium text-emerald-300"
+                    : row.goalDifference < 0
+                      ? "px-4 py-3 font-medium text-red-300"
+                      : "px-4 py-3 font-medium text-zinc-300"
+                }
+              >
+                {row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}
+              </td>
+              <td className="px-4 py-3 font-semibold text-white">{row.points}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export async function generateMetadata({ params }: { params: { id: string } }) {
   const tournament = await db.tournament.findUnique({ where: { id: params.id } });
   return tournament ? { title: tournament.title, description: tournament.description } : { title: "Турнир не найден" };
@@ -68,12 +232,13 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
     .filter((match) => match.scheduledAt || match.schedules.length)
     .sort((a, b) => new Date(a.scheduledAt ?? a.schedules[0]?.startsAt ?? 0).getTime() - new Date(b.scheduledAt ?? b.schedules[0]?.startsAt ?? 0).getTime());
 
-  const simpleLeaderboard =
+  const leagueMatches = leagueStage
+    ? tournament.matches.filter((match) => match.stageId === leagueStage.id)
+    : tournament.matches.filter((match) => !match.groupId && !match.bracketId);
+
+  const leagueTable =
     tournament.format === TournamentFormat.ROUND_ROBIN || tournament.format === TournamentFormat.LEAGUE
-      ? tournament.participants.map((entry) => ({
-          user: entry.user,
-          points: tournament.matches.filter((match) => match.winnerId === entry.userId).length * 3,
-        }))
+      ? buildLeagueTable(tournament.participants, leagueMatches)
       : [];
 
   return (
@@ -90,7 +255,9 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           <div className="flex flex-wrap gap-6 text-sm text-zinc-400">
             <span>Старт: {formatDate(tournament.startsAt)}</span>
             <span>Регистрация до: {formatDate(tournament.registrationEndsAt)}</span>
-            <span>Участники: {tournament.participants.length}/{tournament.maxParticipants}</span>
+            <span>
+              Участники: {tournament.participants.length}/{tournament.maxParticipants}
+            </span>
           </div>
         </div>
         {canRegister ? (
@@ -116,62 +283,41 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           {groupStage ? (
             <div className="space-y-4">
               <div className="text-sm uppercase tracking-[0.24em] text-zinc-500">Группы</div>
-              <div className="grid gap-4 xl:grid-cols-2">
+              <div className="grid gap-4">
                 {groupStage.groups.map((group) => (
                   <Card key={group.id} className="overflow-hidden p-0">
                     <div className="border-b border-white/10 px-5 py-4 font-medium text-white">{group.name}</div>
-                    <table className="w-full text-left text-sm">
-                      <thead className="bg-white/5 text-zinc-400">
-                        <tr>
-                          <th className="px-4 py-3">Игрок</th>
-                          <th className="px-4 py-3">И</th>
-                          <th className="px-4 py-3">О</th>
-                          <th className="px-4 py-3">РМ</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {group.standings.length ? (
-                          group.standings.map((row) => (
-                            <tr key={row.id} className="border-t border-white/10">
-                              <td className="px-4 py-3">{row.participant.user.nickname ?? row.participant.user.name}</td>
-                              <td className="px-4 py-3">{row.played}</td>
-                              <td className="px-4 py-3">{row.points}</td>
-                              <td className="px-4 py-3">{row.goalDifference}</td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr className="border-t border-white/10">
-                            <td className="px-4 py-3 text-zinc-500" colSpan={4}>
-                              Таблица заполнится после матчей группы.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
+                    {group.standings.length ? (
+                      <StandingsTable
+                        rows={group.standings.map((row) => ({
+                          id: row.id,
+                          rank: row.rank,
+                          name: getDisplayName(row.participant.user.nickname, row.participant.user.name ?? "Игрок"),
+                          played: row.played,
+                          wins: row.wins,
+                          draws: row.draws,
+                          losses: row.losses,
+                          goalDifference: row.goalDifference,
+                          points: row.points,
+                        }))}
+                      />
+                    ) : (
+                      <div className="px-4 py-4 text-sm text-zinc-500">Таблица заполнится после матчей группы.</div>
+                    )}
                   </Card>
                 ))}
               </div>
             </div>
           ) : null}
 
-          {leagueStage ? (
-            <Card className="overflow-hidden">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-white/5 text-zinc-400">
-                  <tr>
-                    <th className="px-4 py-3">Игрок</th>
-                    <th className="px-4 py-3">Очки</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {simpleLeaderboard.map((row) => (
-                    <tr key={row.user.id} className="border-t border-white/10">
-                      <td className="px-4 py-3">{row.user.nickname ?? row.user.name}</td>
-                      <td className="px-4 py-3">{row.points}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {leagueStage || tournament.format === TournamentFormat.ROUND_ROBIN ? (
+            <Card className="overflow-hidden p-0">
+              <div className="border-b border-white/10 px-5 py-4 font-medium text-white">Таблица лиги</div>
+              {leagueTable.length ? (
+                <StandingsTable rows={leagueTable} />
+              ) : (
+                <div className="px-4 py-4 text-sm text-zinc-500">Таблица лиги заполнится после первых сыгранных матчей.</div>
+              )}
             </Card>
           ) : null}
 
@@ -189,8 +335,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                         {match.player1?.nickname ?? match.player1?.name ?? "TBD"} vs {match.player2?.nickname ?? match.player2?.name ?? "TBD"}
                       </div>
                       <div className="mt-2 text-sm text-zinc-400">
-                        {match.group?.name ?? match.stage?.name ?? `Раунд ${match.round}`} •{" "}
-                        {formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}
+                        {match.group?.name ?? match.stage?.name ?? `Раунд ${match.round}`} • {formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}
                       </div>
                     </div>
                     <Badge variant="neutral">{match.status}</Badge>
