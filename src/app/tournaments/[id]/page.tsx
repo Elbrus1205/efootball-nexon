@@ -97,10 +97,10 @@ function rowHighlight(index: number) {
 }
 
 function rankBadge(index: number) {
-  if (index === 0) return "inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-primary/20 px-2 font-semibold text-primary";
-  if (index === 1) return "inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-emerald-400/15 px-2 font-semibold text-emerald-300";
-  if (index === 2) return "inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-amber-400/15 px-2 font-semibold text-amber-300";
-  return "inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-white/5 px-2 font-medium text-zinc-300";
+  if (index === 0) return "inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-primary/20 px-2 text-sm font-semibold text-primary";
+  if (index === 1) return "inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-emerald-400/15 px-2 text-sm font-semibold text-emerald-300";
+  if (index === 2) return "inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-amber-400/15 px-2 text-sm font-semibold text-amber-300";
+  return "inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-white/5 px-2 text-sm font-medium text-zinc-300";
 }
 
 function StickyHeader({ children, left = 0 }: { children: React.ReactNode; left?: number }) {
@@ -130,14 +130,14 @@ function StandingsTable({
   }>;
 }) {
   return (
-    <div className="overflow-x-auto rounded-[1.5rem] border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))]">
+    <div className="overflow-x-auto rounded-[1.5rem] border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:px-2 [&_td:nth-child(1)]:text-center [&_td:nth-child(1)]:w-12 [&_td:nth-child(2)]:pl-2 [&_th:nth-child(1)]:px-2 [&_th:nth-child(2)]:pl-2">
       <table className="w-full min-w-[760px] text-left text-sm">
         <thead>
           <tr>
             <StickyHeader left={0}>
               <div className="flex justify-center">№</div>
             </StickyHeader>
-            <StickyHeader left={72}>Команда</StickyHeader>
+            <StickyHeader left={56}>Команда</StickyHeader>
             <StickyHeader>
               <div className="text-center">И</div>
             </StickyHeader>
@@ -161,10 +161,10 @@ function StandingsTable({
         <tbody>
           {rows.map((row, index) => (
             <tr key={row.id} className={rowHighlight(index)}>
-              <td className="sticky left-0 z-10 px-4 py-3 text-zinc-300" style={{ background: "inherit" }}>
+              <td className="sticky left-0 z-10 w-14 px-3 py-3 text-zinc-300" style={{ background: "inherit" }}>
                 <span className={rankBadge(index)}>{row.rank ?? index + 1}</span>
               </td>
-              <td className="sticky left-[72px] z-10 px-4 py-3 font-medium text-white" style={{ background: "inherit" }}>
+              <td className="sticky left-[56px] z-10 px-3 py-3 font-medium text-white" style={{ background: "inherit" }}>
                 {row.name}
               </td>
               <td className="px-4 py-3 text-center text-zinc-300">{row.played}</td>
