@@ -134,7 +134,9 @@ function StandingsTable({
       <table className="w-full min-w-[760px] text-left text-sm">
         <thead>
           <tr>
-            <StickyHeader left={0}>№</StickyHeader>
+            <StickyHeader left={0}>
+              <div className="flex justify-center">№</div>
+            </StickyHeader>
             <StickyHeader left={72}>Команда</StickyHeader>
             <StickyHeader>
               <div className="text-center">И</div>
