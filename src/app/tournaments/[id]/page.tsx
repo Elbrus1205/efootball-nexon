@@ -135,12 +135,24 @@ function StandingsTable({
           <tr>
             <StickyHeader left={0}>№</StickyHeader>
             <StickyHeader left={72}>Команда</StickyHeader>
-            <StickyHeader>И</StickyHeader>
-            <StickyHeader>В</StickyHeader>
-            <StickyHeader>Н</StickyHeader>
-            <StickyHeader>П</StickyHeader>
-            <StickyHeader>+/-</StickyHeader>
-            <StickyHeader>Очки</StickyHeader>
+            <StickyHeader>
+              <div className="text-center">И</div>
+            </StickyHeader>
+            <StickyHeader>
+              <div className="text-center">В</div>
+            </StickyHeader>
+            <StickyHeader>
+              <div className="text-center">Н</div>
+            </StickyHeader>
+            <StickyHeader>
+              <div className="text-center">П</div>
+            </StickyHeader>
+            <StickyHeader>
+              <div className="text-center">+/-</div>
+            </StickyHeader>
+            <StickyHeader>
+              <div className="text-center">Очки</div>
+            </StickyHeader>
           </tr>
         </thead>
         <tbody>
@@ -152,22 +164,22 @@ function StandingsTable({
               <td className="sticky left-[72px] z-10 px-4 py-3 font-medium text-white" style={{ background: "inherit" }}>
                 {row.name}
               </td>
-              <td className="px-4 py-3 text-zinc-300">{row.played}</td>
-              <td className="px-4 py-3 text-zinc-300">{row.wins}</td>
-              <td className="px-4 py-3 text-zinc-300">{row.draws}</td>
-              <td className="px-4 py-3 text-zinc-300">{row.losses}</td>
+              <td className="px-4 py-3 text-center text-zinc-300">{row.played}</td>
+              <td className="px-4 py-3 text-center text-zinc-300">{row.wins}</td>
+              <td className="px-4 py-3 text-center text-zinc-300">{row.draws}</td>
+              <td className="px-4 py-3 text-center text-zinc-300">{row.losses}</td>
               <td
                 className={
                   row.goalDifference > 0
-                    ? "px-4 py-3 font-medium text-emerald-300"
+                    ? "px-4 py-3 text-center font-medium text-emerald-300"
                     : row.goalDifference < 0
-                      ? "px-4 py-3 font-medium text-red-300"
-                      : "px-4 py-3 font-medium text-zinc-300"
+                      ? "px-4 py-3 text-center font-medium text-red-300"
+                      : "px-4 py-3 text-center font-medium text-zinc-300"
                 }
               >
                 {row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}
               </td>
-              <td className="px-4 py-3 font-semibold text-white">{row.points}</td>
+              <td className="px-4 py-3 text-center font-semibold text-white">{row.points}</td>
             </tr>
           ))}
         </tbody>
