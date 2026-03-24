@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BracketView } from "@/components/tournaments/bracket-view";
+import { matchStatusLabel, matchStatusVariant, playoffTypeLabel, tournamentFormatLabel, tournamentStatusLabel, tournamentStatusVariant } from "@/lib/admin-display";
 import { formatDate } from "@/lib/utils";
 
 type LeagueRow = {
@@ -261,9 +262,9 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
       <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
         <div className="space-y-4">
           <div className="flex flex-wrap gap-3">
-            <Badge variant="primary">{tournament.status}</Badge>
-            <Badge variant="accent">{tournament.format}</Badge>
-            {tournament.playoffType ? <Badge variant="neutral">{tournament.playoffType}</Badge> : null}
+            <Badge variant={tournamentStatusVariant[tournament.status]}>{tournamentStatusLabel[tournament.status]}</Badge>
+            <Badge variant="accent">{tournamentFormatLabel[tournament.format] ?? tournament.format}</Badge>
+            {tournament.playoffType ? <Badge variant="neutral">{playoffTypeLabel[tournament.playoffType] ?? tournament.playoffType}</Badge> : null}
           </div>
           <h1 className="font-display text-4xl font-thin text-white">{tournament.title}</h1>
           <p className="max-w-3xl text-zinc-400">{tournament.description}</p>
@@ -353,7 +354,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                         {match.group?.name ?? match.stage?.name ?? `Раунд ${match.round}`} • {formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}
                       </div>
                     </div>
-                    <Badge variant="neutral">{match.status}</Badge>
+                    <Badge variant={matchStatusVariant[match.status] ?? "neutral"}>{matchStatusLabel[match.status] ?? match.status}</Badge>
                   </div>
                 </Card>
               ))
