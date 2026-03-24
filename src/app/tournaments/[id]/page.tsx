@@ -134,10 +134,10 @@ function StandingsTable({
       <table className="w-full min-w-[760px] text-left text-sm">
         <thead>
           <tr>
-            <StickyHeader left={0}>
+            <StickyHeader>
               <div className="flex justify-center">№</div>
             </StickyHeader>
-            <StickyHeader left={56}>Команда</StickyHeader>
+            <StickyHeader>Команда</StickyHeader>
             <StickyHeader>
               <div className="text-center">И</div>
             </StickyHeader>
@@ -161,10 +161,10 @@ function StandingsTable({
         <tbody>
           {rows.map((row, index) => (
             <tr key={row.id} className={rowHighlight(index)}>
-              <td className="sticky left-0 z-10 w-14 px-3 py-3 text-zinc-300" style={{ background: "inherit" }}>
+              <td className="w-14 px-3 py-3 text-zinc-300">
                 <span className={rankBadge(index)}>{row.rank ?? index + 1}</span>
               </td>
-              <td className="sticky left-[56px] z-10 px-3 py-3 font-medium text-white" style={{ background: "inherit" }}>
+              <td className="px-3 py-3 font-medium text-white">
                 {row.name}
               </td>
               <td className="px-4 py-3 text-center text-zinc-300">{row.played}</td>
