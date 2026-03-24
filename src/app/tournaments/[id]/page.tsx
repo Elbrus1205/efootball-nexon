@@ -34,7 +34,6 @@ function buildLeagueTable(
     player2Id: string | null;
     player1Score: number | null;
     player2Score: number | null;
-    status: string;
   }>,
 ) {
   const table = new Map<string, LeagueRow>();
@@ -89,6 +88,31 @@ function buildLeagueTable(
   });
 }
 
+function rowHighlight(index: number) {
+  if (index === 0) return "border-t border-primary/20 bg-primary/10";
+  if (index === 1) return "border-t border-emerald-400/10 bg-emerald-400/5";
+  if (index === 2) return "border-t border-amber-400/10 bg-amber-400/5";
+  return "border-t border-white/10";
+}
+
+function rankBadge(index: number) {
+  if (index === 0) return "inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-primary/20 px-2 font-semibold text-primary";
+  if (index === 1) return "inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-emerald-400/15 px-2 font-semibold text-emerald-300";
+  if (index === 2) return "inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-amber-400/15 px-2 font-semibold text-amber-300";
+  return "inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-white/5 px-2 font-medium text-zinc-300";
+}
+
+function StickyHeader({ children, left = 0 }: { children: React.ReactNode; left?: number }) {
+  return (
+    <th
+      className="sticky top-0 z-20 border-b border-white/10 bg-[linear-gradient(180deg,rgba(18,24,34,0.98),rgba(14,18,26,0.92))] px-4 py-3 text-xs uppercase tracking-[0.18em] text-zinc-300 backdrop-blur-xl"
+      style={left ? { left } : undefined}
+    >
+      {children}
+    </th>
+  );
+}
+
 function StandingsTable({
   rows,
 }: {
@@ -105,54 +129,33 @@ function StandingsTable({
   }>;
 }) {
   return (
-    <div className="overflow-x-auto rounded-[1.5rem]">
-      <table className="w-full min-w-[720px] text-left text-sm">
-        <thead className="text-zinc-300">
+    <div className="overflow-x-auto rounded-[1.5rem] border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))]">
+      <table className="w-full min-w-[760px] text-left text-sm">
+        <thead>
           <tr>
-            <th className="sticky top-0 z-10 bg-[#141922]/95 px-4 py-3 backdrop-blur">№</th>
-            <th className="sticky top-0 z-10 bg-[#141922]/95 px-4 py-3 backdrop-blur">Команда</th>
-            <th className="sticky top-0 z-10 bg-[#141922]/95 px-4 py-3 backdrop-blur">И</th>
-            <th className="sticky top-0 z-10 bg-[#141922]/95 px-4 py-3 backdrop-blur">В</th>
-            <th className="sticky top-0 z-10 bg-[#141922]/95 px-4 py-3 backdrop-blur">Н</th>
-            <th className="sticky top-0 z-10 bg-[#141922]/95 px-4 py-3 backdrop-blur">П</th>
-            <th className="sticky top-0 z-10 bg-[#141922]/95 px-4 py-3 backdrop-blur">+/-</th>
-            <th className="sticky top-0 z-10 bg-[#141922]/95 px-4 py-3 backdrop-blur">Очки</th>
+            <StickyHeader left={0}>№</StickyHeader>
+            <StickyHeader left={72}>Команда</StickyHeader>
+            <StickyHeader>И</StickyHeader>
+            <StickyHeader>В</StickyHeader>
+            <StickyHeader>Н</StickyHeader>
+            <StickyHeader>П</StickyHeader>
+            <StickyHeader>+/-</StickyHeader>
+            <StickyHeader>Очки</StickyHeader>
           </tr>
         </thead>
         <tbody>
           {rows.map((row, index) => (
-            <tr
-              key={row.id}
-              className={
-                index === 0
-                  ? "border-t border-primary/20 bg-primary/10"
-                  : index === 1
-                    ? "border-t border-emerald-400/10 bg-emerald-400/5"
-                    : index === 2
-                      ? "border-t border-amber-400/10 bg-amber-400/5"
-                      : "border-t border-white/10"
-              }
-            >
-              <td className="px-4 py-3 text-zinc-300">
-                <span
-                  className={
-                    index === 0
-                      ? "inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-primary/20 px-2 font-semibold text-primary"
-                      : index === 1
-                        ? "inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-emerald-400/15 px-2 font-semibold text-emerald-300"
-                        : index === 2
-                          ? "inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-amber-400/15 px-2 font-semibold text-amber-300"
-                          : "inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-white/5 px-2 font-medium text-zinc-300"
-                  }
-                >
-                  {row.rank ?? index + 1}
-                </span>
+            <tr key={row.id} className={rowHighlight(index)}>
+              <td className="sticky left-0 z-10 px-4 py-3 text-zinc-300" style={{ background: "inherit" }}>
+                <span className={rankBadge(index)}>{row.rank ?? index + 1}</span>
               </td>
-              <td className="px-4 py-3 font-medium text-white">{row.name}</td>
-              <td className="px-4 py-3">{row.played}</td>
-              <td className="px-4 py-3">{row.wins}</td>
-              <td className="px-4 py-3">{row.draws}</td>
-              <td className="px-4 py-3">{row.losses}</td>
+              <td className="sticky left-[72px] z-10 px-4 py-3 font-medium text-white" style={{ background: "inherit" }}>
+                {row.name}
+              </td>
+              <td className="px-4 py-3 text-zinc-300">{row.played}</td>
+              <td className="px-4 py-3 text-zinc-300">{row.wins}</td>
+              <td className="px-4 py-3 text-zinc-300">{row.draws}</td>
+              <td className="px-4 py-3 text-zinc-300">{row.losses}</td>
               <td
                 className={
                   row.goalDifference > 0

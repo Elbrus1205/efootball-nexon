@@ -2,6 +2,7 @@
 
 import { SingleEliminationBracket, SVGViewer } from "@g-loot/react-tournament-brackets";
 import { Match, User } from "@prisma/client";
+import { GitBranch, Trophy } from "lucide-react";
 
 export function BracketView({
   matches,
@@ -14,7 +15,7 @@ export function BracketView({
     nextMatchId: match.nextMatchId,
     nextLooserMatchId: match.loserNextMatchId,
     tournamentRoundText: `${match.bracket === "lower" ? "Lower" : "Upper"} / ${match.round}`,
-    state: match.status === "CONFIRMED" ? "DONE" : "SCHEDULED",
+    state: match.status === "CONFIRMED" || match.status === "FINISHED" ? "DONE" : "SCHEDULED",
     participants: [
       {
         id: match.player1Id ?? "tbd-1",
@@ -34,10 +35,28 @@ export function BracketView({
   }));
 
   return (
-    <div className="overflow-x-auto rounded-3xl border border-white/10 bg-black/30 p-4">
-      <SVGViewer width={1000} height={520}>
-        <SingleEliminationBracket matches={data as never} />
-      </SVGViewer>
+    <div className="overflow-hidden rounded-[2rem] border border-primary/15 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.14),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-black/20 px-5 py-4 backdrop-blur-xl">
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-primary">
+            <GitBranch className="h-4 w-4" />
+            Плей-офф
+          </div>
+          <div className="text-sm text-zinc-400">Спортивная сетка сезона с переходами между раундами и акцентом на победителя.</div>
+        </div>
+        <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/10 px-4 py-2 text-sm text-amber-200">
+          <Trophy className="h-4 w-4" />
+          Финальная часть
+        </div>
+      </div>
+
+      <div className="overflow-x-auto bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.08),transparent_30%),linear-gradient(180deg,rgba(10,10,10,0.65),rgba(10,10,10,0.88))] px-2 py-4 sm:px-4">
+        <div className="min-w-[980px] rounded-[1.75rem] border border-white/10 bg-black/25 p-3 shadow-[0_0_45px_rgba(59,130,246,0.08)] backdrop-blur-md">
+          <SVGViewer width={1120} height={620}>
+            <SingleEliminationBracket matches={data as never} />
+          </SVGViewer>
+        </div>
+      </div>
     </div>
   );
 }
