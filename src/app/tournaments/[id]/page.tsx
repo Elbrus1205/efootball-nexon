@@ -130,8 +130,8 @@ function StandingsTable({
   }>;
 }) {
   return (
-    <div className="overflow-x-auto rounded-[1.5rem] border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:px-2 [&_td:nth-child(1)]:text-center [&_td:nth-child(1)]:w-12 [&_td:nth-child(2)]:pl-2 [&_th:nth-child(1)]:px-2 [&_th:nth-child(2)]:pl-2">
-      <table className="w-full min-w-[760px] text-left text-sm">
+    <div className="overflow-x-auto rounded-[1.5rem] border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:px-2 [&_td:nth-child(1)]:text-center [&_td:nth-child(1)]:w-12 [&_td:nth-child(2)]:pl-2 [&_td:nth-child(n+3)]:px-2 [&_td:nth-child(n+3)]:w-10 [&_th:nth-child(1)]:px-2 [&_th:nth-child(2)]:pl-2 [&_th:nth-child(n+3)]:px-2 [&_th:nth-child(n+3)]:w-10">
+      <table className="w-full min-w-[640px] text-left text-sm">
         <thead>
           <tr>
             <StickyHeader>
@@ -167,22 +167,22 @@ function StandingsTable({
               <td className="px-3 py-3 font-medium text-white">
                 {row.name}
               </td>
-              <td className="px-4 py-3 text-center text-zinc-300">{row.played}</td>
-              <td className="px-4 py-3 text-center text-zinc-300">{row.wins}</td>
-              <td className="px-4 py-3 text-center text-zinc-300">{row.draws}</td>
-              <td className="px-4 py-3 text-center text-zinc-300">{row.losses}</td>
+              <td className="px-2 py-3 text-center text-zinc-300">{row.played}</td>
+              <td className="px-2 py-3 text-center text-zinc-300">{row.wins}</td>
+              <td className="px-2 py-3 text-center text-zinc-300">{row.draws}</td>
+              <td className="px-2 py-3 text-center text-zinc-300">{row.losses}</td>
               <td
                 className={
                   row.goalDifference > 0
-                    ? "px-4 py-3 text-center font-medium text-emerald-300"
+                    ? "px-2 py-3 text-center font-medium text-emerald-300"
                     : row.goalDifference < 0
-                      ? "px-4 py-3 text-center font-medium text-red-300"
-                      : "px-4 py-3 text-center font-medium text-zinc-300"
+                      ? "px-2 py-3 text-center font-medium text-red-300"
+                      : "px-2 py-3 text-center font-medium text-zinc-300"
                 }
               >
                 {row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}
               </td>
-              <td className="px-4 py-3 text-center font-semibold text-white">{row.points}</td>
+              <td className="px-2 py-3 text-center font-semibold text-white">{row.points}</td>
             </tr>
           ))}
         </tbody>
