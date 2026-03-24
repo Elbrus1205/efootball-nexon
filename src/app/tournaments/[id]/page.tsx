@@ -130,7 +130,7 @@ function StandingsTable({
   }>;
 }) {
   return (
-    <div className="overflow-x-auto rounded-[1.5rem] border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:px-2 [&_td:nth-child(1)]:text-center [&_td:nth-child(1)]:w-12 [&_td:nth-child(2)]:w-[1%] [&_td:nth-child(2)]:whitespace-nowrap [&_td:nth-child(2)]:pl-2 [&_td:nth-child(2)]:pr-[15px] [&_td:nth-child(n+3)]:px-2 [&_td:nth-child(n+3)]:w-10 [&_th:nth-child(1)]:px-2 [&_th:nth-child(2)]:w-[1%] [&_th:nth-child(2)]:whitespace-nowrap [&_th:nth-child(2)]:pl-2 [&_th:nth-child(2)]:pr-[15px] [&_th:nth-child(n+3)]:px-2 [&_th:nth-child(n+3)]:w-10">
+    <div className="overflow-x-auto rounded-[1.5rem] border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:px-1 [&_td:nth-child(1)]:text-center [&_td:nth-child(1)]:w-10 [&_td:nth-child(2)]:w-[1%] [&_td:nth-child(2)]:whitespace-nowrap [&_td:nth-child(2)]:pl-2 [&_td:nth-child(2)]:pr-[15px] [&_td:nth-child(n+3)]:px-2 [&_td:nth-child(n+3)]:w-10 [&_th:nth-child(1)]:px-1 [&_th:nth-child(1)]:w-10 [&_th:nth-child(2)]:w-[1%] [&_th:nth-child(2)]:whitespace-nowrap [&_th:nth-child(2)]:pl-2 [&_th:nth-child(2)]:pr-[15px] [&_th:nth-child(n+3)]:px-2 [&_th:nth-child(n+3)]:w-10">
       <table className="w-max min-w-[640px] table-auto text-left text-sm">
         <thead>
           <tr>
@@ -161,7 +161,7 @@ function StandingsTable({
         <tbody>
           {rows.map((row, index) => (
             <tr key={row.id} className={rowHighlight(index)}>
-              <td className="w-14 px-3 py-3 text-zinc-300">
+              <td className="w-10 px-1 py-3 text-zinc-300">
                 <span className={rankBadge(index)}>{row.rank ?? index + 1}</span>
               </td>
               <td className="px-3 py-3 font-medium text-white">
@@ -303,7 +303,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
               <div className="text-sm uppercase tracking-[0.24em] text-zinc-500">Группы</div>
               <div className="grid gap-4">
                 {groupStage.groups.map((group) => (
-                  <Card key={group.id} className="overflow-hidden p-0">
+                  <Card key={group.id} className="mx-auto w-fit max-w-full overflow-hidden p-0">
                     <div className="border-b border-white/10 px-5 py-4 font-medium text-white">{group.name}</div>
                     {group.standings.length ? (
                       <StandingsTable
@@ -329,7 +329,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           ) : null}
 
           {leagueStage || tournament.format === TournamentFormat.ROUND_ROBIN ? (
-            <Card className="overflow-hidden p-0">
+            <Card className="mx-auto w-fit max-w-full overflow-hidden p-0">
               <div className="border-b border-white/10 px-5 py-4 font-medium text-white">Таблица лиги</div>
               {leagueTable.length ? (
                 <StandingsTable rows={leagueTable} />
