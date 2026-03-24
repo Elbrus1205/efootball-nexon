@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { generateTournamentStages } from "@/lib/services/tournaments";
+import { generateTournamentMatches, generateTournamentSchedule, generateTournamentStages } from "@/lib/services/tournaments";
 import { tournamentBuilderSchema } from "@/lib/validators";
 import { slugify } from "@/lib/utils";
 
@@ -91,6 +91,14 @@ export async function POST(request: Request) {
 
     if (body.autoCreateStages) {
       await generateTournamentStages(tournament.id);
+    }
+
+    if (body.autoCreateMatches) {
+      await generateTournamentMatches(tournament.id);
+    }
+
+    if (body.autoCreateSchedule) {
+      await generateTournamentSchedule(tournament.id, { overwrite: true });
     }
 
     return NextResponse.redirect(new URL("/admin/tournaments?created=1", origin), 303);

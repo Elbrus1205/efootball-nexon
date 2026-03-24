@@ -73,6 +73,10 @@ export default async function AdminTournamentsPage() {
                     Workspace
                   </Link>
                 </Button>
+                <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
+                  <input type="hidden" name="_method" value="generate-schedule" />
+                  <Button variant="outline">Сгенерировать расписание</Button>
+                </form>
                 <Button asChild variant="outline">
                   <Link href={`/tournaments/${tournament.id}`}>Публичная страница</Link>
                 </Button>

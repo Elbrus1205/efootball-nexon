@@ -472,6 +472,94 @@ export async function generateTournamentMatches(tournamentId: string) {
   return db.match.findMany({ where: { tournamentId } });
 }
 
+export async function generateTournamentSchedule(
+  tournamentId: string,
+  options?: { overwrite?: boolean; slotMinutes?: number; breakBetweenRoundsMinutes?: number },
+) {
+  const tournament = await db.tournament.findUnique({
+    where: { id: tournamentId },
+    include: {
+      matches: {
+        include: {
+          schedules: true,
+          group: true,
+          stage: true,
+        },
+        orderBy: [{ round: "asc" }, { matchNumber: "asc" }, { createdAt: "asc" }],
+      },
+    },
+  });
+
+  if (!tournament) throw new Error("Tournament not found");
+  if (!tournament.matches.length) throw new Error("No matches to schedule");
+
+  const overwrite = options?.overwrite ?? false;
+  const slotMinutes = options?.slotMinutes ?? 60;
+  const breakBetweenRoundsMinutes = options?.breakBetweenRoundsMinutes ?? 30;
+
+  let cursor = new Date(tournament.startsAt);
+  let currentRound = tournament.matches[0]?.round ?? 1;
+
+  const createdSchedules = [];
+
+  for (const match of tournament.matches) {
+    if (!overwrite && (match.scheduledAt || match.schedules.length)) {
+      const existingStartsAt = match.scheduledAt ?? match.schedules[0]?.startsAt;
+      if (existingStartsAt) {
+        cursor = new Date(existingStartsAt);
+      }
+      continue;
+    }
+
+    if (match.round !== currentRound) {
+      currentRound = match.round;
+      cursor = new Date(cursor.getTime() + breakBetweenRoundsMinutes * 60_000);
+    }
+
+    const startsAt = new Date(cursor);
+    const endsAt = new Date(startsAt.getTime() + slotMinutes * 60_000);
+    const slotLabel = match.group?.name
+      ? `${match.group.name} • Тур ${match.round}`
+      : match.stage?.name
+        ? `${match.stage.name} • Раунд ${match.round}`
+        : `Раунд ${match.round} • Матч ${match.matchNumber}`;
+
+    const existingSchedule = match.schedules[0];
+    const schedule = existingSchedule
+      ? await db.matchSchedule.update({
+          where: { id: existingSchedule.id },
+          data: {
+            startsAt,
+            endsAt,
+            slotLabel,
+            timezone: "Europe/Moscow",
+          },
+        })
+      : await db.matchSchedule.create({
+          data: {
+            matchId: match.id,
+            startsAt,
+            endsAt,
+            slotLabel,
+            timezone: "Europe/Moscow",
+          },
+        });
+
+    await db.match.update({
+      where: { id: match.id },
+      data: {
+        scheduledAt: startsAt,
+        status: match.status === MatchStatus.PENDING || match.status === MatchStatus.READY ? MatchStatus.SCHEDULED : match.status,
+      },
+    });
+
+    createdSchedules.push(schedule);
+    cursor = new Date(endsAt.getTime());
+  }
+
+  return createdSchedules;
+}
+
 export async function recalculateGroupStandings(tournamentId: string) {
   const groups = await db.tournamentGroup.findMany({
     where: { stage: { tournamentId } },
