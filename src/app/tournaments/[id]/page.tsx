@@ -130,8 +130,8 @@ function StandingsTable({
   }>;
 }) {
   return (
-    <div className="overflow-x-auto rounded-[1.5rem] border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:px-2 [&_td:nth-child(1)]:text-center [&_td:nth-child(1)]:w-12 [&_td:nth-child(2)]:pl-2 [&_td:nth-child(n+3)]:px-2 [&_td:nth-child(n+3)]:w-10 [&_th:nth-child(1)]:px-2 [&_th:nth-child(2)]:pl-2 [&_th:nth-child(n+3)]:px-2 [&_th:nth-child(n+3)]:w-10">
-      <table className="w-full min-w-[640px] text-left text-sm">
+    <div className="overflow-x-auto rounded-[1.5rem] border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:px-2 [&_td:nth-child(1)]:text-center [&_td:nth-child(1)]:w-12 [&_td:nth-child(2)]:w-[1%] [&_td:nth-child(2)]:whitespace-nowrap [&_td:nth-child(2)]:pl-2 [&_td:nth-child(2)]:pr-[15px] [&_td:nth-child(n+3)]:px-2 [&_td:nth-child(n+3)]:w-10 [&_th:nth-child(1)]:px-2 [&_th:nth-child(2)]:w-[1%] [&_th:nth-child(2)]:whitespace-nowrap [&_th:nth-child(2)]:pl-2 [&_th:nth-child(2)]:pr-[15px] [&_th:nth-child(n+3)]:px-2 [&_th:nth-child(n+3)]:w-10">
+      <table className="w-max min-w-[640px] table-auto text-left text-sm">
         <thead>
           <tr>
             <StickyHeader>
