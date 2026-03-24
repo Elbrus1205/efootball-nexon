@@ -1,13 +1,20 @@
-import { notFound } from "next/navigation";
 import { StageType, TournamentFormat, TournamentStatus } from "@prisma/client";
-import { db } from "@/lib/db";
-import { getCurrentSession } from "@/lib/auth/session";
+import { notFound } from "next/navigation";
+import { BracketView } from "@/components/tournaments/bracket-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BracketView } from "@/components/tournaments/bracket-view";
-import { matchStatusLabel, matchStatusVariant, playoffTypeLabel, tournamentFormatLabel, tournamentStatusLabel, tournamentStatusVariant } from "@/lib/admin-display";
+import { getCurrentSession } from "@/lib/auth/session";
+import {
+  matchStatusLabel,
+  matchStatusVariant,
+  playoffTypeLabel,
+  tournamentFormatLabel,
+  tournamentStatusLabel,
+  tournamentStatusVariant,
+} from "@/lib/admin-display";
+import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 
 type LeagueRow = {
@@ -103,12 +110,9 @@ function rankBadge(index: number) {
   return "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white/5 px-1 text-[10px] font-medium text-zinc-300";
 }
 
-function StickyHeader({ children, left = 0 }: { children: React.ReactNode; left?: number }) {
+function StickyHeader({ children }: { children: React.ReactNode }) {
   return (
-    <th
-      className="sticky top-0 z-20 border-b border-white/10 bg-[linear-gradient(180deg,rgba(18,24,34,0.98),rgba(14,18,26,0.92))] px-4 py-3 text-xs uppercase tracking-[0.18em] text-zinc-300 backdrop-blur-xl"
-      style={left ? { left } : undefined}
-    >
+    <th className="sticky top-0 z-20 border-b border-white/10 bg-[linear-gradient(180deg,rgba(18,24,34,0.98),rgba(14,18,26,0.92))] px-4 py-3 text-xs uppercase tracking-[0.18em] text-zinc-300 backdrop-blur-xl">
       {children}
     </th>
   );
@@ -130,7 +134,7 @@ function StandingsTable({
   }>;
 }) {
   return (
-    <div className="overflow-x-auto rounded-[1.5rem] border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:px-0 [&_td:nth-child(1)]:text-center [&_td:nth-child(1)]:w-5 [&_td:nth-child(2)]:w-[1%] [&_td:nth-child(2)]:whitespace-nowrap [&_td:nth-child(2)]:pl-2 [&_td:nth-child(2)]:pr-[15px] [&_td:nth-child(n+3)]:px-1 [&_td:nth-child(n+3)]:w-7 [&_th:nth-child(1)]:px-0 [&_th:nth-child(1)]:w-5 [&_th:nth-child(2)]:w-[1%] [&_th:nth-child(2)]:whitespace-nowrap [&_th:nth-child(2)]:pl-2 [&_th:nth-child(2)]:pr-[15px] [&_th:nth-child(n+3)]:px-1 [&_th:nth-child(n+3)]:w-7">
+    <div className="overflow-x-auto rounded-[1.5rem] border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:w-5 [&_td:nth-child(1)]:px-0 [&_td:nth-child(1)]:text-center [&_td:nth-child(2)]:w-[1%] [&_td:nth-child(2)]:whitespace-nowrap [&_td:nth-child(2)]:pl-2 [&_td:nth-child(2)]:pr-[15px] [&_td:nth-child(n+3)]:w-7 [&_td:nth-child(n+3)]:px-1 [&_th:nth-child(1)]:w-5 [&_th:nth-child(1)]:px-0 [&_th:nth-child(2)]:w-[1%] [&_th:nth-child(2)]:whitespace-nowrap [&_th:nth-child(2)]:pl-2 [&_th:nth-child(2)]:pr-[15px] [&_th:nth-child(n+3)]:w-7 [&_th:nth-child(n+3)]:px-1">
       <table className="w-max min-w-[560px] table-auto text-left text-sm">
         <thead>
           <tr>
@@ -164,9 +168,7 @@ function StandingsTable({
               <td className="w-5 px-0 py-3 text-zinc-300">
                 <span className={rankBadge(index)}>{row.rank ?? index + 1}</span>
               </td>
-              <td className="px-3 py-3 font-medium text-white">
-                {row.name}
-              </td>
+              <td className="px-3 py-3 font-medium text-white">{row.name}</td>
               <td className="px-1 py-3 text-center text-zinc-300">{row.played}</td>
               <td className="px-1 py-3 text-center text-zinc-300">{row.wins}</td>
               <td className="px-1 py-3 text-center text-zinc-300">{row.draws}</td>
@@ -237,7 +239,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   if (!tournament) notFound();
 
   const canRegister =
-    session?.user &&
+    !!session?.user &&
     tournament.status === TournamentStatus.REGISTRATION_OPEN &&
     tournament.participants.length < tournament.maxParticipants &&
     !tournament.participants.some((entry) => entry.userId === session.user.id);
@@ -246,9 +248,18 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   const playoffStage = tournament.stages.find((stage) => stage.type === StageType.PLAYOFF);
   const leagueStage = tournament.stages.find((stage) => stage.type === StageType.LEAGUE);
   const bracketMatches = playoffStage?.bracket?.matches ?? tournament.matches.filter((match) => !match.groupId);
+
   const scheduledMatches = tournament.matches
     .filter((match) => match.scheduledAt || match.schedules.length)
-    .sort((a, b) => new Date(a.scheduledAt ?? a.schedules[0]?.startsAt ?? 0).getTime() - new Date(b.scheduledAt ?? b.schedules[0]?.startsAt ?? 0).getTime());
+    .sort(
+      (a, b) =>
+        new Date(a.scheduledAt ?? a.schedules[0]?.startsAt ?? 0).getTime() -
+        new Date(b.scheduledAt ?? b.schedules[0]?.startsAt ?? 0).getTime(),
+    );
+
+  const myMatches = session?.user
+    ? scheduledMatches.filter((match) => match.player1Id === session.user.id || match.player2Id === session.user.id)
+    : [];
 
   const leagueMatches = leagueStage
     ? tournament.matches.filter((match) => match.stageId === leagueStage.id)
@@ -278,6 +289,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
             </span>
           </div>
         </div>
+
         {canRegister ? (
           <form action={`/api/tournaments/${tournament.id}/register`} method="post">
             <Button size="lg">Зарегистрироваться</Button>
@@ -292,7 +304,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
       <Tabs defaultValue="structure">
         <TabsList>
           <TabsTrigger value="structure">Структура турнира</TabsTrigger>
-          <TabsTrigger value="matches">Матчи</TabsTrigger>
+          <TabsTrigger value="matches">Расписание</TabsTrigger>
+          <TabsTrigger value="my-matches">Мои матчи</TabsTrigger>
           <TabsTrigger value="participants">Участники</TabsTrigger>
           <TabsTrigger value="rules">Правила</TabsTrigger>
         </TabsList>
@@ -353,7 +366,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                         {match.player1?.nickname ?? match.player1?.name ?? "TBD"} vs {match.player2?.nickname ?? match.player2?.name ?? "TBD"}
                       </div>
                       <div className="mt-2 text-sm text-zinc-400">
-                        {match.group?.name ?? match.stage?.name ?? `Раунд ${match.round}`} • {formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}
+                        {match.group?.name ?? match.stage?.name ?? `Раунд ${match.round}`} •{" "}
+                        {formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}
                       </div>
                     </div>
                     <Badge variant={matchStatusVariant[match.status] ?? "neutral"}>{matchStatusLabel[match.status] ?? match.status}</Badge>
@@ -361,7 +375,34 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                 </Card>
               ))
             ) : (
-              <Card className="p-6 text-zinc-500">После публикации расписания здесь появится календарь матчей турнира.</Card>
+              <Card className="p-6 text-zinc-500">После публикации расписания здесь появится календарь всех матчей турнира.</Card>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="my-matches">
+          <div className="grid gap-4">
+            {!session?.user ? (
+              <Card className="p-6 text-zinc-500">Вкладка доступна после входа в аккаунт.</Card>
+            ) : myMatches.length ? (
+              myMatches.map((match) => (
+                <Card key={match.id} className="p-5">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <div className="font-medium text-white">
+                        {match.player1?.nickname ?? match.player1?.name ?? "TBD"} vs {match.player2?.nickname ?? match.player2?.name ?? "TBD"}
+                      </div>
+                      <div className="mt-2 text-sm text-zinc-400">
+                        {match.group?.name ?? match.stage?.name ?? `Раунд ${match.round}`} •{" "}
+                        {formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}
+                      </div>
+                    </div>
+                    <Badge variant={matchStatusVariant[match.status] ?? "neutral"}>{matchStatusLabel[match.status] ?? match.status}</Badge>
+                  </div>
+                </Card>
+              ))
+            ) : (
+              <Card className="p-6 text-zinc-500">Здесь появятся матчи текущего участника после публикации расписания.</Card>
             )}
           </div>
         </TabsContent>
