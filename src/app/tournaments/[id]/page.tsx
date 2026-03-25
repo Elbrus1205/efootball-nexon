@@ -111,6 +111,43 @@ function rankBadge(index: number) {
   return "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white/5 px-1 text-[10px] font-medium text-zinc-300";
 }
 
+function getSubmissionState({
+  matchStatus,
+  latestSubmission,
+}: {
+  matchStatus: string;
+  latestSubmission?: {
+    status: string;
+    moderatorComment: string | null;
+  };
+}) {
+  if (matchStatus === "DISPUTED") {
+    return { label: "Матч в споре", tone: "danger" as const };
+  }
+
+  if (matchStatus === "CONFIRMED") {
+    return { label: "Результат подтверждён", tone: "success" as const };
+  }
+
+  if (!latestSubmission) {
+    return { label: "Ожидается результат", tone: "waiting" as const };
+  }
+
+  if (latestSubmission.status === "PENDING") {
+    return { label: "Результат отправлен", tone: "success" as const };
+  }
+
+  if (latestSubmission.status === "REJECTED" && latestSubmission.moderatorComment === "AUTO_MISMATCH") {
+    return { label: "Нужно ввести счёт заново", tone: "retry" as const };
+  }
+
+  if (latestSubmission.status === "DISPUTED") {
+    return { label: "Матч в споре", tone: "danger" as const };
+  }
+
+  return { label: "Ожидается результат", tone: "waiting" as const };
+}
+
 function StickyHeader({ children }: { children: React.ReactNode }) {
   return (
     <th className="sticky top-0 z-20 border-b border-white/10 bg-[linear-gradient(180deg,rgba(18,24,34,0.98),rgba(14,18,26,0.92))] px-4 py-3 text-xs uppercase tracking-[0.18em] text-zinc-300 backdrop-blur-xl">
@@ -386,37 +423,64 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
             {!session?.user ? (
               <Card className="p-6 text-zinc-500">Вкладка доступна после входа в аккаунт.</Card>
             ) : myMatches.length ? (
-              myMatches.map((match) => (
-                <MyMatchCard
-                  key={match.id}
-                  id={match.id}
-                  title={`${match.player1?.nickname ?? match.player1?.name ?? "TBD"} vs ${match.player2?.nickname ?? match.player2?.name ?? "TBD"}`}
-                  meta={`${match.group?.name ?? match.stage?.name ?? `Раунд ${match.round}`} • ${formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}`}
-                  statusLabel={matchStatusLabel[match.status] ?? match.status}
-                  statusVariant={matchStatusVariant[match.status] ?? "neutral"}
-                  scoreText={
-                    match.player1Score !== null && match.player2Score !== null
-                      ? `Подтверждённый счёт: ${match.player1Score} : ${match.player2Score}`
-                      : "Счёт ещё не подтверждён"
-                  }
-                  canSubmit={match.status !== "CONFIRMED" && match.status !== "DISPUTED"}
-                  waitingForOpponent={match.submissions.some((submission) => submission.submittedById === session.user.id && submission.status === "PENDING")}
-                  attemptsLeft={Math.max(
-                    0,
-                    3 -
-                      Math.floor(
-                        match.submissions.filter(
-                          (submission) => submission.status === "REJECTED" && submission.moderatorComment === "AUTO_MISMATCH",
-                        ).length / 2,
-                      ),
-                  )}
-                  helperText={
-                    match.status === "DISPUTED"
-                      ? "Матч переведён в спор. Теперь результат выставляет администратор."
-                      : "Оба игрока должны ввести один и тот же счёт. Если результаты не совпадут три раза, матч уйдёт в спор."
-                  }
-                />
-              ))
+              myMatches.map((match) => {
+                const player1LatestSubmission = match.submissions.find((submission) => submission.submittedById === match.player1Id);
+                const player2LatestSubmission = match.submissions.find((submission) => submission.submittedById === match.player2Id);
+
+                return (
+                  <MyMatchCard
+                    key={match.id}
+                    id={match.id}
+                    title={`${match.player1?.nickname ?? match.player1?.name ?? "TBD"} vs ${match.player2?.nickname ?? match.player2?.name ?? "TBD"}`}
+                    meta={`${match.group?.name ?? match.stage?.name ?? `Раунд ${match.round}`} • ${formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}`}
+                    statusLabel={matchStatusLabel[match.status] ?? match.status}
+                    statusVariant={matchStatusVariant[match.status] ?? "neutral"}
+                    scoreText={
+                      match.player1Score !== null && match.player2Score !== null
+                        ? `Подтверждённый счёт: ${match.player1Score} : ${match.player2Score}`
+                        : "Счёт ещё не подтверждён"
+                    }
+                    canSubmit={match.status !== "CONFIRMED" && match.status !== "DISPUTED"}
+                    waitingForOpponent={match.submissions.some((submission) => submission.submittedById === session.user.id && submission.status === "PENDING")}
+                    attemptsLeft={Math.max(
+                      0,
+                      3 -
+                        Math.floor(
+                          match.submissions.filter(
+                            (submission) => submission.status === "REJECTED" && submission.moderatorComment === "AUTO_MISMATCH",
+                          ).length / 2,
+                        ),
+                    )}
+                    helperText={
+                      match.status === "DISPUTED"
+                        ? "Матч переведён в спор. Теперь результат выставляет администратор."
+                        : "Оба игрока должны ввести один и тот же счёт. Если результаты не совпадут три раза, матч уйдёт в спор."
+                    }
+                    player1Name={match.player1?.nickname ?? match.player1?.name ?? "Игрок 1"}
+                    player2Name={match.player2?.nickname ?? match.player2?.name ?? "Игрок 2"}
+                    player1SubmissionState={getSubmissionState({
+                      matchStatus: match.status,
+                      latestSubmission: player1LatestSubmission
+                        ? {
+                            status: player1LatestSubmission.status,
+                            moderatorComment: player1LatestSubmission.moderatorComment,
+                          }
+                        : undefined,
+                    })}
+                    player2SubmissionState={getSubmissionState({
+                      matchStatus: match.status,
+                      latestSubmission: player2LatestSubmission
+                        ? {
+                            status: player2LatestSubmission.status,
+                            moderatorComment: player2LatestSubmission.moderatorComment,
+                          }
+                        : undefined,
+                    })}
+                    disputeHref="/contacts"
+                    isDisputed={match.status === "DISPUTED"}
+                  />
+                );
+              })
             ) : (
               <Card className="p-6 text-zinc-500">Здесь появятся матчи текущего участника после публикации расписания.</Card>
             )}
