@@ -74,7 +74,7 @@ export const tournamentBuilderSchema = z.object({
   coverImage: z.string().url().optional().or(z.literal("")),
   playoffType: z.nativeEnum(PlayoffType).optional().nullable(),
   seedingMethod: z.nativeEnum(SeedingMethod).default(SeedingMethod.MANUAL),
-  roundsInLeague: z.coerce.number().min(1, "В лиге должен быть минимум 1 круг.").max(4, "Максимум 4 круга в лиге.").default(1),
+  roundsInLeague: optionalIntField(1, 4, "В лиге должен быть минимум 1 круг."),
   groupsCount: optionalIntField(1, 16, "Количество групп должно быть от 1 до 16."),
   participantsPerGroup: optionalIntField(2, 32, "В группе должно быть от 2 до 32 участников."),
   playoffTeamsPerGroup: optionalIntField(1, 8, "Из группы должно выходить от 1 до 8 участников."),
@@ -90,6 +90,41 @@ export const tournamentBuilderSchema = z.object({
   checkInRequired: z.coerce.boolean().default(false),
   clubSelectionMode: z.nativeEnum(ClubSelectionMode).default(ClubSelectionMode.ADMIN_RANDOM),
   sortRules: z.array(z.nativeEnum(SortRule)).default([SortRule.POINTS, SortRule.GOAL_DIFFERENCE, SortRule.GOALS_FOR, SortRule.WINS]),
+}).superRefine((data, ctx) => {
+  const isLeague = data.format === TournamentFormat.LEAGUE || data.format === TournamentFormat.ROUND_ROBIN;
+  const isGroups = data.format === TournamentFormat.GROUPS || data.format === TournamentFormat.GROUPS_PLAYOFF;
+
+  if (isLeague && !data.roundsInLeague) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["roundsInLeague"],
+      message: "В лиге должен быть минимум 1 круг.",
+    });
+  }
+
+  if (isGroups && !data.groupsCount) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["groupsCount"],
+      message: "Для группового этапа нужно указать количество групп.",
+    });
+  }
+
+  if (isGroups && !data.participantsPerGroup) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["participantsPerGroup"],
+      message: "Для группового этапа нужно указать количество участников в группе.",
+    });
+  }
+
+  if (data.format === TournamentFormat.GROUPS_PLAYOFF && !data.playoffTeamsPerGroup) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["playoffTeamsPerGroup"],
+      message: "Нужно указать, сколько участников выходит из группы.",
+    });
+  }
 });
 
 export const resultSubmissionSchema = z.object({
