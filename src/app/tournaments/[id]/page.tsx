@@ -1,12 +1,15 @@
-import { StageType, TournamentFormat, TournamentStatus } from "@prisma/client";
+import { ClubSelectionMode, StageType, TournamentFormat, TournamentStatus } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { BracketView } from "@/components/tournaments/bracket-view";
+import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
 import { MyMatchCard } from "@/components/tournaments/my-match-card";
+import { RegisterTournamentButton } from "@/components/tournaments/register-tournament-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentSession } from "@/lib/auth/session";
+import { getAvailableClubs } from "@/lib/clubs";
 import {
   matchStatusLabel,
   matchStatusVariant,
@@ -20,7 +23,11 @@ import { formatDate } from "@/lib/utils";
 
 type LeagueRow = {
   id: string;
-  name: string;
+  rank?: number | null;
+  clubName: string;
+  clubBadgePath?: string | null;
+  playerId?: string | null;
+  playerName: string;
   played: number;
   wins: number;
   draws: number;
@@ -29,13 +36,15 @@ type LeagueRow = {
   points: number;
 };
 
-function getDisplayName(name: string | null | undefined, fallback: string) {
+function displayName(name: string | null | undefined, fallback: string) {
   return name?.trim() || fallback;
 }
 
 function buildLeagueTable(
   participants: Array<{
     userId: string;
+    clubName: string | null;
+    clubBadgePath: string | null;
     user: { id: string; nickname: string | null; name: string | null };
   }>,
   matches: Array<{
@@ -48,9 +57,13 @@ function buildLeagueTable(
   const table = new Map<string, LeagueRow>();
 
   for (const entry of participants) {
+    const playerName = displayName(entry.user.nickname, entry.user.name ?? "Игрок");
     table.set(entry.userId, {
       id: entry.user.id,
-      name: getDisplayName(entry.user.nickname, entry.user.name ?? "Игрок"),
+      playerId: entry.user.id,
+      playerName,
+      clubName: entry.clubName?.trim() || playerName,
+      clubBadgePath: entry.clubBadgePath,
       played: 0,
       wins: 0,
       draws: 0,
@@ -93,7 +106,7 @@ function buildLeagueTable(
     if (b.points !== a.points) return b.points - a.points;
     if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
     if (b.wins !== a.wins) return b.wins - a.wins;
-    return a.name.localeCompare(b.name, "ru");
+    return a.clubName.localeCompare(b.clubName, "ru");
   });
 }
 
@@ -121,30 +134,14 @@ function getSubmissionState({
     moderatorComment: string | null;
   };
 }) {
-  if (matchStatus === "DISPUTED") {
-    return { label: "Матч в споре", tone: "danger" as const };
-  }
-
-  if (matchStatus === "CONFIRMED") {
-    return { label: "Результат подтверждён", tone: "success" as const };
-  }
-
-  if (!latestSubmission) {
-    return { label: "Ожидается результат", tone: "waiting" as const };
-  }
-
-  if (latestSubmission.status === "PENDING") {
-    return { label: "Результат отправлен", tone: "success" as const };
-  }
-
+  if (matchStatus === "DISPUTED") return { label: "Матч в споре", tone: "danger" as const };
+  if (matchStatus === "CONFIRMED") return { label: "Результат подтверждён", tone: "success" as const };
+  if (!latestSubmission) return { label: "Ожидается результат", tone: "waiting" as const };
+  if (latestSubmission.status === "PENDING") return { label: "Результат отправлен", tone: "success" as const };
   if (latestSubmission.status === "REJECTED" && latestSubmission.moderatorComment === "AUTO_MISMATCH") {
     return { label: "Нужно ввести счёт заново", tone: "retry" as const };
   }
-
-  if (latestSubmission.status === "DISPUTED") {
-    return { label: "Матч в споре", tone: "danger" as const };
-  }
-
+  if (latestSubmission.status === "DISPUTED") return { label: "Матч в споре", tone: "danger" as const };
   return { label: "Ожидается результат", tone: "waiting" as const };
 }
 
@@ -156,21 +153,7 @@ function StickyHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
-function StandingsTable({
-  rows,
-}: {
-  rows: Array<{
-    id: string;
-    rank?: number | null;
-    name: string;
-    played: number;
-    wins: number;
-    draws: number;
-    losses: number;
-    goalDifference: number;
-    points: number;
-  }>;
-}) {
+function StandingsTable({ rows }: { rows: LeagueRow[] }) {
   return (
     <div className="overflow-x-auto rounded-[1.5rem] border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:w-5 [&_td:nth-child(1)]:px-0 [&_td:nth-child(1)]:text-center [&_td:nth-child(2)]:w-[1%] [&_td:nth-child(2)]:whitespace-nowrap [&_td:nth-child(2)]:pl-2 [&_td:nth-child(2)]:pr-[15px] [&_td:nth-child(n+3)]:w-7 [&_td:nth-child(n+3)]:px-1 [&_th:nth-child(1)]:w-5 [&_th:nth-child(1)]:px-0 [&_th:nth-child(2)]:w-[1%] [&_th:nth-child(2)]:whitespace-nowrap [&_th:nth-child(2)]:pl-2 [&_th:nth-child(2)]:pr-[15px] [&_th:nth-child(n+3)]:w-7 [&_th:nth-child(n+3)]:px-1">
       <table className="w-max min-w-[560px] table-auto text-left text-sm">
@@ -206,20 +189,20 @@ function StandingsTable({
               <td className="w-5 px-0 py-3 text-zinc-300">
                 <span className={rankBadge(index)}>{row.rank ?? index + 1}</span>
               </td>
-              <td className="px-3 py-3 font-medium text-white">{row.name}</td>
+              <td className="px-3 py-3">
+                <ClubPlayerLine
+                  clubName={row.clubName}
+                  badgePath={row.clubBadgePath}
+                  playerId={row.playerId}
+                  playerName={row.playerName}
+                  compact
+                />
+              </td>
               <td className="px-1 py-3 text-center text-zinc-300">{row.played}</td>
               <td className="px-1 py-3 text-center text-zinc-300">{row.wins}</td>
               <td className="px-1 py-3 text-center text-zinc-300">{row.draws}</td>
               <td className="px-1 py-3 text-center text-zinc-300">{row.losses}</td>
-              <td
-                className={
-                  row.goalDifference > 0
-                    ? "px-1 py-3 text-center font-medium text-emerald-300"
-                    : row.goalDifference < 0
-                      ? "px-1 py-3 text-center font-medium text-red-300"
-                      : "px-1 py-3 text-center font-medium text-zinc-300"
-                }
-              >
+              <td className={row.goalDifference > 0 ? "px-1 py-3 text-center font-medium text-emerald-300" : row.goalDifference < 0 ? "px-1 py-3 text-center font-medium text-red-300" : "px-1 py-3 text-center font-medium text-zinc-300"}>
                 {row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}
               </td>
               <td className="px-1 py-3 text-center font-semibold text-white">{row.points}</td>
@@ -246,7 +229,15 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
         orderBy: { createdAt: "asc" },
       },
       matches: {
-        include: { player1: true, player2: true, winner: true, stage: true, group: true, schedules: true, submissions: { orderBy: { createdAt: "desc" } } },
+        include: {
+          player1: true,
+          player2: true,
+          winner: true,
+          stage: true,
+          group: true,
+          schedules: true,
+          submissions: { orderBy: { createdAt: "desc" } },
+        },
         orderBy: [{ round: "asc" }, { matchNumber: "asc" }],
       },
       stages: {
@@ -254,7 +245,11 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           groups: {
             include: {
               standings: {
-                include: { participant: { include: { user: true } } },
+                include: {
+                  participant: {
+                    include: { user: true },
+                  },
+                },
                 orderBy: { rank: "asc" },
               },
             },
@@ -308,6 +303,18 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
       ? buildLeagueTable(tournament.participants, leagueMatches)
       : [];
 
+  const availableClubs = await getAvailableClubs();
+  const takenClubSlugs = tournament.participants.map((entry) => entry.clubSlug).filter(Boolean) as string[];
+  const participantClubMap = Object.fromEntries(
+    tournament.participants.map((entry) => [
+      entry.userId,
+      {
+        clubName: entry.clubName,
+        clubBadgePath: entry.clubBadgePath,
+      },
+    ]),
+  );
+
   return (
     <div className="page-shell space-y-8">
       <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
@@ -322,16 +329,17 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           <div className="flex flex-wrap gap-6 text-sm text-zinc-400">
             <span>Старт: {formatDate(tournament.startsAt)}</span>
             <span>Регистрация до: {formatDate(tournament.registrationEndsAt)}</span>
-            <span>
-              Участники: {tournament.participants.length}/{tournament.maxParticipants}
-            </span>
+            <span>Участники: {tournament.participants.length}/{tournament.maxParticipants}</span>
           </div>
         </div>
 
         {canRegister ? (
-          <form action={`/api/tournaments/${tournament.id}/register`} method="post">
-            <Button size="lg">Зарегистрироваться</Button>
-          </form>
+          <RegisterTournamentButton
+            tournamentId={tournament.id}
+            clubSelectionMode={tournament.clubSelectionMode ?? ClubSelectionMode.ADMIN_RANDOM}
+            clubs={availableClubs}
+            takenClubSlugs={takenClubSlugs}
+          />
         ) : (
           <Button size="lg" disabled>
             {tournament.participants.length >= tournament.maxParticipants ? "Лимит достигнут" : "Регистрация недоступна"}
@@ -361,7 +369,10 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                         rows={group.standings.map((row) => ({
                           id: row.id,
                           rank: row.rank,
-                          name: getDisplayName(row.participant.user.nickname, row.participant.user.name ?? "Игрок"),
+                          clubName: row.participant.clubName?.trim() || displayName(row.participant.user.nickname, row.participant.user.name ?? "Игрок"),
+                          clubBadgePath: row.participant.clubBadgePath,
+                          playerId: row.participant.user.id,
+                          playerName: displayName(row.participant.user.nickname, row.participant.user.name ?? "Игрок"),
                           played: row.played,
                           wins: row.wins,
                           draws: row.draws,
@@ -390,7 +401,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
             </Card>
           ) : null}
 
-          {playoffStage ? <BracketView matches={bracketMatches} /> : null}
+          {playoffStage ? <BracketView matches={bracketMatches} clubsByUserId={participantClubMap} /> : null}
         </TabsContent>
 
         <TabsContent value="matches">
@@ -398,14 +409,24 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
             {scheduledMatches.length ? (
               scheduledMatches.map((match) => (
                 <Card key={match.id} className="p-5">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                      <div className="font-medium text-white">
-                        {match.player1?.nickname ?? match.player1?.name ?? "TBD"} vs {match.player2?.nickname ?? match.player2?.name ?? "TBD"}
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="space-y-3">
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <ClubPlayerLine
+                          playerId={match.player1?.id}
+                          playerName={match.player1?.nickname ?? match.player1?.name ?? "Игрок 1"}
+                          clubName={match.player1Id ? participantClubMap[match.player1Id]?.clubName : null}
+                          badgePath={match.player1Id ? participantClubMap[match.player1Id]?.clubBadgePath : null}
+                        />
+                        <ClubPlayerLine
+                          playerId={match.player2?.id}
+                          playerName={match.player2?.nickname ?? match.player2?.name ?? "Игрок 2"}
+                          clubName={match.player2Id ? participantClubMap[match.player2Id]?.clubName : null}
+                          badgePath={match.player2Id ? participantClubMap[match.player2Id]?.clubBadgePath : null}
+                        />
                       </div>
-                      <div className="mt-2 text-sm text-zinc-400">
-                        {match.group?.name ?? match.stage?.name ?? `Раунд ${match.round}`} •{" "}
-                        {formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}
+                      <div className="text-sm text-zinc-400">
+                        {match.group?.name ?? match.stage?.name ?? `Раунд ${match.round}`} • {formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}
                       </div>
                     </div>
                     <Badge variant={matchStatusVariant[match.status] ?? "neutral"}>{matchStatusLabel[match.status] ?? match.status}</Badge>
@@ -431,7 +452,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                   <MyMatchCard
                     key={match.id}
                     id={match.id}
-                    title={`${match.player1?.nickname ?? match.player1?.name ?? "TBD"} vs ${match.player2?.nickname ?? match.player2?.name ?? "TBD"}`}
+                    title="Личный матч"
                     meta={`${match.group?.name ?? match.stage?.name ?? `Раунд ${match.round}`} • ${formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}`}
                     statusLabel={matchStatusLabel[match.status] ?? match.status}
                     statusVariant={matchStatusVariant[match.status] ?? "neutral"}
@@ -456,8 +477,14 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                         ? "Матч переведён в спор. Теперь результат выставляет администратор."
                         : "Оба игрока должны ввести один и тот же счёт. Если результаты не совпадут три раза, матч уйдёт в спор."
                     }
+                    player1Id={match.player1?.id}
+                    player2Id={match.player2?.id}
                     player1Name={match.player1?.nickname ?? match.player1?.name ?? "Игрок 1"}
                     player2Name={match.player2?.nickname ?? match.player2?.name ?? "Игрок 2"}
+                    player1ClubName={match.player1Id ? participantClubMap[match.player1Id]?.clubName : null}
+                    player2ClubName={match.player2Id ? participantClubMap[match.player2Id]?.clubName : null}
+                    player1ClubBadgePath={match.player1Id ? participantClubMap[match.player1Id]?.clubBadgePath : null}
+                    player2ClubBadgePath={match.player2Id ? participantClubMap[match.player2Id]?.clubBadgePath : null}
                     player1SubmissionState={getSubmissionState({
                       matchStatus: match.status,
                       latestSubmission: player1LatestSubmission
@@ -491,8 +518,13 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {tournament.participants.map((entry) => (
               <Card key={entry.id} className="p-4">
-                <div className="font-medium text-white">{entry.user.nickname ?? entry.user.name}</div>
-                <div className="mt-2 text-sm text-zinc-500">UID: {entry.user.efootballUid ?? "Не заполнен"}</div>
+                <ClubPlayerLine
+                  playerId={entry.user.id}
+                  playerName={displayName(entry.user.nickname, entry.user.name ?? "Игрок")}
+                  clubName={entry.clubName}
+                  badgePath={entry.clubBadgePath}
+                />
+                <div className="mt-3 text-sm text-zinc-500">UID: {entry.user.efootballUid ?? "Не заполнен"}</div>
                 <div className="mt-1 text-sm text-zinc-500">{entry.group?.name ?? "Без группы"}</div>
               </Card>
             ))}

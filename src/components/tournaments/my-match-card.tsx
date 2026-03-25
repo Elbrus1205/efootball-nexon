@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Clock3 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -27,6 +28,12 @@ type MyMatchCardProps = {
   helperText: string;
   player1Name: string;
   player2Name: string;
+  player1Id?: string | null;
+  player2Id?: string | null;
+  player1ClubName?: string | null;
+  player2ClubName?: string | null;
+  player1ClubBadgePath?: string | null;
+  player2ClubBadgePath?: string | null;
   player1SubmissionState: SubmissionState;
   player2SubmissionState: SubmissionState;
   disputeHref: string;
@@ -53,6 +60,12 @@ export function MyMatchCard({
   helperText,
   player1Name,
   player2Name,
+  player1Id,
+  player2Id,
+  player1ClubName,
+  player2ClubName,
+  player1ClubBadgePath,
+  player2ClubBadgePath,
   player1SubmissionState,
   player2SubmissionState,
   disputeHref,
@@ -104,12 +117,16 @@ export function MyMatchCard({
       <div className="grid gap-3 md:grid-cols-2">
         <div className={`rounded-2xl border p-4 text-sm ${submissionToneClass(player1SubmissionState.tone)}`}>
           <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">Игрок 1</div>
-          <div className="mt-2 font-medium text-white">{player1Name}</div>
+          <div className="mt-2">
+            <ClubPlayerLine playerId={player1Id} playerName={player1Name} clubName={player1ClubName} badgePath={player1ClubBadgePath} />
+          </div>
           <div className="mt-2">{player1SubmissionState.label}</div>
         </div>
         <div className={`rounded-2xl border p-4 text-sm ${submissionToneClass(player2SubmissionState.tone)}`}>
           <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">Игрок 2</div>
-          <div className="mt-2 font-medium text-white">{player2Name}</div>
+          <div className="mt-2">
+            <ClubPlayerLine playerId={player2Id} playerName={player2Name} clubName={player2ClubName} badgePath={player2ClubBadgePath} />
+          </div>
           <div className="mt-2">{player2SubmissionState.label}</div>
         </div>
       </div>
