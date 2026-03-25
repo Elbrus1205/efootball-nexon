@@ -4,13 +4,19 @@ import { Eye, Layers3, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { playoffTypeLabel, tournamentFormatLabel, tournamentStatusLabel, tournamentStatusVariant } from "@/lib/admin-display";
+import {
+  playoffTypeLabel,
+  tournamentFormatLabel,
+  tournamentStatusLabel,
+  tournamentStatusVariant,
+} from "@/lib/admin-display";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 
 export default async function AdminTournamentsPage() {
   await requireRole([UserRole.ADMIN]);
+
   const tournaments = await db.tournament.findMany({
     include: {
       _count: { select: { participants: true, stages: true, matches: true } },
@@ -25,7 +31,7 @@ export default async function AdminTournamentsPage() {
         <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <CardTitle>Турниры и форматы</CardTitle>
-            <CardDescription>Единый список турниров, стадий и операционных переходов между регистрацией, группами и плей-офф.</CardDescription>
+            <CardDescription>Единый список турниров, стадий и операционных действий: регистрация, группы, плей-офф и расписание.</CardDescription>
           </div>
           <div className="flex flex-wrap gap-3">
             <Button asChild variant="secondary">
@@ -73,25 +79,31 @@ export default async function AdminTournamentsPage() {
                     Workspace
                   </Link>
                 </Button>
+
                 <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
                   <input type="hidden" name="_method" value="generate-schedule" />
                   <Button variant="outline">Сгенерировать расписание</Button>
                 </form>
+
                 <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
                   <input type="hidden" name="_method" value="assign-random-clubs" />
                   <Button variant="outline">Распределить клубы</Button>
                 </form>
+
                 <Button asChild variant="outline">
                   <Link href={`/tournaments/${tournament.id}`}>Публичная страница</Link>
                 </Button>
+
                 <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
                   <input type="hidden" name="_method" value="generate-stages" />
                   <Button variant="outline">Сгенерировать стадии</Button>
                 </form>
+
                 <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
                   <input type="hidden" name="_method" value="generate-matches" />
                   <Button variant="outline">Сгенерировать матчи</Button>
                 </form>
+
                 <Button asChild variant="outline">
                   <Link href={`/admin/tournaments/${tournament.id}/edit`}>Редактировать</Link>
                 </Button>
@@ -107,13 +119,22 @@ export default async function AdminTournamentsPage() {
                 <Button asChild variant="outline">
                   <Link href={`/admin/tournaments/${tournament.id}/bracket`}>Сетка</Link>
                 </Button>
+
+                <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
+                  <input type="hidden" name="_method" value="delete" />
+                  <Button variant="outline" className="border-red-400/20 bg-red-500/10 text-red-200 hover:bg-red-500/20 hover:text-red-100">
+                    Удалить турнир
+                  </Button>
+                </form>
               </div>
             </div>
           </Card>
         ))}
       </div>
 
-      {!tournaments.length ? <Card className="p-6 text-sm text-zinc-500">Первый турнир можно собрать через конструктор: формат, стадии, участники и расписание.</Card> : null}
+      {!tournaments.length ? (
+        <Card className="p-6 text-sm text-zinc-500">Первый турнир можно собрать через конструктор: формат, стадии, участники и расписание.</Card>
+      ) : null}
     </div>
   );
 }

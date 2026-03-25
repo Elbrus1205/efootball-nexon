@@ -7,7 +7,14 @@ import { MatchManager } from "@/components/admin/match-manager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { adminActionLabel, adminEntityLabel, playoffTypeLabel, tournamentFormatLabel, tournamentStatusLabel, tournamentStatusVariant } from "@/lib/admin-display";
+import {
+  adminActionLabel,
+  adminEntityLabel,
+  playoffTypeLabel,
+  tournamentFormatLabel,
+  tournamentStatusLabel,
+  tournamentStatusVariant,
+} from "@/lib/admin-display";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
@@ -82,6 +89,12 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
             <Button asChild variant="outline">
               <Link href={`/admin/tournaments/${tournament.id}/bracket`}>Сетка</Link>
             </Button>
+            <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
+              <input type="hidden" name="_method" value="delete" />
+              <Button variant="outline" className="border-red-400/20 bg-red-500/10 text-red-200 hover:bg-red-500/20 hover:text-red-100">
+                Удалить турнир
+              </Button>
+            </form>
           </CardContent>
         </Card>
 
@@ -148,7 +161,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
                 <History className="h-5 w-5 text-primary" />
                 История действий
               </CardTitle>
-              <CardDescription>Последние admin actions с before/after diff по ключевым изменениям турнира.</CardDescription>
+              <CardDescription>Последние действия админов с before/after diff по ключевым изменениям турнира.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {tournament.actions.length ? (
@@ -186,7 +199,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
                 <Link href={`/admin/tournaments/${tournament.id}/stages`}>Редактор стадий</Link>
               </Button>
               <Button asChild variant="outline">
-                <Link href={`/admin/tournaments/${tournament.id}/standings`}>Standings manager</Link>
+                <Link href={`/admin/tournaments/${tournament.id}/standings`}>Таблицы и standings</Link>
               </Button>
             </CardContent>
           </Card>

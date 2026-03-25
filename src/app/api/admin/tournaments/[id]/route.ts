@@ -8,6 +8,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   await requireRole([UserRole.ADMIN]);
   const formData = await request.formData();
   const method = formData.get("_method");
+  const redirectUrl = new URL("/admin/tournaments", request.url);
 
   if (method === "delete") {
     await db.tournament.delete({ where: { id: params.id } });
@@ -40,5 +41,5 @@ export async function POST(request: Request, { params }: { params: { id: string 
     await assignRandomClubsToTournament(params.id);
   }
 
-  return NextResponse.redirect(new URL("/admin/tournaments", process.env.NEXTAUTH_URL));
+  return NextResponse.redirect(redirectUrl, 303);
 }
