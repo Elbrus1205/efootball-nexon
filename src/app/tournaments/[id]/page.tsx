@@ -1,6 +1,7 @@
 import { StageType, TournamentFormat, TournamentStatus } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { BracketView } from "@/components/tournaments/bracket-view";
+import { MyMatchCard } from "@/components/tournaments/my-match-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -208,7 +209,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
         orderBy: { createdAt: "asc" },
       },
       matches: {
-        include: { player1: true, player2: true, winner: true, stage: true, group: true, schedules: true },
+        include: { player1: true, player2: true, winner: true, stage: true, group: true, schedules: true, submissions: { orderBy: { createdAt: "desc" } } },
         orderBy: [{ round: "asc" }, { matchNumber: "asc" }],
       },
       stages: {
@@ -386,20 +387,35 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
               <Card className="p-6 text-zinc-500">Вкладка доступна после входа в аккаунт.</Card>
             ) : myMatches.length ? (
               myMatches.map((match) => (
-                <Card key={match.id} className="p-5">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                      <div className="font-medium text-white">
-                        {match.player1?.nickname ?? match.player1?.name ?? "TBD"} vs {match.player2?.nickname ?? match.player2?.name ?? "TBD"}
-                      </div>
-                      <div className="mt-2 text-sm text-zinc-400">
-                        {match.group?.name ?? match.stage?.name ?? `Раунд ${match.round}`} •{" "}
-                        {formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}
-                      </div>
-                    </div>
-                    <Badge variant={matchStatusVariant[match.status] ?? "neutral"}>{matchStatusLabel[match.status] ?? match.status}</Badge>
-                  </div>
-                </Card>
+                <MyMatchCard
+                  key={match.id}
+                  id={match.id}
+                  title={`${match.player1?.nickname ?? match.player1?.name ?? "TBD"} vs ${match.player2?.nickname ?? match.player2?.name ?? "TBD"}`}
+                  meta={`${match.group?.name ?? match.stage?.name ?? `Раунд ${match.round}`} • ${formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}`}
+                  statusLabel={matchStatusLabel[match.status] ?? match.status}
+                  statusVariant={matchStatusVariant[match.status] ?? "neutral"}
+                  scoreText={
+                    match.player1Score !== null && match.player2Score !== null
+                      ? `Подтверждённый счёт: ${match.player1Score} : ${match.player2Score}`
+                      : "Счёт ещё не подтверждён"
+                  }
+                  canSubmit={match.status !== "CONFIRMED" && match.status !== "DISPUTED"}
+                  waitingForOpponent={match.submissions.some((submission) => submission.submittedById === session.user.id && submission.status === "PENDING")}
+                  attemptsLeft={Math.max(
+                    0,
+                    3 -
+                      Math.floor(
+                        match.submissions.filter(
+                          (submission) => submission.status === "REJECTED" && submission.moderatorComment === "AUTO_MISMATCH",
+                        ).length / 2,
+                      ),
+                  )}
+                  helperText={
+                    match.status === "DISPUTED"
+                      ? "Матч переведён в спор. Теперь результат выставляет администратор."
+                      : "Оба игрока должны ввести один и тот же счёт. Если результаты не совпадут три раза, матч уйдёт в спор."
+                  }
+                />
               ))
             ) : (
               <Card className="p-6 text-zinc-500">Здесь появятся матчи текущего участника после публикации расписания.</Card>
