@@ -91,6 +91,11 @@ enum SortRule {
   WINS
 }
 
+enum ClubSelectionMode {
+  PLAYER_PICK
+  ADMIN_RANDOM
+}
+
 enum MatchResultStatus {
   PENDING
   CONFIRMED
@@ -224,6 +229,7 @@ model Tournament {
   autoAdvanceFromGroups  Boolean                  @default(false)
   manualBracketControl   Boolean                  @default(false)
   manualPlayoffSelection Boolean                  @default(false)
+  clubSelectionMode      ClubSelectionMode        @default(ADMIN_RANDOM)
   maxParticipants        Int
   pointsForWin           Int                      @default(3)
   pointsForDraw          Int                      @default(1)
@@ -301,6 +307,9 @@ model TournamentRegistration {
   seed                Int?
   stageSeed           Int?
   groupId             String?
+  clubSlug            String?
+  clubName            String?
+  clubBadgePath       String?
   approvedAt          DateTime?
   checkedInAt         DateTime?
   notes               String?           @db.Text
@@ -316,6 +325,7 @@ model TournamentRegistration {
   winningMatches      Match[]           @relation("winningRegistration")
 
   @@unique([tournamentId, userId])
+  @@unique([tournamentId, clubSlug])
   @@index([tournamentId, status])
   @@index([groupId])
 }

@@ -1,4 +1,5 @@
 import {
+  ClubSelectionMode,
   ParticipantStatus,
   PlayoffType,
   SeedingMethod,
@@ -87,6 +88,7 @@ export const tournamentBuilderSchema = z.object({
   manualBracketControl: z.coerce.boolean().default(false),
   manualPlayoffSelection: z.coerce.boolean().default(false),
   checkInRequired: z.coerce.boolean().default(false),
+  clubSelectionMode: z.nativeEnum(ClubSelectionMode).default(ClubSelectionMode.ADMIN_RANDOM),
   sortRules: z.array(z.nativeEnum(SortRule)).default([SortRule.POINTS, SortRule.GOAL_DIFFERENCE, SortRule.GOALS_FOR, SortRule.WINS]),
 });
 

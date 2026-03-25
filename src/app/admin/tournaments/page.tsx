@@ -77,6 +77,10 @@ export default async function AdminTournamentsPage() {
                   <input type="hidden" name="_method" value="generate-schedule" />
                   <Button variant="outline">Сгенерировать расписание</Button>
                 </form>
+                <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
+                  <input type="hidden" name="_method" value="assign-random-clubs" />
+                  <Button variant="outline">Распределить клубы</Button>
+                </form>
                 <Button asChild variant="outline">
                   <Link href={`/tournaments/${tournament.id}`}>Публичная страница</Link>
                 </Button>

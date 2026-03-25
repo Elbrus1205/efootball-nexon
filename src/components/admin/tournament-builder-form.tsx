@@ -1,6 +1,6 @@
 "use client";
 
-import { PlayoffType, SeedingMethod, SortRule, TournamentFormat, TournamentStatus } from "@prisma/client";
+import { ClubSelectionMode, PlayoffType, SeedingMethod, SortRule, TournamentFormat, TournamentStatus } from "@prisma/client";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +37,7 @@ type BuilderValues = {
   manualBracketControl?: boolean;
   manualPlayoffSelection?: boolean;
   checkInRequired?: boolean;
+  clubSelectionMode?: ClubSelectionMode;
   sortRules?: SortRule[];
 };
 
@@ -126,6 +127,18 @@ export function TournamentBuilderForm({
           <div className="space-y-2">
             <Label htmlFor="coverImage">Обложка</Label>
             <Input id="coverImage" name="coverImage" placeholder="https://..." defaultValue={initialValues?.coverImage ?? ""} />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="clubSelectionMode">Режим выбора клуба</Label>
+            <select
+              id="clubSelectionMode"
+              name="clubSelectionMode"
+              defaultValue={initialValues?.clubSelectionMode ?? ClubSelectionMode.ADMIN_RANDOM}
+              className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white"
+            >
+              <option value={ClubSelectionMode.ADMIN_RANDOM}>Админ распределяет клубы случайно после закрытия регистрации</option>
+              <option value={ClubSelectionMode.PLAYER_PICK}>Участники выбирают клуб сами при регистрации</option>
+            </select>
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="description">Описание</Label>

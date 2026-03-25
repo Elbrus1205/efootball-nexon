@@ -1,4 +1,5 @@
 import {
+  ClubSelectionMode,
   MatchStatus,
   NotificationType,
   ParticipantStatus,
@@ -9,6 +10,7 @@ import {
   TournamentStatus,
 } from "@prisma/client";
 import { db } from "@/lib/db";
+import { getAvailableClubs } from "@/lib/clubs";
 
 function createGroupSourceRef(groupId: string, rank: number) {
   return `group:${groupId}:rank:${rank}`;
@@ -558,6 +560,57 @@ export async function generateTournamentSchedule(
   }
 
   return createdSchedules;
+}
+
+export async function assignRandomClubsToTournament(tournamentId: string) {
+  const tournament = await db.tournament.findUnique({
+    where: { id: tournamentId },
+    include: {
+      participants: {
+        where: { status: ParticipantStatus.CONFIRMED },
+        orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
+      },
+    },
+  });
+
+  if (!tournament) throw new Error("Tournament not found");
+  if (tournament.clubSelectionMode !== ClubSelectionMode.ADMIN_RANDOM) {
+    throw new Error("This tournament uses player club selection.");
+  }
+
+  if (tournament.status === TournamentStatus.REGISTRATION_OPEN && tournament.registrationEndsAt > new Date()) {
+    throw new Error("Registration must be closed before random club assignment.");
+  }
+
+  const clubs = await getAvailableClubs();
+  if (!clubs.length) throw new Error("No club badges found in public/club-badges.");
+
+  const usedClubs = tournament.participants.map((item) => item.clubSlug).filter(Boolean) as string[];
+  const freeClubs = shuffle(clubs.filter((club) => !usedClubs.includes(club.slug)));
+  const unassigned = tournament.participants.filter((item) => !item.clubSlug);
+
+  if (freeClubs.length < unassigned.length) {
+    throw new Error("Not enough clubs to assign all participants.");
+  }
+
+  await Promise.all(
+    unassigned.map((entry, index) =>
+      db.tournamentRegistration.update({
+        where: { id: entry.id },
+        data: {
+          clubSlug: freeClubs[index].slug,
+          clubName: freeClubs[index].name,
+          clubBadgePath: freeClubs[index].imagePath,
+        },
+      }),
+    ),
+  );
+
+  return db.tournamentRegistration.findMany({
+    where: { tournamentId },
+    include: { user: true },
+    orderBy: { createdAt: "asc" },
+  });
 }
 
 export async function recalculateGroupStandings(tournamentId: string) {

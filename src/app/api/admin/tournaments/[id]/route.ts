@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { closeTournamentRegistration, generateTournamentMatches, generateTournamentSchedule, generateTournamentStages } from "@/lib/services/tournaments";
+import { assignRandomClubsToTournament, closeTournamentRegistration, generateTournamentMatches, generateTournamentSchedule, generateTournamentStages } from "@/lib/services/tournaments";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   await requireRole([UserRole.ADMIN]);
@@ -34,6 +34,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   if (method === "generate-schedule") {
     await generateTournamentSchedule(params.id, { overwrite: true });
+  }
+
+  if (method === "assign-random-clubs") {
+    await assignRandomClubsToTournament(params.id);
   }
 
   return NextResponse.redirect(new URL("/admin/tournaments", process.env.NEXTAUTH_URL));
