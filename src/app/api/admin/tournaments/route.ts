@@ -13,6 +13,7 @@ function checkboxValue(value: FormDataEntryValue | null) {
 export async function POST(request: Request) {
   const session = await requireRole([UserRole.ADMIN]);
   const origin = new URL(request.url).origin;
+  let tournamentCreated = false;
 
   try {
     const formData = await request.formData();
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
       coverImage: formData.get("coverImage"),
       playoffType: formData.get("playoffType") || null,
       seedingMethod: formData.get("seedingMethod"),
-      roundsInLeague: formData.get("roundsInLeague"),
+      roundsInLeague: formData.get("roundsInLeague") || null,
       groupsCount: formData.get("groupsCount") || null,
       participantsPerGroup: formData.get("participantsPerGroup") || null,
       playoffTeamsPerGroup: formData.get("playoffTeamsPerGroup") || null,
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
         coverImage: body.coverImage || null,
         playoffType: body.playoffType ?? null,
         seedingMethod: body.seedingMethod,
-        roundsInLeague: body.roundsInLeague,
+        roundsInLeague: body.roundsInLeague ?? undefined,
         groupsCount: body.groupsCount ?? null,
         participantsPerGroup: body.participantsPerGroup ?? null,
         playoffTeamsPerGroup: body.playoffTeamsPerGroup ?? null,
@@ -91,21 +92,38 @@ export async function POST(request: Request) {
       },
     });
 
-    if (body.autoCreateStages) {
-      await generateTournamentStages(tournament.id);
-    }
+    tournamentCreated = true;
 
-    if (body.autoCreateMatches) {
-      await generateTournamentMatches(tournament.id);
-    }
+    try {
+      if (body.autoCreateStages) {
+        await generateTournamentStages(tournament.id);
+      }
 
-    if (body.autoCreateSchedule) {
-      await generateTournamentSchedule(tournament.id, { overwrite: true });
+      if (body.autoCreateMatches) {
+        await generateTournamentMatches(tournament.id);
+      }
+
+      if (body.autoCreateSchedule) {
+        await generateTournamentSchedule(tournament.id, { overwrite: true });
+      }
+    } catch (automationError) {
+      console.error("Tournament was created, but automation failed", automationError);
+      const warning = encodeURIComponent("Турнир создан, но автоматическая генерация стадий, матчей или расписания выполнилась не полностью.");
+      return NextResponse.redirect(new URL(`/admin/tournaments?created=1&warning=${warning}`, origin), 303);
     }
 
     return NextResponse.redirect(new URL("/admin/tournaments?created=1", origin), 303);
   } catch (error) {
     console.error("Failed to create tournament", error);
-    return NextResponse.redirect(new URL("/admin/tournaments/builder?error=Не удалось создать турнир. Проверьте поля и базу данных.", origin), 303);
+
+    if (tournamentCreated) {
+      const warning = encodeURIComponent("Турнир создан, но после создания произошла ошибка. Проверьте стадии, матчи и расписание вручную.");
+      return NextResponse.redirect(new URL(`/admin/tournaments?created=1&warning=${warning}`, origin), 303);
+    }
+
+    return NextResponse.redirect(
+      new URL(`/admin/tournaments/builder?error=${encodeURIComponent("Не удалось создать турнир. Проверьте поля и базу данных.")}`, origin),
+      303,
+    );
   }
 }

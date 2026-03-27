@@ -14,7 +14,11 @@ import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 
-export default async function AdminTournamentsPage() {
+export default async function AdminTournamentsPage({
+  searchParams,
+}: {
+  searchParams?: { created?: string; warning?: string };
+}) {
   await requireRole([UserRole.ADMIN]);
 
   const tournaments = await db.tournament.findMany({
@@ -27,6 +31,15 @@ export default async function AdminTournamentsPage() {
 
   return (
     <div className="space-y-6">
+      {searchParams?.created ? (
+        <Card className="border-emerald-400/20 bg-emerald-500/10">
+          <CardDescription className="p-5 text-sm text-emerald-100">
+            Турнир успешно создан.
+            {searchParams.warning ? ` ${searchParams.warning}` : ""}
+          </CardDescription>
+        </Card>
+      ) : null}
+
       <Card>
         <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
