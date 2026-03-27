@@ -2,7 +2,6 @@ import { UserRole } from "@prisma/client";
 import { Blocks, CalendarDays, GitBranch, Settings2, Users } from "lucide-react";
 import { requireRole } from "@/lib/auth/session";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TournamentBuilderForm } from "@/components/admin/tournament-builder-form";
 
@@ -25,12 +24,12 @@ const steps = [
   {
     icon: CalendarDays,
     title: "4. Матчи и календарь",
-    description: "Автогенерация матчей, слоты расписания и логика переходов между этапами.",
+    description: "Автогенерация матчей, расписание туров и логика переходов между этапами.",
   },
   {
     icon: Settings2,
     title: "5. Публикация и автоматизация",
-    description: "Автосоздание стадий, автоперенос в плей-офф, логи действий и запуск турнира.",
+    description: "Автопереходы, матчи, расписание, контроль плей-офф и запуск турнира.",
   },
 ];
 
@@ -52,11 +51,10 @@ export default async function AdminTournamentBuilderPage({
           <CardTitle>Создание нового турнира</CardTitle>
           <CardDescription>Пошаговая форма для лиги, групп, плей-офф и комбинированных сценариев.</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-3">
-          <Button type="button">Новый сценарий</Button>
-          <Button type="button" variant="secondary">
-            Сохранить как черновик
-          </Button>
+        <CardContent>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-sm leading-6 text-zinc-300">
+            Турнир собирается в одном месте: формат, структура, участники, клубы, матчи, расписание и автоматизация.
+          </div>
         </CardContent>
       </Card>
 
