@@ -109,11 +109,6 @@ export default async function AdminTournamentsPage({
                 </Button>
 
                 <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
-                  <input type="hidden" name="_method" value="generate-stages" />
-                  <Button variant="outline">Сгенерировать стадии</Button>
-                </form>
-
-                <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
                   <input type="hidden" name="_method" value="generate-matches" />
                   <Button variant="outline">Создать матчи и расписание</Button>
                 </form>

@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       pointsForDraw: formData.get("pointsForDraw"),
       pointsForLoss: formData.get("pointsForLoss"),
       autoCreateMatches: checkboxValue(formData.get("autoCreateMatches")),
-      autoCreateStages: checkboxValue(formData.get("autoCreateStages")),
+      autoCreateStages: true,
       autoCreateSchedule: checkboxValue(formData.get("autoCreateSchedule")),
       autoAdvanceFromGroups: checkboxValue(formData.get("autoAdvanceFromGroups")),
       manualBracketControl: checkboxValue(formData.get("manualBracketControl")),
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
         pointsForDraw: body.pointsForDraw,
         pointsForLoss: body.pointsForLoss,
         autoCreateMatches: body.autoCreateMatches,
-        autoCreateStages: body.autoCreateStages,
+        autoCreateStages: true,
         autoCreateSchedule: body.autoCreateSchedule,
         autoAdvanceFromGroups: body.autoAdvanceFromGroups,
         manualBracketControl: body.manualBracketControl,
@@ -95,9 +95,7 @@ export async function POST(request: Request) {
     tournamentCreated = true;
 
     try {
-      if (body.autoCreateStages) {
-        await generateTournamentStages(tournament.id);
-      }
+      await generateTournamentStages(tournament.id);
 
       if (body.autoCreateMatches) {
         await generateTournamentMatches(tournament.id);
