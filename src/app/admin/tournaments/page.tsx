@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { UserRole } from "@prisma/client";
 import { Eye, Layers3, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +34,7 @@ export default async function AdminTournamentsPage({
       {searchParams?.created ? (
         <Card className="border-emerald-400/20 bg-emerald-500/10">
           <CardDescription className="p-5 text-sm text-emerald-100">
-            РўСѓСЂРЅРёСЂ СѓСЃРїРµС€РЅРѕ СЃРѕР·РґР°РЅ.
+            Турнир успешно создан.
             {searchParams.warning ? ` ${searchParams.warning}` : ""}
           </CardDescription>
         </Card>
@@ -43,20 +43,22 @@ export default async function AdminTournamentsPage({
       <Card>
         <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <CardTitle>РўСѓСЂРЅРёСЂС‹ Рё С„РѕСЂРјР°С‚С‹</CardTitle>
-            <CardDescription>Р•РґРёРЅС‹Р№ СЃРїРёСЃРѕРє С‚СѓСЂРЅРёСЂРѕРІ, СЃС‚Р°РґРёР№ Рё РѕРїРµСЂР°С†РёРѕРЅРЅС‹С… РґРµР№СЃС‚РІРёР№: СЂРµРіРёСЃС‚СЂР°С†РёСЏ, РіСЂСѓРїРїС‹, РїР»РµР№-РѕС„С„ Рё СЂР°СЃРїРёСЃР°РЅРёРµ.</CardDescription>
+            <CardTitle>Турниры и форматы</CardTitle>
+            <CardDescription>
+              Единый список турниров, стадий и операционных действий: регистрация, группы, плей-офф и расписание.
+            </CardDescription>
           </div>
           <div className="flex flex-wrap gap-3">
             <Button asChild variant="secondary">
               <Link href="/admin/tournaments/builder">
                 <Layers3 className="mr-2 h-4 w-4" />
-                РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ С‚СѓСЂРЅРёСЂР°
+                Конструктор турнира
               </Link>
             </Button>
             <Button asChild>
               <Link href="/admin/tournaments/builder">
                 <Plus className="mr-2 h-4 w-4" />
-                РЎРѕР·РґР°С‚СЊ С‚СѓСЂРЅРёСЂ
+                Создать турнир
               </Link>
             </Button>
           </div>
@@ -74,14 +76,18 @@ export default async function AdminTournamentsPage({
                   <Badge variant="neutral">{tournamentFormatLabel[tournament.format]}</Badge>
                   {tournament.playoffType ? <Badge variant="accent">{playoffTypeLabel[tournament.playoffType]}</Badge> : null}
                 </div>
+
                 <p className="max-w-3xl text-sm leading-6 text-zinc-400">{tournament.description}</p>
+
                 <div className="flex flex-wrap gap-4 text-sm text-zinc-500">
-                  <span>РЎС‚Р°СЂС‚: {formatDate(tournament.startsAt)}</span>
-                  <span>Р РµРіРёСЃС‚СЂР°С†РёСЏ РґРѕ: {formatDate(tournament.registrationEndsAt)}</span>
-                  <span>РЈС‡Р°СЃС‚РЅРёРєРё: {tournament._count.participants}/{tournament.maxParticipants}</span>
-                  <span>РЎС‚Р°РґРёРё: {tournament._count.stages}</span>
-                  <span>РњР°С‚С‡Рё: {tournament._count.matches}</span>
-                  <span>РЎРµР·РѕРЅ: {tournament.season?.name ?? "Р‘РµР· СЃРµР·РѕРЅР°"}</span>
+                  <span>Старт: {formatDate(tournament.startsAt)}</span>
+                  <span>Регистрация до: {formatDate(tournament.registrationEndsAt)}</span>
+                  <span>
+                    Участники: {tournament._count.participants}/{tournament.maxParticipants}
+                  </span>
+                  <span>Стадии: {tournament._count.stages}</span>
+                  <span>Матчи: {tournament._count.matches}</span>
+                  <span>Сезон: {tournament.season?.name ?? "Без сезона"}</span>
                 </div>
               </div>
 
@@ -95,11 +101,11 @@ export default async function AdminTournamentsPage({
 
                 <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
                   <input type="hidden" name="_method" value="assign-random-clubs" />
-                  <Button variant="outline">Р Р°СЃРїСЂРµРґРµР»РёС‚СЊ РєР»СѓР±С‹</Button>
+                  <Button variant="outline">Распределить клубы</Button>
                 </form>
 
                 <Button asChild variant="outline">
-                  <Link href={`/tournaments/${tournament.id}`}>РџСѓР±Р»РёС‡РЅР°СЏ СЃС‚СЂР°РЅРёС†Р°</Link>
+                  <Link href={`/tournaments/${tournament.id}`}>Публичная страница</Link>
                 </Button>
 
                 <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
@@ -113,25 +119,25 @@ export default async function AdminTournamentsPage({
                 </form>
 
                 <Button asChild variant="outline">
-                  <Link href={`/admin/tournaments/${tournament.id}/edit`}>Р РµРґР°РєС‚РёСЂРѕРІР°С‚СЊ</Link>
+                  <Link href={`/admin/tournaments/${tournament.id}/edit`}>Редактировать</Link>
                 </Button>
                 <Button asChild variant="outline">
-                  <Link href={`/admin/tournaments/${tournament.id}/participants`}>РЈС‡Р°СЃС‚РЅРёРєРё</Link>
+                  <Link href={`/admin/tournaments/${tournament.id}/participants`}>Участники</Link>
                 </Button>
                 <Button asChild variant="outline">
-                  <Link href={`/admin/tournaments/${tournament.id}/stages`}>РЎС‚Р°РґРёРё</Link>
+                  <Link href={`/admin/tournaments/${tournament.id}/stages`}>Стадии</Link>
                 </Button>
                 <Button asChild variant="outline">
-                  <Link href={`/admin/tournaments/${tournament.id}/standings`}>РўР°Р±Р»РёС†С‹</Link>
+                  <Link href={`/admin/tournaments/${tournament.id}/standings`}>Таблицы</Link>
                 </Button>
                 <Button asChild variant="outline">
-                  <Link href={`/admin/tournaments/${tournament.id}/bracket`}>РЎРµС‚РєР°</Link>
+                  <Link href={`/admin/tournaments/${tournament.id}/bracket`}>Сетка</Link>
                 </Button>
 
                 <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
                   <input type="hidden" name="_method" value="delete" />
                   <Button variant="outline" className="border-red-400/20 bg-red-500/10 text-red-200 hover:bg-red-500/20 hover:text-red-100">
-                    РЈРґР°Р»РёС‚СЊ С‚СѓСЂРЅРёСЂ
+                    Удалить турнир
                   </Button>
                 </form>
               </div>
@@ -141,7 +147,9 @@ export default async function AdminTournamentsPage({
       </div>
 
       {!tournaments.length ? (
-        <Card className="p-6 text-sm text-zinc-500">РџРµСЂРІС‹Р№ С‚СѓСЂРЅРёСЂ РјРѕР¶РЅРѕ СЃРѕР±СЂР°С‚СЊ С‡РµСЂРµР· РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ: С„РѕСЂРјР°С‚, СЃС‚Р°РґРёРё, СѓС‡Р°СЃС‚РЅРёРєРё Рё СЂР°СЃРїРёСЃР°РЅРёРµ.</Card>
+        <Card className="p-6 text-sm text-zinc-500">
+          Первый турнир можно собрать через конструктор: формат, стадии, участники и расписание.
+        </Card>
       ) : null}
     </div>
   );
