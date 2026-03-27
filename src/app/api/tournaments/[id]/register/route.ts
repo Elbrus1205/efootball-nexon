@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
+import { syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const session = await requireAuth();
@@ -69,6 +70,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       clubBadgePath,
     },
   });
+
+  await syncTournamentLifecycleStatus(params.id);
 
   const origin = new URL(request.url).origin;
   if (contentType.includes("application/json")) {

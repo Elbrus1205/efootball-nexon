@@ -17,6 +17,12 @@ function createGroupSourceRef(groupId: string, rank: number) {
 }
 import { createNotification } from "@/lib/services/notifications";
 
+const TERMINAL_MATCH_STATUSES = new Set<MatchStatus>([
+  MatchStatus.CONFIRMED,
+  MatchStatus.FINISHED,
+  MatchStatus.FORFEIT,
+]);
+
 function nextPowerOfTwo(value: number) {
   return Math.pow(2, Math.ceil(Math.log2(Math.max(value, 2))));
 }
@@ -1019,6 +1025,50 @@ export async function closeTournamentRegistration(tournamentId: string) {
   return db.tournament.findUnique({ where: { id: tournamentId } });
 }
 
+export async function syncTournamentLifecycleStatus(tournamentId: string) {
+  const tournament = await db.tournament.findUnique({
+    where: { id: tournamentId },
+    include: {
+      participants: {
+        where: { status: ParticipantStatus.CONFIRMED },
+        select: { id: true },
+      },
+      matches: {
+        select: { id: true, status: true },
+      },
+    },
+  });
+
+  if (!tournament) {
+    throw new Error("Tournament not found");
+  }
+
+  const confirmedParticipants = tournament.participants.length;
+  const hasMatches = tournament.matches.length > 0;
+  const allMatchesCompleted =
+    hasMatches && tournament.matches.every((match) => TERMINAL_MATCH_STATUSES.has(match.status));
+
+  const nextStatus =
+    allMatchesCompleted
+      ? TournamentStatus.COMPLETED
+      : confirmedParticipants >= tournament.maxParticipants && tournament.status === TournamentStatus.REGISTRATION_OPEN
+        ? TournamentStatus.REGISTRATION_CLOSED
+        : null;
+
+  if (!nextStatus) {
+    return tournament;
+  }
+
+  return db.tournament.update({
+    where: { id: tournamentId },
+    data: {
+      status: nextStatus,
+      registrationClosedAt:
+        nextStatus === TournamentStatus.REGISTRATION_CLOSED && !tournament.registrationClosedAt ? new Date() : tournament.registrationClosedAt,
+    },
+  });
+}
+
 export async function advanceMatch(matchId: string, winnerId: string, loserId?: string | null) {
   const match = await db.match.findUnique({ where: { id: matchId } });
   if (!match) throw new Error("Match not found");
@@ -1047,4 +1097,6 @@ export async function advanceMatch(matchId: string, winnerId: string, loserId?: 
       data: match.loserNextMatchSlot === 1 ? { player1Id: loserId } : { player2Id: loserId },
     });
   }
+
+  await syncTournamentLifecycleStatus(match.tournamentId);
 }

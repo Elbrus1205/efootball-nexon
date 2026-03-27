@@ -24,16 +24,6 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   if (method === "generate-matches") {
     await generateTournamentMatches(params.id);
-    const tournament = await db.tournament.findUnique({
-      where: { id: params.id },
-      select: { autoCreateSchedule: true },
-    });
-    if (tournament?.autoCreateSchedule) {
-      await generateTournamentSchedule(params.id, { overwrite: true });
-    }
-  }
-
-  if (method === "generate-schedule") {
     await generateTournamentSchedule(params.id, { overwrite: true });
   }
 

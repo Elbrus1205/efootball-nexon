@@ -3,7 +3,7 @@ import { MatchStatus, NotificationType, UserRole } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/session";
 import { logAdminAction } from "@/lib/services/admin-actions";
-import { advanceMatch } from "@/lib/services/tournaments";
+import { advanceMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { createNotification } from "@/lib/services/notifications";
 import { reviewSchema } from "@/lib/validators";
 
@@ -61,6 +61,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       data: { status: MatchStatus.DISPUTED },
     });
   }
+
+  await syncTournamentLifecycleStatus(match.tournamentId);
 
   const targets = [match.player1Id, match.player2Id].filter(Boolean) as string[];
   await Promise.all(
