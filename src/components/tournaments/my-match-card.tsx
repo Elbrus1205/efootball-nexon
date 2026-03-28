@@ -121,7 +121,7 @@ export function MyMatchCard({
         </div>
         <div className="flex flex-col items-start gap-1.5 lg:items-end">
           <Badge variant={statusVariant}>{statusLabel}</Badge>
-          <div className="text-sm font-medium text-zinc-300">{scoreText}</div>
+          {hasConfirmedScore ? null : <div className="text-sm font-medium text-zinc-300">{scoreText}</div>}
         </div>
       </div>
 
