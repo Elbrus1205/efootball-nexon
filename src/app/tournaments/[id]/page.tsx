@@ -511,7 +511,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                     key={match.id}
                     id={match.id}
                     title="Личный матч"
-                    meta={`${match.group?.name ?? match.stage?.name ?? `Раунд ${match.round}`} • ${formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}`}
+                    meta={`${scheduleStageLabel(match)} • ${formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}`}
                     statusLabel={matchStatusLabel[match.status] ?? match.status}
                     statusVariant={matchStatusVariant[match.status] ?? "neutral"}
                     scoreText={
