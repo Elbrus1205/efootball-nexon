@@ -1078,9 +1078,37 @@ export async function startTournament(tournamentId: string) {
     await generateTournamentStages(tournamentId);
   }
 
-  if (!tournament.matches.length) {
-    await generateTournamentMatches(tournamentId);
+  const playoffStage = await db.tournamentStage.findFirst({
+    where: { tournamentId, type: StageType.PLAYOFF },
+    include: { bracket: true },
+  });
+
+  if (playoffStage?.bracket && isDirectPlayoffFormat(tournament.format)) {
+    const bracketSize = nextPowerOfTwo(confirmedParticipants);
+    await db.playoffBracket.update({
+      where: { id: playoffStage.bracket.id },
+      data: { size: bracketSize },
+    });
+    await db.tournamentStage.update({
+      where: { id: playoffStage.id },
+      data: { roundsCount: Math.log2(bracketSize) },
+    });
   }
+
+  await db.matchResultSubmission.deleteMany({
+    where: { match: { tournamentId } },
+  });
+  await db.matchSchedule.deleteMany({
+    where: { match: { tournamentId } },
+  });
+  await db.match.deleteMany({
+    where: { tournamentId },
+  });
+  await db.bracketSlot.deleteMany({
+    where: { bracket: { tournamentId } },
+  });
+
+  await generateTournamentMatches(tournamentId);
 
   await generateTournamentSchedule(tournamentId, { overwrite: true });
 

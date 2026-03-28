@@ -300,7 +300,7 @@ export function TournamentBuilderForm({
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {[
-            ["autoCreateMatches", "Автоматически создать матчи", initialValues?.autoCreateMatches ?? true],
+            ["autoCreateMatches", "Автоматически создать матчи", initialValues?.autoCreateMatches ?? false],
             ["autoCreateSchedule", "Автоматически создать расписание", initialValues?.autoCreateSchedule ?? false],
             ["autoAdvanceFromGroups", "Автоматически выводить из групп", initialValues?.autoAdvanceFromGroups ?? false],
             ["manualBracketControl", "Ручное управление сеткой", initialValues?.manualBracketControl ?? false],
