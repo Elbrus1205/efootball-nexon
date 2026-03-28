@@ -354,13 +354,15 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
       </div>
 
       <Tabs defaultValue="structure">
-        <TabsList>
-          <TabsTrigger value="structure">Структура турнира</TabsTrigger>
-          <TabsTrigger value="matches">Расписание</TabsTrigger>
-          <TabsTrigger value="my-matches">Мои матчи</TabsTrigger>
-          <TabsTrigger value="participants">Участники</TabsTrigger>
-          <TabsTrigger value="rules">Правила</TabsTrigger>
-        </TabsList>
+        <div className="max-w-full overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <TabsList className="flex w-max min-w-full max-w-full flex-nowrap">
+            <TabsTrigger className="shrink-0 whitespace-nowrap" value="structure">????????? ???????</TabsTrigger>
+            <TabsTrigger className="shrink-0 whitespace-nowrap" value="matches">??????????</TabsTrigger>
+            <TabsTrigger className="shrink-0 whitespace-nowrap" value="my-matches">??? ?????</TabsTrigger>
+            <TabsTrigger className="shrink-0 whitespace-nowrap" value="participants">?????????</TabsTrigger>
+            <TabsTrigger className="shrink-0 whitespace-nowrap" value="rules">???????</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="structure" className="space-y-6">
           {groupStage ? (
