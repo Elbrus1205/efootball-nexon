@@ -104,20 +104,20 @@ export function MyMatchCard({
   };
 
   return (
-    <Card className="space-y-4 p-4 sm:p-5">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <Card className="space-y-3 p-4 sm:space-y-4 sm:p-5">
+      <div className="flex flex-col gap-2 sm:gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="font-medium text-white">{title}</div>
           <div className="mt-2 text-sm text-zinc-400">{meta}</div>
         </div>
-        <div className="flex flex-col items-start gap-2 lg:items-end">
+        <div className="flex flex-col items-start gap-1.5 lg:items-end">
           <Badge variant={statusVariant}>{statusLabel}</Badge>
           <div className="text-sm font-medium text-zinc-300">{scoreText}</div>
         </div>
       </div>
 
-      <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4 sm:p-5">
-        <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-3 sm:p-5">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2 sm:gap-4">
           <div className="min-w-0 flex-1">
             <ClubPlayerLine
               playerId={player1Id}
@@ -125,14 +125,15 @@ export function MyMatchCard({
               clubName={player1ClubName}
               badgePath={player1ClubBadgePath}
               align="center"
+              compact
             />
-            <div className={`mt-3 rounded-xl border px-3 py-2 text-center text-xs ${submissionToneClass(player1SubmissionState.tone)}`}>
+            <div className={`mt-2 rounded-xl border px-2 py-1.5 text-center text-[11px] leading-4 sm:mt-3 sm:px-3 sm:py-2 sm:text-xs ${submissionToneClass(player1SubmissionState.tone)}`}>
               {player1SubmissionState.label}
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center justify-center">
-            <div className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm font-semibold tracking-[0.24em] text-zinc-300">
+          <div className="flex shrink-0 items-center justify-center self-center">
+            <div className="rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-xs font-semibold tracking-[0.24em] text-zinc-300 sm:px-4 sm:py-2 sm:text-sm">
               VS
             </div>
           </div>
@@ -144,8 +145,9 @@ export function MyMatchCard({
               clubName={player2ClubName}
               badgePath={player2ClubBadgePath}
               align="center"
+              compact
             />
-            <div className={`mt-3 rounded-xl border px-3 py-2 text-center text-xs ${submissionToneClass(player2SubmissionState.tone)}`}>
+            <div className={`mt-2 rounded-xl border px-2 py-1.5 text-center text-[11px] leading-4 sm:mt-3 sm:px-3 sm:py-2 sm:text-xs ${submissionToneClass(player2SubmissionState.tone)}`}>
               {player2SubmissionState.label}
             </div>
           </div>
@@ -172,7 +174,7 @@ export function MyMatchCard({
           </div>
         </div>
       ) : (
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-zinc-400">
+        <div className="rounded-2xl border border-white/10 bg-black/20 p-3 text-sm text-zinc-400 sm:p-4">
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/5 text-zinc-300">
               {waitingForOpponent ? <Clock3 className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
@@ -191,7 +193,7 @@ export function MyMatchCard({
       )}
 
       {canSubmit ? (
-        <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+        <div className="grid gap-2 sm:gap-3 sm:grid-cols-[1fr_1fr_auto]">
           <Input
             type="number"
             min={0}
