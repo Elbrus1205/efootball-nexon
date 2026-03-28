@@ -2,7 +2,6 @@ import { Match, TournamentRegistration, User } from "@prisma/client";
 import { GitBranch, Trophy } from "lucide-react";
 import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
 import { Card } from "@/components/ui/card";
-import { matchStatusLabel, matchStatusVariant } from "@/lib/admin-display";
 import { cn } from "@/lib/utils";
 
 type ClubMeta = {
@@ -24,15 +23,6 @@ function roundTitle(round: number) {
   if (round === 3) return "1/2 финала";
   if (round === 4) return "Финал";
   return `Раунд ${round}`;
-}
-
-function statusClasses(status: BracketMatch["status"]) {
-  const variant = matchStatusVariant[status] ?? "neutral";
-  if (variant === "success") return "border-emerald-400/20 bg-emerald-400/10 text-emerald-200";
-  if (variant === "danger") return "border-red-400/20 bg-red-400/10 text-red-200";
-  if (variant === "accent") return "border-cyan-400/20 bg-cyan-400/10 text-cyan-200";
-  if (variant === "primary") return "border-primary/20 bg-primary/10 text-primary";
-  return "border-white/10 bg-white/5 text-zinc-300";
 }
 
 function bracketLabel(match: BracketMatch) {
@@ -114,13 +104,8 @@ export function BracketView({
 
                 return (
                   <Card key={match.id} className="space-y-4 border-white/10 bg-black/20 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                        {bracketLabel(match)}
-                      </div>
-                      <div className={cn("rounded-full border px-3 py-1 text-xs", statusClasses(match.status))}>
-                        {matchStatusLabel[match.status] ?? match.status}
-                      </div>
+                    <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                      {bracketLabel(match)}
                     </div>
 
                     <div className="space-y-3">
