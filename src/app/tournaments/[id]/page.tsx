@@ -417,27 +417,44 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
             {scheduledMatches.length ? (
               scheduledMatches.map((match) => (
                 <Card key={match.id} className="p-5">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="space-y-3">
-                      <div className="grid gap-3 md:grid-cols-2">
-                        <ClubPlayerLine
-                          playerId={match.player1?.id}
-                          playerName={match.player1?.nickname ?? match.player1?.name ?? "Игрок 1"}
-                          clubName={match.player1Id ? participantClubMap[match.player1Id]?.clubName : null}
-                          badgePath={match.player1Id ? participantClubMap[match.player1Id]?.clubBadgePath : null}
-                        />
-                        <ClubPlayerLine
-                          playerId={match.player2?.id}
-                          playerName={match.player2?.nickname ?? match.player2?.name ?? "Игрок 2"}
-                          clubName={match.player2Id ? participantClubMap[match.player2Id]?.clubName : null}
-                          badgePath={match.player2Id ? participantClubMap[match.player2Id]?.clubBadgePath : null}
-                        />
-                      </div>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col items-center gap-2 text-center">
+                      <Badge variant={matchStatusVariant[match.status] ?? "neutral"}>{matchStatusLabel[match.status] ?? match.status}</Badge>
                       <div className="text-sm text-zinc-400">
-                        {match.group?.name ?? match.stage?.name ?? `Раунд ${match.round}`} • {formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}
+                        {match.group?.name ?? match.stage?.name ?? `?????????? ${match.round}`} ??? {formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}
                       </div>
                     </div>
-                    <Badge variant={matchStatusVariant[match.status] ?? "neutral"}>{matchStatusLabel[match.status] ?? match.status}</Badge>
+
+                    <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-3 sm:p-5">
+                      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2 sm:gap-4">
+                        <div className="min-w-0">
+                          <ClubPlayerLine
+                            playerId={match.player1?.id}
+                            playerName={match.player1?.nickname ?? match.player1?.name ?? "?????????? 1"}
+                            clubName={match.player1Id ? participantClubMap[match.player1Id]?.clubName : null}
+                            badgePath={match.player1Id ? participantClubMap[match.player1Id]?.clubBadgePath : null}
+                            align="center"
+                            compact
+                            reverse
+                          />
+                        </div>
+                        <div className="flex shrink-0 items-start justify-center pt-1 sm:pt-2">
+                          <div className="rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-xs font-semibold tracking-[0.24em] text-zinc-300 sm:px-4 sm:py-2 sm:text-sm">
+                            VS
+                          </div>
+                        </div>
+                        <div className="min-w-0">
+                          <ClubPlayerLine
+                            playerId={match.player2?.id}
+                            playerName={match.player2?.nickname ?? match.player2?.name ?? "?????????? 2"}
+                            clubName={match.player2Id ? participantClubMap[match.player2Id]?.clubName : null}
+                            badgePath={match.player2Id ? participantClubMap[match.player2Id]?.clubBadgePath : null}
+                            align="center"
+                            compact
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </Card>
               ))

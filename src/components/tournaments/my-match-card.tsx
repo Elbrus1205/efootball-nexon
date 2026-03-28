@@ -126,13 +126,14 @@ export function MyMatchCard({
               badgePath={player1ClubBadgePath}
               align="center"
               compact
+              reverse
             />
             <div className={`mt-2 rounded-xl border px-2 py-1.5 text-center text-[11px] leading-4 sm:mt-3 sm:px-3 sm:py-2 sm:text-xs ${submissionToneClass(player1SubmissionState.tone)}`}>
               {player1SubmissionState.label}
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center justify-center self-center">
+          <div className="flex shrink-0 items-start justify-center pt-1 sm:pt-2">
             <div className="rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-xs font-semibold tracking-[0.24em] text-zinc-300 sm:px-4 sm:py-2 sm:text-sm">
               VS
             </div>

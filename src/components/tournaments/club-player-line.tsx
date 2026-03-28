@@ -7,6 +7,7 @@ type ClubPlayerLineProps = {
   playerName: string;
   align?: "left" | "center";
   compact?: boolean;
+  reverse?: boolean;
 };
 
 export function ClubPlayerLine({
@@ -16,11 +17,14 @@ export function ClubPlayerLine({
   playerName,
   align = "left",
   compact = false,
+  reverse = false,
 }: ClubPlayerLineProps) {
-  const alignmentClass = align === "center" ? "items-center text-center" : "items-start text-left";
+  const centered = align === "center";
+  const directionClass = reverse ? "flex-row-reverse" : "flex-row";
+  const wrapperClass = centered ? "items-center text-center" : reverse ? "items-end text-right" : "items-start text-left";
 
   return (
-    <div className={`flex gap-3 ${alignmentClass}`}>
+    <div className={`flex ${directionClass} gap-3 ${centered ? "items-center justify-center" : "items-start"}`}>
       {badgePath ? (
         <div
           className={
@@ -33,10 +37,14 @@ export function ClubPlayerLine({
           <img src={badgePath} alt={clubName ?? playerName} className="h-full w-full object-contain p-1" />
         </div>
       ) : null}
-      <div className={`min-w-0 ${alignmentClass}`}>
-        <div className={compact ? "text-sm font-medium text-white" : "text-sm font-medium text-white"}>{clubName ?? "Клуб не назначен"}</div>
+
+      <div className={`min-w-0 ${wrapperClass}`}>
+        <div className="text-sm font-medium text-white">{clubName ?? "Клуб не назначен"}</div>
         {playerId ? (
-          <Link href={`/players/${playerId}`} className="mt-1 text-xs text-zinc-400 underline-offset-4 transition hover:text-primary hover:underline">
+          <Link
+            href={`/players/${playerId}`}
+            className="mt-1 text-xs text-zinc-400 underline-offset-4 transition hover:text-primary hover:underline"
+          >
             {playerName}
           </Link>
         ) : (
