@@ -117,8 +117,8 @@ export function MyMatchCard({
       </div>
 
       <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-3 sm:p-5">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2 sm:grid-cols-[minmax(0,220px)_auto_minmax(0,220px)] sm:items-start sm:justify-center sm:gap-4">
-          <div className="min-w-0 flex-1 sm:justify-self-end">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[minmax(0,240px)_auto_auto_auto_minmax(0,240px)] sm:justify-center sm:gap-3">
+          <div className="min-w-0 sm:justify-self-end">
             <ClubPlayerLine
               playerId={player1Id}
               playerName={player1Name}
@@ -133,13 +133,21 @@ export function MyMatchCard({
             </div>
           </div>
 
+          <div className="hidden shrink-0 items-center justify-center self-center sm:flex">
+            <span className="min-w-[1ch] text-right text-base font-semibold text-white sm:text-lg"> </span>
+          </div>
+
           <div className="flex shrink-0 items-center justify-center self-center">
             <div className="flex h-8 items-center justify-center px-1 text-xs font-semibold tracking-[0.24em] text-zinc-300 sm:h-10 sm:text-sm">
               VS
             </div>
           </div>
 
-          <div className="min-w-0 flex-1 sm:justify-self-start">
+          <div className="hidden shrink-0 items-center justify-center self-center sm:flex">
+            <span className="min-w-[1ch] text-left text-base font-semibold text-white sm:text-lg"> </span>
+          </div>
+
+          <div className="min-w-0 sm:justify-self-start">
             <ClubPlayerLine
               playerId={player2Id}
               playerName={player2Name}
