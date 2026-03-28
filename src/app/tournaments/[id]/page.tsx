@@ -454,8 +454,16 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                           />
                         </div>
                         <div className="flex shrink-0 items-center justify-center self-center">
-                          <div className="flex h-8 items-center justify-center px-1 text-xs font-semibold tracking-[0.24em] text-zinc-300 sm:h-10 sm:text-sm">
-                            VS
+                          <div className="flex items-center justify-center gap-2 px-1 text-zinc-300 sm:gap-3">
+                            <span className="min-w-[1ch] text-right text-base font-semibold text-white sm:text-lg">
+                              {match.player1Score ?? ""}
+                            </span>
+                            <div className="flex h-8 items-center justify-center px-1 text-xs font-semibold tracking-[0.24em] text-zinc-300 sm:h-10 sm:text-sm">
+                              VS
+                            </div>
+                            <span className="min-w-[1ch] text-left text-base font-semibold text-white sm:text-lg">
+                              {match.player2Score ?? ""}
+                            </span>
                           </div>
                         </div>
                         <div className="min-w-0">
