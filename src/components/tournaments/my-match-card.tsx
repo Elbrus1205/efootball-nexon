@@ -126,7 +126,7 @@ export function MyMatchCard({
       </div>
 
       <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-3 sm:p-5">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[240px_auto_240px] sm:justify-center sm:gap-4">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[190px_auto_190px] sm:justify-center sm:gap-2">
           <div className="min-w-0 sm:justify-self-end">
             <ClubPlayerLine
               playerId={player1Id}
