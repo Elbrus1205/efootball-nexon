@@ -438,8 +438,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                             reverse
                           />
                         </div>
-                        <div className="flex shrink-0 items-start justify-center pt-1 sm:pt-2">
-                          <div className="px-1 py-1 text-xs font-semibold tracking-[0.24em] text-zinc-300 sm:text-sm">
+                        <div className="flex shrink-0 items-center justify-center self-center">
+                          <div className="flex h-8 items-center justify-center px-1 text-xs font-semibold tracking-[0.24em] text-zinc-300 sm:h-10 sm:text-sm">
                             VS
                           </div>
                         </div>
