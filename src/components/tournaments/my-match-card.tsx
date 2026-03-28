@@ -128,9 +128,11 @@ export function MyMatchCard({
               compact
               reverse
             />
-            <div className={`mt-2 rounded-xl border px-2 py-1.5 text-center text-[11px] leading-4 sm:mt-3 sm:px-3 sm:py-2 sm:text-xs ${submissionToneClass(player1SubmissionState.tone)}`}>
-              {player1SubmissionState.label}
-            </div>
+            {player1SubmissionState.tone === "success" && statusLabel === "Подтверждён" ? null : (
+              <div className={`mt-2 rounded-xl border px-2 py-1.5 text-center text-[11px] leading-4 sm:mt-3 sm:px-3 sm:py-2 sm:text-xs ${submissionToneClass(player1SubmissionState.tone)}`}>
+                {player1SubmissionState.label}
+              </div>
+            )}
           </div>
 
           <div className="flex shrink-0 items-center justify-center self-center">
@@ -148,9 +150,11 @@ export function MyMatchCard({
               align="center"
               compact
             />
-            <div className={`mt-2 rounded-xl border px-2 py-1.5 text-center text-[11px] leading-4 sm:mt-3 sm:px-3 sm:py-2 sm:text-xs ${submissionToneClass(player2SubmissionState.tone)}`}>
-              {player2SubmissionState.label}
-            </div>
+            {player2SubmissionState.tone === "success" && statusLabel === "Подтверждён" ? null : (
+              <div className={`mt-2 rounded-xl border px-2 py-1.5 text-center text-[11px] leading-4 sm:mt-3 sm:px-3 sm:py-2 sm:text-xs ${submissionToneClass(player2SubmissionState.tone)}`}>
+                {player2SubmissionState.label}
+              </div>
+            )}
           </div>
         </div>
       </div>
