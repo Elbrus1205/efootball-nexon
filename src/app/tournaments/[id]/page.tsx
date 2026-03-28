@@ -439,7 +439,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                           />
                         </div>
                         <div className="flex shrink-0 items-start justify-center pt-1 sm:pt-2">
-                          <div className="rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-xs font-semibold tracking-[0.24em] text-zinc-300 sm:px-4 sm:py-2 sm:text-sm">
+                          <div className="px-1 py-1 text-xs font-semibold tracking-[0.24em] text-zinc-300 sm:text-sm">
                             VS
                           </div>
                         </div>
