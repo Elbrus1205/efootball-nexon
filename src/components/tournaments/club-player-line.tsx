@@ -39,16 +39,16 @@ export function ClubPlayerLine({
       ) : null}
 
       <div className={`min-w-0 ${wrapperClass}`}>
-        <div className="text-sm font-medium text-white">{clubName ?? "Клуб не назначен"}</div>
+        <div className="text-sm font-medium leading-tight text-white">{clubName ?? "Клуб не назначен"}</div>
         {playerId ? (
           <Link
             href={`/players/${playerId}`}
-            className="mt-1 text-xs text-zinc-400 underline-offset-4 transition hover:text-primary hover:underline"
+            className="mt-0.5 text-xs leading-tight text-zinc-400 underline-offset-4 transition hover:text-primary hover:underline"
           >
             {playerName}
           </Link>
         ) : (
-          <div className="mt-1 text-xs text-zinc-400">{playerName}</div>
+          <div className="mt-0.5 text-xs leading-tight text-zinc-400">{playerName}</div>
         )}
       </div>
     </div>
