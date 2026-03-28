@@ -454,26 +454,26 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                           />
                         </div>
                         <div className="hidden shrink-0 items-center justify-center self-center sm:flex">
-                          <span className="min-w-[1ch] text-right text-base font-semibold text-white sm:text-lg">
-                            {match.player1Score ?? ""}
-                          </span>
-                        </div>
+                            <span className="min-w-[1ch] text-right text-base font-semibold text-white sm:text-lg">
+                              {match.player1Score !== null && match.player2Score !== null ? "" : match.player1Score ?? ""}
+                            </span>
+                          </div>
                         <div className="flex shrink-0 items-center justify-center self-center">
                           <div className="flex items-center justify-center gap-2 px-1 text-zinc-300 sm:gap-0">
                             <span className="min-w-[1ch] text-right text-base font-semibold text-white sm:hidden sm:text-lg">
-                              {match.player1Score ?? ""}
+                              {match.player1Score !== null && match.player2Score !== null ? "" : match.player1Score ?? ""}
                             </span>
                             <div className="flex h-8 items-center justify-center px-1 text-xs font-semibold tracking-[0.24em] text-zinc-300 sm:h-10 sm:text-sm">
-                              VS
+                              {match.player1Score !== null && match.player2Score !== null ? `${match.player1Score} - ${match.player2Score}` : "VS"}
                             </div>
                             <span className="min-w-[1ch] text-left text-base font-semibold text-white sm:hidden sm:text-lg">
-                              {match.player2Score ?? ""}
+                              {match.player1Score !== null && match.player2Score !== null ? "" : match.player2Score ?? ""}
                             </span>
                           </div>
                         </div>
                         <div className="hidden shrink-0 items-center justify-center self-center sm:flex">
                           <span className="min-w-[1ch] text-left text-base font-semibold text-white sm:text-lg">
-                            {match.player2Score ?? ""}
+                            {match.player1Score !== null && match.player2Score !== null ? "" : match.player2Score ?? ""}
                           </span>
                         </div>
                         <div className="min-w-0 sm:justify-self-start">
@@ -519,6 +519,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                         ? `Подтверждённый счёт: ${match.player1Score} : ${match.player2Score}`
                         : "Счёт ещё не подтверждён"
                     }
+                    confirmedPlayer1Score={match.player1Score}
+                    confirmedPlayer2Score={match.player2Score}
                     canSubmit={match.status !== "CONFIRMED" && match.status !== "DISPUTED"}
                     waitingForOpponent={match.submissions.some((submission) => submission.submittedById === session.user.id && submission.status === "PENDING")}
                     attemptsLeft={Math.max(

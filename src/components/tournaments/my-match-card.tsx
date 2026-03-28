@@ -22,6 +22,8 @@ type MyMatchCardProps = {
   statusLabel: string;
   statusVariant: "primary" | "accent" | "neutral" | "success" | "danger";
   scoreText: string;
+  confirmedPlayer1Score?: number | null;
+  confirmedPlayer2Score?: number | null;
   canSubmit: boolean;
   waitingForOpponent: boolean;
   attemptsLeft: number;
@@ -54,6 +56,8 @@ export function MyMatchCard({
   statusLabel,
   statusVariant,
   scoreText,
+  confirmedPlayer1Score,
+  confirmedPlayer2Score,
   canSubmit,
   waitingForOpponent,
   attemptsLeft,
@@ -72,10 +76,15 @@ export function MyMatchCard({
   isDisputed,
 }: MyMatchCardProps) {
   const router = useRouter();
-  const [player1Score, setPlayer1Score] = useState("");
-  const [player2Score, setPlayer2Score] = useState("");
+  const [player1ScoreInput, setPlayer1ScoreInput] = useState("");
+  const [player2ScoreInput, setPlayer2ScoreInput] = useState("");
   const [message, setMessage] = useState(helperText);
   const [isPending, startTransition] = useTransition();
+  const hasConfirmedScore =
+    confirmedPlayer1Score !== null &&
+    confirmedPlayer1Score !== undefined &&
+    confirmedPlayer2Score !== null &&
+    confirmedPlayer2Score !== undefined;
 
   const onSubmit = () => {
     startTransition(async () => {
@@ -85,8 +94,8 @@ export function MyMatchCard({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          player1Score: Number(player1Score),
-          player2Score: Number(player2Score),
+          player1Score: Number(player1ScoreInput),
+          player2Score: Number(player2ScoreInput),
         }),
       });
 
@@ -96,8 +105,8 @@ export function MyMatchCard({
       setMessage(result.message ?? result.error ?? "Не удалось сохранить результат.");
 
       if (response.ok) {
-        setPlayer1Score("");
-        setPlayer2Score("");
+        setPlayer1ScoreInput("");
+        setPlayer2ScoreInput("");
         router.refresh();
       }
     });
@@ -137,7 +146,7 @@ export function MyMatchCard({
 
           <div className="flex shrink-0 items-center justify-center self-center">
             <div className="flex h-8 items-center justify-center px-1 text-xs font-semibold tracking-[0.24em] text-zinc-300 sm:h-10 sm:text-sm">
-              VS
+              {hasConfirmedScore ? `${confirmedPlayer1Score} - ${confirmedPlayer2Score}` : "VS"}
             </div>
           </div>
 
@@ -204,20 +213,20 @@ export function MyMatchCard({
             min={0}
             max={99}
             placeholder="Голы первой команды"
-            value={player1Score}
-            onChange={(event) => setPlayer1Score(event.target.value)}
+            value={player1ScoreInput}
+            onChange={(event) => setPlayer1ScoreInput(event.target.value)}
           />
           <Input
             type="number"
             min={0}
             max={99}
             placeholder="Голы второй команды"
-            value={player2Score}
-            onChange={(event) => setPlayer2Score(event.target.value)}
+            value={player2ScoreInput}
+            onChange={(event) => setPlayer2ScoreInput(event.target.value)}
           />
           <Button
             onClick={onSubmit}
-            disabled={isPending || player1Score === "" || player2Score === ""}
+            disabled={isPending || player1ScoreInput === "" || player2ScoreInput === ""}
             className="sm:min-w-[180px]"
           >
             {isPending ? "Сохранение..." : "Отправить счёт"}
