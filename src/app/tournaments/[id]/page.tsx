@@ -445,7 +445,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                         <div className="min-w-0 sm:justify-self-end">
                           <ClubPlayerLine
                             playerId={match.player1?.id}
-                            playerName={match.player1?.nickname ?? match.player1?.name ?? "?????????? 1"}
+                            playerName={match.player1?.nickname ?? match.player1?.name ?? "Игрок 1"}
                             clubName={match.player1Id ? participantClubMap[match.player1Id]?.clubName : null}
                             badgePath={match.player1Id ? participantClubMap[match.player1Id]?.clubBadgePath : null}
                             align="center"
@@ -461,7 +461,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                         <div className="min-w-0 sm:justify-self-start">
                           <ClubPlayerLine
                             playerId={match.player2?.id}
-                            playerName={match.player2?.nickname ?? match.player2?.name ?? "?????????? 2"}
+                            playerName={match.player2?.nickname ?? match.player2?.name ?? "Игрок 2"}
                             clubName={match.player2Id ? participantClubMap[match.player2Id]?.clubName : null}
                             badgePath={match.player2Id ? participantClubMap[match.player2Id]?.clubBadgePath : null}
                             align="center"
