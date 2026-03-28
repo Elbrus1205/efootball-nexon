@@ -258,7 +258,13 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           bracket: {
             include: {
               matches: {
-                include: { player1: true, player2: true, winner: true },
+                include: {
+                  player1: true,
+                  player2: true,
+                  winner: true,
+                  participant1Entry: true,
+                  participant2Entry: true,
+                },
                 orderBy: [{ round: "asc" }, { matchNumber: "asc" }],
               },
             },
@@ -280,7 +286,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   const groupStage = tournament.stages.find((stage) => stage.type === StageType.GROUP_STAGE);
   const playoffStage = tournament.stages.find((stage) => stage.type === StageType.PLAYOFF);
   const leagueStage = tournament.stages.find((stage) => stage.type === StageType.LEAGUE);
-  const bracketMatches = playoffStage?.bracket?.matches ?? tournament.matches.filter((match) => !match.groupId);
+  const bracketMatches = playoffStage?.bracket?.matches ?? [];
 
   const scheduledMatches = tournament.matches
     .filter((match) => match.scheduledAt || match.schedules.length)

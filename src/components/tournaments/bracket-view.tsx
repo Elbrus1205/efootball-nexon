@@ -1,4 +1,4 @@
-import { Match, User } from "@prisma/client";
+import { Match, TournamentRegistration, User } from "@prisma/client";
 import { GitBranch, Trophy } from "lucide-react";
 import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
 import { Card } from "@/components/ui/card";
@@ -14,6 +14,8 @@ type BracketMatch = Match & {
   player1: User | null;
   player2: User | null;
   winner: User | null;
+  participant1Entry: TournamentRegistration | null;
+  participant2Entry: TournamentRegistration | null;
 };
 
 function roundTitle(round: number) {
@@ -31,6 +33,28 @@ function statusClasses(status: BracketMatch["status"]) {
   if (variant === "accent") return "border-cyan-400/20 bg-cyan-400/10 text-cyan-200";
   if (variant === "primary") return "border-primary/20 bg-primary/10 text-primary";
   return "border-white/10 bg-white/5 text-zinc-300";
+}
+
+function resolveClubMeta(match: BracketMatch, slot: 1 | 2, clubsByUserId: Record<string, ClubMeta>): ClubMeta {
+  if (slot === 1) {
+    return {
+      clubName: match.player1Id
+        ? clubsByUserId[match.player1Id]?.clubName ?? match.participant1Entry?.clubName
+        : match.participant1Entry?.clubName,
+      clubBadgePath: match.player1Id
+        ? clubsByUserId[match.player1Id]?.clubBadgePath ?? match.participant1Entry?.clubBadgePath
+        : match.participant1Entry?.clubBadgePath,
+    };
+  }
+
+  return {
+    clubName: match.player2Id
+      ? clubsByUserId[match.player2Id]?.clubName ?? match.participant2Entry?.clubName
+      : match.participant2Entry?.clubName,
+    clubBadgePath: match.player2Id
+      ? clubsByUserId[match.player2Id]?.clubBadgePath ?? match.participant2Entry?.clubBadgePath
+      : match.participant2Entry?.clubBadgePath,
+  };
 }
 
 export function BracketView({
@@ -57,7 +81,9 @@ export function BracketView({
             <GitBranch className="h-4 w-4" />
             Плей-офф
           </div>
-          <div className="text-sm text-zinc-400">Сетка показывает пары по раундам: клуб и эмблема сверху, имя игрока ссылкой на профиль ниже.</div>
+          <div className="text-sm text-zinc-400">
+            Сетка показывает пары по раундам: клуб и эмблема сверху, имя игрока ссылкой на профиль ниже.
+          </div>
         </div>
         <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/10 px-4 py-2 text-sm text-amber-200">
           <Trophy className="h-4 w-4" />
@@ -73,44 +99,63 @@ export function BracketView({
                 {roundTitle(round)}
               </div>
 
-              {roundMatches.map((match) => (
-                <Card key={match.id} className="space-y-4 border-white/10 bg-black/20 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                      {match.bracket === "lower" ? "Lower bracket" : "Upper bracket"} • Матч #{match.matchNumber}
-                    </div>
-                    <div className={cn("rounded-full border px-3 py-1 text-xs", statusClasses(match.status))}>
-                      {matchStatusLabel[match.status] ?? match.status}
-                    </div>
-                  </div>
+              {roundMatches.map((match) => {
+                const playerOneClub = resolveClubMeta(match, 1, clubsByUserId);
+                const playerTwoClub = resolveClubMeta(match, 2, clubsByUserId);
 
-                  <div className="space-y-3">
-                    <div className={cn("rounded-2xl border p-3", match.winnerId === match.player1Id ? "border-emerald-400/20 bg-emerald-400/5" : "border-white/10 bg-white/[0.03]")}>
-                      <div className="flex items-start justify-between gap-3">
-                        <ClubPlayerLine
-                          playerId={match.player1?.id}
-                          playerName={match.player1?.nickname ?? match.player1?.name ?? "Игрок не назначен"}
-                          clubName={match.player1Id ? clubsByUserId[match.player1Id]?.clubName : null}
-                          badgePath={match.player1Id ? clubsByUserId[match.player1Id]?.clubBadgePath : null}
-                        />
-                        <div className="text-lg font-semibold text-white">{match.player1Score ?? "-"}</div>
+                return (
+                  <Card key={match.id} className="space-y-4 border-white/10 bg-black/20 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                        {match.bracket === "lower" ? "Lower bracket" : "Upper bracket"} • Матч #{match.matchNumber}
+                      </div>
+                      <div className={cn("rounded-full border px-3 py-1 text-xs", statusClasses(match.status))}>
+                        {matchStatusLabel[match.status] ?? match.status}
                       </div>
                     </div>
 
-                    <div className={cn("rounded-2xl border p-3", match.winnerId === match.player2Id ? "border-emerald-400/20 bg-emerald-400/5" : "border-white/10 bg-white/[0.03]")}>
-                      <div className="flex items-start justify-between gap-3">
-                        <ClubPlayerLine
-                          playerId={match.player2?.id}
-                          playerName={match.player2?.nickname ?? match.player2?.name ?? "Игрок не назначен"}
-                          clubName={match.player2Id ? clubsByUserId[match.player2Id]?.clubName : null}
-                          badgePath={match.player2Id ? clubsByUserId[match.player2Id]?.clubBadgePath : null}
-                        />
-                        <div className="text-lg font-semibold text-white">{match.player2Score ?? "-"}</div>
+                    <div className="space-y-3">
+                      <div
+                        className={cn(
+                          "rounded-2xl border p-3",
+                          match.winnerId === match.player1Id
+                            ? "border-emerald-400/20 bg-emerald-400/5"
+                            : "border-white/10 bg-white/[0.03]",
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <ClubPlayerLine
+                            playerId={match.player1?.id}
+                            playerName={match.player1?.nickname ?? match.player1?.name ?? "Игрок не назначен"}
+                            clubName={playerOneClub.clubName}
+                            badgePath={playerOneClub.clubBadgePath}
+                          />
+                          <div className="text-lg font-semibold text-white">{match.player1Score ?? "-"}</div>
+                        </div>
+                      </div>
+
+                      <div
+                        className={cn(
+                          "rounded-2xl border p-3",
+                          match.winnerId === match.player2Id
+                            ? "border-emerald-400/20 bg-emerald-400/5"
+                            : "border-white/10 bg-white/[0.03]",
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <ClubPlayerLine
+                            playerId={match.player2?.id}
+                            playerName={match.player2?.nickname ?? match.player2?.name ?? "Игрок не назначен"}
+                            clubName={playerTwoClub.clubName}
+                            badgePath={playerTwoClub.clubBadgePath}
+                          />
+                          <div className="text-lg font-semibold text-white">{match.player2Score ?? "-"}</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
           ))}
         </div>
