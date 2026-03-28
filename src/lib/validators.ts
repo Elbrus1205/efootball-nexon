@@ -57,7 +57,13 @@ export const tournamentSchema = z.object({
   prizePool: z.string().optional().or(z.literal("")),
   format: z.nativeEnum(TournamentFormat),
   status: z.nativeEnum(TournamentStatus).default(TournamentStatus.REGISTRATION_OPEN),
-  coverImage: z.string().url().optional().or(z.literal("")),
+  coverImage: z
+    .string()
+    .refine((value) => !value || value.startsWith("data:image/") || value.startsWith("http://") || value.startsWith("https://"), {
+      message: "Обложка должна быть картинкой или ссылкой на картинку.",
+    })
+    .optional()
+    .or(z.literal("")),
 });
 
 export const tournamentBuilderSchema = z.object({
@@ -71,7 +77,13 @@ export const tournamentBuilderSchema = z.object({
   prizePool: z.string().optional().or(z.literal("")),
   format: z.nativeEnum(TournamentFormat),
   status: z.nativeEnum(TournamentStatus).default(TournamentStatus.DRAFT),
-  coverImage: z.string().url().optional().or(z.literal("")),
+  coverImage: z
+    .string()
+    .refine((value) => !value || value.startsWith("data:image/") || value.startsWith("http://") || value.startsWith("https://"), {
+      message: "Обложка должна быть картинкой или ссылкой на картинку.",
+    })
+    .optional()
+    .or(z.literal("")),
   playoffType: z.nativeEnum(PlayoffType).optional().nullable(),
   seedingMethod: z.nativeEnum(SeedingMethod).default(SeedingMethod.MANUAL),
   roundsInLeague: optionalIntField(1, 4, "В лиге должен быть минимум 1 круг."),

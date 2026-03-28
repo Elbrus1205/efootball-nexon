@@ -1,4 +1,4 @@
-import { ClubSelectionMode, StageType, TournamentFormat, TournamentStatus } from "@prisma/client";
+﻿import { ClubSelectionMode, StageType, TournamentFormat, TournamentStatus } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { BracketView } from "@/components/tournaments/bracket-view";
 import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
@@ -47,13 +47,13 @@ function scheduleStageLabel(match: {
 }) {
   if (match.group?.name) return match.group.name;
 
-  if (match.stage?.type === StageType.PLAYOFF) return "РџР»РµР№-РѕС„С„";
-  if (match.stage?.type === StageType.GROUP_STAGE) return "Р“СЂСѓРїРїРѕРІРѕР№ СЌС‚Р°Рї";
-  if (match.stage?.type === StageType.LEAGUE) return "Р›РёРіР°";
+  if (match.stage?.type === StageType.PLAYOFF) return "Плей-офф";
+  if (match.stage?.type === StageType.GROUP_STAGE) return "Групповой этап";
+  if (match.stage?.type === StageType.LEAGUE) return "Лига";
 
   if (match.stage?.name?.trim()) return match.stage.name;
 
-  return `Р Р°СѓРЅРґ ${match.round}`;
+  return `Раунд ${match.round}`;
 }
 
 function buildLeagueTable(
@@ -73,7 +73,7 @@ function buildLeagueTable(
   const table = new Map<string, LeagueRow>();
 
   for (const entry of participants) {
-    const playerName = displayName(entry.user.nickname, entry.user.name ?? "РРіСЂРѕРє");
+    const playerName = displayName(entry.user.nickname, entry.user.name ?? "Игрок");
     table.set(entry.userId, {
       id: entry.user.id,
       playerId: entry.user.id,
@@ -150,15 +150,15 @@ function getSubmissionState({
     moderatorComment: string | null;
   };
 }) {
-  if (matchStatus === "DISPUTED") return { label: "РњР°С‚С‡ РІ СЃРїРѕСЂРµ", tone: "danger" as const };
-  if (matchStatus === "CONFIRMED") return { label: "Р РµР·СѓР»СЊС‚Р°С‚ РїРѕРґС‚РІРµСЂР¶РґС‘РЅ", tone: "success" as const };
-  if (!latestSubmission) return { label: "РћР¶РёРґР°РµС‚СЃСЏ СЂРµР·СѓР»СЊС‚Р°С‚", tone: "waiting" as const };
-  if (latestSubmission.status === "PENDING") return { label: "Р РµР·СѓР»СЊС‚Р°С‚ РѕС‚РїСЂР°РІР»РµРЅ", tone: "success" as const };
+  if (matchStatus === "DISPUTED") return { label: "Матч в споре", tone: "danger" as const };
+  if (matchStatus === "CONFIRMED") return { label: "Счёт подтверждён", tone: "success" as const };
+  if (!latestSubmission) return { label: "Ожидается результат", tone: "waiting" as const };
+  if (latestSubmission.status === "PENDING") return { label: "Результат отправлен", tone: "success" as const };
   if (latestSubmission.status === "REJECTED" && latestSubmission.moderatorComment === "AUTO_MISMATCH") {
-    return { label: "РќСѓР¶РЅРѕ РІРІРµСЃС‚Рё СЃС‡С‘С‚ Р·Р°РЅРѕРІРѕ", tone: "retry" as const };
+    return { label: "Введите счёт заново", tone: "retry" as const };
   }
-  if (latestSubmission.status === "DISPUTED") return { label: "РњР°С‚С‡ РІ СЃРїРѕСЂРµ", tone: "danger" as const };
-  return { label: "РћР¶РёРґР°РµС‚СЃСЏ СЂРµР·СѓР»СЊС‚Р°С‚", tone: "waiting" as const };
+  if (latestSubmission.status === "DISPUTED") return { label: "Матч в споре", tone: "danger" as const };
+  return { label: "Ожидается результат", tone: "waiting" as const };
 }
 
 function StickyHeader({ children }: { children: React.ReactNode }) {
@@ -176,26 +176,26 @@ function StandingsTable({ rows }: { rows: LeagueRow[] }) {
         <thead>
           <tr>
             <StickyHeader>
-              <div className="flex justify-center">в„–</div>
+              <div className="flex justify-center">№</div>
             </StickyHeader>
-            <StickyHeader>РљРѕРјР°РЅРґР°</StickyHeader>
+            <StickyHeader>Команда</StickyHeader>
             <StickyHeader>
-              <div className="text-center">Р</div>
-            </StickyHeader>
-            <StickyHeader>
-              <div className="text-center">Р’</div>
+              <div className="text-center">Очки</div>
             </StickyHeader>
             <StickyHeader>
-              <div className="text-center">Рќ</div>
+              <div className="text-center">Очки</div>
             </StickyHeader>
             <StickyHeader>
-              <div className="text-center">Рџ</div>
+              <div className="text-center">Очки</div>
             </StickyHeader>
             <StickyHeader>
-              <div className="text-center">+/-</div>
+              <div className="text-center">Очки</div>
             </StickyHeader>
             <StickyHeader>
-              <div className="text-center">РћС‡РєРё</div>
+              <div className="text-center">Очки</div>
+            </StickyHeader>
+            <StickyHeader>
+              <div className="text-center">Очки</div>
             </StickyHeader>
           </tr>
         </thead>
@@ -218,7 +218,8 @@ function StandingsTable({ rows }: { rows: LeagueRow[] }) {
               <td className="px-1 py-3 text-center text-zinc-300">{row.wins}</td>
               <td className="px-1 py-3 text-center text-zinc-300">{row.draws}</td>
               <td className="px-1 py-3 text-center text-zinc-300">{row.losses}</td>
-              <td className={row.goalDifference > 0 ? "px-1 py-3 text-center font-medium text-emerald-300" : row.goalDifference < 0 ? "px-1 py-3 text-center font-medium text-red-300" : "px-1 py-3 text-center font-medium text-zinc-300"}>
+              <td className={row.goalDifference > 0 ? "Матч переведён в спор. Теперь результат выставляет администрация." : "Оба игрока должны ввести один и тот же счёт. Если результаты не совпадут три раза, матч уйдёт в спор."
+                    }>
                 {row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}
               </td>
               <td className="px-1 py-3 text-center font-semibold text-white">{row.points}</td>
@@ -232,7 +233,8 @@ function StandingsTable({ rows }: { rows: LeagueRow[] }) {
 
 export async function generateMetadata({ params }: { params: { id: string } }) {
   const tournament = await db.tournament.findUnique({ where: { id: params.id } });
-  return tournament ? { title: tournament.title, description: tournament.description } : { title: "РўСѓСЂРЅРёСЂ РЅРµ РЅР°Р№РґРµРЅ" };
+  return tournament ? { title: tournament.title, description: tournament.description } : { title: "Счёт ещё не подтверждён"
+                    };
 }
 
 export default async function TournamentDetailsPage({ params }: { params: { id: string } }) {
@@ -349,9 +351,9 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           <h1 className="font-display text-4xl font-thin text-white">{tournament.title}</h1>
           <p className="max-w-3xl text-zinc-400">{tournament.description}</p>
           <div className="flex flex-wrap gap-6 text-sm text-zinc-400">
-            <span>РЎС‚Р°СЂС‚: {formatDate(tournament.startsAt)}</span>
-            <span>Р РµРіРёСЃС‚СЂР°С†РёСЏ РґРѕ: {formatDate(tournament.registrationEndsAt)}</span>
-            <span>РЈС‡Р°СЃС‚РЅРёРєРё: {tournament.participants.length}/{tournament.maxParticipants}</span>
+            <span>Старт: {formatDate(tournament.startsAt)}</span>
+            <span>Регистрация до: {formatDate(tournament.registrationEndsAt)}</span>
+            <span>Участники: {tournament.participants.length}/{tournament.maxParticipants}</span>
           </div>
         </div>
 
@@ -364,7 +366,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           />
         ) : tournament.status === TournamentStatus.REGISTRATION_OPEN ? (
           <Button size="lg" disabled>
-            {tournament.participants.length >= tournament.maxParticipants ? "Лимит достигнут" : "Регистрация недоступна"}
+            {tournament.participants.length >= tournament.maxParticipants ? "Матч переведён в спор. Теперь результат выставляет администрация." : "Оба игрока должны ввести один и тот же счёт. Если результаты не совпадут три раза, матч уйдёт в спор."
+                    }
           </Button>
         ) : null}
       </div>
@@ -372,31 +375,31 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
       <Tabs defaultValue="structure">
         <div className="max-w-full overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <TabsList className="inline-flex min-w-max flex-nowrap">
-            <TabsTrigger className="shrink-0 whitespace-nowrap" value="structure">РЎС‚СЂСѓРєС‚СѓСЂР° С‚СѓСЂРЅРёСЂР°</TabsTrigger>
-            <TabsTrigger className="shrink-0 whitespace-nowrap" value="matches">Р Р°СЃРїРёСЃР°РЅРёРµ</TabsTrigger>
-            <TabsTrigger className="shrink-0 whitespace-nowrap" value="my-matches">РњРѕРё РјР°С‚С‡Рё</TabsTrigger>
-            <TabsTrigger className="shrink-0 whitespace-nowrap" value="participants">РЈС‡Р°СЃС‚РЅРёРєРё</TabsTrigger>
-            <TabsTrigger className="shrink-0 whitespace-nowrap" value="rules">РџСЂР°РІРёР»Р°</TabsTrigger>
+            <TabsTrigger className="shrink-0 whitespace-nowrap" value="structure">Структура турнира</TabsTrigger>
+            <TabsTrigger className="shrink-0 whitespace-nowrap" value="matches">Расписание</TabsTrigger>
+            <TabsTrigger className="shrink-0 whitespace-nowrap" value="my-matches">Мои матчи</TabsTrigger>
+            <TabsTrigger className="shrink-0 whitespace-nowrap" value="participants">Участники</TabsTrigger>
+            <TabsTrigger className="shrink-0 whitespace-nowrap" value="rules">Правила</TabsTrigger>
           </TabsList>
         </div>
 
         <TabsContent value="structure" className="space-y-6">
           {groupStage ? (
             <div className="space-y-4">
-              <div className="text-sm uppercase tracking-[0.24em] text-zinc-500">Р“СЂСѓРїРїС‹</div>
+              <div className="text-sm uppercase tracking-[0.24em] text-zinc-500">Группы</div>
               <div className="grid gap-4">
                 {groupStage.groups.map((group) => (
                   <Card key={group.id} className="mx-auto w-fit max-w-full overflow-hidden p-0">
-                    <div className="border-b border-white/10 px-5 py-4 font-medium text-white">{group.name}</div>
+                    <div className="border-b border-white/10 px-5 py-4 font-medium text-white">Таблица лиги</div>
                     {group.standings.length ? (
                       <StandingsTable
                         rows={group.standings.map((row) => ({
                           id: row.id,
                           rank: row.rank,
-                          clubName: row.participant.clubName?.trim() || displayName(row.participant.user.nickname, row.participant.user.name ?? "РРіСЂРѕРє"),
+                          clubName: row.participant.clubName?.trim() || displayName(row.participant.user.nickname, row.participant.user.name ?? "Игрок"),
                           clubBadgePath: row.participant.clubBadgePath,
                           playerId: row.participant.user.id,
-                          playerName: displayName(row.participant.user.nickname, row.participant.user.name ?? "РРіСЂРѕРє"),
+                          playerName: displayName(row.participant.user.nickname, row.participant.user.name ?? "Игрок"),
                           played: row.played,
                           wins: row.wins,
                           draws: row.draws,
@@ -406,7 +409,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                         }))}
                       />
                     ) : (
-                      <div className="px-4 py-4 text-sm text-zinc-500">РўР°Р±Р»РёС†Р° Р·Р°РїРѕР»РЅРёС‚СЃСЏ РїРѕСЃР»Рµ РјР°С‚С‡РµР№ РіСЂСѓРїРїС‹.</div>
+                      <div className="px-4 py-4 text-sm text-zinc-500">Таблица лиги заполнится после первых сыгранных матчей.</div>
                     )}
                   </Card>
                 ))}
@@ -416,11 +419,11 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
 
           {leagueStage || tournament.format === TournamentFormat.ROUND_ROBIN ? (
             <Card className="mx-auto w-fit max-w-full overflow-hidden p-0">
-              <div className="border-b border-white/10 px-5 py-4 font-medium text-white">РўР°Р±Р»РёС†Р° Р»РёРіРё</div>
+              <div className="border-b border-white/10 px-5 py-4 font-medium text-white">Таблица лиги</div>
               {leagueTable.length ? (
                 <StandingsTable rows={leagueTable} />
               ) : (
-                <div className="px-4 py-4 text-sm text-zinc-500">РўР°Р±Р»РёС†Р° Р»РёРіРё Р·Р°РїРѕР»РЅРёС‚СЃСЏ РїРѕСЃР»Рµ РїРµСЂРІС‹С… СЃС‹РіСЂР°РЅРЅС‹С… РјР°С‚С‡РµР№.</div>
+                <div className="px-4 py-4 text-sm text-zinc-500">Таблица лиги заполнится после первых сыгранных матчей.</div>
               )}
             </Card>
           ) : null}
@@ -436,7 +439,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                   <div className="flex flex-col gap-4">
                     <div className="flex flex-col items-center gap-2 text-center">
                       <div className="text-sm text-zinc-400">
-                        {scheduleStageLabel(match)} вЂў {formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}
+                        {scheduleStageLabel(match)} • {formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}
                       </div>
                     </div>
 
@@ -445,7 +448,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                         <div className="min-w-0 sm:justify-self-end">
                           <ClubPlayerLine
                             playerId={match.player1?.id}
-                            playerName={match.player1?.nickname ?? match.player1?.name ?? "РРіСЂРѕРє 1"}
+                            playerName={match.player1?.nickname ?? match.player1?.name ?? "Игрок 1"}
                             clubName={match.player1Id ? participantClubMap[match.player1Id]?.clubName : null}
                             badgePath={match.player1Id ? participantClubMap[match.player1Id]?.clubBadgePath : null}
                             align="center"
@@ -455,13 +458,14 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                         </div>
                         <div className="flex shrink-0 items-center justify-center self-center">
                           <div className="flex h-8 items-center justify-center px-1 text-xs font-semibold tracking-[0.24em] text-zinc-300 sm:h-10 sm:text-sm">
-                              {match.player1Score !== null && match.player2Score !== null ? `${match.player1Score} - ${match.player2Score}` : "VS"}
+                              {match.player1Score !== null && match.player2Score !== null ? `${match.player1Score} - ${match.player2Score}` : "Счёт ещё не подтверждён"
+                    }
                           </div>
                         </div>
                         <div className="min-w-0 sm:justify-self-start">
                           <ClubPlayerLine
                             playerId={match.player2?.id}
-                            playerName={match.player2?.nickname ?? match.player2?.name ?? "РРіСЂРѕРє 2"}
+                            playerName={match.player2?.nickname ?? match.player2?.name ?? "Игрок 2"}
                             clubName={match.player2Id ? participantClubMap[match.player2Id]?.clubName : null}
                             badgePath={match.player2Id ? participantClubMap[match.player2Id]?.clubBadgePath : null}
                             align="center"
@@ -474,7 +478,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                 </Card>
               ))
             ) : (
-              <Card className="p-6 text-zinc-500">РџРѕСЃР»Рµ РїСѓР±Р»РёРєР°С†РёРё СЂР°СЃРїРёСЃР°РЅРёСЏ Р·РґРµСЃСЊ РїРѕСЏРІРёС‚СЃСЏ РєР°Р»РµРЅРґР°СЂСЊ РІСЃРµС… РјР°С‚С‡РµР№ С‚СѓСЂРЅРёСЂР°.</Card>
+              <Card className="p-6 text-zinc-500">Здесь появятся матчи текущего участника после публикации расписания.</Card>
             )}
           </div>
         </TabsContent>
@@ -482,7 +486,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
         <TabsContent value="my-matches">
           <div className="grid gap-4">
             {!session?.user ? (
-              <Card className="p-6 text-zinc-500">Р’РєР»Р°РґРєР° РґРѕСЃС‚СѓРїРЅР° РїРѕСЃР»Рµ РІС…РѕРґР° РІ Р°РєРєР°СѓРЅС‚.</Card>
+              <Card className="p-6 text-zinc-500">Здесь появятся матчи текущего участника после публикации расписания.</Card>
             ) : myMatches.length ? (
               myMatches.map((match) => {
                 const player1LatestSubmission = match.submissions.find((submission) => submission.submittedById === match.player1Id);
@@ -492,14 +496,14 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                   <MyMatchCard
                     key={match.id}
                     id={match.id}
-                    title="Р›РёС‡РЅС‹Р№ РјР°С‚С‡"
-                    meta={`${scheduleStageLabel(match)} вЂў ${formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}`}
+                    title="Личный матч"
+                    meta={`${scheduleStageLabel(match)} • ${formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}`}
                     statusLabel={matchStatusLabel[match.status] ?? match.status}
                     statusVariant={matchStatusVariant[match.status] ?? "neutral"}
                     scoreText={
                       match.player1Score !== null && match.player2Score !== null
-                        ? `РџРѕРґС‚РІРµСЂР¶РґС‘РЅРЅС‹Р№ СЃС‡С‘С‚: ${match.player1Score} : ${match.player2Score}`
-                        : "РЎС‡С‘С‚ РµС‰С‘ РЅРµ РїРѕРґС‚РІРµСЂР¶РґС‘РЅ"
+                        ? `Подтверждённый счёт: ${match.player1Score} : ${match.player2Score}`
+                        : "Счёт ещё не подтверждён"
                     }
                     confirmedPlayer1Score={match.player1Score}
                     confirmedPlayer2Score={match.player2Score}
@@ -516,13 +520,12 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                     )}
                     helperText={
                       match.status === "DISPUTED"
-                        ? "РњР°С‚С‡ РїРµСЂРµРІРµРґС‘РЅ РІ СЃРїРѕСЂ. РўРµРїРµСЂСЊ СЂРµР·СѓР»СЊС‚Р°С‚ РІС‹СЃС‚Р°РІР»СЏРµС‚ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ."
-                        : "РћР±Р° РёРіСЂРѕРєР° РґРѕР»Р¶РЅС‹ РІРІРµСЃС‚Рё РѕРґРёРЅ Рё С‚РѕС‚ Р¶Рµ СЃС‡С‘С‚. Р•СЃР»Рё СЂРµР·СѓР»СЊС‚Р°С‚С‹ РЅРµ СЃРѕРІРїР°РґСѓС‚ С‚СЂРё СЂР°Р·Р°, РјР°С‚С‡ СѓР№РґС‘С‚ РІ СЃРїРѕСЂ."
+                        ? "Матч переведён в спор. Теперь результат выставляет администрация." : "Оба игрока должны ввести один и тот же счёт. Если результаты не совпадут три раза, матч уйдёт в спор."
                     }
                     player1Id={match.player1?.id}
                     player2Id={match.player2?.id}
-                    player1Name={match.player1?.nickname ?? match.player1?.name ?? "РРіСЂРѕРє 1"}
-                    player2Name={match.player2?.nickname ?? match.player2?.name ?? "РРіСЂРѕРє 2"}
+                    player1Name={match.player1?.nickname ?? match.player1?.name ?? "Игрок 1"}
+                    player2Name={match.player2?.nickname ?? match.player2?.name ?? "Игрок 2"}
                     player1ClubName={match.player1Id ? participantClubMap[match.player1Id]?.clubName : null}
                     player2ClubName={match.player2Id ? participantClubMap[match.player2Id]?.clubName : null}
                     player1ClubBadgePath={match.player1Id ? participantClubMap[match.player1Id]?.clubBadgePath : null}
@@ -551,7 +554,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                 );
               })
             ) : (
-              <Card className="p-6 text-zinc-500">Р—РґРµСЃСЊ РїРѕСЏРІСЏС‚СЃСЏ РјР°С‚С‡Рё С‚РµРєСѓС‰РµРіРѕ СѓС‡Р°СЃС‚РЅРёРєР° РїРѕСЃР»Рµ РїСѓР±Р»РёРєР°С†РёРё СЂР°СЃРїРёСЃР°РЅРёСЏ.</Card>
+              <Card className="p-6 text-zinc-500">Здесь появятся матчи текущего участника после публикации расписания.</Card>
             )}
           </div>
         </TabsContent>
@@ -562,12 +565,12 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
               <Card key={entry.id} className="p-4">
                 <ClubPlayerLine
                   playerId={entry.user.id}
-                  playerName={displayName(entry.user.nickname, entry.user.name ?? "РРіСЂРѕРє")}
+                  playerName={displayName(entry.user.nickname, entry.user.name ?? "Игрок")}
                   clubName={entry.clubName}
                   badgePath={entry.clubBadgePath}
                 />
-                <div className="mt-3 text-sm text-zinc-500">UID: {entry.user.efootballUid ?? "РќРµ Р·Р°РїРѕР»РЅРµРЅ"}</div>
-                <div className="mt-1 text-sm text-zinc-500">{entry.group?.name ?? "Р‘РµР· РіСЂСѓРїРїС‹"}</div>
+                <div className="mt-3 text-sm text-zinc-500">UID: {entry.user.efootballUid ?? "Не заполнен"}</div>
+                <div className="mt-1 text-sm text-zinc-500">{entry.group?.name ?? "Без группы"}</div>
               </Card>
             ))}
           </div>
@@ -580,4 +583,5 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
     </div>
   );
 }
+
 

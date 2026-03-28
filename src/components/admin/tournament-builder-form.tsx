@@ -1,13 +1,13 @@
 "use client";
 
 import { ClubSelectionMode, PlayoffType, SeedingMethod, SortRule, TournamentFormat, TournamentStatus } from "@prisma/client";
-import { useState } from "react";
+import { ChangeEvent, useState } from "react";
+import { playoffTypeLabel, seedingMethodLabel, sortRuleLabel, tournamentFormatLabel, tournamentStatusLabel } from "@/lib/admin-display";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { playoffTypeLabel, seedingMethodLabel, sortRuleLabel, tournamentFormatLabel, tournamentStatusLabel } from "@/lib/admin-display";
 
 type BuilderValues = {
   title?: string;
@@ -52,13 +52,34 @@ export function TournamentBuilderForm({
   initialValues?: BuilderValues;
 }) {
   const [format, setFormat] = useState<TournamentFormat>(initialValues?.format ?? TournamentFormat.SINGLE_ELIMINATION);
-  const selectedSortRules = initialValues?.sortRules ?? [SortRule.POINTS, SortRule.GOAL_DIFFERENCE, SortRule.GOALS_FOR, SortRule.WINS];
+  const [coverImage, setCoverImage] = useState(initialValues?.coverImage ?? "");
+
+  const selectedSortRules = initialValues?.sortRules ?? [
+    SortRule.POINTS,
+    SortRule.GOAL_DIFFERENCE,
+    SortRule.GOALS_FOR,
+    SortRule.WINS,
+  ];
+
   const showGroups = format === TournamentFormat.GROUPS || format === TournamentFormat.GROUPS_PLAYOFF;
   const showLeague = format === TournamentFormat.LEAGUE || format === TournamentFormat.ROUND_ROBIN;
   const showPlayoff =
     format === TournamentFormat.SINGLE_ELIMINATION ||
     format === TournamentFormat.DOUBLE_ELIMINATION ||
     format === TournamentFormat.GROUPS_PLAYOFF;
+
+  const onCoverChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setCoverImage(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   return (
     <form action={action} method="post" className="space-y-6">
@@ -129,7 +150,15 @@ export function TournamentBuilderForm({
 
           <div className="space-y-2">
             <Label htmlFor="maxParticipants">Лимит участников</Label>
-            <Input id="maxParticipants" name="maxParticipants" type="number" min={2} max={256} defaultValue={initialValues?.maxParticipants ?? 16} required />
+            <Input
+              id="maxParticipants"
+              name="maxParticipants"
+              type="number"
+              min={2}
+              max={256}
+              defaultValue={initialValues?.maxParticipants ?? 16}
+              required
+            />
           </div>
 
           <div className="space-y-2">
@@ -138,8 +167,22 @@ export function TournamentBuilderForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="coverImage">Обложка</Label>
-            <Input id="coverImage" name="coverImage" placeholder="https://..." defaultValue={initialValues?.coverImage ?? ""} />
+            <Label htmlFor="coverImageFile">Обложка</Label>
+            <input type="hidden" name="coverImage" value={coverImage} />
+            <Input id="coverImageFile" type="file" accept="image/*" onChange={onCoverChange} />
+            {coverImage ? (
+              <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={coverImage} alt="Обложка турнира" className="h-32 w-full rounded-xl object-cover" />
+                <Button type="button" variant="outline" className="w-full" onClick={() => setCoverImage("")}>
+                  Убрать обложку
+                </Button>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-400">
+                Загрузите обложку турнира с устройства.
+              </div>
+            )}
           </div>
 
           <div className="space-y-2 md:col-span-2">
