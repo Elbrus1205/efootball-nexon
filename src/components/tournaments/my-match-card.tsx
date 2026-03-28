@@ -90,7 +90,9 @@ export function MyMatchCard({
         }),
       });
 
-      const result = await response.json().catch(() => ({ error: "Не удалось обработать ответ сервера." }));
+      const result = await response.json().catch(() => ({
+        error: "Не удалось обработать ответ сервера.",
+      }));
       setMessage(result.message ?? result.error ?? "Не удалось сохранить результат.");
 
       if (response.ok) {
@@ -102,7 +104,7 @@ export function MyMatchCard({
   };
 
   return (
-    <Card className="space-y-4 p-5">
+    <Card className="space-y-4 p-4 sm:p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="font-medium text-white">{title}</div>
@@ -114,20 +116,39 @@ export function MyMatchCard({
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2">
-        <div className={`rounded-2xl border p-4 text-sm ${submissionToneClass(player1SubmissionState.tone)}`}>
-          <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">Игрок 1</div>
-          <div className="mt-2">
-            <ClubPlayerLine playerId={player1Id} playerName={player1Name} clubName={player1ClubName} badgePath={player1ClubBadgePath} />
+      <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+        <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <ClubPlayerLine
+              playerId={player1Id}
+              playerName={player1Name}
+              clubName={player1ClubName}
+              badgePath={player1ClubBadgePath}
+              align="center"
+            />
+            <div className={`mt-3 rounded-xl border px-3 py-2 text-center text-xs ${submissionToneClass(player1SubmissionState.tone)}`}>
+              {player1SubmissionState.label}
+            </div>
           </div>
-          <div className="mt-2">{player1SubmissionState.label}</div>
-        </div>
-        <div className={`rounded-2xl border p-4 text-sm ${submissionToneClass(player2SubmissionState.tone)}`}>
-          <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">Игрок 2</div>
-          <div className="mt-2">
-            <ClubPlayerLine playerId={player2Id} playerName={player2Name} clubName={player2ClubName} badgePath={player2ClubBadgePath} />
+
+          <div className="flex shrink-0 items-center justify-center">
+            <div className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm font-semibold tracking-[0.24em] text-zinc-300">
+              VS
+            </div>
           </div>
-          <div className="mt-2">{player2SubmissionState.label}</div>
+
+          <div className="min-w-0 flex-1">
+            <ClubPlayerLine
+              playerId={player2Id}
+              playerName={player2Name}
+              clubName={player2ClubName}
+              badgePath={player2ClubBadgePath}
+              align="center"
+            />
+            <div className={`mt-3 rounded-xl border px-3 py-2 text-center text-xs ${submissionToneClass(player2SubmissionState.tone)}`}>
+              {player2SubmissionState.label}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -158,8 +179,12 @@ export function MyMatchCard({
             </div>
             <div>
               <div>{message}</div>
-              {waitingForOpponent ? <div className="mt-2 text-zinc-500">Свой результат уже отправлен. Ожидается ответ второго игрока.</div> : null}
-              {attemptsLeft > 0 && canSubmit ? <div className="mt-2 text-zinc-500">Осталось попыток на совпадение: {attemptsLeft}.</div> : null}
+              {waitingForOpponent ? (
+                <div className="mt-2 text-zinc-500">Свой результат уже отправлен. Ожидается ответ соперника.</div>
+              ) : null}
+              {attemptsLeft > 0 && canSubmit ? (
+                <div className="mt-2 text-zinc-500">Осталось попыток на совпадение: {attemptsLeft}.</div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -171,7 +196,7 @@ export function MyMatchCard({
             type="number"
             min={0}
             max={99}
-            placeholder="Голы игрока 1"
+            placeholder="Голы первой команды"
             value={player1Score}
             onChange={(event) => setPlayer1Score(event.target.value)}
           />
@@ -179,11 +204,15 @@ export function MyMatchCard({
             type="number"
             min={0}
             max={99}
-            placeholder="Голы игрока 2"
+            placeholder="Голы второй команды"
             value={player2Score}
             onChange={(event) => setPlayer2Score(event.target.value)}
           />
-          <Button onClick={onSubmit} disabled={isPending || player1Score === "" || player2Score === ""} className="sm:min-w-[180px]">
+          <Button
+            onClick={onSubmit}
+            disabled={isPending || player1Score === "" || player2Score === ""}
+            className="sm:min-w-[180px]"
+          >
             {isPending ? "Сохранение..." : "Отправить счёт"}
           </Button>
         </div>
