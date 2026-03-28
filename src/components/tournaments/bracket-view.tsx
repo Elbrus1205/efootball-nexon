@@ -17,12 +17,15 @@ type BracketMatch = Match & {
   participant2Entry: TournamentRegistration | null;
 };
 
-function roundTitle(round: number) {
-  if (round === 1) return "1/8 финала";
-  if (round === 2) return "1/4 финала";
-  if (round === 3) return "1/2 финала";
-  if (round === 4) return "Финал";
-  return `Раунд ${round}`;
+function roundTitle(round: number, totalRounds: number) {
+  const roundsRemaining = totalRounds - round;
+
+  if (roundsRemaining <= 0) return "Финал";
+  if (roundsRemaining === 1) return "1/2 финала";
+  if (roundsRemaining === 2) return "1/4 финала";
+  if (roundsRemaining === 3) return "1/8 финала";
+
+  return `1/${2 ** roundsRemaining} финала`;
 }
 
 function bracketLabel(match: BracketMatch) {
@@ -74,6 +77,7 @@ export function BracketView({
   }, new Map());
 
   const orderedRounds = Array.from(rounds.entries()).sort((a, b) => a[0] - b[0]);
+  const totalRounds = orderedRounds.length;
 
   return (
     <div className="overflow-hidden rounded-[2rem] border border-primary/15 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.14),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))]">
@@ -95,7 +99,7 @@ export function BracketView({
           {orderedRounds.map(([round, roundMatches]) => (
             <div key={round} className="w-[320px] shrink-0 space-y-4">
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-medium text-white">
-                {roundTitle(round)}
+                {roundTitle(round, totalRounds)}
               </div>
 
               {roundMatches.map((match) => {
