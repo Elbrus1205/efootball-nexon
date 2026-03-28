@@ -117,8 +117,8 @@ export function MyMatchCard({
       </div>
 
       <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-3 sm:p-5">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2 sm:gap-4">
-          <div className="min-w-0 flex-1">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2 sm:grid-cols-[minmax(0,220px)_auto_minmax(0,220px)] sm:items-start sm:justify-center sm:gap-4">
+          <div className="min-w-0 flex-1 sm:justify-self-end">
             <ClubPlayerLine
               playerId={player1Id}
               playerName={player1Name}
@@ -139,7 +139,7 @@ export function MyMatchCard({
             </div>
           </div>
 
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 sm:justify-self-start">
             <ClubPlayerLine
               playerId={player2Id}
               playerName={player2Name}

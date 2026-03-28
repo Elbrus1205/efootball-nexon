@@ -441,8 +441,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                     </div>
 
                     <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-3 sm:p-5">
-                      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2 sm:gap-4">
-                        <div className="min-w-0">
+                      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2 sm:grid-cols-[minmax(0,220px)_auto_auto_auto_minmax(0,220px)] sm:items-center sm:justify-center sm:gap-3">
+                        <div className="min-w-0 sm:justify-self-end">
                           <ClubPlayerLine
                             playerId={match.player1?.id}
                             playerName={match.player1?.nickname ?? match.player1?.name ?? "?????????? 1"}
@@ -453,20 +453,30 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                             reverse
                           />
                         </div>
+                        <div className="hidden shrink-0 items-center justify-center self-center sm:flex">
+                          <span className="min-w-[1ch] text-right text-base font-semibold text-white sm:text-lg">
+                            {match.player1Score ?? ""}
+                          </span>
+                        </div>
                         <div className="flex shrink-0 items-center justify-center self-center">
-                          <div className="flex items-center justify-center gap-2 px-1 text-zinc-300 sm:gap-3">
-                            <span className="min-w-[1ch] text-right text-base font-semibold text-white sm:text-lg">
+                          <div className="flex items-center justify-center gap-2 px-1 text-zinc-300 sm:gap-0">
+                            <span className="min-w-[1ch] text-right text-base font-semibold text-white sm:hidden sm:text-lg">
                               {match.player1Score ?? ""}
                             </span>
                             <div className="flex h-8 items-center justify-center px-1 text-xs font-semibold tracking-[0.24em] text-zinc-300 sm:h-10 sm:text-sm">
                               VS
                             </div>
-                            <span className="min-w-[1ch] text-left text-base font-semibold text-white sm:text-lg">
+                            <span className="min-w-[1ch] text-left text-base font-semibold text-white sm:hidden sm:text-lg">
                               {match.player2Score ?? ""}
                             </span>
                           </div>
                         </div>
-                        <div className="min-w-0">
+                        <div className="hidden shrink-0 items-center justify-center self-center sm:flex">
+                          <span className="min-w-[1ch] text-left text-base font-semibold text-white sm:text-lg">
+                            {match.player2Score ?? ""}
+                          </span>
+                        </div>
+                        <div className="min-w-0 sm:justify-self-start">
                           <ClubPlayerLine
                             playerId={match.player2?.id}
                             playerName={match.player2?.nickname ?? match.player2?.name ?? "?????????? 2"}
