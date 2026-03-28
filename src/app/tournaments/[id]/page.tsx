@@ -40,6 +40,22 @@ function displayName(name: string | null | undefined, fallback: string) {
   return name?.trim() || fallback;
 }
 
+function scheduleStageLabel(match: {
+  round: number;
+  group?: { name: string } | null;
+  stage?: { name: string | null; type?: StageType | null } | null;
+}) {
+  if (match.group?.name) return match.group.name;
+
+  if (match.stage?.type === StageType.PLAYOFF) return "Плей-офф";
+  if (match.stage?.type === StageType.GROUP_STAGE) return "Групповой этап";
+  if (match.stage?.type === StageType.LEAGUE) return "Лига";
+
+  if (match.stage?.name?.trim()) return match.stage.name;
+
+  return `Раунд ${match.round}`;
+}
+
 function buildLeagueTable(
   participants: Array<{
     userId: string;
@@ -419,9 +435,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                 <Card key={match.id} className="p-5">
                   <div className="flex flex-col gap-4">
                     <div className="flex flex-col items-center gap-2 text-center">
-                      <Badge variant={matchStatusVariant[match.status] ?? "neutral"}>{matchStatusLabel[match.status] ?? match.status}</Badge>
                       <div className="text-sm text-zinc-400">
-                        {match.group?.name ?? match.stage?.name ?? `?????????? ${match.round}`} ??? {formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}
+                        {scheduleStageLabel(match)} • {formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}
                       </div>
                     </div>
 
