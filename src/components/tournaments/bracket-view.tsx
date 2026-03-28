@@ -35,6 +35,18 @@ function statusClasses(status: BracketMatch["status"]) {
   return "border-white/10 bg-white/5 text-zinc-300";
 }
 
+function bracketLabel(match: BracketMatch) {
+  if (match.bracket === "lower") {
+    return `Lower bracket • Матч #${match.matchNumber}`;
+  }
+
+  if (match.loserNextMatchId || match.loserNextMatchSlot) {
+    return `Upper bracket • Матч #${match.matchNumber}`;
+  }
+
+  return `Матч #${match.matchNumber}`;
+}
+
 function resolveClubMeta(match: BracketMatch, slot: 1 | 2, clubsByUserId: Record<string, ClubMeta>): ClubMeta {
   if (slot === 1) {
     return {
@@ -104,7 +116,7 @@ export function BracketView({
                   <Card key={match.id} className="space-y-4 border-white/10 bg-black/20 p-4">
                     <div className="flex items-center justify-between gap-3">
                       <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                        {match.bracket === "lower" ? "Lower bracket" : "Upper bracket"} • Матч #{match.matchNumber}
+                        {bracketLabel(match)}
                       </div>
                       <div className={cn("rounded-full border px-3 py-1 text-xs", statusClasses(match.status))}>
                         {matchStatusLabel[match.status] ?? match.status}
