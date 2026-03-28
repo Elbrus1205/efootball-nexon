@@ -469,13 +469,15 @@ export async function generateTournamentMatches(tournamentId: string) {
     }
   }
 
-  await db.tournament.update({
-    where: { id: tournamentId },
-    data: {
-      status: TournamentStatus.IN_PROGRESS,
-      registrationClosedAt: new Date(),
-    },
-  });
+  if (tournament.status === TournamentStatus.REGISTRATION_CLOSED) {
+    await db.tournament.update({
+      where: { id: tournamentId },
+      data: {
+        status: TournamentStatus.IN_PROGRESS,
+        registrationClosedAt: tournament.registrationClosedAt ?? new Date(),
+      },
+    });
+  }
 
   return db.match.findMany({ where: { tournamentId } });
 }
