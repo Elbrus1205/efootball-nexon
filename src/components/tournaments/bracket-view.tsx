@@ -117,7 +117,7 @@ export function BracketView({
                             : "border-white/10 bg-white/[0.03]",
                         )}
                       >
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center justify-between gap-3">
                           <ClubPlayerLine
                             playerId={match.player1?.id}
                             playerName={match.player1?.nickname ?? match.player1?.name ?? "Игрок не назначен"}
@@ -136,7 +136,7 @@ export function BracketView({
                             : "border-white/10 bg-white/[0.03]",
                         )}
                       >
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center justify-between gap-3">
                           <ClubPlayerLine
                             playerId={match.player2?.id}
                             playerName={match.player2?.nickname ?? match.player2?.name ?? "Игрок не назначен"}
