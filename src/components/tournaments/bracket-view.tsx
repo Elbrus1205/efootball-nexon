@@ -81,9 +81,6 @@ export function BracketView({
             <GitBranch className="h-4 w-4" />
             Плей-офф
           </div>
-          <div className="text-sm text-zinc-400">
-            Сетка показывает пары по раундам: клуб и эмблема сверху, имя игрока ссылкой на профиль ниже.
-          </div>
         </div>
         <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/10 px-4 py-2 text-sm text-amber-200">
           <Trophy className="h-4 w-4" />
