@@ -1,4 +1,4 @@
-import {
+﻿import {
   ClubSelectionMode,
   MatchStatus,
   NotificationType,
@@ -25,6 +25,14 @@ const TERMINAL_MATCH_STATUSES = new Set<MatchStatus>([
 
 function nextPowerOfTwo(value: number) {
   return Math.pow(2, Math.ceil(Math.log2(Math.max(value, 2))));
+}
+
+function isPowerOfTwo(value: number) {
+  return value >= 2 && (value & (value - 1)) === 0;
+}
+
+function isDirectPlayoffFormat(format: TournamentFormat) {
+  return format === TournamentFormat.SINGLE_ELIMINATION || format === TournamentFormat.DOUBLE_ELIMINATION;
 }
 
 function shuffle<T>(items: T[]) {
@@ -529,10 +537,10 @@ export async function generateTournamentSchedule(
     const startsAt = new Date(cursor);
     const endsAt = new Date(startsAt.getTime() + slotMinutes * 60_000);
     const slotLabel = match.group?.name
-      ? `${match.group.name} • Тур ${match.round}`
+      ? `${match.group.name} вЂў РўСѓСЂ ${match.round}`
       : match.stage?.name
-        ? `${match.stage.name} • Раунд ${match.round}`
-        : `Раунд ${match.round} • Матч ${match.matchNumber}`;
+        ? `${match.stage.name} вЂў Р Р°СѓРЅРґ ${match.round}`
+        : `Р Р°СѓРЅРґ ${match.round} вЂў РњР°С‚С‡ ${match.matchNumber}`;
 
     const existingSchedule = match.schedules[0];
     const schedule = existingSchedule
@@ -999,15 +1007,19 @@ export async function closeTournamentRegistration(tournamentId: string) {
   });
 
   if (!tournament) throw new Error("Tournament not found");
-  if (!tournament.stages.length) await generateTournamentStages(tournamentId);
-  if (!tournament.matches.length) {
-    await generateTournamentMatches(tournamentId);
+  const confirmedParticipants = tournament.participants.length;
+  if (confirmedParticipants < 2) {
+    throw new Error("Р”Р»СЏ Р·Р°РєСЂС‹С‚РёСЏ СЂРµРіРёСЃС‚СЂР°С†РёРё РЅСѓР¶РЅРѕ РјРёРЅРёРјСѓРј 2 СѓС‡Р°СЃС‚РЅРёРєР°.");
+  }
+
+  if (isDirectPlayoffFormat(tournament.format) && !isPowerOfTwo(confirmedParticipants)) {
+    throw new Error("Р”Р»СЏ РїР»РµР№-РѕС„С„ РЅСѓР¶РЅРѕ 2, 4, 8, 16 РёР»Рё 32 СѓС‡Р°СЃС‚РЅРёРєР°.");
   }
 
   await db.tournament.update({
     where: { id: tournamentId },
     data: {
-      status: TournamentStatus.IN_PROGRESS,
+      status: TournamentStatus.REGISTRATION_CLOSED,
       registrationClosedAt: new Date(),
     },
   });
@@ -1016,8 +1028,93 @@ export async function closeTournamentRegistration(tournamentId: string) {
     tournament.participants.map((player) =>
       createNotification({
         userId: player.user.id,
-        title: "Турнир стартовал",
-        body: `${tournament.title}: регистрация закрыта, структура и матчи уже сформированы.`,
+        title: "Р РµРіРёСЃС‚СЂР°С†РёСЏ Р·Р°РєСЂС‹С‚Р°",
+        body: `${tournament.title}: СЂРµРіРёСЃС‚СЂР°С†РёСЏ Р·Р°РєСЂС‹С‚Р°. РћР¶РёРґР°РµС‚СЃСЏ Р·Р°РїСѓСЃРє С‚СѓСЂРЅРёСЂР° Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂРѕРј.`,
+        type: NotificationType.TOURNAMENT,
+        link: `/tournaments/${tournament.id}`,
+      }),
+    ),
+  );
+
+  return db.tournament.findUnique({ where: { id: tournamentId } });
+}
+
+export async function startTournament(tournamentId: string) {
+  const tournament = await db.tournament.findUnique({
+    where: { id: tournamentId },
+    include: {
+      participants: {
+        where: { status: ParticipantStatus.CONFIRMED },
+        include: { user: true },
+        orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
+      },
+      matches: true,
+      stages: true,
+    },
+  });
+
+  if (!tournament) throw new Error("Tournament not found");
+  if (tournament.status !== TournamentStatus.REGISTRATION_CLOSED) {
+    throw new Error("РўСѓСЂРЅРёСЂ РјРѕР¶РЅРѕ Р·Р°РїСѓСЃС‚РёС‚СЊ С‚РѕР»СЊРєРѕ РїРѕСЃР»Рµ Р·Р°РєСЂС‹С‚РёСЏ СЂРµРіРёСЃС‚СЂР°С†РёРё.");
+  }
+
+  const confirmedParticipants = tournament.participants.length;
+  if (confirmedParticipants < 2) {
+    throw new Error("Р”Р»СЏ СЃС‚Р°СЂС‚Р° С‚СѓСЂРЅРёСЂР° РЅСѓР¶РЅРѕ РјРёРЅРёРјСѓРј 2 СѓС‡Р°СЃС‚РЅРёРєР°.");
+  }
+
+  if (isDirectPlayoffFormat(tournament.format) && !isPowerOfTwo(confirmedParticipants)) {
+    throw new Error("Р”Р»СЏ РїР»РµР№-РѕС„С„ РЅСѓР¶РЅРѕ 2, 4, 8, 16 РёР»Рё 32 СѓС‡Р°СЃС‚РЅРёРєР°.");
+  }
+
+  const missingClub = tournament.participants.find(
+    (participant) => !participant.clubSlug || !participant.clubName || !participant.clubBadgePath,
+  );
+  if (missingClub) {
+    throw new Error("РџРµСЂРµРґ СЃС‚Р°СЂС‚РѕРј С‚СѓСЂРЅРёСЂР° РІСЃРµРј СѓС‡Р°СЃС‚РЅРёРєР°Рј РЅСѓР¶РЅРѕ РЅР°Р·РЅР°С‡РёС‚СЊ РєР»СѓР±С‹.");
+  }
+
+  if (!tournament.stages.length) {
+    await generateTournamentStages(tournamentId);
+  }
+
+  if (!tournament.matches.length) {
+    await generateTournamentMatches(tournamentId);
+  }
+
+  await generateTournamentSchedule(tournamentId, { overwrite: true });
+
+  await db.tournamentStage.updateMany({
+    where: { tournamentId },
+    data: { status: StageStatus.PENDING },
+  });
+
+  const firstStage = await db.tournamentStage.findFirst({
+    where: { tournamentId },
+    orderBy: { orderIndex: "asc" },
+  });
+
+  if (firstStage) {
+    await db.tournamentStage.update({
+      where: { id: firstStage.id },
+      data: { status: StageStatus.ACTIVE },
+    });
+  }
+
+  await db.tournament.update({
+    where: { id: tournamentId },
+    data: {
+      status: TournamentStatus.IN_PROGRESS,
+      registrationClosedAt: tournament.registrationClosedAt ?? new Date(),
+    },
+  });
+
+  await Promise.all(
+    tournament.participants.map((player) =>
+      createNotification({
+        userId: player.user.id,
+        title: "РўСѓСЂРЅРёСЂ СЃС‚Р°СЂС‚РѕРІР°Р»",
+        body: `${tournament.title}: РјР°С‚С‡Рё, СЂР°СЃРїРёСЃР°РЅРёРµ Рё С‚СѓСЂРЅРёСЂРЅР°СЏ СЃС‚СЂСѓРєС‚СѓСЂР° СѓР¶Рµ РґРѕСЃС‚СѓРїРЅС‹.`,
         type: NotificationType.TOURNAMENT,
         link: `/tournaments/${tournament.id}`,
       }),
@@ -1102,3 +1199,4 @@ export async function advanceMatch(matchId: string, winnerId: string, loserId?: 
 
   await syncTournamentLifecycleStatus(match.tournamentId);
 }
+
