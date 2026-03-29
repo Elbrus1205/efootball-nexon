@@ -14,7 +14,6 @@ export default async function PlayerProfilePage({ params }: { params: { id: stri
     <div className="page-shell space-y-8">
       <Card className="p-6">
         <div className="space-y-3">
-          <div className="text-sm uppercase tracking-[0.22em] text-zinc-500">Профиль игрока</div>
           <h1 className="font-display text-3xl font-thin text-white">{user.nickname ?? user.name ?? "Игрок eFootball Nexon"}</h1>
           <div className="grid gap-3 text-sm text-zinc-400 sm:grid-cols-2 lg:grid-cols-4">
             <div>Имя: {user.name ?? "Не указано"}</div>
