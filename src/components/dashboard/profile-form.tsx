@@ -20,6 +20,7 @@ export function ProfileForm({
     bio: string;
     image: string;
     bannerImage: string;
+    registeredAt: string;
   };
 }) {
   const [draft, setDraft] = useState(initialValues);
@@ -98,7 +99,13 @@ export function ProfileForm({
       const res = await fetch("/api/register", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(draft),
+        body: JSON.stringify({
+          nickname: draft.nickname,
+          favoriteTeam: draft.favoriteTeam,
+          bio: draft.bio,
+          image: draft.image,
+          bannerImage: draft.bannerImage,
+        }),
       });
 
       if (!res.ok) {
@@ -162,23 +169,40 @@ export function ProfileForm({
           </div>
         </div>
 
-        <div className="space-y-6 p-5 sm:p-6">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Никнейм</Label>
-              <Input value={draft.nickname} onChange={(e) => setDraft((v) => ({ ...v, nickname: e.target.value }))} />
+        <div className="space-y-5 p-5 sm:p-6">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <Label className="mb-2 block text-[11px] uppercase tracking-[0.24em] text-zinc-500">Никнейм</Label>
+              <Input
+                value={draft.nickname}
+                className="h-11 border-white/10 bg-white/[0.04]"
+                onChange={(e) => setDraft((v) => ({ ...v, nickname: e.target.value }))}
+              />
             </div>
-            <div className="space-y-2">
-              <Label>Любимый клуб</Label>
-              <Input value={draft.favoriteTeam} onChange={(e) => setDraft((v) => ({ ...v, favoriteTeam: e.target.value }))} />
+
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <Label className="mb-2 block text-[11px] uppercase tracking-[0.24em] text-zinc-500">Любимый клуб</Label>
+              <Input
+                value={draft.favoriteTeam}
+                className="h-11 border-white/10 bg-white/[0.04]"
+                onChange={(e) => setDraft((v) => ({ ...v, favoriteTeam: e.target.value }))}
+              />
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div className="mb-2 text-[11px] uppercase tracking-[0.24em] text-zinc-500">На сайте с</div>
+              <div className="flex h-11 items-center rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-white">
+                {initialValues.registeredAt}
+              </div>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Описание профиля</Label>
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+            <Label className="mb-2 block text-[11px] uppercase tracking-[0.24em] text-zinc-500">Описание профиля</Label>
             <Textarea
               rows={5}
               maxLength={300}
+              className="border-white/10 bg-white/[0.04]"
               placeholder="Короткое описание игрока, любимый стиль игры, достижения или любые детали о профиле."
               value={draft.bio}
               onChange={(e) => setDraft((v) => ({ ...v, bio: e.target.value }))}
