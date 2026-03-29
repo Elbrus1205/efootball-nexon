@@ -172,7 +172,14 @@ export const authOptions: NextAuthOptions = {
       : []),
   ],
   callbacks: {
-    async signIn({ user }) {
+    async signIn({ user, account }) {
+      if (account?.provider === "vk" && user.id && account.providerAccountId) {
+        await db.user.update({
+          where: { id: user.id },
+          data: { vkId: account.providerAccountId },
+        });
+      }
+
       return !user.isBanned;
     },
     async jwt({ token, user }) {
