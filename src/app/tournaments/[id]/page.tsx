@@ -19,6 +19,7 @@ import {
   tournamentStatusVariant,
 } from "@/lib/admin-display";
 import { db } from "@/lib/db";
+import { getPlayerDisplayName } from "@/lib/player-name";
 import { formatDate } from "@/lib/utils";
 
 type LeagueRow = {
@@ -73,7 +74,7 @@ function buildLeagueTable(
   const table = new Map<string, LeagueRow>();
 
   for (const entry of participants) {
-    const playerName = displayName(entry.user.nickname, entry.user.name ?? "Игрок");
+    const playerName = getPlayerDisplayName(entry.user);
     table.set(entry.userId, {
       id: entry.user.id,
       playerId: entry.user.id,
@@ -396,10 +397,10 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                         rows={group.standings.map((row) => ({
                           id: row.id,
                           rank: row.rank,
-                          clubName: row.participant.clubName?.trim() || displayName(row.participant.user.nickname, row.participant.user.name ?? "Игрок"),
+                          clubName: row.participant.clubName?.trim() || getPlayerDisplayName(row.participant.user),
                           clubBadgePath: row.participant.clubBadgePath,
                           playerId: row.participant.user.id,
-                          playerName: displayName(row.participant.user.nickname, row.participant.user.name ?? "Игрок"),
+                          playerName: getPlayerDisplayName(row.participant.user),
                           played: row.played,
                           wins: row.wins,
                           draws: row.draws,
@@ -448,7 +449,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                         <div className="min-w-0 justify-self-end">
                           <ClubPlayerLine
                             playerId={match.player1?.id}
-                            playerName={match.player1?.nickname ?? match.player1?.name ?? "Игрок 1"}
+                            playerName={match.player1 ? getPlayerDisplayName(match.player1) : "Игрок 1"}
                             clubName={match.player1Id ? participantClubMap[match.player1Id]?.clubName : null}
                             badgePath={match.player1Id ? participantClubMap[match.player1Id]?.clubBadgePath : null}
                             align="center"
@@ -464,7 +465,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                         <div className="min-w-0 justify-self-start">
                           <ClubPlayerLine
                             playerId={match.player2?.id}
-                            playerName={match.player2?.nickname ?? match.player2?.name ?? "Игрок 2"}
+                            playerName={match.player2 ? getPlayerDisplayName(match.player2) : "Игрок 2"}
                             clubName={match.player2Id ? participantClubMap[match.player2Id]?.clubName : null}
                             badgePath={match.player2Id ? participantClubMap[match.player2Id]?.clubBadgePath : null}
                             align="center"
@@ -523,8 +524,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                     }
                     player1Id={match.player1?.id}
                     player2Id={match.player2?.id}
-                    player1Name={match.player1?.nickname ?? match.player1?.name ?? "Игрок 1"}
-                    player2Name={match.player2?.nickname ?? match.player2?.name ?? "Игрок 2"}
+                    player1Name={match.player1 ? getPlayerDisplayName(match.player1) : "Игрок 1"}
+                    player2Name={match.player2 ? getPlayerDisplayName(match.player2) : "Игрок 2"}
                     player1ClubName={match.player1Id ? participantClubMap[match.player1Id]?.clubName : null}
                     player2ClubName={match.player2Id ? participantClubMap[match.player2Id]?.clubName : null}
                     player1ClubBadgePath={match.player1Id ? participantClubMap[match.player1Id]?.clubBadgePath : null}
@@ -564,7 +565,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
               <Card key={entry.id} className="p-4">
                 <ClubPlayerLine
                   playerId={entry.user.id}
-                  playerName={displayName(entry.user.nickname, entry.user.name ?? "Игрок")}
+                  playerName={getPlayerDisplayName(entry.user)}
                   clubName={entry.clubName}
                   badgePath={entry.clubBadgePath}
                 />

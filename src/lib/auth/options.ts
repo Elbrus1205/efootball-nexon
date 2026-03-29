@@ -6,6 +6,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import VkProvider from "next-auth/providers/vk";
 import { db } from "@/lib/db";
 import { verifyTelegramAuth } from "@/lib/auth/telegram";
+import { generateFallbackNickname } from "@/lib/player-name";
 
 const TELEGRAM_ADMIN_ID = "6595067194";
 
@@ -81,11 +82,13 @@ export const authOptions: NextAuthOptions = {
 
         const displayName = [credentials.first_name, credentials.last_name].filter(Boolean).join(" ");
         const role = credentials.id === TELEGRAM_ADMIN_ID ? UserRole.ADMIN : UserRole.PLAYER;
+        const fallbackNickname = generateFallbackNickname(credentials.id);
 
         const user = await db.user.upsert({
           where: { telegramId: credentials.id },
           update: {
             name: displayName || credentials.username || "Telegram Player",
+            nickname: credentials.username || fallbackNickname,
             telegramUsername: credentials.username,
             image: credentials.photo_url,
             role,
@@ -95,6 +98,7 @@ export const authOptions: NextAuthOptions = {
             telegramUsername: credentials.username,
             image: credentials.photo_url,
             name: displayName || credentials.username || "Telegram Player",
+            nickname: credentials.username || fallbackNickname,
             role,
           },
         });
@@ -131,6 +135,15 @@ export const authOptions: NextAuthOptions = {
       if (token.sub) {
         const dbUser = await db.user.findUnique({ where: { id: token.sub } });
         if (dbUser) {
+          if (!dbUser.nickname?.trim()) {
+            const generatedNickname = generateFallbackNickname(dbUser.id);
+            await db.user.update({
+              where: { id: dbUser.id },
+              data: { nickname: generatedNickname },
+            });
+            dbUser.nickname = generatedNickname;
+          }
+
           token.role = dbUser.role;
           token.nickname = dbUser.nickname;
           token.efootballUid = dbUser.efootballUid;

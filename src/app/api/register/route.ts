@@ -2,6 +2,7 @@ import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth/session";
+import { generateFallbackNickname } from "@/lib/player-name";
 import { profileSchema, registerSchema } from "@/lib/validators";
 
 export async function POST(request: Request) {
@@ -19,6 +20,7 @@ export async function POST(request: Request) {
       email: body.email,
       passwordHash,
       name: body.name,
+      nickname: generateFallbackNickname(body.email),
     },
   });
 

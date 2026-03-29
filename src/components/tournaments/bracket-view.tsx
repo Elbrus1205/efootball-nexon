@@ -2,6 +2,7 @@ import { Match, TournamentRegistration, User } from "@prisma/client";
 import { GitBranch, Trophy } from "lucide-react";
 import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
 import { Card } from "@/components/ui/card";
+import { getPlayerDisplayName } from "@/lib/player-name";
 import { cn } from "@/lib/utils";
 
 type ClubMeta = {
@@ -124,7 +125,7 @@ export function BracketView({
                         <div className="flex items-center justify-between gap-3">
                           <ClubPlayerLine
                             playerId={match.player1?.id}
-                            playerName={match.player1?.nickname ?? match.player1?.name ?? "Игрок не назначен"}
+                            playerName={match.player1 ? getPlayerDisplayName(match.player1) : "Игрок не назначен"}
                             clubName={playerOneClub.clubName}
                             badgePath={playerOneClub.clubBadgePath}
                           />
@@ -143,7 +144,7 @@ export function BracketView({
                         <div className="flex items-center justify-between gap-3">
                           <ClubPlayerLine
                             playerId={match.player2?.id}
-                            playerName={match.player2?.nickname ?? match.player2?.name ?? "Игрок не назначен"}
+                            playerName={match.player2 ? getPlayerDisplayName(match.player2) : "Игрок не назначен"}
                             clubName={playerTwoClub.clubName}
                             badgePath={playerTwoClub.clubBadgePath}
                           />
