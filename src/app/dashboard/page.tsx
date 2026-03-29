@@ -61,7 +61,7 @@ export default async function DashboardPage() {
                 </div>
 
                 <div className="min-w-0 pb-1">
-                  <h1 className="truncate text-[1.7rem] font-semibold leading-none text-white sm:text-3xl">
+                  <h1 className="truncate text-[18px] font-semibold leading-none text-white sm:text-3xl">
                     {displayName}
                   </h1>
                   {user.bio ? (
