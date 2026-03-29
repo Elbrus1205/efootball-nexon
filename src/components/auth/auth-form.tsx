@@ -21,11 +21,13 @@ export function AuthForm({ type }: { type: "login" | "register" }) {
   const submit = () => {
     startTransition(async () => {
       try {
+        const normalizedEmail = email.trim().toLowerCase();
+
         if (type === "register") {
           const res = await fetch("/api/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password, name }),
+            body: JSON.stringify({ email: normalizedEmail, password, name }),
           });
 
           if (!res.ok) {
@@ -36,7 +38,7 @@ export function AuthForm({ type }: { type: "login" | "register" }) {
         }
 
         const result = await signIn("credentials", {
-          email,
+          email: normalizedEmail,
           password,
           redirect: false,
         });

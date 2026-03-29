@@ -7,7 +7,15 @@ import { profileSchema, registerSchema } from "@/lib/validators";
 
 export async function POST(request: Request) {
   const body = registerSchema.parse(await request.json());
-  const existing = await db.user.findUnique({ where: { email: body.email } });
+  const normalizedEmail = body.email.trim().toLowerCase();
+  const existing = await db.user.findFirst({
+    where: {
+      email: {
+        equals: normalizedEmail,
+        mode: "insensitive",
+      },
+    },
+  });
 
   if (existing) {
     return NextResponse.json({ error: "Email already exists" }, { status: 409 });
@@ -17,10 +25,10 @@ export async function POST(request: Request) {
 
   const user = await db.user.create({
     data: {
-      email: body.email,
+      email: normalizedEmail,
       passwordHash,
       name: body.name,
-      nickname: generateFallbackNickname(body.email),
+      nickname: generateFallbackNickname(normalizedEmail),
     },
   });
 

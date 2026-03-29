@@ -1,6 +1,6 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { UserRole } from "@prisma/client";
-import { compare } from "bcryptjs";
+import { compare, hash } from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import VkProvider from "next-auth/providers/vk";
@@ -30,13 +30,59 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials.password) return null;
 
-        const user = await db.user.findUnique({
-          where: { email: credentials.email },
+        const normalizedEmail = credentials.email.trim().toLowerCase();
+        const rawPassword = credentials.password;
+        const trimmedPassword = rawPassword.trim();
+
+        const user = await db.user.findFirst({
+          where: {
+            email: {
+              equals: normalizedEmail,
+              mode: "insensitive",
+            },
+          },
         });
 
         if (!user?.passwordHash || user.isBanned) return null;
-        const isValid = await compare(credentials.password, user.passwordHash);
+
+        const passwordCandidates = Array.from(new Set([rawPassword, trimmedPassword].filter(Boolean)));
+        let isValid = false;
+        let matchedPassword = rawPassword;
+
+        if (user.passwordHash.startsWith("$2")) {
+          for (const candidate of passwordCandidates) {
+            if (await compare(candidate, user.passwordHash)) {
+              isValid = true;
+              matchedPassword = candidate;
+              break;
+            }
+          }
+        } else {
+          for (const candidate of passwordCandidates) {
+            if (candidate === user.passwordHash) {
+              isValid = true;
+              matchedPassword = candidate;
+              await db.user.update({
+                where: { id: user.id },
+                data: {
+                  passwordHash: await hash(candidate, 10),
+                },
+              });
+              break;
+            }
+          }
+        }
+
         if (!isValid) return null;
+
+        if (matchedPassword !== rawPassword) {
+          await db.user.update({
+            where: { id: user.id },
+            data: {
+              passwordHash: await hash(matchedPassword, 10),
+            },
+          });
+        }
 
         return {
           id: user.id,
