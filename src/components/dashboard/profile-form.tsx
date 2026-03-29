@@ -96,12 +96,12 @@ export function ProfileForm({
           <div className="relative px-5 pb-5 sm:px-6">
             <div className="-mt-10 flex flex-col gap-4 sm:-mt-12 sm:flex-row sm:items-end sm:justify-between">
               <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end">
-                <div className="relative">
+                <div className="relative inline-flex w-fit self-start">
                   <Avatar className="h-20 w-20 rounded-[1.75rem] border-4 border-[#101827] shadow-[0_18px_60px_rgba(0,0,0,0.45)] sm:h-24 sm:w-24">
                     <AvatarImage src={avatarPreview || undefined} alt="Аватар игрока" />
                     <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
-                  <label className="absolute -bottom-1 -right-1 inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-primary text-white shadow-lg hover:bg-primary/90">
+                  <label className="absolute -bottom-1 -right-1 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-primary text-white shadow-lg hover:bg-primary/90">
                     <Camera className="h-4 w-4" />
                     <input type="file" accept="image/*" className="hidden" onChange={(event) => onImageSelect(event, "avatar")} />
                   </label>
