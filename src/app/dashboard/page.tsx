@@ -64,7 +64,7 @@ export default async function DashboardPage() {
                   </Button>
                 </div>
 
-                <div className="min-w-0 pb-1">
+                <div className="min-w-0 pb-[12px] sm:pb-1">
                   <h1 className="truncate text-[18px] font-semibold leading-none text-white sm:text-3xl">
                     {displayName}
                   </h1>
