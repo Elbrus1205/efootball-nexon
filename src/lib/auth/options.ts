@@ -9,6 +9,7 @@ import { verifyTelegramAuth } from "@/lib/auth/telegram";
 import { generateFallbackNickname } from "@/lib/player-name";
 
 const TELEGRAM_ADMIN_ID = "6595067194";
+const hasVkCredentials = Boolean(process.env.VK_CLIENT_ID && process.env.VK_CLIENT_SECRET);
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db) as never,
@@ -115,10 +116,14 @@ export const authOptions: NextAuthOptions = {
         };
       },
     }),
-    VkProvider({
-      clientId: process.env.VK_CLIENT_ID ?? "",
-      clientSecret: process.env.VK_CLIENT_SECRET ?? "",
-    }),
+    ...(hasVkCredentials
+      ? [
+          VkProvider({
+            clientId: process.env.VK_CLIENT_ID!,
+            clientSecret: process.env.VK_CLIENT_SECRET!,
+          }),
+        ]
+      : []),
   ],
   callbacks: {
     async signIn({ user }) {
