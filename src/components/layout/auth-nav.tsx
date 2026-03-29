@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { Bell, LogOut, Shield } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Bell, Lock, LogOut, Shield, ShieldCheck } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export function AuthNav({ unread = 0 }: { unread?: number }) {
@@ -43,20 +43,36 @@ export function AuthNav({ unread = 0 }: { unread?: number }) {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 p-0 hover:bg-white/5">
-            <Avatar className="h-10 w-10 sm:h-10 sm:w-10">
+            <Avatar className="h-10 w-10">
               <AvatarImage src={session.user.image ?? undefined} alt={session.user.name ?? "Avatar"} />
-              <AvatarFallback>{session.user.name}</AvatarFallback>
+              <AvatarFallback>{(session.user.nickname ?? session.user.name ?? "U").slice(0, 1)}</AvatarFallback>
             </Avatar>
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="w-64 rounded-3xl border-white/10 bg-[#12161f]/95 p-2 text-white backdrop-blur-xl">
           <div className="px-3 py-2">
             <div className="text-sm font-medium">{session.user.nickname ?? session.user.name}</div>
             <div className="text-xs text-zinc-500">{session.user.email ?? "Telegram/VK"}</div>
           </div>
+
           <DropdownMenuItem asChild>
             <Link href="/dashboard">Профиль</Link>
           </DropdownMenuItem>
+
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard/security" className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4" />
+              Безопасность
+            </Link>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard/privacy" className="flex items-center gap-2">
+              <Lock className="h-4 w-4" />
+              Конфиденциальность
+            </Link>
+          </DropdownMenuItem>
+
           {(session.user.role === "ADMIN" || session.user.role === "MODERATOR") && (
             <DropdownMenuItem asChild>
               <Link href="/admin" className="flex items-center gap-2">
@@ -65,6 +81,7 @@ export function AuthNav({ unread = 0 }: { unread?: number }) {
               </Link>
             </DropdownMenuItem>
           )}
+
           <DropdownMenuItem
             onSelect={async () => {
               await signOut({ redirect: false });
