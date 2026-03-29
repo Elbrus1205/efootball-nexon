@@ -170,29 +170,31 @@ export function ProfileForm({
         </div>
 
         <div className="space-y-5 p-5 sm:p-6">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-              <Label className="mb-2 block text-[11px] uppercase tracking-[0.24em] text-zinc-500">Никнейм</Label>
-              <Input
-                value={draft.nickname}
-                className="h-11 border-white/10 bg-white/[0.04]"
-                onChange={(e) => setDraft((v) => ({ ...v, nickname: e.target.value }))}
-              />
-            </div>
+          <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label className="block text-[11px] uppercase tracking-[0.24em] text-zinc-500">Никнейм</Label>
+                <Input
+                  value={draft.nickname}
+                  className="h-10 border-white/10 bg-white/[0.04]"
+                  onChange={(e) => setDraft((v) => ({ ...v, nickname: e.target.value }))}
+                />
+              </div>
 
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-              <Label className="mb-2 block text-[11px] uppercase tracking-[0.24em] text-zinc-500">Любимый клуб</Label>
-              <Input
-                value={draft.favoriteTeam}
-                className="h-11 border-white/10 bg-white/[0.04]"
-                onChange={(e) => setDraft((v) => ({ ...v, favoriteTeam: e.target.value }))}
-              />
-            </div>
+              <div className="space-y-2">
+                <Label className="block text-[11px] uppercase tracking-[0.24em] text-zinc-500">Любимый клуб</Label>
+                <Input
+                  value={draft.favoriteTeam}
+                  className="h-10 border-white/10 bg-white/[0.04]"
+                  onChange={(e) => setDraft((v) => ({ ...v, favoriteTeam: e.target.value }))}
+                />
+              </div>
 
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-              <div className="mb-2 text-[11px] uppercase tracking-[0.24em] text-zinc-500">На сайте с</div>
-              <div className="flex h-11 items-center rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-white">
-                {initialValues.registeredAt}
+              <div className="space-y-2">
+                <div className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">На сайте с</div>
+                <div className="flex h-10 items-center rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-white">
+                  {initialValues.registeredAt}
+                </div>
               </div>
             </div>
           </div>
