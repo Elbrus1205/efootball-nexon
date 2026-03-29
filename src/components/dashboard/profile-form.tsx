@@ -29,7 +29,42 @@ export function ProfileForm({
 
   const displayName = draft.nickname || "Игрок eFootball Nexon";
 
-  const onImageSelect = (event: ChangeEvent<HTMLInputElement>, type: "avatar" | "banner") => {
+  const optimizeImage = (file: File, type: "avatar" | "banner") =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onerror = () => reject(new Error("Не удалось прочитать изображение."));
+      reader.onload = () => {
+        const source = typeof reader.result === "string" ? reader.result : "";
+        const image = new window.Image();
+
+        image.onerror = () => reject(new Error("Не удалось обработать изображение."));
+        image.onload = () => {
+          const maxSize = type === "avatar" ? 512 : 1600;
+          const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+          const width = Math.max(1, Math.round(image.width * scale));
+          const height = Math.max(1, Math.round(image.height * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+
+          const context = canvas.getContext("2d");
+          if (!context) {
+            reject(new Error("Не удалось подготовить изображение."));
+            return;
+          }
+
+          context.drawImage(image, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/webp", 0.88));
+        };
+
+        image.src = source;
+      };
+
+      reader.readAsDataURL(file);
+    });
+
+  const onImageSelect = async (event: ChangeEvent<HTMLInputElement>, type: "avatar" | "banner") => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -43,9 +78,8 @@ export function ProfileForm({
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
+    try {
+      const result = await optimizeImage(file, type);
       if (type === "avatar") {
         setAvatarPreview(result);
         setDraft((current) => ({ ...current, image: result }));
@@ -53,8 +87,10 @@ export function ProfileForm({
         setBannerPreview(result);
         setDraft((current) => ({ ...current, bannerImage: result }));
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Не удалось обработать изображение.";
+      toast.error(message);
+    }
   };
 
   const saveProfile = () => {
@@ -66,7 +102,8 @@ export function ProfileForm({
       });
 
       if (!res.ok) {
-        toast.error("Не удалось сохранить изменения профиля.");
+        const payload = await res.json().catch(() => null);
+        toast.error(payload?.error || "Не удалось сохранить изменения профиля.");
         return;
       }
 
