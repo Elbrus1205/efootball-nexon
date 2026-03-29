@@ -24,7 +24,6 @@ export default async function DashboardPage() {
           isVerified={isVerified}
           initialValues={{
             nickname: user.nickname ?? "",
-            efootballUid: user.efootballUid ?? "",
             favoriteTeam: user.favoriteTeam ?? "",
             image: user.image ?? "",
           }}

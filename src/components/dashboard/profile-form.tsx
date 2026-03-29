@@ -15,7 +15,6 @@ export function ProfileForm({
 }: {
   initialValues: {
     nickname: string;
-    efootballUid: string;
     favoriteTeam: string;
     image: string;
   };
@@ -168,19 +167,13 @@ export function ProfileForm({
                     <Input value={draft.nickname} onChange={(e) => setDraft((v) => ({ ...v, nickname: e.target.value }))} />
                   </div>
                   <div className="space-y-2">
-                    <Label>UID eFootball</Label>
-                    <Input value={draft.efootballUid} onChange={(e) => setDraft((v) => ({ ...v, efootballUid: e.target.value }))} />
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
                     <Label>Любимая команда</Label>
                     <Input value={draft.favoriteTeam} onChange={(e) => setDraft((v) => ({ ...v, favoriteTeam: e.target.value }))} />
                   </div>
-                  <div className="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm text-zinc-400">
-                    Галочка подтверждения показывается автоматически, если аккаунт подтверждён через текущую систему входа.
-                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm text-zinc-400">
+                  Галочка подтверждения показывается автоматически, если аккаунт подтверждён через текущую систему входа.
                 </div>
 
                 <div className="flex flex-col gap-3 sm:flex-row">

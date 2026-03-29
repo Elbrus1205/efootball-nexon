@@ -36,7 +36,6 @@ export const loginSchema = z.object({
 
 export const profileSchema = z.object({
   nickname: z.string().min(2),
-  efootballUid: z.string().min(4),
   favoriteTeam: z.string().optional().or(z.literal("")),
   image: z
     .string()

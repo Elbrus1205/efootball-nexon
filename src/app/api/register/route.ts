@@ -35,7 +35,6 @@ export async function PATCH(request: Request) {
     where: { id: session.user.id },
     data: {
       nickname: body.nickname,
-      efootballUid: body.efootballUid,
       favoriteTeam: body.favoriteTeam || null,
       image: body.image || null,
     },
