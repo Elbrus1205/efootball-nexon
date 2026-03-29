@@ -27,25 +27,50 @@ export default async function DashboardPage() {
         <div className="relative overflow-hidden border-b border-white/10">
           <div
             className="h-40 bg-[linear-gradient(180deg,rgba(22,33,54,1),rgba(12,18,30,1))] sm:h-52"
-            style={user.bannerImage ? { backgroundImage: `linear-gradient(180deg, rgba(8,10,16,0.18), rgba(8,10,16,0.7)), url(${user.bannerImage})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+            style={
+              user.bannerImage
+                ? {
+                    backgroundImage: `linear-gradient(180deg, rgba(8,10,16,0.18), rgba(8,10,16,0.7)), url(${user.bannerImage})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }
+                : undefined
+            }
           />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:36px_36px] opacity-20" />
 
-          <div className="relative px-5 pb-5 sm:px-6">
-            <div className="-mt-10 flex flex-col gap-4 sm:-mt-12 sm:flex-row sm:items-end sm:justify-between">
-              <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end">
-                <Avatar className="h-20 w-20 rounded-[1.75rem] border-4 border-[#101827] shadow-[0_18px_60px_rgba(0,0,0,0.45)] sm:h-24 sm:w-24">
-                  <AvatarImage src={user.image || undefined} alt="Аватар игрока" />
-                  <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
-                </Avatar>
+          <div className="relative px-5 pb-6 sm:px-6">
+            <div className="-mt-10 flex items-end justify-between gap-4 sm:-mt-12">
+              <div className="flex min-w-0 items-end gap-4">
+                <div className="relative shrink-0">
+                  <Avatar className="h-20 w-20 rounded-[1.75rem] border-4 border-[#101827] shadow-[0_18px_60px_rgba(0,0,0,0.45)] sm:h-24 sm:w-24">
+                    <AvatarImage src={user.image || undefined} alt="Аватар игрока" />
+                    <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+
+                  <Button
+                    asChild
+                    size="icon"
+                    variant="secondary"
+                    className="absolute -right-1 -top-1 h-9 w-9 rounded-full border border-white/10 bg-[#111827] shadow-[0_10px_25px_rgba(0,0,0,0.28)] sm:hidden"
+                  >
+                    <Link href="/dashboard/edit" aria-label="Редактировать профиль">
+                      <PencilLine className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
 
                 <div className="min-w-0 pb-1">
-                  <h1 className="truncate text-2xl font-semibold text-white sm:text-3xl">{displayName}</h1>
-                  {user.bio ? <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">{user.bio}</p> : null}
+                  <h1 className="truncate text-[1.9rem] font-semibold leading-none text-white sm:text-3xl">
+                    {displayName}
+                  </h1>
+                  {user.bio ? (
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">{user.bio}</p>
+                  ) : null}
                 </div>
               </div>
 
-              <Button asChild variant="secondary" className="gap-2 sm:self-center">
+              <Button asChild variant="secondary" className="hidden gap-2 sm:inline-flex">
                 <Link href="/dashboard/edit">
                   <PencilLine className="h-4 w-4" />
                   Редактировать профиль
