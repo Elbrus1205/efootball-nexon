@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PencilLine } from "lucide-react";
 import { requireAuth } from "@/lib/auth/session";
+import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -12,10 +13,12 @@ export default async function DashboardPage() {
   const user = await db.user.findUnique({
     where: { id: session.user.id },
   });
+  const clubs = await getAvailableClubs();
 
   if (!user) return null;
 
   const displayName = user.nickname || "Игрок eFootball Nexon";
+  const favoriteClub = clubs.find((club) => club.slug === user.favoriteTeam || club.name === user.favoriteTeam) ?? null;
   const registeredAt = new Intl.DateTimeFormat("ru-RU", {
     day: "numeric",
     month: "short",
@@ -91,7 +94,21 @@ export default async function DashboardPage() {
           </div>
           <div className="border-b border-white/10 pb-3">
             <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Любимый клуб</div>
-            <div className="mt-2 text-sm font-medium text-white">{user.favoriteTeam || "Не выбран"}</div>
+            <div className="mt-2 flex items-center gap-3">
+              {favoriteClub ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={favoriteClub.imagePath}
+                    alt={favoriteClub.name}
+                    className="h-8 w-8 rounded-full border border-white/10 object-contain bg-black/20 p-1"
+                  />
+                  <div className="text-sm font-medium text-white">{favoriteClub.name}</div>
+                </>
+              ) : (
+                <div className="text-sm font-medium text-white">Не выбран</div>
+              )}
+            </div>
           </div>
           <div className="border-b border-white/10 pb-3">
             <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Дата регистрации</div>

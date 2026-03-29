@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ChangeEvent, useState, useTransition } from "react";
 import { ArrowLeft, Camera, ImagePlus, Save } from "lucide-react";
 import { toast } from "sonner";
+import type { ClubOption } from "@/lib/clubs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 export function ProfileForm({
   initialValues,
+  clubs,
 }: {
   initialValues: {
     nickname: string;
@@ -22,6 +24,7 @@ export function ProfileForm({
     bannerImage: string;
     registeredAt: string;
   };
+  clubs: ClubOption[];
 }) {
   const [draft, setDraft] = useState(initialValues);
   const [avatarPreview, setAvatarPreview] = useState(initialValues.image);
@@ -183,11 +186,20 @@ export function ProfileForm({
 
               <div className="space-y-2">
                 <Label className="block text-[11px] uppercase tracking-[0.24em] text-zinc-500">Любимый клуб</Label>
-                <Input
+                <select
                   value={draft.favoriteTeam}
-                  className="h-10 border-white/10 bg-white/[0.04]"
+                  className="h-10 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none transition focus:border-primary"
                   onChange={(e) => setDraft((v) => ({ ...v, favoriteTeam: e.target.value }))}
-                />
+                >
+                  <option value="" className="bg-[#0b1220] text-zinc-300">
+                    Не выбран
+                  </option>
+                  {clubs.map((club) => (
+                    <option key={club.slug} value={club.slug} className="bg-[#0b1220] text-white">
+                      {club.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="space-y-2">

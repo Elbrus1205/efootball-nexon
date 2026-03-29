@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { ProfileForm } from "@/components/dashboard/profile-form";
 import { requireAuth } from "@/lib/auth/session";
+import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
 
 export default async function DashboardEditPage() {
@@ -8,6 +9,7 @@ export default async function DashboardEditPage() {
   const user = await db.user.findUnique({
     where: { id: session.user.id },
   });
+  const clubs = await getAvailableClubs();
 
   if (!user) return null;
 
@@ -32,6 +34,7 @@ export default async function DashboardEditPage() {
           bannerImage: user.bannerImage ?? "",
           registeredAt,
         }}
+        clubs={clubs}
       />
     </div>
   );
