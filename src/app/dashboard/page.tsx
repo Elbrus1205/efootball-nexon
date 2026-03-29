@@ -54,7 +54,11 @@ export default async function DashboardPage() {
                     variant="secondary"
                     className="absolute -right-1 -top-1 h-6 w-6 rounded-full border border-white/10 bg-[#111827] p-0 shadow-[0_10px_25px_rgba(0,0,0,0.28)] sm:hidden"
                   >
-                    <Link href="/dashboard/edit" aria-label="Редактировать профиль">
+                    <Link
+                      href="/dashboard/edit"
+                      aria-label="Редактировать профиль"
+                      className="flex h-full w-full items-center justify-center rounded-full"
+                    >
                       <PencilLine className="h-3 w-3" />
                     </Link>
                   </Button>
