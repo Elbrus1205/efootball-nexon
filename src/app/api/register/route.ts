@@ -36,6 +36,8 @@ export async function PATCH(request: Request) {
     data: {
       nickname: body.nickname,
       favoriteTeam: body.favoriteTeam || null,
+      bio: body.bio || null,
+      bannerImage: body.bannerImage || null,
       image: body.image || null,
     },
   });

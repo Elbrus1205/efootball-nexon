@@ -37,6 +37,14 @@ export const loginSchema = z.object({
 export const profileSchema = z.object({
   nickname: z.string().min(2),
   favoriteTeam: z.string().optional().or(z.literal("")),
+  bio: z.string().max(300).optional().or(z.literal("")),
+  bannerImage: z
+    .string()
+    .refine((value) => !value || value.startsWith("data:image/") || value.startsWith("http://") || value.startsWith("https://"), {
+      message: "Banner must be an image data URL or image URL",
+    })
+    .optional()
+    .or(z.literal("")),
   image: z
     .string()
     .refine((value) => !value || value.startsWith("data:image/") || value.startsWith("http://") || value.startsWith("https://"), {

@@ -121,6 +121,8 @@ model User {
   email               String?                  @unique
   emailVerified       DateTime?
   image               String?
+  bannerImage         String?
+  bio                 String?                  @db.Text
   passwordHash        String?
   nickname            String?
   efootballUid        String?
