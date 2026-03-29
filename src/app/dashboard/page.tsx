@@ -48,20 +48,13 @@ export default async function DashboardPage() {
                     <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
 
-                  <Button
-                    asChild
-                    size="icon"
-                    variant="secondary"
-                    className="absolute -right-1 -top-1 h-6 w-6 rounded-full border border-white/10 bg-[#111827] p-0 shadow-[0_10px_25px_rgba(0,0,0,0.28)] sm:hidden"
+                  <Link
+                    href="/dashboard/edit"
+                    aria-label="Редактировать профиль"
+                    className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-[#111827] text-white shadow-[0_8px_20px_rgba(0,0,0,0.28)] sm:hidden"
                   >
-                    <Link
-                      href="/dashboard/edit"
-                      aria-label="Редактировать профиль"
-                      className="flex h-full w-full items-center justify-center rounded-full"
-                    >
-                      <PencilLine className="h-3 w-3" />
-                    </Link>
-                  </Button>
+                    <PencilLine className="h-2.5 w-2.5" />
+                  </Link>
                 </div>
 
                 <div className="min-w-0 pb-[12px] sm:pb-1">
