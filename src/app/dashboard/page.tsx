@@ -77,12 +77,12 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="grid gap-3 p-5 sm:grid-cols-2 sm:p-6">
-          <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+        <div className="grid gap-4 p-5 sm:grid-cols-2 sm:p-6">
+          <div className="border-b border-white/10 pb-3">
             <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Никнейм</div>
             <div className="mt-2 text-sm font-medium text-white">{displayName}</div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+          <div className="border-b border-white/10 pb-3">
             <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Любимый клуб</div>
             <div className="mt-2 text-sm font-medium text-white">{user.favoriteTeam || "Не выбран"}</div>
           </div>
