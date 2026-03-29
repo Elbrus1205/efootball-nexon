@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { CalendarDays, ChevronRight, Trophy } from "lucide-react";
 import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
@@ -29,19 +27,17 @@ export default async function DashboardPage() {
 
   if (!user) return null;
 
-  const upcomingMatches = [...user.playerOneMatches, ...user.playerTwoMatches];
-
   return (
     <div className="page-shell space-y-8">
       <div className="space-y-3">
         <Badge variant="primary">Личный кабинет игрока</Badge>
         <h1 className="font-display text-3xl font-thin text-white">Профиль игрока {user.nickname || user.name || "eFootball Mobile"}.</h1>
         <p className="max-w-2xl text-zinc-400">
-          В кабинете игрока собраны личные данные, ближайшие матчи и список турниров, в которых он участвует.
+          В кабинете игрока собраны личные данные и список турниров, в которых он участвует.
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+      <div className="grid gap-6">
         <ProfileForm
           initialValues={{
             nickname: user.nickname ?? "",
@@ -50,45 +46,6 @@ export default async function DashboardPage() {
             image: user.image ?? "",
           }}
         />
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Предстоящие матчи</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {upcomingMatches.length ? (
-              upcomingMatches.map((match) => {
-                const opponent =
-                  "player2" in match
-                    ? match.player2
-                    : "player1" in match
-                      ? match.player1
-                      : null;
-
-                return (
-                  <div key={match.id} className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm">
-                    <div className="font-medium text-white">{match.tournament.title}</div>
-                    <div className="mt-2 flex items-center gap-2 text-zinc-400">
-                      <Trophy className="h-4 w-4 text-accent" />
-                      <span>Соперник: {opponent?.nickname ?? opponent?.name ?? "Будет определён позже"}</span>
-                    </div>
-                    <div className="mt-2 flex items-center gap-2 text-zinc-400">
-                      <CalendarDays className="h-4 w-4 text-primary" />
-                      <span>{match.scheduledAt ? formatDate(match.scheduledAt) : "Дата и время будут назначены позже"}</span>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <p className="text-sm text-zinc-500">На данный момент у игрока нет назначенных матчей.</p>
-            )}
-
-            <Link href="/dashboard/matches" className="inline-flex items-center gap-2 text-sm text-primary transition hover:text-white">
-              Открыть все матчи
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-          </CardContent>
-        </Card>
       </div>
 
       <Card>
