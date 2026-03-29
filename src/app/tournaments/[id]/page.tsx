@@ -568,8 +568,6 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                   clubName={entry.clubName}
                   badgePath={entry.clubBadgePath}
                 />
-                <div className="mt-3 text-sm text-zinc-500">UID: {entry.user.efootballUid ?? "Не заполнен"}</div>
-                <div className="mt-1 text-sm text-zinc-500">{entry.group?.name ?? "Без группы"}</div>
               </Card>
             ))}
           </div>
