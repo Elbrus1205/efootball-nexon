@@ -139,8 +139,8 @@ export function ProfileForm({
           </div>
 
           <div className="relative px-5 pb-5 sm:px-6">
-            <div className="-mt-10 flex flex-col gap-4 sm:-mt-12 sm:flex-row sm:items-end sm:justify-between">
-              <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end">
+            <div className="-mt-10 flex items-end justify-between gap-4 sm:-mt-12">
+              <div className="flex min-w-0 items-end gap-4">
                 <div className="relative inline-flex w-fit self-start">
                   <Avatar className="h-20 w-20 rounded-[1.75rem] border-4 border-[#101827] shadow-[0_18px_60px_rgba(0,0,0,0.45)] sm:h-24 sm:w-24">
                     <AvatarImage src={avatarPreview || undefined} alt="Аватар игрока" />
@@ -152,8 +152,10 @@ export function ProfileForm({
                   </label>
                 </div>
 
-                <div className="min-w-0 pb-1">
-                  <h2 className="truncate text-2xl font-semibold text-white sm:text-3xl">{displayName}</h2>
+                <div className="min-w-0 pb-[12px] sm:pb-1">
+                  <h2 className="truncate text-[18px] font-semibold leading-none text-white sm:text-3xl">
+                    {displayName}
+                  </h2>
                 </div>
               </div>
             </div>
