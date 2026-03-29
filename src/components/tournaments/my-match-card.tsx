@@ -80,6 +80,7 @@ export function MyMatchCard({
   const [player2ScoreInput, setPlayer2ScoreInput] = useState("");
   const [message, setMessage] = useState(helperText);
   const [isPending, startTransition] = useTransition();
+
   const hasConfirmedScore =
     confirmedPlayer1Score !== null &&
     confirmedPlayer1Score !== undefined &&
@@ -102,6 +103,7 @@ export function MyMatchCard({
       const result = await response.json().catch(() => ({
         error: "Не удалось обработать ответ сервера.",
       }));
+
       setMessage(result.message ?? result.error ?? "Не удалось сохранить результат.");
 
       if (response.ok) {
@@ -117,7 +119,10 @@ export function MyMatchCard({
       <div className="flex flex-col gap-2 sm:gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="font-medium text-white">{title}</div>
-          <div className="mt-2 text-sm text-zinc-400">{meta}</div>
+          <div className="mt-2 inline-flex items-center gap-2 text-sm text-zinc-400">
+            <Clock3 className="h-4 w-4 shrink-0 text-zinc-500" />
+            <span>{meta}</span>
+          </div>
         </div>
         <div className="flex flex-col items-start gap-1.5 lg:items-end">
           <Badge variant={statusVariant}>{statusLabel}</Badge>
@@ -138,14 +143,16 @@ export function MyMatchCard({
               reverse
             />
             {player1SubmissionState.tone === "success" && statusLabel === "Подтверждён" ? null : (
-              <div className={`mt-2 rounded-xl border px-2 py-1.5 text-center text-[11px] leading-4 sm:mt-3 sm:px-3 sm:py-2 sm:text-xs ${submissionToneClass(player1SubmissionState.tone)}`}>
+              <div
+                className={`mt-2 rounded-xl border px-2 py-1.5 text-center text-[11px] leading-4 sm:mt-3 sm:px-3 sm:py-2 sm:text-xs ${submissionToneClass(player1SubmissionState.tone)}`}
+              >
                 {player1SubmissionState.label}
               </div>
             )}
           </div>
 
           <div className="flex shrink-0 items-center justify-center self-center">
-            <div className="flex h-8 items-center justify-center px-1 text-xs font-semibold tracking-[0.24em] text-zinc-300 sm:h-10 sm:text-sm">
+            <div className="flex min-w-[56px] items-center justify-center text-center text-xs font-semibold tracking-[0.24em] text-zinc-300 sm:min-w-[72px] sm:text-sm">
               {hasConfirmedScore ? `${confirmedPlayer1Score} - ${confirmedPlayer2Score}` : "VS"}
             </div>
           </div>
@@ -160,7 +167,9 @@ export function MyMatchCard({
               compact
             />
             {player2SubmissionState.tone === "success" && statusLabel === "Подтверждён" ? null : (
-              <div className={`mt-2 rounded-xl border px-2 py-1.5 text-center text-[11px] leading-4 sm:mt-3 sm:px-3 sm:py-2 sm:text-xs ${submissionToneClass(player2SubmissionState.tone)}`}>
+              <div
+                className={`mt-2 rounded-xl border px-2 py-1.5 text-center text-[11px] leading-4 sm:mt-3 sm:px-3 sm:py-2 sm:text-xs ${submissionToneClass(player2SubmissionState.tone)}`}
+              >
                 {player2SubmissionState.label}
               </div>
             )}
@@ -178,7 +187,8 @@ export function MyMatchCard({
               <div>
                 <div className="font-medium text-red-200">Спорный матч</div>
                 <div className="mt-1 text-sm text-red-100/80">
-                  Игроки трижды не совпали по счёту. Матч передан на проверку администрации, ручной ввод результата отключён.
+                  Игроки трижды не совпали по счёту. Матч передан на проверку администрации, ручной ввод результата
+                  отключён.
                 </div>
               </div>
               <Button asChild variant="outline" className="border-red-300/20 bg-red-500/10 text-red-100 hover:bg-red-500/20">
@@ -188,18 +198,22 @@ export function MyMatchCard({
           </div>
         </div>
       ) : (
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-3 text-sm text-zinc-400 sm:p-4">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:p-4">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/5 text-zinc-300">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white/5 text-zinc-300 sm:h-10 sm:w-10">
               {waitingForOpponent ? <Clock3 className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
             </div>
-            <div>
-              <div>{message}</div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium leading-5 text-zinc-200">{message}</div>
               {waitingForOpponent ? (
-                <div className="mt-2 text-zinc-500">Свой результат уже отправлен. Ожидается ответ соперника.</div>
+                <div className="mt-1.5 text-xs leading-5 text-zinc-500 sm:text-sm">
+                  Свой результат уже отправлен. Ожидается ответ соперника.
+                </div>
               ) : null}
               {attemptsLeft > 0 && canSubmit ? (
-                <div className="mt-2 text-zinc-500">Осталось попыток на совпадение: {attemptsLeft}.</div>
+                <div className="mt-1.5 inline-flex items-center rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] font-medium text-zinc-400 sm:text-xs">
+                  Осталось попыток: {attemptsLeft}
+                </div>
               ) : null}
             </div>
           </div>
