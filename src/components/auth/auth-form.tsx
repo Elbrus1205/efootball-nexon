@@ -20,33 +20,43 @@ export function AuthForm({ type }: { type: "login" | "register" }) {
 
   const submit = () => {
     startTransition(async () => {
-      if (type === "register") {
-        const res = await fetch("/api/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password, name }),
+      try {
+        if (type === "register") {
+          const res = await fetch("/api/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password, name }),
+          });
+
+          if (!res.ok) {
+            const payload = await res.json().catch(() => null);
+            toast.error(payload?.error || "Не удалось создать аккаунт");
+            return;
+          }
+        }
+
+        const result = await signIn("credentials", {
+          email,
+          password,
+          redirect: false,
         });
 
-        if (!res.ok) {
-          toast.error("Не удалось создать аккаунт");
+        if (!result) {
+          toast.error("Не удалось выполнить вход. Попробуйте ещё раз.");
           return;
         }
+
+        if (result.error) {
+          toast.error("Неверный email или пароль");
+          return;
+        }
+
+        toast.success(type === "register" ? "Аккаунт создан" : "Вход выполнен");
+        router.push("/dashboard");
+        router.refresh();
+      } catch {
+        toast.error("Не удалось выполнить вход. Попробуйте ещё раз.");
       }
-
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
-
-      if (result?.error) {
-        toast.error("Неверный email или пароль");
-        return;
-      }
-
-      toast.success(type === "register" ? "Аккаунт создан" : "Вход выполнен");
-      router.push("/dashboard");
-      router.refresh();
     });
   };
 
@@ -67,14 +77,17 @@ export function AuthForm({ type }: { type: "login" | "register" }) {
             <Input id="name" value={name} onChange={(event) => setName(event.target.value)} />
           </div>
         ) : null}
+
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
         </div>
+
         <div className="space-y-2">
           <Label htmlFor="password">Пароль</Label>
           <Input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
         </div>
+
         <Button className="w-full" onClick={submit} disabled={pending}>
           {pending ? "Подождите..." : type === "login" ? "Войти" : "Создать аккаунт"}
         </Button>
