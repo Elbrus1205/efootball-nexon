@@ -52,16 +52,16 @@ export default async function DashboardPage() {
                     asChild
                     size="icon"
                     variant="secondary"
-                    className="absolute -right-1 -top-1 h-9 w-9 rounded-full border border-white/10 bg-[#111827] shadow-[0_10px_25px_rgba(0,0,0,0.28)] sm:hidden"
+                    className="absolute -right-1 -top-1 h-7 w-7 rounded-full border border-white/10 bg-[#111827] shadow-[0_10px_25px_rgba(0,0,0,0.28)] sm:hidden"
                   >
                     <Link href="/dashboard/edit" aria-label="Редактировать профиль">
-                      <PencilLine className="h-4 w-4" />
+                      <PencilLine className="h-3.5 w-3.5" />
                     </Link>
                   </Button>
                 </div>
 
                 <div className="min-w-0 pb-1">
-                  <h1 className="truncate text-[1.9rem] font-semibold leading-none text-white sm:text-3xl">
+                  <h1 className="truncate text-[1.7rem] font-semibold leading-none text-white sm:text-3xl">
                     {displayName}
                   </h1>
                   {user.bio ? (
