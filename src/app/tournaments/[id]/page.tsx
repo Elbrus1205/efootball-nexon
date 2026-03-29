@@ -37,10 +37,6 @@ type LeagueRow = {
   points: number;
 };
 
-function displayName(name: string | null | undefined, fallback: string) {
-  return name?.trim() || fallback;
-}
-
 function scheduleStageLabel(match: {
   round: number;
   group?: { name: string } | null;
