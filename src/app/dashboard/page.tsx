@@ -26,7 +26,7 @@ export default async function DashboardPage() {
       <Card className="overflow-hidden border-white/10 bg-white/[0.03]">
         <div className="relative overflow-hidden border-b border-white/10">
           <div
-            className="h-40 bg-[linear-gradient(180deg,rgba(22,33,54,1),rgba(12,18,30,1))] sm:h-52"
+            className="h-40 rounded-t-[inherit] bg-[linear-gradient(180deg,rgba(22,33,54,1),rgba(12,18,30,1))] sm:h-52"
             style={
               user.bannerImage
                 ? {
