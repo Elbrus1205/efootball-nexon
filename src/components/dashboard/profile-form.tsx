@@ -82,7 +82,6 @@ export function ProfileForm({
       <CardContent className="space-y-6 p-0">
         <div className="relative overflow-hidden border-b border-white/10">
           <div className="h-32 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.28),transparent_38%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.18),transparent_34%),linear-gradient(180deg,rgba(22,33,54,1),rgba(12,18,30,1))] sm:h-40" />
-
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:36px_36px] opacity-20" />
 
           <div className="relative px-5 pb-5 sm:px-6">
@@ -111,9 +110,6 @@ export function ProfileForm({
                       </span>
                     ) : null}
                   </div>
-                  <div className="mt-2 text-sm text-zinc-400">
-                    Профиль игрока для участия в турнирах, матчах и сетках eFootball Nexon.
-                  </div>
                 </div>
               </div>
 
@@ -133,21 +129,6 @@ export function ProfileForm({
         </div>
 
         <div className="space-y-6 p-5 sm:p-6">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Никнейм</div>
-              <div className="mt-2 text-sm font-medium text-white">{values.nickname || "Не указан"}</div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">UID</div>
-              <div className="mt-2 text-sm font-medium text-white">{values.efootballUid || "Не указан"}</div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Любимая команда</div>
-              <div className="mt-2 text-sm font-medium text-white">{values.favoriteTeam || "Не выбрана"}</div>
-            </div>
-          </div>
-
           {isEditing ? (
             <div className="rounded-[2rem] border border-white/10 bg-white/[0.02] p-5">
               <div className="mb-5 flex items-center gap-3">
