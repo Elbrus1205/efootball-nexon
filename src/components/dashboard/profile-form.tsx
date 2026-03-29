@@ -81,7 +81,15 @@ export function ProfileForm({
         <div className="relative overflow-hidden border-b border-white/10">
           <div
             className="h-40 bg-[linear-gradient(180deg,rgba(22,33,54,1),rgba(12,18,30,1))] sm:h-52"
-            style={bannerPreview ? { backgroundImage: `linear-gradient(180deg, rgba(8,10,16,0.18), rgba(8,10,16,0.7)), url(${bannerPreview})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+            style={
+              bannerPreview
+                ? {
+                    backgroundImage: `linear-gradient(180deg, rgba(8,10,16,0.18), rgba(8,10,16,0.7)), url(${bannerPreview})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }
+                : undefined
+            }
           />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:36px_36px] opacity-20" />
 
@@ -110,19 +118,6 @@ export function ProfileForm({
                 <div className="min-w-0 pb-1">
                   <h2 className="truncate text-2xl font-semibold text-white sm:text-3xl">{displayName}</h2>
                 </div>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row sm:self-center">
-                <Button asChild variant="outline">
-                  <Link href="/dashboard" className="gap-2">
-                    <ArrowLeft className="h-4 w-4" />
-                    Назад к профилю
-                  </Link>
-                </Button>
-                <Button onClick={saveProfile} disabled={pending} className="gap-2">
-                  <Save className="h-4 w-4" />
-                  {pending ? "Сохранение..." : "Сохранить"}
-                </Button>
               </div>
             </div>
           </div>
@@ -153,6 +148,19 @@ export function ProfileForm({
 
           <div className="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm text-zinc-400">
             Статус профиля: скоро будет. Этот блок подготовлен под следующий этап.
+          </div>
+
+          <div className="flex flex-col gap-3 border-t border-white/10 pt-2">
+            <Button asChild variant="outline" className="h-14 rounded-2xl text-base">
+              <Link href="/dashboard" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Назад к профилю
+              </Link>
+            </Button>
+            <Button onClick={saveProfile} disabled={pending} className="h-14 gap-2 rounded-2xl text-base">
+              <Save className="h-4 w-4" />
+              {pending ? "Сохранение..." : "Сохранить"}
+            </Button>
           </div>
         </div>
       </CardContent>
