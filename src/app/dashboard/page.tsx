@@ -51,9 +51,9 @@ export default async function DashboardPage() {
                   <Link
                     href="/dashboard/edit"
                     aria-label="Редактировать профиль"
-                    className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-[#111827] text-white shadow-[0_8px_20px_rgba(0,0,0,0.28)] sm:hidden"
+                    className="absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-[#111827] text-white shadow-[0_8px_20px_rgba(0,0,0,0.28)] sm:hidden"
                   >
-                    <PencilLine className="h-2.5 w-2.5" />
+                    <PencilLine className="h-3.5 w-3.5" />
                   </Link>
                 </div>
 
