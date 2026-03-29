@@ -16,6 +16,13 @@ export default async function DashboardPage() {
   if (!user) return null;
 
   const displayName = user.nickname || "Игрок eFootball Nexon";
+  const registeredAt = new Intl.DateTimeFormat("ru-RU", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(user.createdAt);
 
   return (
     <div className="page-shell space-y-8">
@@ -77,7 +84,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 p-5 sm:grid-cols-2 sm:p-6">
+        <div className="grid gap-4 p-5 sm:grid-cols-3 sm:p-6">
           <div className="border-b border-white/10 pb-3">
             <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Никнейм</div>
             <div className="mt-2 text-sm font-medium text-white">{displayName}</div>
@@ -85,6 +92,10 @@ export default async function DashboardPage() {
           <div className="border-b border-white/10 pb-3">
             <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Любимый клуб</div>
             <div className="mt-2 text-sm font-medium text-white">{user.favoriteTeam || "Не выбран"}</div>
+          </div>
+          <div className="border-b border-white/10 pb-3">
+            <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Дата регистрации</div>
+            <div className="mt-2 text-sm font-medium text-white">{registeredAt}</div>
           </div>
         </div>
       </Card>
