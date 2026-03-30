@@ -73,6 +73,27 @@ export const tournamentSchema = z.object({
     .or(z.literal("")),
 });
 
+export const securityPasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Введите текущий пароль."),
+    newPassword: z.string().min(8, "Новый пароль должен быть не короче 8 символов."),
+    repeatPassword: z.string().min(8, "Повторите новый пароль."),
+  })
+  .refine((data) => data.newPassword === data.repeatPassword, {
+    path: ["repeatPassword"],
+    message: "Пароли не совпадают.",
+  });
+
+export const securityEmailSchema = z.object({
+  email: z.string().email("Введите корректный email."),
+  password: z.string().min(1, "Введите пароль для подтверждения."),
+});
+
+export const securitySessionSchema = z.object({
+  authSessionId: z.string().optional(),
+  revokeAll: z.coerce.boolean().optional().default(false),
+});
+
 export const tournamentBuilderSchema = z.object({
   title: z.string().min(3, "Название турнира должно быть не короче 3 символов."),
   description: z.string().min(20, "Описание турнира должно быть не короче 20 символов."),

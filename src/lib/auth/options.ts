@@ -1,9 +1,11 @@
+import { randomUUID } from "crypto";
+import { LoginAttemptStatus, UserRole } from "@prisma/client";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import { UserRole } from "@prisma/client";
 import { compare, hash } from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import VkProvider from "next-auth/providers/vk";
+import { buildSecurityContext, createLoginHistory, createSecuritySession, touchSecuritySession } from "@/lib/auth/security";
 import { db } from "@/lib/db";
 import { verifyTelegramAuth } from "@/lib/auth/telegram";
 import { generateFallbackNickname } from "@/lib/player-name";
@@ -27,12 +29,13 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials.password) return null;
 
         const normalizedEmail = credentials.email.trim().toLowerCase();
         const rawPassword = credentials.password;
         const trimmedPassword = rawPassword.trim();
+        const context = buildSecurityContext(req?.headers);
 
         const user = await db.user.findFirst({
           where: {
@@ -43,7 +46,15 @@ export const authOptions: NextAuthOptions = {
           },
         });
 
-        if (!user?.passwordHash || user.isBanned) return null;
+        if (!user?.passwordHash || user.isBanned) {
+          await createLoginHistory({
+            userId: user?.id,
+            email: normalizedEmail,
+            status: LoginAttemptStatus.FAILED,
+            context,
+          });
+          return null;
+        }
 
         const passwordCandidates = Array.from(new Set([rawPassword, trimmedPassword].filter(Boolean)));
         let isValid = false;
@@ -73,7 +84,15 @@ export const authOptions: NextAuthOptions = {
           }
         }
 
-        if (!isValid) return null;
+        if (!isValid) {
+          await createLoginHistory({
+            userId: user.id,
+            email: normalizedEmail,
+            status: LoginAttemptStatus.FAILED,
+            context,
+          });
+          return null;
+        }
 
         if (matchedPassword !== rawPassword) {
           await db.user.update({
@@ -84,6 +103,18 @@ export const authOptions: NextAuthOptions = {
           });
         }
 
+        const authSessionId = await createSecuritySession({
+          userId: user.id,
+          context,
+        });
+
+        await createLoginHistory({
+          userId: user.id,
+          email: normalizedEmail,
+          status: LoginAttemptStatus.SUCCESS,
+          context,
+        });
+
         return {
           id: user.id,
           email: user.email,
@@ -93,6 +124,7 @@ export const authOptions: NextAuthOptions = {
           nickname: user.nickname,
           efootballUid: user.efootballUid,
           isBanned: user.isBanned,
+          authSessionId,
         };
       },
     }),
@@ -108,9 +140,10 @@ export const authOptions: NextAuthOptions = {
         auth_date: { label: "Auth date", type: "text" },
         hash: { label: "Hash", type: "text" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         const token = process.env.TELEGRAM_BOT_TOKEN;
         if (!token || !credentials?.id || !credentials.hash || !credentials.auth_date) return null;
+        const context = buildSecurityContext(req?.headers);
 
         const verified = verifyTelegramAuth(
           credentials as {
@@ -150,6 +183,18 @@ export const authOptions: NextAuthOptions = {
           },
         });
 
+        const authSessionId = await createSecuritySession({
+          userId: user.id,
+          context,
+        });
+
+        await createLoginHistory({
+          userId: user.id,
+          email: user.email,
+          status: LoginAttemptStatus.SUCCESS,
+          context,
+        });
+
         return {
           id: user.id,
           email: user.email,
@@ -159,6 +204,7 @@ export const authOptions: NextAuthOptions = {
           nickname: user.nickname,
           efootballUid: user.efootballUid,
           isBanned: user.isBanned,
+          authSessionId,
         };
       },
     }),
@@ -174,10 +220,35 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account }) {
       if (account?.provider === "vk" && user.id && account.providerAccountId) {
+        const authSessionId = randomUUID();
         await db.user.update({
           where: { id: user.id },
           data: { vkId: account.providerAccountId },
         });
+        await createSecuritySession({
+          userId: user.id,
+          authSessionId,
+          context: {
+            device: "VK OAuth",
+            platform: "VK",
+            location: "Не определено",
+            ipAddress: null,
+            userAgent: "VK OAuth",
+          },
+        });
+        await createLoginHistory({
+          userId: user.id,
+          email: user.email,
+          status: LoginAttemptStatus.SUCCESS,
+          context: {
+            device: "VK OAuth",
+            platform: "VK",
+            location: "Не определено",
+            ipAddress: null,
+            userAgent: "VK OAuth",
+          },
+        });
+        user.authSessionId = authSessionId;
       }
 
       return !user.isBanned;
@@ -188,9 +259,36 @@ export const authOptions: NextAuthOptions = {
         token.nickname = user.nickname;
         token.efootballUid = user.efootballUid;
         token.isBanned = user.isBanned;
+        token.authSessionId = user.authSessionId ?? token.authSessionId;
       }
 
       if (token.sub) {
+        if (!token.authSessionId) {
+          token.authSessionId = await createSecuritySession({
+            userId: token.sub,
+            authSessionId: randomUUID(),
+            context: {
+              device: "Текущее устройство",
+              platform: "Не определено",
+              location: "Не определено",
+              ipAddress: null,
+              userAgent: "Unknown",
+            },
+          });
+        }
+
+        if (token.authSessionId) {
+          const activeSession = await db.securitySession.findUnique({
+            where: { authSessionId: token.authSessionId },
+          });
+
+          if (!activeSession || activeSession.revokedAt) {
+            return {} as typeof token;
+          }
+
+          await touchSecuritySession(token.authSessionId);
+        }
+
         const dbUser = await db.user.findUnique({ where: { id: token.sub } });
         if (dbUser) {
           if (!dbUser.nickname?.trim()) {
@@ -221,6 +319,7 @@ export const authOptions: NextAuthOptions = {
         session.user.nickname = token.nickname;
         session.user.efootballUid = token.efootballUid;
         session.user.isBanned = Boolean(token.isBanned);
+        session.user.authSessionId = token.authSessionId;
       }
 
       return session;

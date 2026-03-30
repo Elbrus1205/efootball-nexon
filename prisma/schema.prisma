@@ -115,6 +115,11 @@ enum AdminActionType {
   FORFEIT
 }
 
+enum LoginAttemptStatus {
+  SUCCESS
+  FAILED
+}
+
 model User {
   id                  String                   @id @default(cuid())
   name                String?
@@ -144,6 +149,8 @@ model User {
   notifications       Notification[]
   passwordResetTokens PasswordResetToken[]
   adminActions        AdminAction[]
+  securitySessions    SecuritySession[]
+  loginHistory        LoginHistory[]
 }
 
 model Account {
@@ -498,4 +505,39 @@ model AdminAction {
 
   @@index([adminId, createdAt])
   @@index([tournamentId, createdAt])
+}
+
+model SecuritySession {
+  id            String   @id @default(cuid())
+  authSessionId String   @unique
+  userId        String
+  device        String
+  platform      String?
+  location      String?
+  ipAddress     String?
+  userAgent     String?  @db.Text
+  lastActiveAt  DateTime @default(now())
+  createdAt     DateTime @default(now())
+  revokedAt     DateTime?
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt, lastActiveAt])
+}
+
+model LoginHistory {
+  id         String             @id @default(cuid())
+  userId     String?
+  email      String?
+  status     LoginAttemptStatus
+  device     String
+  platform   String?
+  location   String?
+  ipAddress  String?
+  userAgent  String?            @db.Text
+  createdAt  DateTime           @default(now())
+  user       User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([email, createdAt])
+  @@index([status, createdAt])
 }

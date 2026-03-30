@@ -9,6 +9,7 @@ declare module "next-auth" {
       nickname?: string | null;
       efootballUid?: string | null;
       isBanned: boolean;
+      authSessionId?: string | null;
     };
   }
 
@@ -17,6 +18,7 @@ declare module "next-auth" {
     nickname?: string | null;
     efootballUid?: string | null;
     isBanned?: boolean;
+    authSessionId?: string | null;
   }
 }
 
@@ -26,5 +28,6 @@ declare module "next-auth/jwt" {
     nickname?: string | null;
     efootballUid?: string | null;
     isBanned?: boolean;
+    authSessionId?: string | null;
   }
 }
