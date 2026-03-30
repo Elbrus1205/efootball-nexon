@@ -7,7 +7,6 @@ import {
   Clock3,
   KeyRound,
   Laptop2,
-  Lock,
   Mail,
   MapPin,
   ShieldAlert,
