@@ -94,6 +94,10 @@ export const securitySessionSchema = z.object({
   revokeAll: z.coerce.boolean().optional().default(false),
 });
 
+export const emailVerificationCodeSchema = z.object({
+  code: z.string().trim().min(6, "Введите 6-значный код.").max(6, "Введите 6-значный код."),
+});
+
 export const tournamentBuilderSchema = z.object({
   title: z.string().min(3, "Название турнира должно быть не короче 3 символов."),
   description: z.string().min(20, "Описание турнира должно быть не короче 20 символов."),

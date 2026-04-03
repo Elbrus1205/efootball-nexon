@@ -165,10 +165,12 @@ function DangerSection({
 
 export function SecurityPanel({
   currentEmail,
+  emailVerified,
   sessions,
   loginHistory,
 }: {
   currentEmail: string;
+  emailVerified: boolean;
   sessions: SecuritySessionItem[];
   loginHistory: LoginHistoryItem[];
 }) {
@@ -183,9 +185,12 @@ export function SecurityPanel({
 
   const [email, setEmail] = useState(currentEmail);
   const [emailPassword, setEmailPassword] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [emailVerifiedState, setEmailVerifiedState] = useState(emailVerified);
 
   const [historyFilter, setHistoryFilter] = useState<"all" | "success" | "failed">("all");
   const [openSection, setOpenSection] = useState<string | null>("password");
+  const [verificationPending, startVerificationTransition] = useTransition();
 
   const filteredHistory = useMemo(() => {
     if (historyFilter === "all") return loginHistory;
@@ -231,13 +236,61 @@ export function SecurityPanel({
 
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
+        if (payload?.emailUpdated) {
+          setEmail(payload.email ?? email);
+          setEmailVerifiedState(false);
+          toast.error(payload?.error || "Email обновлён, но код не отправился.");
+          router.refresh();
+          return;
+        }
+
         toast.error(payload?.error || "Не удалось обновить email.");
         return;
       }
 
       setEmail(payload?.email ?? email);
       setEmailPassword("");
-      toast.success("Email обновлён.");
+      setEmailVerifiedState(false);
+      toast.success(payload?.verificationSent ? "Email обновлён. Код подтверждения уже отправлен." : "Email обновлён.");
+      router.refresh();
+    });
+  };
+
+  const sendVerificationCode = () => {
+    startVerificationTransition(async () => {
+      const res = await fetch("/api/security/email/send-code", {
+        method: "POST",
+      });
+
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast.error(payload?.error || "Не удалось отправить код.");
+        return;
+      }
+
+      toast.success("Код подтверждения отправлен на почту.");
+    });
+  };
+
+  const verifyEmailCode = () => {
+    startVerificationTransition(async () => {
+      const res = await fetch("/api/security/email/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: verificationCode,
+        }),
+      });
+
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast.error(payload?.error || "Не удалось подтвердить email.");
+        return;
+      }
+
+      setVerificationCode("");
+      setEmailVerifiedState(true);
+      toast.success("Email подтверждён.");
       router.refresh();
     });
   };
@@ -336,7 +389,7 @@ export function SecurityPanel({
         icon={<Mail className="h-5 w-5" />}
         title="Email"
         description="Почта используется для входа, подтверждений и восстановления доступа."
-        status={<Badge variant="success">Подтверждён</Badge>}
+        status={<Badge variant={emailVerifiedState ? "success" : "accent"}>{emailVerifiedState ? "Подтверждён" : "Не подтверждён"}</Badge>}
       >
         <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
           <div className="space-y-2">
@@ -351,9 +404,33 @@ export function SecurityPanel({
             <Button disabled={emailPending} onClick={changeEmail}>
               {emailPending ? "Сохраняем..." : "Сохранить email"}
             </Button>
-            <Button variant="outline">Отправить письмо ещё раз</Button>
+            <Button variant="outline" disabled={verificationPending} onClick={sendVerificationCode}>
+              {verificationPending ? "Отправляем..." : "Отправить код"}
+            </Button>
           </div>
         </div>
+        {!emailVerifiedState ? (
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+              <div className="space-y-2">
+                <Label htmlFor="verificationCode">Код подтверждения</Label>
+                <Input
+                  id="verificationCode"
+                  inputMode="numeric"
+                  placeholder="Введите код из письма"
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
+                />
+              </div>
+              <Button disabled={verificationPending || verificationCode.trim().length < 6} onClick={verifyEmailCode}>
+                {verificationPending ? "Проверяем..." : "Подтвердить email"}
+              </Button>
+            </div>
+            <div className="mt-3 text-sm text-zinc-400">
+              После смены почты или отправки кода на этот адрес придёт письмо с 6-значным кодом.
+            </div>
+          </div>
+        ) : null}
       </SecuritySection>
 
       <SecuritySection

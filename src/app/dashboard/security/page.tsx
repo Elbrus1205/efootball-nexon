@@ -18,6 +18,7 @@ export default async function DashboardSecurityPage() {
     where: { id: session.user.id },
     select: {
       email: true,
+      emailVerified: true,
       securitySessions: {
         where: {
           revokedAt: null,
@@ -90,7 +91,12 @@ export default async function DashboardSecurityPage() {
           </div>
         </div>
 
-        <SecurityPanel currentEmail={user.email ?? ""} sessions={sessions} loginHistory={loginHistory} />
+        <SecurityPanel
+          currentEmail={user.email ?? ""}
+          emailVerified={Boolean(user.emailVerified)}
+          sessions={sessions}
+          loginHistory={loginHistory}
+        />
       </div>
     </div>
   );
