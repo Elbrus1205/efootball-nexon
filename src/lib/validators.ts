@@ -86,7 +86,6 @@ export const securityPasswordSchema = z
 
 export const securityEmailSchema = z.object({
   email: z.string().email("Введите корректный email."),
-  password: z.string().min(1, "Введите пароль для подтверждения."),
 });
 
 export const securitySessionSchema = z.object({

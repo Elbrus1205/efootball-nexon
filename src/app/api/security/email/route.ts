@@ -1,4 +1,3 @@
-import { compare } from "bcryptjs";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
@@ -15,17 +14,11 @@ export async function PATCH(request: Request) {
     select: {
       id: true,
       email: true,
-      passwordHash: true,
     },
   });
 
-  if (!user?.passwordHash) {
-    return NextResponse.json({ error: "Для этого аккаунта пароль пока не задан." }, { status: 400 });
-  }
-
-  const isValid = await compare(body.password, user.passwordHash);
-  if (!isValid) {
-    return NextResponse.json({ error: "Пароль для подтверждения указан неверно." }, { status: 400 });
+  if (!user) {
+    return NextResponse.json({ error: "Пользователь не найден." }, { status: 404 });
   }
 
   const existingUser = await db.user.findFirst({

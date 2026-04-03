@@ -184,7 +184,6 @@ export function SecurityPanel({
   const [repeatPassword, setRepeatPassword] = useState("");
 
   const [email, setEmail] = useState(currentEmail);
-  const [emailPassword, setEmailPassword] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [emailVerifiedState, setEmailVerifiedState] = useState(emailVerified);
 
@@ -196,6 +195,7 @@ export function SecurityPanel({
     if (historyFilter === "all") return loginHistory;
     return loginHistory.filter((item) => item.status === historyFilter);
   }, [historyFilter, loginHistory]);
+  const hasBoundEmail = email.trim().length > 0;
 
   const changePassword = () => {
     startPasswordTransition(async () => {
@@ -230,7 +230,6 @@ export function SecurityPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
-          password: emailPassword,
         }),
       });
 
@@ -249,7 +248,6 @@ export function SecurityPanel({
       }
 
       setEmail(payload?.email ?? email);
-      setEmailPassword("");
       setEmailVerifiedState(false);
       toast.success(payload?.verificationSent ? "Email обновлён. Код подтверждения уже отправлен." : "Email обновлён.");
       router.refresh();
@@ -387,24 +385,28 @@ export function SecurityPanel({
         isOpen={openSection === "email"}
         onToggle={toggleSection}
         icon={<Mail className="h-5 w-5" />}
-        title="Email"
-        description="Почта используется для входа, подтверждений и восстановления доступа."
-        status={<Badge variant={emailVerifiedState ? "success" : "accent"}>{emailVerifiedState ? "Подтверждён" : "Не подтверждён"}</Badge>}
+        title={hasBoundEmail ? "Email" : "Привязать почту"}
+        description={
+          hasBoundEmail
+            ? "Почта используется для входа, подтверждений и восстановления доступа."
+            : "Добавьте почту к аккаунту, если вошли через Telegram или VK."
+        }
+        status={
+          <Badge variant={hasBoundEmail ? (emailVerifiedState ? "success" : "accent") : "neutral"}>
+            {hasBoundEmail ? (emailVerifiedState ? "Подтверждён" : "Не подтверждён") : "Не привязана"}
+          </Badge>
+        }
       >
-        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
           <div className="space-y-2">
-            <Label htmlFor="email">Текущий email</Label>
-            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="emailPassword">Пароль для подтверждения</Label>
-            <Input id="emailPassword" type="password" placeholder="Введите пароль" value={emailPassword} onChange={(e) => setEmailPassword(e.target.value)} />
+            <Label htmlFor="email">{hasBoundEmail ? "Текущий email" : "Email для привязки"}</Label>
+            <Input id="email" type="email" value={email} placeholder="Введите email" onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div className="flex flex-col gap-2 sm:w-52">
-            <Button disabled={emailPending} onClick={changeEmail}>
-              {emailPending ? "Сохраняем..." : "Сохранить email"}
+            <Button disabled={emailPending || email.trim().length === 0} onClick={changeEmail}>
+              {emailPending ? "Сохраняем..." : hasBoundEmail ? "Изменить email" : "Привязать почту"}
             </Button>
-            <Button variant="outline" disabled={verificationPending} onClick={sendVerificationCode}>
+            <Button variant="outline" disabled={verificationPending || email.trim().length === 0} onClick={sendVerificationCode}>
               {verificationPending ? "Отправляем..." : "Отправить код"}
             </Button>
           </div>
@@ -427,7 +429,7 @@ export function SecurityPanel({
               </Button>
             </div>
             <div className="mt-3 text-sm text-zinc-400">
-              После смены почты или отправки кода на этот адрес придёт письмо с 6-значным кодом.
+              После привязки или смены почты на этот адрес придёт письмо с 6-значным кодом.
             </div>
           </div>
         ) : null}
