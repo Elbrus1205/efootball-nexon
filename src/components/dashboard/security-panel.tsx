@@ -406,9 +406,11 @@ export function SecurityPanel({
             <Button disabled={emailPending || email.trim().length === 0} onClick={changeEmail}>
               {emailPending ? "Сохраняем..." : hasBoundEmail ? "Изменить email" : "Привязать почту"}
             </Button>
-            <Button variant="outline" disabled={verificationPending || email.trim().length === 0} onClick={sendVerificationCode}>
-              {verificationPending ? "Отправляем..." : "Отправить код"}
-            </Button>
+            {!emailVerifiedState ? (
+              <Button variant="outline" disabled={verificationPending || email.trim().length === 0} onClick={sendVerificationCode}>
+                {verificationPending ? "Отправляем..." : "Отправить код"}
+              </Button>
+            ) : null}
           </div>
         </div>
         {!emailVerifiedState ? (
