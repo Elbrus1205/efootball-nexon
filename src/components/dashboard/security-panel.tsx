@@ -71,22 +71,22 @@ function SecuritySection({
       <button
         type="button"
         onClick={() => onToggle(sectionId)}
-        className="flex w-full flex-col gap-3 p-5 text-left transition hover:bg-white/[0.02] sm:flex-row sm:items-start sm:justify-between sm:p-6"
+        className="flex w-full flex-col gap-4 p-4 text-left transition hover:bg-white/[0.02] sm:flex-row sm:items-start sm:justify-between sm:p-6"
       >
         <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white">
+          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] border border-white/10 bg-white/[0.04] text-white sm:h-11 sm:w-11 sm:rounded-2xl">
             {icon}
           </div>
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-white">{title}</h2>
-            <p className="max-w-2xl text-sm leading-6 text-zinc-400">{description}</p>
+          <div className="min-w-0 space-y-1">
+            <h2 className="text-[17px] font-semibold leading-7 text-white sm:text-lg">{title}</h2>
+            <p className="max-w-2xl text-sm leading-7 text-zinc-400 sm:leading-6">{description}</p>
           </div>
         </div>
-        <div className="flex items-center justify-between gap-3 sm:justify-end">
+        <div className="flex items-center justify-between gap-3 pl-[52px] sm:pl-0 sm:justify-end">
           {status ? <div className="sm:shrink-0">{status}</div> : <span />}
           <div
             className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white transition",
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] border border-white/10 bg-white/[0.04] text-white transition sm:rounded-2xl",
               isOpen && "rotate-180",
             )}
           >
@@ -115,22 +115,22 @@ function DangerSection({
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full flex-col gap-3 p-5 text-left transition hover:bg-white/[0.02] sm:flex-row sm:items-start sm:justify-between sm:p-6"
+        className="flex w-full flex-col gap-4 p-4 text-left transition hover:bg-white/[0.02] sm:flex-row sm:items-start sm:justify-between sm:p-6"
       >
         <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-red-500/25 bg-red-500/10 text-red-300">
+          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] border border-red-500/25 bg-red-500/10 text-red-300 sm:h-11 sm:w-11 sm:rounded-2xl">
             <ShieldAlert className="h-5 w-5" />
           </div>
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-white">Danger Zone</h2>
-            <p className="max-w-2xl text-sm leading-6 text-zinc-300/85">
+          <div className="min-w-0 space-y-1">
+            <h2 className="text-[17px] font-semibold leading-7 text-white sm:text-lg">Danger Zone</h2>
+            <p className="max-w-2xl text-sm leading-7 text-zinc-300/85 sm:leading-6">
               Удаление аккаунта необратимо. Все турниры, история и данные профиля будут потеряны.
             </p>
           </div>
         </div>
         <div
           className={cn(
-            "flex h-10 w-10 items-center justify-center rounded-2xl border border-red-500/25 bg-red-500/10 text-red-200 transition",
+            "ml-[52px] flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] border border-red-500/25 bg-red-500/10 text-red-200 transition sm:ml-0 sm:rounded-2xl",
             isOpen && "rotate-180",
           )}
         >
