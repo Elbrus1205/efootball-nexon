@@ -39,20 +39,6 @@ export default async function DashboardSecurityPage() {
           lastActiveAt: true,
         },
       },
-      loginHistory: {
-        orderBy: {
-          createdAt: "desc",
-        },
-        take: 20,
-        select: {
-          id: true,
-          status: true,
-          device: true,
-          location: true,
-          ipAddress: true,
-          createdAt: true,
-        },
-      },
     },
   });
 
@@ -66,15 +52,6 @@ export default async function DashboardSecurityPage() {
     lastActive: formatDate(item.lastActiveAt),
     current: session.user.authSessionId === item.authSessionId,
     icon: sessionIcon(item.platform),
-  }));
-
-  const loginHistory = user.loginHistory.map((item) => ({
-    id: item.id,
-    status: item.status === "SUCCESS" ? ("success" as const) : ("failed" as const),
-    device: item.device,
-    location: item.location ?? "Не определено",
-    ip: item.ipAddress ?? "IP скрыт",
-    createdAt: formatDate(item.createdAt),
   }));
 
   return (
@@ -103,7 +80,6 @@ export default async function DashboardSecurityPage() {
           telegramHandle={user.telegramUsername ?? null}
           telegram2faEnabled={Boolean(user.telegram2faEnabled)}
           sessions={sessions}
-          loginHistory={loginHistory}
         />
       </div>
     </div>

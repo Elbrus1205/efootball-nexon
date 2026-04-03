@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Clock3,
@@ -22,7 +22,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
 type SecuritySessionItem = {
@@ -33,15 +32,6 @@ type SecuritySessionItem = {
   lastActive: string;
   current: boolean;
   icon: "laptop" | "phone";
-};
-
-type LoginHistoryItem = {
-  id: string;
-  status: "success" | "failed";
-  device: string;
-  location: string;
-  ip: string;
-  createdAt: string;
 };
 
 function SessionIcon({ icon }: { icon: SecuritySessionItem["icon"] }) {
@@ -179,7 +169,6 @@ export function SecurityPanel({
   telegramHandle,
   telegram2faEnabled,
   sessions,
-  loginHistory,
 }: {
   currentEmail: string;
   emailVerified: boolean;
@@ -188,7 +177,6 @@ export function SecurityPanel({
   telegramHandle: string | null;
   telegram2faEnabled: boolean;
   sessions: SecuritySessionItem[];
-  loginHistory: LoginHistoryItem[];
 }) {
   const router = useRouter();
   const [passwordPending, startPasswordTransition] = useTransition();
@@ -211,13 +199,8 @@ export function SecurityPanel({
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [twoFactorChallengeToken, setTwoFactorChallengeToken] = useState("");
 
-  const [historyFilter, setHistoryFilter] = useState<"all" | "success" | "failed">("all");
   const [openSection, setOpenSection] = useState<string | null>("password");
 
-  const filteredHistory = useMemo(() => {
-    if (historyFilter === "all") return loginHistory;
-    return loginHistory.filter((item) => item.status === historyFilter);
-  }, [historyFilter, loginHistory]);
 
   const hasBoundEmail = email.trim().length > 0;
 
@@ -660,53 +643,9 @@ export function SecurityPanel({
           </Button>
         </div>
       </SecuritySection>
-
-      <SecuritySection
-        sectionId="history"
-        isOpen={openSection === "history"}
-        onToggle={toggleSection}
-        icon={<Clock3 className="h-5 w-5" />}
-        title="История входов"
-        description="Последние попытки входа в аккаунт с устройствами, IP и геолокацией."
-        status={<Badge variant="neutral">Последние 30 дней</Badge>}
-      >
-        <div className="flex flex-wrap gap-2">
-          <Button variant={historyFilter === "all" ? "secondary" : "ghost"} size="sm" onClick={() => setHistoryFilter("all")}>
-            Все
-          </Button>
-          <Button variant={historyFilter === "success" ? "secondary" : "ghost"} size="sm" onClick={() => setHistoryFilter("success")}>
-            Успешные
-          </Button>
-          <Button variant={historyFilter === "failed" ? "secondary" : "ghost"} size="sm" onClick={() => setHistoryFilter("failed")}>
-            Ошибки
-          </Button>
-        </div>
-        <Separator />
-        <div className="space-y-3">
-          {filteredHistory.map((item) => (
-            <div
-              key={item.id}
-              className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="text-sm font-medium text-white">{item.device}</div>
-                  <Badge variant={item.status === "success" ? "success" : "danger"}>
-                    {item.status === "success" ? "Успешно" : "Ошибка"}
-                  </Badge>
-                </div>
-                <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-400">
-                  <span>{item.location}</span>
-                  <span>{item.ip}</span>
-                </div>
-              </div>
-              <div className="text-sm text-zinc-500">{item.createdAt}</div>
-            </div>
-          ))}
-        </div>
-      </SecuritySection>
-
-      <DangerSection isOpen={openSection === "danger"} onToggle={() => toggleSection("danger")} />
+<DangerSection isOpen={openSection === "danger"} onToggle={() => toggleSection("danger")} />
     </>
   );
 }
+
+
