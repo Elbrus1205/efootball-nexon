@@ -75,7 +75,7 @@ export const tournamentSchema = z.object({
 
 export const securityPasswordSchema = z
   .object({
-    currentPassword: z.string().min(1, "Введите текущий пароль."),
+    currentPassword: z.string().optional().or(z.literal("")),
     newPassword: z.string().min(8, "Новый пароль должен быть не короче 8 символов."),
     repeatPassword: z.string().min(8, "Повторите новый пароль."),
   })

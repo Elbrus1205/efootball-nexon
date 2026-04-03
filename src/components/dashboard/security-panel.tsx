@@ -176,11 +176,13 @@ function DangerSection({
 export function SecurityPanel({
   currentEmail,
   emailVerified,
+  hasPassword,
   sessions,
   loginHistory,
 }: {
   currentEmail: string;
   emailVerified: boolean;
+  hasPassword: boolean;
   sessions: SecuritySessionItem[];
   loginHistory: LoginHistoryItem[];
 }) {
@@ -356,15 +358,27 @@ export function SecurityPanel({
         isOpen={openSection === "password"}
         onToggle={toggleSection}
         icon={<KeyRound className="h-5 w-5" />}
-        title="Смена пароля"
-        description="Обновите пароль, чтобы защитить аккаунт и закрыть доступ со старых данных."
+        title={hasPassword ? "Смена пароля" : "Создать пароль"}
+        description={
+          hasPassword
+            ? "Обновите пароль, чтобы защитить аккаунт и закрыть доступ со старых данных."
+            : "Задайте пароль для входа по почте, если аккаунт был создан через Telegram или VK."
+        }
         status={<Badge variant="success">Защита включена</Badge>}
       >
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-2">
-            <Label htmlFor="currentPassword">Текущий пароль</Label>
-            <Input id="currentPassword" type="password" placeholder="Введите текущий пароль" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
-          </div>
+        <div className={cn("grid gap-4", hasPassword ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
+          {hasPassword ? (
+            <div className="space-y-2">
+              <Label htmlFor="currentPassword">Текущий пароль</Label>
+              <Input
+                id="currentPassword"
+                type="password"
+                placeholder="Введите текущий пароль"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+              />
+            </div>
+          ) : null}
           <div className="space-y-2">
             <Label htmlFor="newPassword">Новый пароль</Label>
             <Input id="newPassword" type="password" placeholder="Новый пароль" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
@@ -380,11 +394,13 @@ export function SecurityPanel({
             <div className="text-sm text-zinc-400">Используйте минимум 8 символов, цифры и заглавные буквы.</div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" asChild>
-              <Link href="/forgot-password">Забыли пароль?</Link>
-            </Button>
+            {hasPassword ? (
+              <Button variant="outline" asChild>
+                <Link href="/forgot-password">Забыли пароль?</Link>
+              </Button>
+            ) : null}
             <Button disabled={passwordPending} onClick={changePassword}>
-              {passwordPending ? "Сохраняем..." : "Сохранить новый пароль"}
+              {passwordPending ? "Сохраняем..." : hasPassword ? "Сохранить новый пароль" : "Создать пароль"}
             </Button>
           </div>
         </div>

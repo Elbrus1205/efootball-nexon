@@ -1,8 +1,8 @@
 import { compare, hash } from "bcryptjs";
 import { NextResponse } from "next/server";
+import { revokeSecuritySessions } from "@/lib/auth/security";
 import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { revokeSecuritySessions } from "@/lib/auth/security";
 import { securityPasswordSchema } from "@/lib/validators";
 
 export async function PATCH(request: Request) {
@@ -17,13 +17,19 @@ export async function PATCH(request: Request) {
     },
   });
 
-  if (!user?.passwordHash) {
-    return NextResponse.json({ error: "Для этого аккаунта пароль пока не задан." }, { status: 400 });
+  if (!user) {
+    return NextResponse.json({ error: "Пользователь не найден." }, { status: 404 });
   }
 
-  const isValid = await compare(body.currentPassword, user.passwordHash);
-  if (!isValid) {
-    return NextResponse.json({ error: "Текущий пароль указан неверно." }, { status: 400 });
+  if (user.passwordHash) {
+    if (!body.currentPassword?.trim()) {
+      return NextResponse.json({ error: "Введите текущий пароль." }, { status: 400 });
+    }
+
+    const isValid = await compare(body.currentPassword, user.passwordHash);
+    if (!isValid) {
+      return NextResponse.json({ error: "Текущий пароль указан неверно." }, { status: 400 });
+    }
   }
 
   const nextPasswordHash = await hash(body.newPassword, 10);
@@ -52,10 +58,10 @@ export async function PATCH(request: Request) {
     if (otherSessions.length > 0) {
       await revokeSecuritySessions(
         user.id,
-        otherSessions.map((item: { authSessionId: string }) => item.authSessionId),
+        otherSessions.map((item) => item.authSessionId),
       );
     }
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, hasPassword: true });
 }
