@@ -5,17 +5,20 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
+import { TelegramLogin } from "@/components/auth/telegram-login";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { TelegramLogin } from "@/components/auth/telegram-login";
 
 export function AuthForm({ type }: { type: "login" | "register" }) {
   const [pending, startTransition] = useTransition();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [twoFactorStep, setTwoFactorStep] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [challengeToken, setChallengeToken] = useState("");
   const router = useRouter();
 
   const submit = () => {
@@ -37,9 +40,35 @@ export function AuthForm({ type }: { type: "login" | "register" }) {
           }
         }
 
+        if (type === "login" && !twoFactorStep) {
+          const preflight = await fetch("/api/auth/credentials/preflight", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: normalizedEmail,
+              password,
+            }),
+          });
+
+          const preflightPayload = await preflight.json().catch(() => null);
+          if (!preflight.ok) {
+            toast.error(preflightPayload?.error || "Неверный email или пароль");
+            return;
+          }
+
+          if (preflightPayload?.requiresTwoFactor) {
+            setChallengeToken(preflightPayload.challengeToken ?? "");
+            setTwoFactorStep(true);
+            toast.success("Код отправлен в Telegram-бот. Введите его для завершения входа.");
+            return;
+          }
+        }
+
         const result = await signIn("credentials", {
           email: normalizedEmail,
           password,
+          twoFactorCode: twoFactorStep ? twoFactorCode : undefined,
+          challengeToken: twoFactorStep ? challengeToken : undefined,
           redirect: false,
         });
 
@@ -49,10 +78,13 @@ export function AuthForm({ type }: { type: "login" | "register" }) {
         }
 
         if (result.error) {
-          toast.error("Неверный email или пароль");
+          toast.error(twoFactorStep ? "Неверный код из Telegram или он уже истёк." : "Неверный email или пароль");
           return;
         }
 
+        setTwoFactorStep(false);
+        setTwoFactorCode("");
+        setChallengeToken("");
         toast.success(type === "register" ? "Аккаунт создан" : "Вход выполнен");
         router.push("/dashboard");
         router.refresh();
@@ -65,10 +97,18 @@ export function AuthForm({ type }: { type: "login" | "register" }) {
   return (
     <Card className="mx-auto w-full max-w-md">
       <CardHeader>
-        <CardTitle>{type === "login" ? "Вход в eFootball Nexon" : "Регистрация игрока"}</CardTitle>
+        <CardTitle>
+          {type === "login"
+            ? twoFactorStep
+              ? "Подтверждение входа"
+              : "Вход в eFootball Nexon"
+            : "Регистрация игрока"}
+        </CardTitle>
         <CardDescription>
           {type === "login"
-            ? "Войдите через email, VK или Telegram."
+            ? twoFactorStep
+              ? "Введите код, который бот отправил вам в Telegram."
+              : "Войдите через email, VK или Telegram."
             : "Создайте аккаунт, чтобы регистрироваться на турниры и отправлять результаты."}
         </CardDescription>
       </CardHeader>
@@ -80,49 +120,82 @@ export function AuthForm({ type }: { type: "login" | "register" }) {
           </div>
         ) : null}
 
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
-        </div>
+        {!twoFactorStep ? (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="password">Пароль</Label>
-          <Input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Пароль</Label>
+              <Input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+            </div>
+          </>
+        ) : (
+          <div className="space-y-2">
+            <Label htmlFor="twoFactorCode">Код из Telegram</Label>
+            <Input
+              id="twoFactorCode"
+              inputMode="numeric"
+              placeholder="Введите 6-значный код"
+              value={twoFactorCode}
+              onChange={(event) => setTwoFactorCode(event.target.value)}
+            />
+          </div>
+        )}
 
         <Button className="w-full" onClick={submit} disabled={pending}>
-          {pending ? "Подождите..." : type === "login" ? "Войти" : "Создать аккаунт"}
+          {pending ? "Подождите..." : type === "login" ? (twoFactorStep ? "Подтвердить вход" : "Войти") : "Создать аккаунт"}
         </Button>
 
-        <div className="grid gap-3">
-          <Button variant="secondary" className="w-full" onClick={() => signIn("vk", { callbackUrl: "/dashboard" })}>
-            Продолжить через VK
+        {type === "login" && twoFactorStep ? (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              setTwoFactorStep(false);
+              setTwoFactorCode("");
+              setChallengeToken("");
+            }}
+          >
+            Назад
           </Button>
-          <TelegramLogin botUsername={process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME} />
-        </div>
+        ) : null}
 
-        <div className="text-sm text-zinc-400">
-          {type === "login" ? (
-            <>
-              Нет аккаунта?{" "}
-              <Link className="text-primary" href="/register">
-                Зарегистрироваться
-              </Link>
-            </>
-          ) : (
-            <>
-              Уже есть аккаунт?{" "}
-              <Link className="text-primary" href="/login">
-                Войти
-              </Link>
-            </>
-          )}
-        </div>
+        {!twoFactorStep ? (
+          <>
+            <div className="grid gap-3">
+              <Button variant="secondary" className="w-full" onClick={() => signIn("vk", { callbackUrl: "/dashboard" })}>
+                Продолжить через VK
+              </Button>
+              <TelegramLogin botUsername={process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME} />
+            </div>
 
-        {type === "login" ? (
-          <Link href="/forgot-password" className="inline-block text-sm text-primary">
-            Забыли пароль?
-          </Link>
+            <div className="text-sm text-zinc-400">
+              {type === "login" ? (
+                <>
+                  Нет аккаунта?{" "}
+                  <Link className="text-primary" href="/register">
+                    Зарегистрироваться
+                  </Link>
+                </>
+              ) : (
+                <>
+                  Уже есть аккаунт?{" "}
+                  <Link className="text-primary" href="/login">
+                    Войти
+                  </Link>
+                </>
+              )}
+            </div>
+
+            {type === "login" ? (
+              <Link href="/forgot-password" className="inline-block text-sm text-primary">
+                Забыли пароль?
+              </Link>
+            ) : null}
+          </>
         ) : null}
       </CardContent>
     </Card>

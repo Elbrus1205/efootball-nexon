@@ -9,6 +9,7 @@ import { buildSecurityContext, createLoginHistory, createSecuritySession, touchS
 import { db } from "@/lib/db";
 import { verifyTelegramAuth } from "@/lib/auth/telegram";
 import { generateFallbackNickname } from "@/lib/player-name";
+import { verifyTwoFactorChallenge } from "@/lib/two-factor";
 
 const TELEGRAM_ADMIN_ID = "6595067194";
 const hasVkCredentials = Boolean(process.env.VK_CLIENT_ID && process.env.VK_CLIENT_SECRET);
@@ -28,6 +29,8 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        twoFactorCode: { label: "2FA Code", type: "text" },
+        challengeToken: { label: "2FA Challenge", type: "text" },
       },
       async authorize(credentials, req) {
         if (!credentials?.email || !credentials.password) return null;
@@ -92,6 +95,23 @@ export const authOptions: NextAuthOptions = {
             context,
           });
           return null;
+        }
+
+        if (user.telegram2faEnabled) {
+          if (!credentials.twoFactorCode || !credentials.challengeToken) {
+            return null;
+          }
+
+          const verifiedChallenge = await verifyTwoFactorChallenge({
+            userId: user.id,
+            token: credentials.challengeToken,
+            code: credentials.twoFactorCode,
+            purpose: "LOGIN",
+          });
+
+          if (!verifiedChallenge) {
+            return null;
+          }
         }
 
         if (matchedPassword !== rawPassword) {

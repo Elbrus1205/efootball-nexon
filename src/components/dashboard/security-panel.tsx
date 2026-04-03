@@ -96,9 +96,7 @@ function SecuritySection({
             {isOpen ? <Minus className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
           </div>
         </div>
-        <div className="col-span-2 flex pt-1 sm:hidden">
-          {status ? status : <span />}
-        </div>
+        <div className="col-span-2 flex pt-1 sm:hidden">{status ? status : <span />}</div>
       </button>
       {isOpen ? (
         <div className="border-t border-white/10 px-5 pb-5 pt-4 sm:px-6 sm:pb-6 sm:pt-5">
@@ -177,12 +175,18 @@ export function SecurityPanel({
   currentEmail,
   emailVerified,
   hasPassword,
+  telegramLinked,
+  telegramHandle,
+  telegram2faEnabled,
   sessions,
   loginHistory,
 }: {
   currentEmail: string;
   emailVerified: boolean;
   hasPassword: boolean;
+  telegramLinked: boolean;
+  telegramHandle: string | null;
+  telegram2faEnabled: boolean;
   sessions: SecuritySessionItem[];
   loginHistory: LoginHistoryItem[];
 }) {
@@ -190,6 +194,9 @@ export function SecurityPanel({
   const [passwordPending, startPasswordTransition] = useTransition();
   const [emailPending, startEmailTransition] = useTransition();
   const [sessionsPending, startSessionsTransition] = useTransition();
+  const [verificationPending, startVerificationTransition] = useTransition();
+  const [passwordCodePending, startPasswordCodeTransition] = useTransition();
+  const [twoFactorPending, startTwoFactorTransition] = useTransition();
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -200,15 +207,18 @@ export function SecurityPanel({
   const [verificationCode, setVerificationCode] = useState("");
   const [emailVerifiedState, setEmailVerifiedState] = useState(emailVerified);
 
+  const [telegram2faEnabledState, setTelegram2faEnabledState] = useState(telegram2faEnabled);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [twoFactorChallengeToken, setTwoFactorChallengeToken] = useState("");
+
   const [historyFilter, setHistoryFilter] = useState<"all" | "success" | "failed">("all");
   const [openSection, setOpenSection] = useState<string | null>("password");
-  const [verificationPending, startVerificationTransition] = useTransition();
-  const [passwordCodePending, startPasswordCodeTransition] = useTransition();
 
   const filteredHistory = useMemo(() => {
     if (historyFilter === "all") return loginHistory;
     return loginHistory.filter((item) => item.status === historyFilter);
   }, [historyFilter, loginHistory]);
+
   const hasBoundEmail = email.trim().length > 0;
 
   const changePassword = () => {
@@ -226,7 +236,7 @@ export function SecurityPanel({
 
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        toast.error(payload?.error || "Не удалось сменить пароль.");
+        toast.error(payload?.error || "Не удалось сохранить пароль.");
         return;
       }
 
@@ -260,9 +270,7 @@ export function SecurityPanel({
       const res = await fetch("/api/security/email", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-        }),
+        body: JSON.stringify({ email }),
       });
 
       const payload = await res.json().catch(() => null);
@@ -307,9 +315,7 @@ export function SecurityPanel({
       const res = await fetch("/api/security/email/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code: verificationCode,
-        }),
+        body: JSON.stringify({ code: verificationCode }),
       });
 
       const payload = await res.json().catch(() => null);
@@ -325,14 +331,57 @@ export function SecurityPanel({
     });
   };
 
+  const sendTwoFactorCode = () => {
+    startTwoFactorTransition(async () => {
+      const res = await fetch("/api/security/2fa/telegram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "send" }),
+      });
+
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast.error(payload?.error || "Не удалось отправить код в Telegram.");
+        return;
+      }
+
+      setTwoFactorChallengeToken(payload?.challengeToken ?? "");
+      toast.success("Код отправлен в Telegram-бот.");
+    });
+  };
+
+  const verifyTwoFactorCode = () => {
+    startTwoFactorTransition(async () => {
+      const res = await fetch("/api/security/2fa/telegram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "verify",
+          challengeToken: twoFactorChallengeToken,
+          code: twoFactorCode,
+        }),
+      });
+
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast.error(payload?.error || "Не удалось подтвердить код 2FA.");
+        return;
+      }
+
+      setTelegram2faEnabledState(Boolean(payload?.enabled));
+      setTwoFactorCode("");
+      setTwoFactorChallengeToken("");
+      toast.success(payload?.enabled ? "2FA через Telegram включена." : "2FA через Telegram отключена.");
+      router.refresh();
+    });
+  };
+
   const revokeSession = (authSessionId: string) => {
     startSessionsTransition(async () => {
       const res = await fetch("/api/security/sessions", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          authSessionId,
-        }),
+        body: JSON.stringify({ authSessionId }),
       });
 
       const payload = await res.json().catch(() => null);
@@ -351,14 +400,12 @@ export function SecurityPanel({
       const res = await fetch("/api/security/sessions", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          revokeAll: true,
-        }),
+        body: JSON.stringify({ revokeAll: true }),
       });
 
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        toast.error(payload?.error || "Не удалось завершить сессии.");
+        toast.error(payload?.error || "Не удалось завершить все сессии.");
         return;
       }
 
@@ -405,9 +452,16 @@ export function SecurityPanel({
           </div>
           <div className="space-y-2">
             <Label htmlFor="repeatPassword">Повторите пароль</Label>
-            <Input id="repeatPassword" type="password" placeholder="Повторите новый пароль" value={repeatPassword} onChange={(e) => setRepeatPassword(e.target.value)} />
+            <Input
+              id="repeatPassword"
+              type="password"
+              placeholder="Повторите новый пароль"
+              value={repeatPassword}
+              onChange={(e) => setRepeatPassword(e.target.value)}
+            />
           </div>
         </div>
+
         <div className="grid gap-4 rounded-2xl border border-white/10 bg-black/20 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
           <div className="space-y-2">
             <Label htmlFor="passwordCode">Код с почты</Label>
@@ -418,12 +472,15 @@ export function SecurityPanel({
               value={passwordCode}
               onChange={(e) => setPasswordCode(e.target.value)}
             />
-            <div className="text-sm text-zinc-400">Перед сохранением отправьте код на привязанную почту и подтвердите им создание или смену пароля.</div>
+            <div className="text-sm text-zinc-400">
+              Перед сохранением отправьте код на привязанную почту и подтвердите им создание или смену пароля.
+            </div>
           </div>
           <Button variant="outline" disabled={passwordCodePending || !hasBoundEmail} onClick={sendPasswordCode}>
             {passwordCodePending ? "Отправляем..." : "Отправить код"}
           </Button>
         </div>
+
         <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <div className="text-sm font-medium text-white">Надёжность пароля</div>
@@ -453,11 +510,7 @@ export function SecurityPanel({
             ? "Почта используется для входа, подтверждений и восстановления доступа."
             : "Добавьте почту к аккаунту, если вошли через Telegram или VK."
         }
-        status={
-          <Badge variant={hasBoundEmail ? (emailVerifiedState ? "success" : "accent") : "neutral"}>
-            {hasBoundEmail ? (emailVerifiedState ? "Подтверждён" : "Не подтверждён") : "Не привязана"}
-          </Badge>
-        }
+        status={<Badge variant={hasBoundEmail ? (emailVerifiedState ? "success" : "accent") : "neutral"}>{hasBoundEmail ? (emailVerifiedState ? "Подтверждён" : "Не подтверждён") : "Не привязана"}</Badge>}
       >
         <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
           <div className="space-y-2">
@@ -505,46 +558,57 @@ export function SecurityPanel({
         onToggle={toggleSection}
         icon={<ShieldCheck className="h-5 w-5" />}
         title="Двухфакторная аутентификация (2FA)"
-        description="Добавьте второй шаг подтверждения при входе в аккаунт."
-        status={<Badge variant="neutral">Скоро будет</Badge>}
+        description="После ввода логина и пароля сайт попросит код, который мы отправим в вашего Telegram-бота."
+        status={<Badge variant={telegram2faEnabledState ? "success" : "neutral"}>{telegram2faEnabledState ? "Включена" : "Выключена"}</Badge>}
       >
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="space-y-4 rounded-2xl border border-white/10 bg-black/20 p-4">
-            <div className="space-y-1">
-              <div className="text-sm font-medium text-white">Подключение 2FA</div>
-              <div className="text-sm text-zinc-400">Отсканируйте QR-код в приложении Google Authenticator или Authy.</div>
-            </div>
-            <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/[0.03] text-sm text-zinc-500">
-              QR-код появится позже
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="otpCode">Код подтверждения</Label>
-              <Input id="otpCode" inputMode="numeric" placeholder="Введите 6-значный код" disabled />
-            </div>
+        {!telegramLinked ? (
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-zinc-300">
+            Сначала привяжите Telegram к аккаунту через вход Telegram. После этого здесь можно будет включить 2FA через нашего бота.
           </div>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="space-y-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div className="space-y-1">
+                <div className="text-sm font-medium text-white">Код через Telegram-бота</div>
+                <div className="text-sm text-zinc-400">
+                  Код будет отправляться в Telegram {telegramHandle ? `(@${telegramHandle})` : ""}. После входа на сайте появится второй шаг с вводом этого кода.
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-zinc-300">
+                {telegram2faEnabledState
+                  ? "2FA уже включена. Для отключения тоже потребуется код из Telegram."
+                  : "Включите 2FA, и после нажатия кнопки «Войти» сайт будет просить код из Telegram-бота."}
+              </div>
+              <Button className="sm:w-auto" disabled={twoFactorPending} onClick={sendTwoFactorCode}>
+                {twoFactorPending ? "Отправляем..." : telegram2faEnabledState ? "Отправить код на отключение" : "Отправить код на включение"}
+              </Button>
+            </div>
 
-          <div className="space-y-4 rounded-2xl border border-white/10 bg-black/20 p-4">
-            <div className="space-y-1">
-              <div className="text-sm font-medium text-white">Резервные коды</div>
-              <div className="text-sm text-zinc-400">Сохраните их, чтобы восстановить доступ без телефона.</div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-[#0b0f16] p-4 font-mono text-sm tracking-[0.18em] text-zinc-300">
-              XXXX-XXXX
-              <br />
-              XXXX-XXXX
-              <br />
-              XXXX-XXXX
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button className="flex-1" disabled>
-                Включить 2FA
-              </Button>
-              <Button variant="outline" className="flex-1" disabled>
-                Скачать коды
+            <div className="space-y-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div className="space-y-1">
+                <div className="text-sm font-medium text-white">Подтверждение</div>
+                <div className="text-sm text-zinc-400">Введите код, который бот прислал вам в Telegram.</div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="twoFactorCode">Код 2FA</Label>
+                <Input
+                  id="twoFactorCode"
+                  inputMode="numeric"
+                  placeholder="Введите 6-значный код"
+                  value={twoFactorCode}
+                  onChange={(e) => setTwoFactorCode(e.target.value)}
+                />
+              </div>
+              <Button
+                className="w-full"
+                disabled={twoFactorPending || twoFactorCode.trim().length < 6 || !twoFactorChallengeToken}
+                onClick={verifyTwoFactorCode}
+              >
+                {twoFactorPending ? "Проверяем..." : telegram2faEnabledState ? "Отключить 2FA" : "Включить 2FA"}
               </Button>
             </div>
           </div>
-        </div>
+        )}
       </SecuritySection>
 
       <SecuritySection

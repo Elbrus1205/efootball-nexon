@@ -20,6 +20,9 @@ export default async function DashboardSecurityPage() {
       email: true,
       emailVerified: true,
       passwordHash: true,
+      telegramId: true,
+      telegramUsername: true,
+      telegram2faEnabled: true,
       securitySessions: {
         where: {
           revokedAt: null,
@@ -96,6 +99,9 @@ export default async function DashboardSecurityPage() {
           currentEmail={user.email ?? ""}
           emailVerified={Boolean(user.emailVerified)}
           hasPassword={Boolean(user.passwordHash)}
+          telegramLinked={Boolean(user.telegramId)}
+          telegramHandle={user.telegramUsername ?? null}
+          telegram2faEnabled={Boolean(user.telegram2faEnabled)}
           sessions={sessions}
           loginHistory={loginHistory}
         />

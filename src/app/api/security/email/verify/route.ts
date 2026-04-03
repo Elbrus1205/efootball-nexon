@@ -1,3 +1,4 @@
+import { VerificationCodePurpose } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
@@ -25,6 +26,7 @@ export async function POST(request: Request) {
     where: {
       userId: user.id,
       email: user.email,
+      purpose: VerificationCodePurpose.EMAIL_CONFIRMATION,
       codeHash,
       usedAt: null,
       expiresAt: {

@@ -1,3 +1,4 @@
+import { VerificationCodePurpose } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
@@ -62,6 +63,7 @@ export async function PATCH(request: Request) {
     data: {
       userId: user.id,
       email: normalizedEmail,
+      purpose: VerificationCodePurpose.EMAIL_CONFIRMATION,
       codeHash: hashVerificationCode(code),
       expiresAt: new Date(Date.now() + 10 * 60 * 1000),
     },
