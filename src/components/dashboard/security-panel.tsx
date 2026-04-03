@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
+  ChevronDown,
   Clock3,
   KeyRound,
   Laptop2,
@@ -21,6 +22,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 type SecuritySessionItem = {
   id: string;
@@ -46,12 +48,18 @@ function SessionIcon({ icon }: { icon: SecuritySessionItem["icon"] }) {
 }
 
 function SecuritySection({
+  sectionId,
+  isOpen,
+  onToggle,
   icon,
   title,
   description,
   status,
   children,
 }: {
+  sectionId: string;
+  isOpen: boolean;
+  onToggle: (sectionId: string) => void;
   icon: React.ReactNode;
   title: string;
   description: string;
@@ -59,22 +67,98 @@ function SecuritySection({
   children: React.ReactNode;
 }) {
   return (
-    <Card className="rounded-[28px] border border-white/10 bg-[#11151d] p-5 sm:p-6">
-      <div className="flex flex-col gap-4 sm:gap-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white">
-              {icon}
+    <Card className="rounded-[28px] border border-white/10 bg-[#11151d] p-0">
+      <button
+        type="button"
+        onClick={() => onToggle(sectionId)}
+        className="flex w-full flex-col gap-3 p-5 text-left transition hover:bg-white/[0.02] sm:flex-row sm:items-start sm:justify-between sm:p-6"
+      >
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white">
+            {icon}
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold text-white">{title}</h2>
+            <p className="max-w-2xl text-sm leading-6 text-zinc-400">{description}</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-3 sm:justify-end">
+          {status ? <div className="sm:shrink-0">{status}</div> : <span />}
+          <div
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white transition",
+              isOpen && "rotate-180",
+            )}
+          >
+            <ChevronDown className="h-4 w-4" />
+          </div>
+        </div>
+      </button>
+      {isOpen ? (
+        <div className="border-t border-white/10 px-5 pb-5 pt-4 sm:px-6 sm:pb-6 sm:pt-5">
+          <div className="flex flex-col gap-4 sm:gap-5">{children}</div>
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
+function DangerSection({
+  isOpen,
+  onToggle,
+}: {
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <Card className="rounded-[28px] border border-red-500/25 bg-[linear-gradient(180deg,rgba(85,18,25,0.24),rgba(22,10,12,0.92))] p-0">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full flex-col gap-3 p-5 text-left transition hover:bg-white/[0.02] sm:flex-row sm:items-start sm:justify-between sm:p-6"
+      >
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-red-500/25 bg-red-500/10 text-red-300">
+            <ShieldAlert className="h-5 w-5" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold text-white">Danger Zone</h2>
+            <p className="max-w-2xl text-sm leading-6 text-zinc-300/85">
+              Удаление аккаунта необратимо. Все турниры, история и данные профиля будут потеряны.
+            </p>
+          </div>
+        </div>
+        <div
+          className={cn(
+            "flex h-10 w-10 items-center justify-center rounded-2xl border border-red-500/25 bg-red-500/10 text-red-200 transition",
+            isOpen && "rotate-180",
+          )}
+        >
+          <ChevronDown className="h-4 w-4" />
+        </div>
+      </button>
+      {isOpen ? (
+        <div className="border-t border-red-500/20 px-5 pb-5 pt-4 sm:px-6 sm:pb-6 sm:pt-5">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+            <div className="space-y-4 rounded-2xl border border-red-500/20 bg-black/20 p-4">
+              <div className="space-y-2">
+                <Label htmlFor="dangerConfirm">Введите УДАЛИТЬ для подтверждения</Label>
+                <Input id="dangerConfirm" placeholder="УДАЛИТЬ" />
+              </div>
+              <div className="rounded-2xl border border-red-500/20 bg-red-500/8 px-4 py-3 text-sm text-red-100/85">
+                После подтверждения аккаунт будет удалён без возможности восстановления.
+              </div>
             </div>
-            <div className="space-y-1">
-              <h2 className="text-lg font-semibold text-white">{title}</h2>
-              <p className="max-w-2xl text-sm leading-6 text-zinc-400">{description}</p>
+            <div className="flex flex-col justify-end gap-2">
+              <Button variant="outline">Отмена</Button>
+              <Button className="bg-red-500 text-white hover:bg-red-400">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Удалить аккаунт
+              </Button>
             </div>
           </div>
-          {status ? <div className="sm:shrink-0">{status}</div> : null}
         </div>
-        {children}
-      </div>
+      ) : null}
     </Card>
   );
 }
@@ -101,6 +185,7 @@ export function SecurityPanel({
   const [emailPassword, setEmailPassword] = useState("");
 
   const [historyFilter, setHistoryFilter] = useState<"all" | "success" | "failed">("all");
+  const [openSection, setOpenSection] = useState<string | null>("password");
 
   const filteredHistory = useMemo(() => {
     if (historyFilter === "all") return loginHistory;
@@ -199,9 +284,16 @@ export function SecurityPanel({
     });
   };
 
+  const toggleSection = (sectionId: string) => {
+    setOpenSection((current) => (current === sectionId ? null : sectionId));
+  };
+
   return (
     <>
       <SecuritySection
+        sectionId="password"
+        isOpen={openSection === "password"}
+        onToggle={toggleSection}
         icon={<KeyRound className="h-5 w-5" />}
         title="Смена пароля"
         description="Обновите пароль, чтобы защитить аккаунт и закрыть доступ со старых данных."
@@ -238,6 +330,9 @@ export function SecurityPanel({
       </SecuritySection>
 
       <SecuritySection
+        sectionId="email"
+        isOpen={openSection === "email"}
+        onToggle={toggleSection}
         icon={<Mail className="h-5 w-5" />}
         title="Email"
         description="Почта используется для входа, подтверждений и восстановления доступа."
@@ -262,6 +357,9 @@ export function SecurityPanel({
       </SecuritySection>
 
       <SecuritySection
+        sectionId="2fa"
+        isOpen={openSection === "2fa"}
+        onToggle={toggleSection}
         icon={<ShieldCheck className="h-5 w-5" />}
         title="Двухфакторная аутентификация (2FA)"
         description="Добавьте второй шаг подтверждения при входе в аккаунт."
@@ -307,6 +405,9 @@ export function SecurityPanel({
       </SecuritySection>
 
       <SecuritySection
+        sectionId="sessions"
+        isOpen={openSection === "sessions"}
+        onToggle={toggleSection}
         icon={<Laptop2 className="h-5 w-5" />}
         title="Активные сессии"
         description="Посмотрите, с каких устройств сейчас открыт ваш аккаунт, и завершите лишние сессии."
@@ -354,6 +455,9 @@ export function SecurityPanel({
       </SecuritySection>
 
       <SecuritySection
+        sectionId="history"
+        isOpen={openSection === "history"}
+        onToggle={toggleSection}
         icon={<Clock3 className="h-5 w-5" />}
         title="История входов"
         description="Последние попытки входа в аккаунт с устройствами, IP и геолокацией."
@@ -395,40 +499,7 @@ export function SecurityPanel({
         </div>
       </SecuritySection>
 
-      <Card className="rounded-[28px] border border-red-500/25 bg-[linear-gradient(180deg,rgba(85,18,25,0.24),rgba(22,10,12,0.92))] p-5 sm:p-6">
-        <div className="flex flex-col gap-4 sm:gap-5">
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-red-500/25 bg-red-500/10 text-red-300">
-              <ShieldAlert className="h-5 w-5" />
-            </div>
-            <div className="space-y-1">
-              <h2 className="text-lg font-semibold text-white">Danger Zone</h2>
-              <p className="max-w-2xl text-sm leading-6 text-zinc-300/85">
-                Удаление аккаунта необратимо. Все турниры, история и данные профиля будут потеряны.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
-            <div className="space-y-4 rounded-2xl border border-red-500/20 bg-black/20 p-4">
-              <div className="space-y-2">
-                <Label htmlFor="dangerConfirm">Введите УДАЛИТЬ для подтверждения</Label>
-                <Input id="dangerConfirm" placeholder="УДАЛИТЬ" />
-              </div>
-              <div className="rounded-2xl border border-red-500/20 bg-red-500/8 px-4 py-3 text-sm text-red-100/85">
-                После подтверждения аккаунт будет удалён без возможности восстановления.
-              </div>
-            </div>
-            <div className="flex flex-col justify-end gap-2">
-              <Button variant="outline">Отмена</Button>
-              <Button className="bg-red-500 text-white hover:bg-red-400">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Удалить аккаунт
-              </Button>
-            </div>
-          </div>
-        </div>
-      </Card>
+      <DangerSection isOpen={openSection === "danger"} onToggle={() => toggleSection("danger")} />
     </>
   );
 }
