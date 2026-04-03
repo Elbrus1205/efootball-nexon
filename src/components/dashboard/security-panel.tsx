@@ -28,7 +28,7 @@ type SecuritySessionItem = {
   id: string;
   device: string;
   platform: string;
-  location: string;
+  ipAddress: string;
   lastActive: string;
   current: boolean;
   icon: "laptop" | "phone";
@@ -622,7 +622,7 @@ export function SecurityPanel({
                   <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
                     <span className="inline-flex items-center gap-1">
                       <MapPin className="h-3.5 w-3.5" />
-                      {item.location}
+                      {item.ipAddress}
                     </span>
                     <span className="inline-flex items-center gap-1">
                       <Clock3 className="h-3.5 w-3.5" />

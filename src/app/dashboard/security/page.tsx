@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SecurityPanel } from "@/components/dashboard/security-panel";
 import { requireAuth } from "@/lib/auth/session";
+import { buildSecurityContext } from "@/lib/auth/security";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 
@@ -13,6 +15,7 @@ function sessionIcon(platform: string | null): "laptop" | "phone" {
 
 export default async function DashboardSecurityPage() {
   const session = await requireAuth();
+  const currentContext = buildSecurityContext(headers());
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
@@ -36,6 +39,7 @@ export default async function DashboardSecurityPage() {
           device: true,
           platform: true,
           location: true,
+          ipAddress: true,
           lastActiveAt: true,
         },
       },
@@ -46,9 +50,20 @@ export default async function DashboardSecurityPage() {
 
   const sessions = user.securitySessions.map((item) => ({
     id: item.authSessionId,
-    device: item.device,
-    platform: item.platform ?? "Не определено",
-    location: item.location ?? "Не определено",
+    device:
+      session.user.authSessionId === item.authSessionId &&
+      (!item.device || item.device === "Текущее устройство" || item.device === "Неизвестное устройство")
+        ? currentContext.device
+        : item.device,
+    platform:
+      session.user.authSessionId === item.authSessionId &&
+      (!item.platform || item.platform === "Не определено")
+        ? currentContext.platform
+        : item.platform ?? "Не определено",
+    ipAddress:
+      session.user.authSessionId === item.authSessionId && !item.ipAddress
+        ? currentContext.ipAddress ?? "IP скрыт"
+        : item.ipAddress ?? "IP скрыт",
     lastActive: formatDate(item.lastActiveAt),
     current: session.user.authSessionId === item.authSessionId,
     icon: sessionIcon(item.platform),
