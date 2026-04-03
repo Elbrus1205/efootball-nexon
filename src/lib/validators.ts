@@ -78,6 +78,7 @@ export const securityPasswordSchema = z
     currentPassword: z.string().optional().or(z.literal("")),
     newPassword: z.string().min(8, "Новый пароль должен быть не короче 8 символов."),
     repeatPassword: z.string().min(8, "Повторите новый пароль."),
+    code: z.string().trim().min(6, "Введите 6-значный код из письма.").max(6, "Введите 6-значный код из письма."),
   })
   .refine((data) => data.newPassword === data.repeatPassword, {
     path: ["repeatPassword"],

@@ -1,6 +1,8 @@
+import { VerificationCodePurpose } from "@prisma/client";
 import { compare, hash } from "bcryptjs";
 import { NextResponse } from "next/server";
 import { revokeSecuritySessions } from "@/lib/auth/security";
+import { hashVerificationCode } from "@/lib/email";
 import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { securityPasswordSchema } from "@/lib/validators";
@@ -32,14 +34,52 @@ export async function PATCH(request: Request) {
     }
   }
 
-  const nextPasswordHash = await hash(body.newPassword, 10);
-
-  await db.user.update({
+  const userWithEmail = await db.user.findUnique({
     where: { id: user.id },
-    data: {
-      passwordHash: nextPasswordHash,
+    select: {
+      email: true,
     },
   });
+
+  if (!userWithEmail?.email) {
+    return NextResponse.json({ error: "Сначала привяжите почту к аккаунту." }, { status: 400 });
+  }
+
+  const codeHash = hashVerificationCode(body.code);
+  const record = await db.emailVerificationCode.findFirst({
+    where: {
+      userId: user.id,
+      email: userWithEmail.email,
+      purpose: VerificationCodePurpose.PASSWORD_CHANGE,
+      codeHash,
+      usedAt: null,
+      expiresAt: {
+        gt: new Date(),
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  if (!record) {
+    return NextResponse.json({ error: "Код подтверждения неверный или уже истёк." }, { status: 400 });
+  }
+
+  const nextPasswordHash = await hash(body.newPassword, 10);
+
+  await db.$transaction([
+    db.emailVerificationCode.update({
+      where: { id: record.id },
+      data: { usedAt: new Date() },
+    }),
+    db.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash: nextPasswordHash,
+      },
+    }),
+  ]);
 
   if (session.user.authSessionId) {
     const otherSessions = await db.securitySession.findMany({

@@ -194,6 +194,7 @@ export function SecurityPanel({
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
+  const [passwordCode, setPasswordCode] = useState("");
 
   const [email, setEmail] = useState(currentEmail);
   const [verificationCode, setVerificationCode] = useState("");
@@ -202,6 +203,7 @@ export function SecurityPanel({
   const [historyFilter, setHistoryFilter] = useState<"all" | "success" | "failed">("all");
   const [openSection, setOpenSection] = useState<string | null>("password");
   const [verificationPending, startVerificationTransition] = useTransition();
+  const [passwordCodePending, startPasswordCodeTransition] = useTransition();
 
   const filteredHistory = useMemo(() => {
     if (historyFilter === "all") return loginHistory;
@@ -218,6 +220,7 @@ export function SecurityPanel({
           currentPassword,
           newPassword,
           repeatPassword,
+          code: passwordCode,
         }),
       });
 
@@ -230,8 +233,25 @@ export function SecurityPanel({
       setCurrentPassword("");
       setNewPassword("");
       setRepeatPassword("");
+      setPasswordCode("");
       toast.success("Пароль обновлён.");
       router.refresh();
+    });
+  };
+
+  const sendPasswordCode = () => {
+    startPasswordCodeTransition(async () => {
+      const res = await fetch("/api/security/password/send-code", {
+        method: "POST",
+      });
+
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast.error(payload?.error || "Не удалось отправить код для смены пароля.");
+        return;
+      }
+
+      toast.success("Код для подтверждения пароля отправлен на почту.");
     });
   };
 
@@ -387,6 +407,22 @@ export function SecurityPanel({
             <Label htmlFor="repeatPassword">Повторите пароль</Label>
             <Input id="repeatPassword" type="password" placeholder="Повторите новый пароль" value={repeatPassword} onChange={(e) => setRepeatPassword(e.target.value)} />
           </div>
+        </div>
+        <div className="grid gap-4 rounded-2xl border border-white/10 bg-black/20 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+          <div className="space-y-2">
+            <Label htmlFor="passwordCode">Код с почты</Label>
+            <Input
+              id="passwordCode"
+              inputMode="numeric"
+              placeholder="Введите 6-значный код"
+              value={passwordCode}
+              onChange={(e) => setPasswordCode(e.target.value)}
+            />
+            <div className="text-sm text-zinc-400">Перед сохранением отправьте код на привязанную почту и подтвердите им создание или смену пароля.</div>
+          </div>
+          <Button variant="outline" disabled={passwordCodePending || !hasBoundEmail} onClick={sendPasswordCode}>
+            {passwordCodePending ? "Отправляем..." : "Отправить код"}
+          </Button>
         </div>
         <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">

@@ -120,6 +120,11 @@ enum LoginAttemptStatus {
   FAILED
 }
 
+enum VerificationCodePurpose {
+  EMAIL_CONFIRMATION
+  PASSWORD_CHANGE
+}
+
 model User {
   id                  String                   @id @default(cuid())
   name                String?
@@ -203,13 +208,14 @@ model EmailVerificationCode {
   id        String   @id @default(cuid())
   userId    String
   email     String
+  purpose   VerificationCodePurpose @default(EMAIL_CONFIRMATION)
   codeHash  String
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, email, createdAt])
+  @@index([userId, email, purpose, createdAt])
   @@index([email, expiresAt])
 }
 
