@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ChevronDown,
   Clock3,
   KeyRound,
   Laptop2,
   Mail,
   MapPin,
+  Minus,
+  Plus,
   ShieldAlert,
   ShieldCheck,
   Smartphone,
@@ -71,7 +72,7 @@ function SecuritySection({
       <button
         type="button"
         onClick={() => onToggle(sectionId)}
-        className="flex w-full flex-col gap-4 p-4 text-left transition hover:bg-white/[0.02] sm:flex-row sm:items-start sm:justify-between sm:p-6"
+        className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-3 p-4 text-left transition hover:bg-white/[0.02] sm:flex sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:p-6"
       >
         <div className="flex items-start gap-3">
           <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] border border-white/10 bg-white/[0.04] text-white sm:h-11 sm:w-11 sm:rounded-2xl">
@@ -82,16 +83,21 @@ function SecuritySection({
             <p className="max-w-2xl text-sm leading-7 text-zinc-400 sm:leading-6">{description}</p>
           </div>
         </div>
-        <div className="flex items-center justify-between gap-3 pl-[52px] sm:pl-0 sm:justify-end">
-          {status ? <div className="sm:shrink-0">{status}</div> : <span />}
+        <div className="flex items-start justify-end gap-3">
+          <div className="hidden sm:block sm:shrink-0">{status}</div>
           <div
             className={cn(
-              "flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] border border-white/10 bg-white/[0.04] text-white transition sm:rounded-2xl",
-              isOpen && "rotate-180",
+              "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-white transition-all duration-200",
+              isOpen
+                ? "border-blue-400/40 bg-blue-500/15 shadow-[0_0_0_4px_rgba(59,130,246,0.08)]"
+                : "border-white/10 bg-white/[0.04] hover:bg-white/[0.07]",
             )}
           >
-            <ChevronDown className="h-4 w-4" />
+            {isOpen ? <Minus className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
           </div>
+        </div>
+        <div className="col-span-2 flex pt-1 sm:hidden">
+          {status ? status : <span />}
         </div>
       </button>
       {isOpen ? (
@@ -115,7 +121,7 @@ function DangerSection({
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full flex-col gap-4 p-4 text-left transition hover:bg-white/[0.02] sm:flex-row sm:items-start sm:justify-between sm:p-6"
+        className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-3 p-4 text-left transition hover:bg-white/[0.02] sm:flex sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:p-6"
       >
         <div className="flex items-start gap-3">
           <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] border border-red-500/25 bg-red-500/10 text-red-300 sm:h-11 sm:w-11 sm:rounded-2xl">
@@ -128,13 +134,17 @@ function DangerSection({
             </p>
           </div>
         </div>
-        <div
-          className={cn(
-            "ml-[52px] flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] border border-red-500/25 bg-red-500/10 text-red-200 transition sm:ml-0 sm:rounded-2xl",
-            isOpen && "rotate-180",
-          )}
-        >
-          <ChevronDown className="h-4 w-4" />
+        <div className="flex justify-end">
+          <div
+            className={cn(
+              "flex h-11 w-11 items-center justify-center rounded-full border text-red-100 transition-all duration-200",
+              isOpen
+                ? "border-red-400/35 bg-red-500/14 shadow-[0_0_0_4px_rgba(239,68,68,0.08)]"
+                : "border-red-500/25 bg-red-500/10 hover:bg-red-500/15",
+            )}
+          >
+            {isOpen ? <Minus className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          </div>
         </div>
       </button>
       {isOpen ? (
