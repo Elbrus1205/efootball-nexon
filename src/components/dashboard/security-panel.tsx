@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signIn, signOut } from "next-auth/react";
 import {
   Clock3,
   KeyRound,
@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TelegramConnect } from "@/components/dashboard/telegram-connect";
 import { cn } from "@/lib/utils";
 
 type SecuritySessionItem = {
@@ -105,7 +106,6 @@ function DangerSection({
   hasPassword,
   hasBoundEmail,
   telegramLinked,
-  telegramHandle,
   confirmPassword,
   emailCode,
   telegramCode,
@@ -122,7 +122,6 @@ function DangerSection({
   hasPassword: boolean;
   hasBoundEmail: boolean;
   telegramLinked: boolean;
-  telegramHandle: string | null;
   confirmPassword: string;
   emailCode: string;
   telegramCode: string;
@@ -168,23 +167,6 @@ function DangerSection({
       {isOpen ? (
         <div className="border-t border-red-500/20 px-5 pb-5 pt-4 sm:px-6 sm:pb-6 sm:pt-5">
           <div className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-3">
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">Пароль</div>
-                <div className="mt-2 text-sm font-medium text-white">{hasPassword ? "Подключён" : "Не задан"}</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">Почта</div>
-                <div className="mt-2 text-sm font-medium text-white">{hasBoundEmail ? "Код придёт на email" : "Не привязана"}</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">Telegram</div>
-                <div className="mt-2 text-sm font-medium text-white">
-                  {telegramLinked ? `Код придёт ${telegramHandle ? `в @${telegramHandle}` : "в Telegram"}` : "Не привязан"}
-                </div>
-              </div>
-            </div>
-
             <div className="rounded-2xl border border-red-500/20 bg-black/20 p-4 sm:p-5">
               <div className="mb-4 space-y-1">
                 <div className="text-sm font-semibold text-white">Подтвердите удаление аккаунта</div>
@@ -281,6 +263,7 @@ export function SecurityPanel({
   telegramLinked,
   telegramHandle,
   telegram2faEnabled,
+  vkLinked,
   sessions,
 }: {
   currentEmail: string;
@@ -289,6 +272,7 @@ export function SecurityPanel({
   telegramLinked: boolean;
   telegramHandle: string | null;
   telegram2faEnabled: boolean;
+  vkLinked: boolean;
   sessions: SecuritySessionItem[];
 }) {
   const router = useRouter();
@@ -654,30 +638,102 @@ export function SecurityPanel({
         isOpen={openSection === "email"}
         onToggle={toggleSection}
         icon={<Mail className="h-5 w-5" />}
-        title={hasBoundEmail ? "Email" : "Привязать почту"}
-        description={
-          hasBoundEmail
-            ? "Почта используется для входа, подтверждений и восстановления доступа."
-            : "Добавьте почту к аккаунту, если вошли через Telegram или VK."
+        title="Привязки аккаунта"
+        description="Управляйте почтой, Telegram и VK в одном месте. Telegram и VK после привязки может изменить только администратор."
+        status={
+          <Badge variant={hasBoundEmail || telegramLinked || vkLinked ? "success" : "neutral"}>
+            {[hasBoundEmail, telegramLinked, vkLinked].filter(Boolean).length}/3 подключено
+          </Badge>
         }
-        status={<Badge variant={hasBoundEmail ? (emailVerifiedState ? "success" : "accent") : "neutral"}>{hasBoundEmail ? (emailVerifiedState ? "Подтверждён" : "Не подтверждён") : "Не привязана"}</Badge>}
       >
-        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-          <div className="space-y-2">
-            <Label htmlFor="email">{hasBoundEmail ? "Текущий email" : "Email для привязки"}</Label>
-            <Input id="email" type="email" value={email} placeholder="Введите email" onChange={(e) => setEmail(e.target.value)} />
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="rounded-[26px] border border-white/10 bg-black/20 p-4 sm:p-5">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="text-sm font-semibold text-white">Email</div>
+                <div className="text-sm text-zinc-400">
+                  Почта нужна для входа, подтверждений, смены пароля и восстановления доступа.
+                </div>
+              </div>
+              <Badge variant={hasBoundEmail ? (emailVerifiedState ? "success" : "accent") : "neutral"}>
+                {hasBoundEmail ? (emailVerifiedState ? "Подтверждён" : "Не подтверждён") : "Не привязан"}
+              </Badge>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">{hasBoundEmail ? "Текущий email" : "Email для привязки"}</Label>
+                <Input id="email" type="email" value={email} placeholder="Введите email" onChange={(e) => setEmail(e.target.value)} />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Button disabled={emailPending || email.trim().length === 0} onClick={changeEmail}>
+                  {emailPending ? "Сохраняем..." : hasBoundEmail ? "Изменить email" : "Привязать почту"}
+                </Button>
+                {!emailVerifiedState ? (
+                  <Button variant="outline" disabled={verificationPending || email.trim().length === 0} onClick={sendVerificationCode}>
+                    {verificationPending ? "Отправляем..." : "Отправить код"}
+                  </Button>
+                ) : null}
+              </div>
+            </div>
           </div>
-          <div className="flex flex-col gap-2 sm:w-52">
-            <Button disabled={emailPending || email.trim().length === 0} onClick={changeEmail}>
-              {emailPending ? "Сохраняем..." : hasBoundEmail ? "Изменить email" : "Привязать почту"}
-            </Button>
-            {!emailVerifiedState ? (
-              <Button variant="outline" disabled={verificationPending || email.trim().length === 0} onClick={sendVerificationCode}>
-                {verificationPending ? "Отправляем..." : "Отправить код"}
-              </Button>
-            ) : null}
+
+          <div className="rounded-[26px] border border-white/10 bg-black/20 p-4 sm:p-5">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="text-sm font-semibold text-white">Telegram</div>
+                <div className="text-sm text-zinc-400">
+                  Используется для входа через Telegram и для кодов 2FA в нашего бота.
+                </div>
+              </div>
+              <Badge variant={telegramLinked ? "success" : "neutral"}>
+                {telegramLinked ? "Привязан" : "Не привязан"}
+              </Badge>
+            </div>
+
+            <TelegramConnect
+              botUsername={process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME}
+              linked={telegramLinked}
+              telegramHandle={telegramHandle}
+            />
+          </div>
+
+          <div className="rounded-[26px] border border-white/10 bg-black/20 p-4 sm:p-5">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="text-sm font-semibold text-white">VK</div>
+                <div className="text-sm text-zinc-400">
+                  VK можно привязать один раз. Смену или перенос привязки делает только администратор.
+                </div>
+              </div>
+              <Badge variant={vkLinked ? "success" : "neutral"}>
+                {vkLinked ? "Привязан" : "Не привязан"}
+              </Badge>
+            </div>
+
+            {vkLinked ? (
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+                  VK уже привязан к вашему аккаунту.
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-400">
+                  Изменить привязку VK без участия администратора нельзя.
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-300">
+                  Нажмите кнопку ниже и войдите во VK, чтобы привязать текущий аккаунт.
+                </div>
+                <Button className="w-full" onClick={() => signIn("vk", { callbackUrl: "/dashboard/security" })}>
+                  Привязать VK
+                </Button>
+              </div>
+            )}
           </div>
         </div>
+
         {!emailVerifiedState ? (
           <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
             <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
@@ -700,6 +756,10 @@ export function SecurityPanel({
             </div>
           </div>
         ) : null}
+
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-400">
+          Если Telegram или VK уже подключены, поменять эту привязку самостоятельно нельзя. Для переноса обратитесь к администратору платформы.
+        </div>
       </SecuritySection>
 
       <SecuritySection
@@ -820,7 +880,6 @@ export function SecurityPanel({
         hasPassword={hasPassword}
         hasBoundEmail={hasBoundEmail}
         telegramLinked={telegramLinked}
-        telegramHandle={telegramHandle}
         confirmPassword={deletePassword}
         emailCode={deleteEmailCode}
         telegramCode={deleteTelegramCode}
