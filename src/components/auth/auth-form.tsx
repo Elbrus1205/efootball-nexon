@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { startVkIdAuth } from "@/lib/vkid-client";
 
 export function AuthForm({ type }: { type: "login" | "register" }) {
   const [pending, startTransition] = useTransition();
@@ -22,14 +23,23 @@ export function AuthForm({ type }: { type: "login" | "register" }) {
   const router = useRouter();
 
   const startVkAuth = (callbackPath: string) => {
-    if (typeof window === "undefined") return;
+    startTransition(async () => {
+      try {
+        if (typeof window === "undefined") return;
 
-    const host = window.location.hostname.toLowerCase();
-    const protocol = window.location.protocol;
-    const canonicalOrigin =
-      host === "efootball-nexon.ru" ? `${protocol}//www.efootball-nexon.ru` : window.location.origin;
-    const callbackUrl = `${canonicalOrigin}${callbackPath}`;
-    void signIn("vk", { callbackUrl });
+        const host = window.location.hostname.toLowerCase();
+        const protocol = window.location.protocol;
+        const canonicalOrigin =
+          host === "efootball-nexon.ru" ? `${protocol}//www.efootball-nexon.ru` : window.location.origin;
+
+        await startVkIdAuth({
+          mode: "auth",
+          callbackUrl: `${canonicalOrigin}${callbackPath}`,
+        });
+      } catch {
+        toast.error("Не удалось запустить вход через VK.");
+      }
+    });
   };
 
   const submit = () => {

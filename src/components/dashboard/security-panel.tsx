@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { signIn, signOut } from "next-auth/react";
+import { signOut } from "next-auth/react";
 import {
   Clock3,
   KeyRound,
@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TelegramConnect } from "@/components/dashboard/telegram-connect";
 import { cn } from "@/lib/utils";
+import { startVkIdAuth } from "@/lib/vkid-client";
 
 type SecuritySessionItem = {
   id: string;
@@ -307,14 +308,23 @@ export function SecurityPanel({
   const hasBoundEmail = email.trim().length > 0;
 
   const startVkAuth = (callbackPath: string) => {
-    if (typeof window === "undefined") return;
+    void (async () => {
+      try {
+        if (typeof window === "undefined") return;
 
-    const host = window.location.hostname.toLowerCase();
-    const protocol = window.location.protocol;
-    const canonicalOrigin =
-      host === "efootball-nexon.ru" ? `${protocol}//www.efootball-nexon.ru` : window.location.origin;
-    const callbackUrl = `${canonicalOrigin}${callbackPath}`;
-    void signIn("vk", { callbackUrl });
+        const host = window.location.hostname.toLowerCase();
+        const protocol = window.location.protocol;
+        const canonicalOrigin =
+          host === "efootball-nexon.ru" ? `${protocol}//www.efootball-nexon.ru` : window.location.origin;
+
+        await startVkIdAuth({
+          mode: "bind",
+          callbackUrl: `${canonicalOrigin}${callbackPath}`,
+        });
+      } catch {
+        toast.error("Не удалось запустить привязку VK.");
+      }
+    })();
   };
 
   const changePassword = () => {

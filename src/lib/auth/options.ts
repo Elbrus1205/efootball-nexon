@@ -5,16 +5,13 @@ import { compare, hash } from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { buildSecurityContext, createLoginHistory, createSecuritySession, touchSecuritySession } from "@/lib/auth/security";
-import { db } from "@/lib/db";
 import { verifyTelegramAuth } from "@/lib/auth/telegram";
+import { fetchVkUserProfile } from "@/lib/auth/vk";
+import { db } from "@/lib/db";
 import { generateFallbackNickname } from "@/lib/player-name";
 import { verifyTwoFactorChallenge } from "@/lib/two-factor";
 
 const TELEGRAM_ADMIN_ID = "6595067194";
-const hasVkCredentials = Boolean(process.env.VK_CLIENT_ID && process.env.VK_CLIENT_SECRET);
-const canonicalBaseUrl = process.env.NEXTAUTH_URL?.trim().replace(/\/+$/, "");
-const vkRedirectUri = process.env.VK_REDIRECT_URI?.trim() || (canonicalBaseUrl ? `${canonicalBaseUrl}/api/auth/callback/vk` : undefined);
-const vkApiVersion = "5.131";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db) as never,
@@ -151,6 +148,93 @@ export const authOptions: NextAuthOptions = {
       },
     }),
     CredentialsProvider({
+      id: "vkid",
+      name: "VK ID",
+      credentials: {
+        accessToken: { label: "VK Access Token", type: "text" },
+      },
+      async authorize(credentials, req) {
+        const accessToken = credentials?.accessToken?.trim();
+        if (!accessToken) return null;
+
+        const context = buildSecurityContext(req?.headers);
+        const vkProfile = await fetchVkUserProfile(accessToken);
+        const fallbackNickname = generateFallbackNickname(vkProfile.vkId);
+
+        let user = await db.user.findUnique({
+          where: { vkId: vkProfile.vkId },
+        });
+
+        if (!user && vkProfile.email) {
+          user = await db.user.findFirst({
+            where: {
+              email: {
+                equals: vkProfile.email,
+                mode: "insensitive",
+              },
+            },
+          });
+        }
+
+        if (user) {
+          if (user.isBanned) {
+            await createLoginHistory({
+              userId: user.id,
+              email: user.email ?? vkProfile.email,
+              status: LoginAttemptStatus.FAILED,
+              context,
+            });
+            return null;
+          }
+
+          user = await db.user.update({
+            where: { id: user.id },
+            data: {
+              vkId: user.vkId ?? vkProfile.vkId,
+              email: user.email ?? vkProfile.email ?? undefined,
+              name: user.name?.trim() ? user.name : vkProfile.fullName ?? undefined,
+              nickname: user.nickname?.trim() ? user.nickname : fallbackNickname,
+              image: user.image ?? vkProfile.avatar ?? undefined,
+            },
+          });
+        } else {
+          user = await db.user.create({
+            data: {
+              vkId: vkProfile.vkId,
+              email: vkProfile.email,
+              name: vkProfile.fullName ?? "VK Player",
+              nickname: fallbackNickname,
+              image: vkProfile.avatar,
+            },
+          });
+        }
+
+        const authSessionId = await createSecuritySession({
+          userId: user.id,
+          context,
+        });
+
+        await createLoginHistory({
+          userId: user.id,
+          email: user.email ?? vkProfile.email,
+          status: LoginAttemptStatus.SUCCESS,
+          context,
+        });
+
+        return {
+          id: user.id,
+          email: user.email,
+          image: user.image,
+          name: user.name ?? user.nickname ?? "VK Player",
+          role: user.role,
+          nickname: user.nickname,
+          efootballUid: user.efootballUid,
+          isBanned: user.isBanned,
+          authSessionId,
+        };
+      },
+    }),
+    CredentialsProvider({
       id: "telegram",
       name: "Telegram",
       credentials: {
@@ -230,89 +314,9 @@ export const authOptions: NextAuthOptions = {
         };
       },
     }),
-    ...(hasVkCredentials
-      ? [
-          {
-            id: "vk",
-            name: "VK",
-            type: "oauth" as const,
-            clientId: process.env.VK_CLIENT_ID!,
-            clientSecret: process.env.VK_CLIENT_SECRET!,
-            client: {
-              token_endpoint_auth_method: "client_secret_post" as const,
-            },
-            authorization: {
-              url: "https://oauth.vk.ru/authorize",
-              params: {
-                v: vkApiVersion,
-                ...(vkRedirectUri ? { redirect_uri: vkRedirectUri } : {}),
-              },
-            },
-            token: {
-              url: "https://oauth.vk.ru/access_token",
-              params: {
-                v: vkApiVersion,
-              },
-            },
-            userinfo: {
-              url: "https://api.vk.com/method/users.get",
-              params: {
-                fields: "photo_100",
-                v: vkApiVersion,
-              },
-            },
-            profile(result: { response?: Array<{ id?: number | string; first_name?: string; last_name?: string; photo_100?: string }> }) {
-              const profile = result.response?.[0] ?? {};
-              return {
-                id: String(profile.id ?? ""),
-                name: [profile.first_name, profile.last_name].filter(Boolean).join(" "),
-                email: null,
-                image: profile.photo_100 ?? null,
-              };
-            },
-            style: {
-              logo: "/vk.svg",
-              bg: "#07F",
-              text: "#fff",
-            },
-          },
-        ]
-      : []),
   ],
   callbacks: {
-    async signIn({ user, account }) {
-      if (account?.provider === "vk" && user.id && account.providerAccountId) {
-        const authSessionId = randomUUID();
-        await db.user.update({
-          where: { id: user.id },
-          data: { vkId: account.providerAccountId },
-        });
-        await createSecuritySession({
-          userId: user.id,
-          authSessionId,
-          context: {
-            device: "VK OAuth",
-            platform: "VK",
-            location: "Не определено",
-            ipAddress: null,
-            userAgent: "VK OAuth",
-          },
-        });
-        await createLoginHistory({
-          userId: user.id,
-          email: user.email,
-          status: LoginAttemptStatus.SUCCESS,
-          context: {
-            device: "VK OAuth",
-            platform: "VK",
-            location: "Не определено",
-            ipAddress: null,
-            userAgent: "VK OAuth",
-          },
-        });
-        user.authSessionId = authSessionId;
-      }
-
+    async signIn({ user }) {
       return !user.isBanned;
     },
     async jwt({ token, user }) {
@@ -330,9 +334,9 @@ export const authOptions: NextAuthOptions = {
             userId: token.sub,
             authSessionId: randomUUID(),
             context: {
-              device: "Текущее устройство",
-              platform: "Не определено",
-              location: "Не определено",
+              device: "РўРµРєСѓС‰РµРµ СѓСЃС‚СЂРѕР№СЃС‚РІРѕ",
+              platform: "РќРµ РѕРїСЂРµРґРµР»РµРЅРѕ",
+              location: "РќРµ РѕРїСЂРµРґРµР»РµРЅРѕ",
               ipAddress: null,
               userAgent: "Unknown",
             },
