@@ -29,9 +29,7 @@ export function AuthForm({ type }: { type: "login" | "register" }) {
     const canonicalOrigin =
       host === "efootball-nexon.ru" ? `${protocol}//www.efootball-nexon.ru` : window.location.origin;
     const callbackUrl = `${canonicalOrigin}${callbackPath}`;
-    const authUrl = `${canonicalOrigin}/api/auth/signin/vk?callbackUrl=${encodeURIComponent(callbackUrl)}`;
-
-    window.location.href = authUrl;
+    void signIn("vk", { callbackUrl });
   };
 
   const submit = () => {

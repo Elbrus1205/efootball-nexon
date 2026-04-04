@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signIn, signOut } from "next-auth/react";
 import {
   Clock3,
   KeyRound,
@@ -314,9 +314,7 @@ export function SecurityPanel({
     const canonicalOrigin =
       host === "efootball-nexon.ru" ? `${protocol}//www.efootball-nexon.ru` : window.location.origin;
     const callbackUrl = `${canonicalOrigin}${callbackPath}`;
-    const authUrl = `${canonicalOrigin}/api/auth/signin/vk?callbackUrl=${encodeURIComponent(callbackUrl)}`;
-
-    window.location.href = authUrl;
+    void signIn("vk", { callbackUrl });
   };
 
   const changePassword = () => {
