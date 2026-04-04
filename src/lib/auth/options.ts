@@ -4,7 +4,6 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { compare, hash } from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import VkProvider from "next-auth/providers/vk";
 import { buildSecurityContext, createLoginHistory, createSecuritySession, touchSecuritySession } from "@/lib/auth/security";
 import { db } from "@/lib/db";
 import { verifyTelegramAuth } from "@/lib/auth/telegram";
@@ -233,25 +232,50 @@ export const authOptions: NextAuthOptions = {
     }),
     ...(hasVkCredentials
       ? [
-          VkProvider({
+          {
+            id: "vk",
+            name: "VK",
+            type: "oauth" as const,
             clientId: process.env.VK_CLIENT_ID!,
             clientSecret: process.env.VK_CLIENT_SECRET!,
-            authorization: vkRedirectUri
-              ? {
-                  url: "https://oauth.vk.ru/authorize",
-                  params: {
-                    v: vkApiVersion,
-                    redirect_uri: vkRedirectUri,
-                  },
-                }
-              : {
-                  url: "https://oauth.vk.ru/authorize",
-                  params: {
-                    v: vkApiVersion,
-                  },
-                },
-            token: `https://oauth.vk.ru/access_token?v=${vkApiVersion}`,
-          }),
+            client: {
+              token_endpoint_auth_method: "client_secret_post" as const,
+            },
+            authorization: {
+              url: "https://oauth.vk.ru/authorize",
+              params: {
+                v: vkApiVersion,
+                ...(vkRedirectUri ? { redirect_uri: vkRedirectUri } : {}),
+              },
+            },
+            token: {
+              url: "https://oauth.vk.ru/access_token",
+              params: {
+                v: vkApiVersion,
+              },
+            },
+            userinfo: {
+              url: "https://api.vk.com/method/users.get",
+              params: {
+                fields: "photo_100",
+                v: vkApiVersion,
+              },
+            },
+            profile(result: { response?: Array<{ id?: number | string; first_name?: string; last_name?: string; photo_100?: string }> }) {
+              const profile = result.response?.[0] ?? {};
+              return {
+                id: String(profile.id ?? ""),
+                name: [profile.first_name, profile.last_name].filter(Boolean).join(" "),
+                email: null,
+                image: profile.photo_100 ?? null,
+              };
+            },
+            style: {
+              logo: "/vk.svg",
+              bg: "#07F",
+              text: "#fff",
+            },
+          },
         ]
       : []),
   ],
