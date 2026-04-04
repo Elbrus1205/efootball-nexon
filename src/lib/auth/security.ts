@@ -8,7 +8,7 @@ type HeaderLike =
   | undefined
   | null;
 
-type SecurityContext = {
+export type SecurityContext = {
   ipAddress: string | null;
   userAgent: string;
   device: string;

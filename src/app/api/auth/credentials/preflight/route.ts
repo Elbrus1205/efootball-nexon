@@ -89,6 +89,7 @@ export async function POST(request: Request) {
       userId: user.id,
       telegramId: user.telegramId,
       purpose: "LOGIN",
+      context,
     });
 
     return NextResponse.json({

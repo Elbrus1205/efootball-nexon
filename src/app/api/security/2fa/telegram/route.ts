@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { buildSecurityContext } from "@/lib/auth/security";
 import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { createTelegramTwoFactorChallenge, verifyTwoFactorChallenge } from "@/lib/two-factor";
@@ -7,6 +8,7 @@ export async function POST(request: Request) {
   const session = await requireAuth();
   const body = await request.json().catch(() => ({}));
   const action = String(body?.action ?? "send");
+  const context = buildSecurityContext(request.headers);
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
@@ -31,6 +33,7 @@ export async function POST(request: Request) {
       userId: user.id,
       telegramId: user.telegramId,
       purpose,
+      context,
     });
 
     return NextResponse.json({
