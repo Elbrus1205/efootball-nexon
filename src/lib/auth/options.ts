@@ -13,6 +13,8 @@ import { verifyTwoFactorChallenge } from "@/lib/two-factor";
 
 const TELEGRAM_ADMIN_ID = "6595067194";
 const hasVkCredentials = Boolean(process.env.VK_CLIENT_ID && process.env.VK_CLIENT_SECRET);
+const canonicalBaseUrl = process.env.NEXTAUTH_URL?.trim().replace(/\/+$/, "");
+const vkRedirectUri = process.env.VK_REDIRECT_URI?.trim() || (canonicalBaseUrl ? `${canonicalBaseUrl}/api/auth/callback/vk` : undefined);
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db) as never,
@@ -233,6 +235,13 @@ export const authOptions: NextAuthOptions = {
           VkProvider({
             clientId: process.env.VK_CLIENT_ID!,
             clientSecret: process.env.VK_CLIENT_SECRET!,
+            authorization: vkRedirectUri
+              ? {
+                  params: {
+                    redirect_uri: vkRedirectUri,
+                  },
+                }
+              : undefined,
           }),
         ]
       : []),
