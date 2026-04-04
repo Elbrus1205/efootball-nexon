@@ -24,6 +24,7 @@ export default async function DashboardSecurityPage() {
       telegramId: true,
       telegramUsername: true,
       telegram2faEnabled: true,
+      vkId: true,
       securitySessions: {
         where: {
           revokedAt: null,
@@ -92,6 +93,7 @@ export default async function DashboardSecurityPage() {
           telegramLinked={Boolean(user.telegramId)}
           telegramHandle={user.telegramUsername ?? null}
           telegram2faEnabled={Boolean(user.telegram2faEnabled)}
+          vkLinked={Boolean(user.vkId)}
           sessions={sessions}
         />
       </div>
