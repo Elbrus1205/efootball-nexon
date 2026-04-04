@@ -21,6 +21,19 @@ export function AuthForm({ type }: { type: "login" | "register" }) {
   const [challengeToken, setChallengeToken] = useState("");
   const router = useRouter();
 
+  const startVkAuth = (callbackPath: string) => {
+    if (typeof window === "undefined") return;
+
+    const host = window.location.hostname.toLowerCase();
+    const protocol = window.location.protocol;
+    const canonicalOrigin =
+      host === "efootball-nexon.ru" ? `${protocol}//www.efootball-nexon.ru` : window.location.origin;
+    const callbackUrl = `${canonicalOrigin}${callbackPath}`;
+    const authUrl = `${canonicalOrigin}/api/auth/signin/vk?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+
+    window.location.href = authUrl;
+  };
+
   const submit = () => {
     startTransition(async () => {
       try {
@@ -166,7 +179,7 @@ export function AuthForm({ type }: { type: "login" | "register" }) {
         {!twoFactorStep ? (
           <>
             <div className="grid gap-3">
-              <Button variant="secondary" className="w-full" onClick={() => signIn("vk", { callbackUrl: "/dashboard" })}>
+              <Button variant="secondary" className="w-full" onClick={() => startVkAuth("/dashboard")}>
                 Продолжить через VK
               </Button>
               <TelegramLogin botUsername={process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME} />

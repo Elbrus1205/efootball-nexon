@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { signIn, signOut } from "next-auth/react";
+import { signOut } from "next-auth/react";
 import {
   Clock3,
   KeyRound,
@@ -304,8 +304,20 @@ export function SecurityPanel({
 
   const [openSection, setOpenSection] = useState<string | null>("password");
 
-
   const hasBoundEmail = email.trim().length > 0;
+
+  const startVkAuth = (callbackPath: string) => {
+    if (typeof window === "undefined") return;
+
+    const host = window.location.hostname.toLowerCase();
+    const protocol = window.location.protocol;
+    const canonicalOrigin =
+      host === "efootball-nexon.ru" ? `${protocol}//www.efootball-nexon.ru` : window.location.origin;
+    const callbackUrl = `${canonicalOrigin}${callbackPath}`;
+    const authUrl = `${canonicalOrigin}/api/auth/signin/vk?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+
+    window.location.href = authUrl;
+  };
 
   const changePassword = () => {
     startPasswordTransition(async () => {
@@ -726,7 +738,7 @@ export function SecurityPanel({
                 <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-300">
                   Нажмите кнопку ниже и войдите во VK, чтобы привязать текущий аккаунт.
                 </div>
-                <Button className="w-full" onClick={() => signIn("vk", { callbackUrl: "/dashboard/security" })}>
+                <Button className="w-full" onClick={() => startVkAuth("/dashboard/security")}>
                   Привязать VK
                 </Button>
               </div>
