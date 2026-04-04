@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
@@ -146,9 +146,9 @@ function DangerSection({
             <ShieldAlert className="h-5 w-5" />
           </div>
           <div className="min-w-0 space-y-1">
-            <h2 className="text-[17px] font-semibold leading-7 text-white sm:text-lg">Удаление аккаунта</h2>
+            <h2 className="text-[17px] font-semibold leading-7 text-white sm:text-lg">РЈРґР°Р»РµРЅРёРµ Р°РєРєР°СѓРЅС‚Р°</h2>
             <p className="max-w-2xl text-sm leading-7 text-zinc-300/85 sm:leading-6">
-              Удаление аккаунта необратимо. Все турниры, история и данные профиля будут потеряны.
+              РЈРґР°Р»РµРЅРёРµ Р°РєРєР°СѓРЅС‚Р° РЅРµРѕР±СЂР°С‚РёРјРѕ. Р’СЃРµ С‚СѓСЂРЅРёСЂС‹, РёСЃС‚РѕСЂРёСЏ Рё РґР°РЅРЅС‹Рµ РїСЂРѕС„РёР»СЏ Р±СѓРґСѓС‚ РїРѕС‚РµСЂСЏРЅС‹.
             </p>
           </div>
         </div>
@@ -170,30 +170,30 @@ function DangerSection({
           <div className="space-y-4">
             <div className="rounded-2xl border border-red-500/20 bg-black/20 p-4 sm:p-5">
               <div className="mb-4 space-y-1">
-                <div className="text-sm font-semibold text-white">Подтвердите удаление аккаунта</div>
+                <div className="text-sm font-semibold text-white">РџРѕРґС‚РІРµСЂРґРёС‚Рµ СѓРґР°Р»РµРЅРёРµ Р°РєРєР°СѓРЅС‚Р°</div>
                 <div className="text-sm text-zinc-400">
-                  Для удаления нужны пароль от аккаунта, код с почты и код из Telegram. После подтверждения профиль будет удалён навсегда.
+                  Р”Р»СЏ СѓРґР°Р»РµРЅРёСЏ РЅСѓР¶РЅС‹ РїР°СЂРѕР»СЊ РѕС‚ Р°РєРєР°СѓРЅС‚Р°, РєРѕРґ СЃ РїРѕС‡С‚С‹ Рё РєРѕРґ РёР· Telegram. РџРѕСЃР»Рµ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ РїСЂРѕС„РёР»СЊ Р±СѓРґРµС‚ СѓРґР°Р»С‘РЅ РЅР°РІСЃРµРіРґР°.
                 </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="dangerPassword">Пароль от аккаунта</Label>
+                  <Label htmlFor="dangerPassword">РџР°СЂРѕР»СЊ РѕС‚ Р°РєРєР°СѓРЅС‚Р°</Label>
                   <Input
                     id="dangerPassword"
                     type="password"
-                    placeholder="Введите пароль"
+                    placeholder="Р’РІРµРґРёС‚Рµ РїР°СЂРѕР»СЊ"
                     value={confirmPassword}
                     onChange={(event) => onPasswordChange(event.target.value)}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="dangerEmailCode">Код из письма</Label>
+                  <Label htmlFor="dangerEmailCode">РљРѕРґ РёР· РїРёСЃСЊРјР°</Label>
                   <Input
                     id="dangerEmailCode"
                     inputMode="numeric"
-                    placeholder="6-значный код"
+                    placeholder="6-Р·РЅР°С‡РЅС‹Р№ РєРѕРґ"
                     value={emailCode}
                     onChange={(event) => onEmailCodeChange(event.target.value)}
                   />
@@ -202,11 +202,11 @@ function DangerSection({
 
               <div className="mt-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_220px] md:items-end">
                 <div className="space-y-2">
-                  <Label htmlFor="dangerTelegramCode">Код из Telegram</Label>
+                  <Label htmlFor="dangerTelegramCode">РљРѕРґ РёР· Telegram</Label>
                   <Input
                     id="dangerTelegramCode"
                     inputMode="numeric"
-                    placeholder="6-значный код из Telegram"
+                    placeholder="6-Р·РЅР°С‡РЅС‹Р№ РєРѕРґ РёР· Telegram"
                     value={telegramCode}
                     onChange={(event) => onTelegramCodeChange(event.target.value)}
                   />
@@ -218,12 +218,12 @@ function DangerSection({
                   disabled={codePending || !hasPassword || !hasBoundEmail || !telegramLinked}
                   onClick={onSendCodes}
                 >
-                  {codePending ? "Отправляем коды..." : "Получить коды"}
+                  {codePending ? "РћС‚РїСЂР°РІР»СЏРµРј РєРѕРґС‹..." : "РџРѕР»СѓС‡РёС‚СЊ РєРѕРґС‹"}
                 </Button>
               </div>
 
               <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/8 px-4 py-3 text-sm text-red-100/85">
-                Если это были не вы, просто закройте этот раздел. Никому не передавайте коды подтверждения.
+                Р•СЃР»Рё СЌС‚Рѕ Р±С‹Р»Рё РЅРµ РІС‹, РїСЂРѕСЃС‚Рѕ Р·Р°РєСЂРѕР№С‚Рµ СЌС‚РѕС‚ СЂР°Р·РґРµР». РќРёРєРѕРјСѓ РЅРµ РїРµСЂРµРґР°РІР°Р№С‚Рµ РєРѕРґС‹ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ.
               </div>
             </div>
 
@@ -243,12 +243,12 @@ function DangerSection({
                 onClick={onDelete}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                {pending ? "Удаляем аккаунт..." : "Удалить аккаунт"}
+                {pending ? "РЈРґР°Р»СЏРµРј Р°РєРєР°СѓРЅС‚..." : "РЈРґР°Р»РёС‚СЊ Р°РєРєР°СѓРЅС‚"}
               </Button>
             </div>
 
             <div className="rounded-2xl border border-red-500/20 bg-red-500/8 px-4 py-3 text-sm text-red-100/85">
-              После подтверждения аккаунт будет удалён без возможности восстановления.
+              РџРѕСЃР»Рµ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ Р°РєРєР°СѓРЅС‚ Р±СѓРґРµС‚ СѓРґР°Р»С‘РЅ Р±РµР· РІРѕР·РјРѕР¶РЅРѕСЃС‚Рё РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ.
             </div>
           </div>
         </div>
@@ -322,7 +322,7 @@ export function SecurityPanel({
           callbackUrl: `${canonicalOrigin}${callbackPath}`,
         });
       } catch {
-        toast.error("Не удалось запустить привязку VK.");
+        toast.error("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РїСѓСЃС‚РёС‚СЊ РїСЂРёРІСЏР·РєСѓ VK.");
       }
     })();
   };
@@ -342,7 +342,7 @@ export function SecurityPanel({
 
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        toast.error(payload?.error || "Не удалось сохранить пароль.");
+        toast.error(payload?.error || "РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ РїР°СЂРѕР»СЊ.");
         return;
       }
 
@@ -350,7 +350,7 @@ export function SecurityPanel({
       setNewPassword("");
       setRepeatPassword("");
       setPasswordCode("");
-      toast.success("Пароль обновлён.");
+      toast.success("РџР°СЂРѕР»СЊ РѕР±РЅРѕРІР»С‘РЅ.");
       router.refresh();
     });
   };
@@ -363,11 +363,11 @@ export function SecurityPanel({
 
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        toast.error(payload?.error || "Не удалось отправить код для смены пароля.");
+        toast.error(payload?.error || "РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ РєРѕРґ РґР»СЏ СЃРјРµРЅС‹ РїР°СЂРѕР»СЏ.");
         return;
       }
 
-      toast.success("Код для подтверждения пароля отправлен на почту.");
+      toast.success("РљРѕРґ РґР»СЏ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ РїР°СЂРѕР»СЏ РѕС‚РїСЂР°РІР»РµРЅ РЅР° РїРѕС‡С‚Сѓ.");
     });
   };
 
@@ -384,18 +384,18 @@ export function SecurityPanel({
         if (payload?.emailUpdated) {
           setEmail(payload.email ?? email);
           setEmailVerifiedState(false);
-          toast.error(payload?.error || "Email обновлён, но код не отправился.");
+          toast.error(payload?.error || "Email РѕР±РЅРѕРІР»С‘РЅ, РЅРѕ РєРѕРґ РЅРµ РѕС‚РїСЂР°РІРёР»СЃСЏ.");
           router.refresh();
           return;
         }
 
-        toast.error(payload?.error || "Не удалось обновить email.");
+        toast.error(payload?.error || "РќРµ СѓРґР°Р»РѕСЃСЊ РѕР±РЅРѕРІРёС‚СЊ email.");
         return;
       }
 
       setEmail(payload?.email ?? email);
       setEmailVerifiedState(false);
-      toast.success(payload?.verificationSent ? "Email обновлён. Код подтверждения уже отправлен." : "Email обновлён.");
+      toast.success(payload?.verificationSent ? "Email РѕР±РЅРѕРІР»С‘РЅ. РљРѕРґ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ СѓР¶Рµ РѕС‚РїСЂР°РІР»РµРЅ." : "Email РѕР±РЅРѕРІР»С‘РЅ.");
       router.refresh();
     });
   };
@@ -408,11 +408,11 @@ export function SecurityPanel({
 
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        toast.error(payload?.error || "Не удалось отправить код.");
+        toast.error(payload?.error || "РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ РєРѕРґ.");
         return;
       }
 
-      toast.success("Код подтверждения отправлен на почту.");
+      toast.success("РљРѕРґ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ РѕС‚РїСЂР°РІР»РµРЅ РЅР° РїРѕС‡С‚Сѓ.");
     });
   };
 
@@ -426,13 +426,13 @@ export function SecurityPanel({
 
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        toast.error(payload?.error || "Не удалось подтвердить email.");
+        toast.error(payload?.error || "РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕРґС‚РІРµСЂРґРёС‚СЊ email.");
         return;
       }
 
       setVerificationCode("");
       setEmailVerifiedState(true);
-      toast.success("Email подтверждён.");
+      toast.success("Email РїРѕРґС‚РІРµСЂР¶РґС‘РЅ.");
       router.refresh();
     });
   };
@@ -447,12 +447,12 @@ export function SecurityPanel({
 
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        toast.error(payload?.error || "Не удалось отправить код в Telegram.");
+        toast.error(payload?.error || "РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ РєРѕРґ РІ Telegram.");
         return;
       }
 
       setTwoFactorChallengeToken(payload?.challengeToken ?? "");
-      toast.success("Код отправлен в Telegram-бот.");
+      toast.success("РљРѕРґ РѕС‚РїСЂР°РІР»РµРЅ РІ Telegram-Р±РѕС‚.");
     });
   };
 
@@ -470,14 +470,14 @@ export function SecurityPanel({
 
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        toast.error(payload?.error || "Не удалось подтвердить код 2FA.");
+        toast.error(payload?.error || "РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕРґС‚РІРµСЂРґРёС‚СЊ РєРѕРґ 2FA.");
         return;
       }
 
       setTelegram2faEnabledState(Boolean(payload?.enabled));
       setTwoFactorCode("");
       setTwoFactorChallengeToken("");
-      toast.success(payload?.enabled ? "2FA через Telegram включена." : "2FA через Telegram отключена.");
+      toast.success(payload?.enabled ? "2FA С‡РµСЂРµР· Telegram РІРєР»СЋС‡РµРЅР°." : "2FA С‡РµСЂРµР· Telegram РѕС‚РєР»СЋС‡РµРЅР°.");
       router.refresh();
     });
   };
@@ -492,11 +492,11 @@ export function SecurityPanel({
 
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        toast.error(payload?.error || "Не удалось завершить сессию.");
+        toast.error(payload?.error || "РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РІРµСЂС€РёС‚СЊ СЃРµСЃСЃРёСЋ.");
         return;
       }
 
-      toast.success("Сессия завершена.");
+      toast.success("РЎРµСЃСЃРёСЏ Р·Р°РІРµСЂС€РµРЅР°.");
       router.refresh();
     });
   };
@@ -511,11 +511,11 @@ export function SecurityPanel({
 
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        toast.error(payload?.error || "Не удалось завершить все сессии.");
+        toast.error(payload?.error || "РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РІРµСЂС€РёС‚СЊ РІСЃРµ СЃРµСЃСЃРёРё.");
         return;
       }
 
-      toast.success("Все сессии завершены.");
+      toast.success("Р’СЃРµ СЃРµСЃСЃРёРё Р·Р°РІРµСЂС€РµРЅС‹.");
       router.refresh();
     });
   };
@@ -528,19 +528,19 @@ export function SecurityPanel({
 
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        toast.error(payload?.error || "Не удалось отправить коды подтверждения.");
+        toast.error(payload?.error || "РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ РєРѕРґС‹ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ.");
         return;
       }
 
       setDeleteTelegramChallengeToken(payload?.telegramChallengeToken ?? "");
-      toast.success("Коды отправлены на почту и в Telegram.");
+      toast.success("РљРѕРґС‹ РѕС‚РїСЂР°РІР»РµРЅС‹ РЅР° РїРѕС‡С‚Сѓ Рё РІ Telegram.");
     });
   };
 
   const deleteAccount = () => {
     startAccountDeleteTransition(async () => {
       if (!deleteTelegramChallengeToken) {
-        toast.error("Сначала нажмите «Получить коды».");
+        toast.error("РЎРЅР°С‡Р°Р»Р° РЅР°Р¶РјРёС‚Рµ В«РџРѕР»СѓС‡РёС‚СЊ РєРѕРґС‹В».");
         return;
       }
 
@@ -557,7 +557,7 @@ export function SecurityPanel({
 
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        toast.error(payload?.error || "Не удалось удалить аккаунт.");
+        toast.error(payload?.error || "РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ Р°РєРєР°СѓРЅС‚.");
         return;
       }
 
@@ -579,37 +579,37 @@ export function SecurityPanel({
         isOpen={openSection === "password"}
         onToggle={toggleSection}
         icon={<KeyRound className="h-5 w-5" />}
-        title={hasPassword ? "Смена пароля" : "Создать пароль"}
+        title={hasPassword ? "РЎРјРµРЅР° РїР°СЂРѕР»СЏ" : "РЎРѕР·РґР°С‚СЊ РїР°СЂРѕР»СЊ"}
         description={
           hasPassword
-            ? "Обновите пароль, чтобы защитить аккаунт и закрыть доступ со старых данных."
-            : "Задайте пароль для входа по почте, если аккаунт был создан через Telegram или VK."
+            ? "РћР±РЅРѕРІРёС‚Рµ РїР°СЂРѕР»СЊ, С‡С‚РѕР±С‹ Р·Р°С‰РёС‚РёС‚СЊ Р°РєРєР°СѓРЅС‚ Рё Р·Р°РєСЂС‹С‚СЊ РґРѕСЃС‚СѓРї СЃРѕ СЃС‚Р°СЂС‹С… РґР°РЅРЅС‹С…."
+            : "Р—Р°РґР°Р№С‚Рµ РїР°СЂРѕР»СЊ РґР»СЏ РІС…РѕРґР° РїРѕ РїРѕС‡С‚Рµ, РµСЃР»Рё Р°РєРєР°СѓРЅС‚ Р±С‹Р» СЃРѕР·РґР°РЅ С‡РµСЂРµР· Telegram РёР»Рё VK."
         }
-        status={<Badge variant="success">Защита включена</Badge>}
+        status={<Badge variant="success">Р—Р°С‰РёС‚Р° РІРєР»СЋС‡РµРЅР°</Badge>}
       >
         <div className={cn("grid gap-4", hasPassword ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
           {hasPassword ? (
             <div className="space-y-2">
-              <Label htmlFor="currentPassword">Текущий пароль</Label>
+              <Label htmlFor="currentPassword">РўРµРєСѓС‰РёР№ РїР°СЂРѕР»СЊ</Label>
               <Input
                 id="currentPassword"
                 type="password"
-                placeholder="Введите текущий пароль"
+                placeholder="Р’РІРµРґРёС‚Рµ С‚РµРєСѓС‰РёР№ РїР°СЂРѕР»СЊ"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
               />
             </div>
           ) : null}
           <div className="space-y-2">
-            <Label htmlFor="newPassword">Новый пароль</Label>
-            <Input id="newPassword" type="password" placeholder="Новый пароль" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            <Label htmlFor="newPassword">РќРѕРІС‹Р№ РїР°СЂРѕР»СЊ</Label>
+            <Input id="newPassword" type="password" placeholder="РќРѕРІС‹Р№ РїР°СЂРѕР»СЊ" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="repeatPassword">Повторите пароль</Label>
+            <Label htmlFor="repeatPassword">РџРѕРІС‚РѕСЂРёС‚Рµ РїР°СЂРѕР»СЊ</Label>
             <Input
               id="repeatPassword"
               type="password"
-              placeholder="Повторите новый пароль"
+              placeholder="РџРѕРІС‚РѕСЂРёС‚Рµ РЅРѕРІС‹Р№ РїР°СЂРѕР»СЊ"
               value={repeatPassword}
               onChange={(e) => setRepeatPassword(e.target.value)}
             />
@@ -618,36 +618,36 @@ export function SecurityPanel({
 
         <div className="grid gap-4 rounded-2xl border border-white/10 bg-black/20 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
           <div className="space-y-2">
-            <Label htmlFor="passwordCode">Код с почты</Label>
+            <Label htmlFor="passwordCode">РљРѕРґ СЃ РїРѕС‡С‚С‹</Label>
             <Input
               id="passwordCode"
               inputMode="numeric"
-              placeholder="Введите 6-значный код"
+              placeholder="Р’РІРµРґРёС‚Рµ 6-Р·РЅР°С‡РЅС‹Р№ РєРѕРґ"
               value={passwordCode}
               onChange={(e) => setPasswordCode(e.target.value)}
             />
             <div className="text-sm text-zinc-400">
-              Перед сохранением отправьте код на привязанную почту и подтвердите им создание или смену пароля.
+              РџРµСЂРµРґ СЃРѕС…СЂР°РЅРµРЅРёРµРј РѕС‚РїСЂР°РІСЊС‚Рµ РєРѕРґ РЅР° РїСЂРёРІСЏР·Р°РЅРЅСѓСЋ РїРѕС‡С‚Сѓ Рё РїРѕРґС‚РІРµСЂРґРёС‚Рµ РёРј СЃРѕР·РґР°РЅРёРµ РёР»Рё СЃРјРµРЅСѓ РїР°СЂРѕР»СЏ.
             </div>
           </div>
           <Button variant="outline" disabled={passwordCodePending || !hasBoundEmail} onClick={sendPasswordCode}>
-            {passwordCodePending ? "Отправляем..." : "Отправить код"}
+            {passwordCodePending ? "РћС‚РїСЂР°РІР»СЏРµРј..." : "РћС‚РїСЂР°РІРёС‚СЊ РєРѕРґ"}
           </Button>
         </div>
 
         <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
-            <div className="text-sm font-medium text-white">Надёжность пароля</div>
-            <div className="text-sm text-zinc-400">Используйте минимум 8 символов, цифры и заглавные буквы.</div>
+            <div className="text-sm font-medium text-white">РќР°РґС‘Р¶РЅРѕСЃС‚СЊ РїР°СЂРѕР»СЏ</div>
+            <div className="text-sm text-zinc-400">РСЃРїРѕР»СЊР·СѓР№С‚Рµ РјРёРЅРёРјСѓРј 8 СЃРёРјРІРѕР»РѕРІ, С†РёС„СЂС‹ Рё Р·Р°РіР»Р°РІРЅС‹Рµ Р±СѓРєРІС‹.</div>
           </div>
           <div className="flex gap-2">
             {hasPassword ? (
               <Button variant="outline" asChild>
-                <Link href="/forgot-password">Забыли пароль?</Link>
+                <Link href="/forgot-password">Р—Р°Р±С‹Р»Рё РїР°СЂРѕР»СЊ?</Link>
               </Button>
             ) : null}
             <Button disabled={passwordPending} onClick={changePassword}>
-              {passwordPending ? "Сохраняем..." : hasPassword ? "Сохранить новый пароль" : "Создать пароль"}
+              {passwordPending ? "РЎРѕС…СЂР°РЅСЏРµРј..." : hasPassword ? "РЎРѕС…СЂР°РЅРёС‚СЊ РЅРѕРІС‹Р№ РїР°СЂРѕР»СЊ" : "РЎРѕР·РґР°С‚СЊ РїР°СЂРѕР»СЊ"}
             </Button>
           </div>
         </div>
@@ -658,11 +658,11 @@ export function SecurityPanel({
         isOpen={openSection === "email"}
         onToggle={toggleSection}
         icon={<Mail className="h-5 w-5" />}
-        title="Привязки аккаунта"
-        description="Управляйте почтой, Telegram и VK в одном месте. Telegram и VK после привязки может изменить только администратор."
+        title="РџСЂРёРІСЏР·РєРё Р°РєРєР°СѓРЅС‚Р°"
+        description="РЈРїСЂР°РІР»СЏР№С‚Рµ РїРѕС‡С‚РѕР№, Telegram Рё VK РІ РѕРґРЅРѕРј РјРµСЃС‚Рµ. Telegram Рё VK РїРѕСЃР»Рµ РїСЂРёРІСЏР·РєРё РјРѕР¶РµС‚ РёР·РјРµРЅРёС‚СЊ С‚РѕР»СЊРєРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ."
         status={
           <Badge variant={hasBoundEmail || telegramLinked || vkLinked ? "success" : "neutral"}>
-            {[hasBoundEmail, telegramLinked, vkLinked].filter(Boolean).length}/3 подключено
+            {[hasBoundEmail, telegramLinked, vkLinked].filter(Boolean).length}/3 РїРѕРґРєР»СЋС‡РµРЅРѕ
           </Badge>
         }
       >
@@ -672,27 +672,27 @@ export function SecurityPanel({
               <div className="space-y-1">
                 <div className="text-sm font-semibold text-white">Email</div>
                 <div className="text-sm text-zinc-400">
-                  Почта нужна для входа, подтверждений, смены пароля и восстановления доступа.
+                  РџРѕС‡С‚Р° РЅСѓР¶РЅР° РґР»СЏ РІС…РѕРґР°, РїРѕРґС‚РІРµСЂР¶РґРµРЅРёР№, СЃРјРµРЅС‹ РїР°СЂРѕР»СЏ Рё РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ РґРѕСЃС‚СѓРїР°.
                 </div>
               </div>
               <Badge variant={hasBoundEmail ? (emailVerifiedState ? "success" : "accent") : "neutral"}>
-                {hasBoundEmail ? (emailVerifiedState ? "Подтверждён" : "Не подтверждён") : "Не привязан"}
+                {hasBoundEmail ? (emailVerifiedState ? "РџРѕРґС‚РІРµСЂР¶РґС‘РЅ" : "РќРµ РїРѕРґС‚РІРµСЂР¶РґС‘РЅ") : "РќРµ РїСЂРёРІСЏР·Р°РЅ"}
               </Badge>
             </div>
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">{hasBoundEmail ? "Текущий email" : "Email для привязки"}</Label>
-                <Input id="email" type="email" value={email} placeholder="Введите email" onChange={(e) => setEmail(e.target.value)} />
+                <Label htmlFor="email">{hasBoundEmail ? "РўРµРєСѓС‰РёР№ email" : "Email РґР»СЏ РїСЂРёРІСЏР·РєРё"}</Label>
+                <Input id="email" type="email" value={email} placeholder="Р’РІРµРґРёС‚Рµ email" onChange={(e) => setEmail(e.target.value)} />
               </div>
 
               <div className="flex flex-col gap-2">
                 <Button disabled={emailPending || email.trim().length === 0} onClick={changeEmail}>
-                  {emailPending ? "Сохраняем..." : hasBoundEmail ? "Изменить email" : "Привязать почту"}
+                  {emailPending ? "РЎРѕС…СЂР°РЅСЏРµРј..." : hasBoundEmail ? "РР·РјРµРЅРёС‚СЊ email" : "РџСЂРёРІСЏР·Р°С‚СЊ РїРѕС‡С‚Сѓ"}
                 </Button>
                 {!emailVerifiedState ? (
                   <Button variant="outline" disabled={verificationPending || email.trim().length === 0} onClick={sendVerificationCode}>
-                    {verificationPending ? "Отправляем..." : "Отправить код"}
+                    {verificationPending ? "РћС‚РїСЂР°РІР»СЏРµРј..." : "РћС‚РїСЂР°РІРёС‚СЊ РєРѕРґ"}
                   </Button>
                 ) : null}
               </div>
@@ -703,12 +703,10 @@ export function SecurityPanel({
             <div className="mb-4 flex items-start justify-between gap-3">
               <div className="space-y-1">
                 <div className="text-sm font-semibold text-white">Telegram</div>
-                <div className="text-sm text-zinc-400">
-                  Используется для входа через Telegram и для кодов 2FA в нашего бота.
-                </div>
+                <div className="text-sm text-zinc-400">Вход через Telegram и коды 2FA в нашем боте.</div>
               </div>
               <Badge variant={telegramLinked ? "success" : "neutral"}>
-                {telegramLinked ? "Привязан" : "Не привязан"}
+                {telegramLinked ? "Подключён" : "Не подключён"}
               </Badge>
             </div>
 
@@ -723,31 +721,24 @@ export function SecurityPanel({
             <div className="mb-4 flex items-start justify-between gap-3">
               <div className="space-y-1">
                 <div className="text-sm font-semibold text-white">VK</div>
-                <div className="text-sm text-zinc-400">
-                  VK можно привязать один раз. Смену или перенос привязки делает только администратор.
-                </div>
+                <div className="text-sm text-zinc-400">Быстрый вход и регистрация через VK ID.</div>
               </div>
               <Badge variant={vkLinked ? "success" : "neutral"}>
-                {vkLinked ? "Привязан" : "Не привязан"}
+                {vkLinked ? "Подключён" : "Не подключён"}
               </Badge>
             </div>
 
             {vkLinked ? (
-              <div className="space-y-3">
-                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-                  VK уже привязан к вашему аккаунту.
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-400">
-                  Изменить привязку VK без участия администратора нельзя.
-                </div>
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+                VK уже подключён к вашему аккаунту.
               </div>
             ) : (
               <div className="space-y-3">
                 <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-300">
-                  Нажмите кнопку ниже и войдите во VK, чтобы привязать текущий аккаунт.
+                  Войдите через VK, чтобы подключить его к текущему аккаунту.
                 </div>
                 <Button className="w-full" onClick={() => startVkAuth("/dashboard/security")}>
-                  Привязать VK
+                  Подключить VK
                 </Button>
               </div>
             )}
@@ -758,27 +749,27 @@ export function SecurityPanel({
           <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
             <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
               <div className="space-y-2">
-                <Label htmlFor="verificationCode">Код подтверждения</Label>
+                <Label htmlFor="verificationCode">РљРѕРґ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ</Label>
                 <Input
                   id="verificationCode"
                   inputMode="numeric"
-                  placeholder="Введите код из письма"
+                  placeholder="Р’РІРµРґРёС‚Рµ РєРѕРґ РёР· РїРёСЃСЊРјР°"
                   value={verificationCode}
                   onChange={(e) => setVerificationCode(e.target.value)}
                 />
               </div>
               <Button disabled={verificationPending || verificationCode.trim().length < 6} onClick={verifyEmailCode}>
-                {verificationPending ? "Проверяем..." : "Подтвердить email"}
+                {verificationPending ? "РџСЂРѕРІРµСЂСЏРµРј..." : "РџРѕРґС‚РІРµСЂРґРёС‚СЊ email"}
               </Button>
             </div>
             <div className="mt-3 text-sm text-zinc-400">
-              После привязки или смены почты на этот адрес придёт письмо с 6-значным кодом.
+              РџРѕСЃР»Рµ РїСЂРёРІСЏР·РєРё РёР»Рё СЃРјРµРЅС‹ РїРѕС‡С‚С‹ РЅР° СЌС‚РѕС‚ Р°РґСЂРµСЃ РїСЂРёРґС‘С‚ РїРёСЃСЊРјРѕ СЃ 6-Р·РЅР°С‡РЅС‹Рј РєРѕРґРѕРј.
             </div>
           </div>
         ) : null}
 
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-400">
-          Если Telegram или VK уже подключены, поменять эту привязку самостоятельно нельзя. Для переноса обратитесь к администратору платформы.
+          Telegram и VK можно подключить один раз. Для смены привязки обратитесь к администратору.
         </div>
       </SecuritySection>
 
@@ -787,44 +778,44 @@ export function SecurityPanel({
         isOpen={openSection === "2fa"}
         onToggle={toggleSection}
         icon={<ShieldCheck className="h-5 w-5" />}
-        title="Двухфакторная аутентификация (2FA)"
-        description="После ввода логина и пароля сайт попросит код, который мы отправим в вашего Telegram-бота."
-        status={<Badge variant={telegram2faEnabledState ? "success" : "neutral"}>{telegram2faEnabledState ? "Включена" : "Выключена"}</Badge>}
+        title="Р”РІСѓС…С„Р°РєС‚РѕСЂРЅР°СЏ Р°СѓС‚РµРЅС‚РёС„РёРєР°С†РёСЏ (2FA)"
+        description="РџРѕСЃР»Рµ РІРІРѕРґР° Р»РѕРіРёРЅР° Рё РїР°СЂРѕР»СЏ СЃР°Р№С‚ РїРѕРїСЂРѕСЃРёС‚ РєРѕРґ, РєРѕС‚РѕСЂС‹Р№ РјС‹ РѕС‚РїСЂР°РІРёРј РІ РІР°С€РµРіРѕ Telegram-Р±РѕС‚Р°."
+        status={<Badge variant={telegram2faEnabledState ? "success" : "neutral"}>{telegram2faEnabledState ? "Р’РєР»СЋС‡РµРЅР°" : "Р’С‹РєР»СЋС‡РµРЅР°"}</Badge>}
       >
         {!telegramLinked ? (
           <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-zinc-300">
-            Сначала привяжите Telegram к аккаунту через вход Telegram. После этого здесь можно будет включить 2FA через нашего бота.
+            РЎРЅР°С‡Р°Р»Р° РїСЂРёРІСЏР¶РёС‚Рµ Telegram Рє Р°РєРєР°СѓРЅС‚Сѓ С‡РµСЂРµР· РІС…РѕРґ Telegram. РџРѕСЃР»Рµ СЌС‚РѕРіРѕ Р·РґРµСЃСЊ РјРѕР¶РЅРѕ Р±СѓРґРµС‚ РІРєР»СЋС‡РёС‚СЊ 2FA С‡РµСЂРµР· РЅР°С€РµРіРѕ Р±РѕС‚Р°.
           </div>
         ) : (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-4 rounded-2xl border border-white/10 bg-black/20 p-4">
               <div className="space-y-1">
-                <div className="text-sm font-medium text-white">Код через Telegram-бота</div>
+                <div className="text-sm font-medium text-white">РљРѕРґ С‡РµСЂРµР· Telegram-Р±РѕС‚Р°</div>
                 <div className="text-sm text-zinc-400">
-                  Код будет отправляться в Telegram {telegramHandle ? `(@${telegramHandle})` : ""}. После входа на сайте появится второй шаг с вводом этого кода.
+                  РљРѕРґ Р±СѓРґРµС‚ РѕС‚РїСЂР°РІР»СЏС‚СЊСЃСЏ РІ Telegram {telegramHandle ? `(@${telegramHandle})` : ""}. РџРѕСЃР»Рµ РІС…РѕРґР° РЅР° СЃР°Р№С‚Рµ РїРѕСЏРІРёС‚СЃСЏ РІС‚РѕСЂРѕР№ С€Р°Рі СЃ РІРІРѕРґРѕРј СЌС‚РѕРіРѕ РєРѕРґР°.
                 </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-zinc-300">
                 {telegram2faEnabledState
-                  ? "2FA уже включена. Для отключения тоже потребуется код из Telegram."
-                  : "Включите 2FA, и после нажатия кнопки «Войти» сайт будет просить код из Telegram-бота."}
+                  ? "2FA СѓР¶Рµ РІРєР»СЋС‡РµРЅР°. Р”Р»СЏ РѕС‚РєР»СЋС‡РµРЅРёСЏ С‚РѕР¶Рµ РїРѕС‚СЂРµР±СѓРµС‚СЃСЏ РєРѕРґ РёР· Telegram."
+                  : "Р’РєР»СЋС‡РёС‚Рµ 2FA, Рё РїРѕСЃР»Рµ РЅР°Р¶Р°С‚РёСЏ РєРЅРѕРїРєРё В«Р’РѕР№С‚РёВ» СЃР°Р№С‚ Р±СѓРґРµС‚ РїСЂРѕСЃРёС‚СЊ РєРѕРґ РёР· Telegram-Р±РѕС‚Р°."}
               </div>
               <Button className="sm:w-auto" disabled={twoFactorPending} onClick={sendTwoFactorCode}>
-                {twoFactorPending ? "Отправляем..." : telegram2faEnabledState ? "Отправить код на отключение" : "Отправить код на включение"}
+                {twoFactorPending ? "РћС‚РїСЂР°РІР»СЏРµРј..." : telegram2faEnabledState ? "РћС‚РїСЂР°РІРёС‚СЊ РєРѕРґ РЅР° РѕС‚РєР»СЋС‡РµРЅРёРµ" : "РћС‚РїСЂР°РІРёС‚СЊ РєРѕРґ РЅР° РІРєР»СЋС‡РµРЅРёРµ"}
               </Button>
             </div>
 
             <div className="space-y-4 rounded-2xl border border-white/10 bg-black/20 p-4">
               <div className="space-y-1">
-                <div className="text-sm font-medium text-white">Подтверждение</div>
-                <div className="text-sm text-zinc-400">Введите код, который бот прислал вам в Telegram.</div>
+                <div className="text-sm font-medium text-white">РџРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ</div>
+                <div className="text-sm text-zinc-400">Р’РІРµРґРёС‚Рµ РєРѕРґ, РєРѕС‚РѕСЂС‹Р№ Р±РѕС‚ РїСЂРёСЃР»Р°Р» РІР°Рј РІ Telegram.</div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="twoFactorCode">Код 2FA</Label>
+                <Label htmlFor="twoFactorCode">РљРѕРґ 2FA</Label>
                 <Input
                   id="twoFactorCode"
                   inputMode="numeric"
-                  placeholder="Введите 6-значный код"
+                  placeholder="Р’РІРµРґРёС‚Рµ 6-Р·РЅР°С‡РЅС‹Р№ РєРѕРґ"
                   value={twoFactorCode}
                   onChange={(e) => setTwoFactorCode(e.target.value)}
                 />
@@ -834,7 +825,7 @@ export function SecurityPanel({
                 disabled={twoFactorPending || twoFactorCode.trim().length < 6 || !twoFactorChallengeToken}
                 onClick={verifyTwoFactorCode}
               >
-                {twoFactorPending ? "Проверяем..." : telegram2faEnabledState ? "Отключить 2FA" : "Включить 2FA"}
+                {twoFactorPending ? "РџСЂРѕРІРµСЂСЏРµРј..." : telegram2faEnabledState ? "РћС‚РєР»СЋС‡РёС‚СЊ 2FA" : "Р’РєР»СЋС‡РёС‚СЊ 2FA"}
               </Button>
             </div>
           </div>
@@ -846,9 +837,9 @@ export function SecurityPanel({
         isOpen={openSection === "sessions"}
         onToggle={toggleSection}
         icon={<Laptop2 className="h-5 w-5" />}
-        title="Активные сессии"
-        description="Посмотрите, с каких устройств сейчас открыт ваш аккаунт, и завершите лишние сессии."
-        status={<Badge variant="primary">{sessions.length} устройства</Badge>}
+        title="РђРєС‚РёРІРЅС‹Рµ СЃРµСЃСЃРёРё"
+        description="РџРѕСЃРјРѕС‚СЂРёС‚Рµ, СЃ РєР°РєРёС… СѓСЃС‚СЂРѕР№СЃС‚РІ СЃРµР№С‡Р°СЃ РѕС‚РєСЂС‹С‚ РІР°С€ Р°РєРєР°СѓРЅС‚, Рё Р·Р°РІРµСЂС€РёС‚Рµ Р»РёС€РЅРёРµ СЃРµСЃСЃРёРё."
+        status={<Badge variant="primary">{sessions.length} СѓСЃС‚СЂРѕР№СЃС‚РІР°</Badge>}
       >
         <div className="space-y-3">
           {sessions.map((item) => (
@@ -863,7 +854,7 @@ export function SecurityPanel({
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="text-sm font-medium text-white">{item.device}</div>
-                    {item.current ? <Badge variant="success">Текущее устройство</Badge> : null}
+                    {item.current ? <Badge variant="success">РўРµРєСѓС‰РµРµ СѓСЃС‚СЂРѕР№СЃС‚РІРѕ</Badge> : null}
                   </div>
                   <div className="text-sm text-zinc-400">{item.platform}</div>
                   <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
@@ -883,14 +874,14 @@ export function SecurityPanel({
                 </div>
               </div>
               <Button variant={item.current ? "outline" : "secondary"} className="sm:w-auto" disabled={sessionsPending || item.current} onClick={() => revokeSession(item.id)}>
-                {item.current ? "Это устройство" : "Завершить"}
+                {item.current ? "Р­С‚Рѕ СѓСЃС‚СЂРѕР№СЃС‚РІРѕ" : "Р—Р°РІРµСЂС€РёС‚СЊ"}
               </Button>
             </div>
           ))}
         </div>
         <div className="flex justify-end">
           <Button variant="outline" disabled={sessionsPending || sessions.length === 0} onClick={revokeAllSessions}>
-            {sessionsPending ? "Завершаем..." : "Выйти на всех устройствах"}
+            {sessionsPending ? "Р—Р°РІРµСЂС€Р°РµРј..." : "Р’С‹Р№С‚Рё РЅР° РІСЃРµС… СѓСЃС‚СЂРѕР№СЃС‚РІР°С…"}
           </Button>
         </div>
       </SecuritySection>

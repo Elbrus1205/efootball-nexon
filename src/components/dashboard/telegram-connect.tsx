@@ -101,13 +101,10 @@ export function TelegramConnect({
 
   if (linked) {
     return (
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+      <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+        <div className="flex items-center gap-2">
           <Send className="h-4 w-4 shrink-0" />
-          <span>Telegram уже привязан {telegramHandle ? `к @${telegramHandle}` : "к аккаунту"}.</span>
-        </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-400">
-          Изменить или перенести привязку Telegram можно только через администратора.
+          <span>Telegram подключён {telegramHandle ? `@${telegramHandle}` : "к аккаунту"}.</span>
         </div>
       </div>
     );
@@ -116,7 +113,8 @@ export function TelegramConnect({
   if (!botUsername) {
     return (
       <div className="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm text-zinc-400">
-        Добавьте <code className="text-white">NEXT_PUBLIC_TELEGRAM_BOT_USERNAME</code>, чтобы включить привязку Telegram.
+        Добавьте <code className="text-white">NEXT_PUBLIC_TELEGRAM_BOT_USERNAME</code>, чтобы включить привязку
+        Telegram.
       </div>
     );
   }
