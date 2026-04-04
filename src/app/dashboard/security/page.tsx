@@ -1,7 +1,5 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { SecurityPanel } from "@/components/dashboard/security-panel";
 import { buildSecurityContext } from "@/lib/auth/security";
 import { requireAuth } from "@/lib/auth/session";
@@ -79,16 +77,11 @@ export default async function DashboardSecurityPage() {
       <div className="mx-auto max-w-4xl space-y-6">
         <div className="space-y-3">
           <Badge variant="primary">Безопасность</Badge>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-semibold text-white">Безопасность аккаунта</h1>
-              <p className="max-w-2xl text-sm text-zinc-400">
-                Управление паролем, email, защитой входа и устройствами аккаунта.
-              </p>
-            </div>
-            <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link href="/dashboard">Назад к профилю</Link>
-            </Button>
+          <div className="space-y-2">
+            <h1 className="text-3xl font-semibold text-white">Безопасность аккаунта</h1>
+            <p className="max-w-2xl text-sm text-zinc-400">
+              Управление паролем, email, защитой входа и устройствами аккаунта.
+            </p>
           </div>
         </div>
 
