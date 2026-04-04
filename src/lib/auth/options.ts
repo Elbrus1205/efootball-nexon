@@ -238,12 +238,18 @@ export const authOptions: NextAuthOptions = {
             clientSecret: process.env.VK_CLIENT_SECRET!,
             authorization: vkRedirectUri
               ? {
-                  url: `https://oauth.vk.ru/authorize?scope=email&v=${vkApiVersion}`,
+                  url: "https://oauth.vk.ru/authorize",
                   params: {
+                    v: vkApiVersion,
                     redirect_uri: vkRedirectUri,
                   },
                 }
-              : `https://oauth.vk.ru/authorize?scope=email&v=${vkApiVersion}`,
+              : {
+                  url: "https://oauth.vk.ru/authorize",
+                  params: {
+                    v: vkApiVersion,
+                  },
+                },
             token: `https://oauth.vk.ru/access_token?v=${vkApiVersion}`,
           }),
         ]
