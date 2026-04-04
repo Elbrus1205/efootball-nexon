@@ -61,6 +61,34 @@ function parseDevice(userAgent: string) {
   return `${browser} на ${platform}`;
 }
 
+function parseCountryName(countryCode: string) {
+  if (!countryCode) return "";
+
+  try {
+    const displayNames = new Intl.DisplayNames(["ru"], { type: "region" });
+    return displayNames.of(countryCode.toUpperCase()) ?? countryCode.toUpperCase();
+  } catch {
+    return countryCode.toUpperCase();
+  }
+}
+
+function parseLocation(headers: HeaderLike) {
+  const city =
+    getHeader(headers, "x-vercel-ip-city") ??
+    getHeader(headers, "x-city") ??
+    getHeader(headers, "cf-ipcity") ??
+    "";
+  const countryCode =
+    getHeader(headers, "x-vercel-ip-country") ??
+    getHeader(headers, "cf-ipcountry") ??
+    getHeader(headers, "x-country") ??
+    "";
+
+  const country = parseCountryName(countryCode);
+  const parts = [country, city].map((value) => value.trim()).filter(Boolean);
+  return parts.length ? parts.join(", ") : "Не определено";
+}
+
 export function buildSecurityContext(headers: HeaderLike): SecurityContext {
   const userAgent = getHeader(headers, "user-agent") ?? "Неизвестное устройство";
   const forwarded = getHeader(headers, "x-forwarded-for");
@@ -72,7 +100,7 @@ export function buildSecurityContext(headers: HeaderLike): SecurityContext {
     userAgent,
     device: parseDevice(userAgent),
     platform: parsePlatform(userAgent),
-    location: "Не определено",
+    location: parseLocation(headers),
   };
 }
 

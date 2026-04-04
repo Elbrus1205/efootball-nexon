@@ -3,8 +3,8 @@ import { headers } from "next/headers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SecurityPanel } from "@/components/dashboard/security-panel";
-import { requireAuth } from "@/lib/auth/session";
 import { buildSecurityContext } from "@/lib/auth/security";
+import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 
@@ -48,26 +48,31 @@ export default async function DashboardSecurityPage() {
 
   if (!user) return null;
 
-  const sessions = user.securitySessions.map((item) => ({
-    id: item.authSessionId,
-    device:
-      session.user.authSessionId === item.authSessionId &&
-      (!item.device || item.device === "Текущее устройство" || item.device === "Неизвестное устройство")
-        ? currentContext.device
-        : item.device,
-    platform:
-      session.user.authSessionId === item.authSessionId &&
-      (!item.platform || item.platform === "Не определено")
-        ? currentContext.platform
-        : item.platform ?? "Не определено",
-    ipAddress:
-      session.user.authSessionId === item.authSessionId && !item.ipAddress
-        ? currentContext.ipAddress ?? "IP скрыт"
-        : item.ipAddress ?? "IP скрыт",
-    lastActive: formatDate(item.lastActiveAt),
-    current: session.user.authSessionId === item.authSessionId,
-    icon: sessionIcon(item.platform),
-  }));
+  const sessions = user.securitySessions.map((item) => {
+    const isCurrent = session.user.authSessionId === item.authSessionId;
+
+    return {
+      id: item.authSessionId,
+      device:
+        isCurrent &&
+        (!item.device || item.device === "Текущее устройство" || item.device === "Неизвестное устройство")
+          ? currentContext.device
+          : item.device,
+      platform:
+        isCurrent && (!item.platform || item.platform === "Не определено")
+          ? currentContext.platform
+          : item.platform ?? "Не определено",
+      location:
+        isCurrent && (!item.location || item.location === "Не определено")
+          ? currentContext.location
+          : item.location ?? "Не определено",
+      ipAddress:
+        isCurrent && !item.ipAddress ? currentContext.ipAddress ?? "IP скрыт" : item.ipAddress ?? "IP скрыт",
+      lastActive: formatDate(item.lastActiveAt),
+      current: isCurrent,
+      icon: sessionIcon(isCurrent ? currentContext.platform : item.platform),
+    };
+  });
 
   return (
     <div className="page-shell py-8">
