@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import {
   Clock3,
   KeyRound,
@@ -101,9 +102,37 @@ function SecuritySection({
 function DangerSection({
   isOpen,
   onToggle,
+  hasPassword,
+  hasBoundEmail,
+  telegramLinked,
+  telegramHandle,
+  confirmPassword,
+  emailCode,
+  telegramCode,
+  pending,
+  codePending,
+  onPasswordChange,
+  onEmailCodeChange,
+  onTelegramCodeChange,
+  onSendCodes,
+  onDelete,
 }: {
   isOpen: boolean;
   onToggle: () => void;
+  hasPassword: boolean;
+  hasBoundEmail: boolean;
+  telegramLinked: boolean;
+  telegramHandle: string | null;
+  confirmPassword: string;
+  emailCode: string;
+  telegramCode: string;
+  pending: boolean;
+  codePending: boolean;
+  onPasswordChange: (value: string) => void;
+  onEmailCodeChange: (value: string) => void;
+  onTelegramCodeChange: (value: string) => void;
+  onSendCodes: () => void;
+  onDelete: () => void;
 }) {
   return (
     <Card className="rounded-[28px] border border-red-500/25 bg-[linear-gradient(180deg,rgba(85,18,25,0.24),rgba(22,10,12,0.92))] p-0">
@@ -117,7 +146,7 @@ function DangerSection({
             <ShieldAlert className="h-5 w-5" />
           </div>
           <div className="min-w-0 space-y-1">
-            <h2 className="text-[17px] font-semibold leading-7 text-white sm:text-lg">Danger Zone</h2>
+            <h2 className="text-[17px] font-semibold leading-7 text-white sm:text-lg">Удаление аккаунта</h2>
             <p className="max-w-2xl text-sm leading-7 text-zinc-300/85 sm:leading-6">
               Удаление аккаунта необратимо. Все турниры, история и данные профиля будут потеряны.
             </p>
@@ -138,22 +167,105 @@ function DangerSection({
       </button>
       {isOpen ? (
         <div className="border-t border-red-500/20 px-5 pb-5 pt-4 sm:px-6 sm:pb-6 sm:pt-5">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
-            <div className="space-y-4 rounded-2xl border border-red-500/20 bg-black/20 p-4">
-              <div className="space-y-2">
-                <Label htmlFor="dangerConfirm">Введите УДАЛИТЬ для подтверждения</Label>
-                <Input id="dangerConfirm" placeholder="УДАЛИТЬ" />
+          <div className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">Пароль</div>
+                <div className="mt-2 text-sm font-medium text-white">{hasPassword ? "Подключён" : "Не задан"}</div>
               </div>
-              <div className="rounded-2xl border border-red-500/20 bg-red-500/8 px-4 py-3 text-sm text-red-100/85">
-                После подтверждения аккаунт будет удалён без возможности восстановления.
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">Почта</div>
+                <div className="mt-2 text-sm font-medium text-white">{hasBoundEmail ? "Код придёт на email" : "Не привязана"}</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">Telegram</div>
+                <div className="mt-2 text-sm font-medium text-white">
+                  {telegramLinked ? `Код придёт ${telegramHandle ? `в @${telegramHandle}` : "в Telegram"}` : "Не привязан"}
+                </div>
               </div>
             </div>
-            <div className="flex flex-col justify-end gap-2">
-              <Button variant="outline">Отмена</Button>
-              <Button className="bg-red-500 text-white hover:bg-red-400">
+
+            <div className="rounded-2xl border border-red-500/20 bg-black/20 p-4 sm:p-5">
+              <div className="mb-4 space-y-1">
+                <div className="text-sm font-semibold text-white">Подтвердите удаление аккаунта</div>
+                <div className="text-sm text-zinc-400">
+                  Для удаления нужны пароль от аккаунта, код с почты и код из Telegram. После подтверждения профиль будет удалён навсегда.
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="dangerPassword">Пароль от аккаунта</Label>
+                  <Input
+                    id="dangerPassword"
+                    type="password"
+                    placeholder="Введите пароль"
+                    value={confirmPassword}
+                    onChange={(event) => onPasswordChange(event.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="dangerEmailCode">Код из письма</Label>
+                  <Input
+                    id="dangerEmailCode"
+                    inputMode="numeric"
+                    placeholder="6-значный код"
+                    value={emailCode}
+                    onChange={(event) => onEmailCodeChange(event.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_220px] md:items-end">
+                <div className="space-y-2">
+                  <Label htmlFor="dangerTelegramCode">Код из Telegram</Label>
+                  <Input
+                    id="dangerTelegramCode"
+                    inputMode="numeric"
+                    placeholder="6-значный код из Telegram"
+                    value={telegramCode}
+                    onChange={(event) => onTelegramCodeChange(event.target.value)}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"
+                  disabled={codePending || !hasPassword || !hasBoundEmail || !telegramLinked}
+                  onClick={onSendCodes}
+                >
+                  {codePending ? "Отправляем коды..." : "Получить коды"}
+                </Button>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/8 px-4 py-3 text-sm text-red-100/85">
+                Если это были не вы, просто закройте этот раздел. Никому не передавайте коды подтверждения.
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+              <Button
+                type="button"
+                className="bg-red-500 text-white hover:bg-red-400"
+                disabled={
+                  pending ||
+                  !hasPassword ||
+                  !hasBoundEmail ||
+                  !telegramLinked ||
+                  confirmPassword.trim().length === 0 ||
+                  emailCode.trim().length < 6 ||
+                  telegramCode.trim().length < 6
+                }
+                onClick={onDelete}
+              >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Удалить аккаунт
+                {pending ? "Удаляем аккаунт..." : "Удалить аккаунт"}
               </Button>
+            </div>
+
+            <div className="rounded-2xl border border-red-500/20 bg-red-500/8 px-4 py-3 text-sm text-red-100/85">
+              После подтверждения аккаунт будет удалён без возможности восстановления.
             </div>
           </div>
         </div>
@@ -186,6 +298,8 @@ export function SecurityPanel({
   const [verificationPending, startVerificationTransition] = useTransition();
   const [passwordCodePending, startPasswordCodeTransition] = useTransition();
   const [twoFactorPending, startTwoFactorTransition] = useTransition();
+  const [accountDeletePending, startAccountDeleteTransition] = useTransition();
+  const [accountDeleteCodePending, startAccountDeleteCodeTransition] = useTransition();
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -199,6 +313,10 @@ export function SecurityPanel({
   const [telegram2faEnabledState, setTelegram2faEnabledState] = useState(telegram2faEnabled);
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [twoFactorChallengeToken, setTwoFactorChallengeToken] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteEmailCode, setDeleteEmailCode] = useState("");
+  const [deleteTelegramCode, setDeleteTelegramCode] = useState("");
+  const [deleteTelegramChallengeToken, setDeleteTelegramChallengeToken] = useState("");
 
   const [openSection, setOpenSection] = useState<string | null>("password");
 
@@ -395,6 +513,54 @@ export function SecurityPanel({
 
       toast.success("Все сессии завершены.");
       router.refresh();
+    });
+  };
+
+  const sendAccountDeletionCodes = () => {
+    startAccountDeleteCodeTransition(async () => {
+      const res = await fetch("/api/security/account/send-code", {
+        method: "POST",
+      });
+
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast.error(payload?.error || "Не удалось отправить коды подтверждения.");
+        return;
+      }
+
+      setDeleteTelegramChallengeToken(payload?.telegramChallengeToken ?? "");
+      toast.success("Коды отправлены на почту и в Telegram.");
+    });
+  };
+
+  const deleteAccount = () => {
+    startAccountDeleteTransition(async () => {
+      if (!deleteTelegramChallengeToken) {
+        toast.error("Сначала нажмите «Получить коды».");
+        return;
+      }
+
+      const res = await fetch("/api/security/account", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          password: deletePassword,
+          emailCode: deleteEmailCode,
+          telegramCode: deleteTelegramCode,
+          telegramChallengeToken: deleteTelegramChallengeToken,
+        }),
+      });
+
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast.error(payload?.error || "Не удалось удалить аккаунт.");
+        return;
+      }
+
+      await signOut({
+        redirect: true,
+        callbackUrl: "/",
+      });
     });
   };
 
@@ -648,7 +814,24 @@ export function SecurityPanel({
           </Button>
         </div>
       </SecuritySection>
-<DangerSection isOpen={openSection === "danger"} onToggle={() => toggleSection("danger")} />
+      <DangerSection
+        isOpen={openSection === "danger"}
+        onToggle={() => toggleSection("danger")}
+        hasPassword={hasPassword}
+        hasBoundEmail={hasBoundEmail}
+        telegramLinked={telegramLinked}
+        telegramHandle={telegramHandle}
+        confirmPassword={deletePassword}
+        emailCode={deleteEmailCode}
+        telegramCode={deleteTelegramCode}
+        pending={accountDeletePending}
+        codePending={accountDeleteCodePending}
+        onPasswordChange={setDeletePassword}
+        onEmailCodeChange={setDeleteEmailCode}
+        onTelegramCodeChange={setDeleteTelegramCode}
+        onSendCodes={sendAccountDeletionCodes}
+        onDelete={deleteAccount}
+      />
     </>
   );
 }

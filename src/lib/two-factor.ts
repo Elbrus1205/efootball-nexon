@@ -29,6 +29,8 @@ function getPurposeLabel(purpose: string) {
       return "включения 2FA";
     case "DISABLE_2FA":
       return "отключения 2FA";
+    case "ACCOUNT_DELETION":
+      return "удаления аккаунта";
     default:
       return "подтверждения";
   }

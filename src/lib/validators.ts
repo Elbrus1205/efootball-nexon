@@ -98,6 +98,13 @@ export const emailVerificationCodeSchema = z.object({
   code: z.string().trim().min(6, "Введите 6-значный код.").max(6, "Введите 6-значный код."),
 });
 
+export const securityAccountDeletionSchema = z.object({
+  password: z.string().min(1, "Введите пароль от аккаунта."),
+  emailCode: z.string().trim().min(6, "Введите 6-значный код из письма.").max(6, "Введите 6-значный код из письма."),
+  telegramCode: z.string().trim().min(6, "Введите 6-значный код из Telegram.").max(6, "Введите 6-значный код из Telegram."),
+  telegramChallengeToken: z.string().min(1, "Сначала отправьте код в Telegram."),
+});
+
 export const tournamentBuilderSchema = z.object({
   title: z.string().min(3, "Название турнира должно быть не короче 3 символов."),
   description: z.string().min(20, "Описание турнира должно быть не короче 20 символов."),

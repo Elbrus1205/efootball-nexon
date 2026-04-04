@@ -123,6 +123,7 @@ enum LoginAttemptStatus {
 enum VerificationCodePurpose {
   EMAIL_CONFIRMATION
   PASSWORD_CHANGE
+  ACCOUNT_DELETION
 }
 
 model User {
