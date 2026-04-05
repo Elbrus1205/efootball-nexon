@@ -291,11 +291,11 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
 
   if (!tournament) notFound();
 
-  const canRegister =
-    !!session?.user &&
-    tournament.status === TournamentStatus.REGISTRATION_OPEN &&
-    tournament.participants.length < tournament.maxParticipants &&
-    !tournament.participants.some((entry) => entry.userId === session.user.id);
+  const hasFreeSlots = tournament.participants.length < tournament.maxParticipants;
+  const isRegistrationOpen = tournament.status === TournamentStatus.REGISTRATION_OPEN;
+  const isLoggedIn = Boolean(session?.user);
+  const alreadyRegistered = !!session?.user && tournament.participants.some((entry) => entry.userId === session.user.id);
+  const canRegister = isLoggedIn && isRegistrationOpen && hasFreeSlots && !alreadyRegistered;
 
   const groupStage = tournament.stages.find((stage) => stage.type === StageType.GROUP_STAGE);
   const playoffStages = tournament.stages.filter((stage) => stage.type === StageType.PLAYOFF && stage.bracket);
@@ -324,6 +324,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
 
   const availableClubs = await getAvailableClubs();
   const takenClubSlugs = tournament.participants.map((entry) => entry.clubSlug).filter(Boolean) as string[];
+  const structureSectionTitle = tournament.format === TournamentFormat.CUSTOM ? groupStage?.name?.trim() || "Лиги" : "Группы";
   const participantClubMap = Object.fromEntries(
     tournament.participants.map((entry) => [
       entry.userId,
@@ -359,10 +360,16 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
             clubs={availableClubs}
             takenClubSlugs={takenClubSlugs}
           />
-        ) : tournament.status === TournamentStatus.REGISTRATION_OPEN ? (
-          <Button size="lg" disabled>
-            {tournament.participants.length >= tournament.maxParticipants ? "Лимит достигнут" : "Регистрация недоступна"}
-          </Button>
+        ) : isRegistrationOpen ? (
+          !isLoggedIn ? (
+            <Button size="lg" asChild>
+              <a href={`/login?callbackUrl=/tournaments/${tournament.id}`}>Войти, чтобы зарегистрироваться</a>
+            </Button>
+          ) : (
+            <Button size="lg" disabled>
+              {alreadyRegistered ? "Вы уже зарегистрированы" : hasFreeSlots ? "Регистрация недоступна" : "Лимит достигнут"}
+            </Button>
+          )
         ) : null}
       </div>
 
@@ -380,11 +387,13 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
         <TabsContent value="structure" className="space-y-6">
           {groupStage ? (
             <div className="space-y-4">
-              <div className="text-sm uppercase tracking-[0.24em] text-zinc-500">Группы</div>
+              <div className="text-sm uppercase tracking-[0.24em] text-zinc-500">{structureSectionTitle}</div>
               <div className="grid gap-4">
                 {groupStage.groups.map((group) => (
                   <Card key={group.id} className="mx-auto w-fit max-w-full overflow-hidden p-0">
-                    <div className="border-b border-white/10 px-5 py-4 font-medium text-white">Таблица лиги</div>
+                    <div className="border-b border-white/10 px-5 py-4 font-medium text-white">
+                      {tournament.format === TournamentFormat.CUSTOM && groupStage.groups.length > 1 ? group.name : "Таблица лиги"}
+                    </div>
                     {group.standings.length ? (
                       <StandingsTable
                         rows={group.standings.map((row) => ({
