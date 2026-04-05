@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { Bell, Lock, LogOut, Shield, ShieldCheck } from "lucide-react";
+import { Bell, LogOut, Shield, ShieldCheck, User2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -56,20 +56,16 @@ export function AuthNav({ unread = 0 }: { unread?: number }) {
           </div>
 
           <DropdownMenuItem asChild>
-            <Link href="/dashboard">Профиль</Link>
+            <Link href="/dashboard" className="flex items-center gap-2">
+              <User2 className="h-4 w-4" />
+              Профиль
+            </Link>
           </DropdownMenuItem>
 
           <DropdownMenuItem asChild>
             <Link href="/dashboard/security" className="flex items-center gap-2">
               <ShieldCheck className="h-4 w-4" />
               Безопасность
-            </Link>
-          </DropdownMenuItem>
-
-          <DropdownMenuItem asChild>
-            <Link href="/dashboard/privacy" className="flex items-center gap-2">
-              <Lock className="h-4 w-4" />
-              Конфиденциальность
             </Link>
           </DropdownMenuItem>
 
