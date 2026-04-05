@@ -100,9 +100,9 @@ export const emailVerificationCodeSchema = z.object({
 
 export const securityAccountDeletionSchema = z.object({
   password: z.string().min(1, "Введите пароль от аккаунта."),
-  emailCode: z.string().trim().min(6, "Введите 6-значный код из письма.").max(6, "Введите 6-значный код из письма."),
-  telegramCode: z.string().trim().min(6, "Введите 6-значный код из Telegram.").max(6, "Введите 6-значный код из Telegram."),
-  telegramChallengeToken: z.string().min(1, "Сначала отправьте код в Telegram."),
+  emailCode: z.string().trim().optional().or(z.literal("")),
+  telegramCode: z.string().trim().optional().or(z.literal("")),
+  telegramChallengeToken: z.string().optional().or(z.literal("")),
 });
 
 export const tournamentBuilderSchema = z.object({

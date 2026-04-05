@@ -29,58 +29,69 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Сначала задайте пароль для аккаунта." }, { status: 400 });
   }
 
-  if (!user.email) {
-    return NextResponse.json({ error: "Сначала привяжите почту к аккаунту." }, { status: 400 });
-  }
-
-  if (!user.telegramId) {
-    return NextResponse.json({ error: "Сначала привяжите Telegram к аккаунту." }, { status: 400 });
-  }
-
   const isValidPassword = await compare(body.password, user.passwordHash);
   if (!isValidPassword) {
     return NextResponse.json({ error: "Пароль указан неверно." }, { status: 400 });
   }
 
-  const emailCodeHash = hashVerificationCode(body.emailCode);
-  const emailRecord = await db.emailVerificationCode.findFirst({
-    where: {
-      userId: user.id,
-      email: user.email,
-      purpose: VerificationCodePurpose.ACCOUNT_DELETION,
-      codeHash: emailCodeHash,
-      usedAt: null,
-      expiresAt: {
-        gt: new Date(),
-      },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  let emailRecord: { id: string } | null = null;
+  if (user.email) {
+    if (!body.emailCode || body.emailCode.trim().length !== 6) {
+      return NextResponse.json({ error: "Введите код из письма." }, { status: 400 });
+    }
 
-  if (!emailRecord) {
-    return NextResponse.json({ error: "Код из письма неверный или уже истёк." }, { status: 400 });
+    const emailCodeHash = hashVerificationCode(body.emailCode);
+    emailRecord = await db.emailVerificationCode.findFirst({
+      where: {
+        userId: user.id,
+        email: user.email,
+        purpose: VerificationCodePurpose.ACCOUNT_DELETION,
+        codeHash: emailCodeHash,
+        usedAt: null,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    if (!emailRecord) {
+      return NextResponse.json({ error: "Код из письма неверный или уже истёк." }, { status: 400 });
+    }
   }
 
-  const telegramRecord = await verifyTwoFactorChallenge({
-    userId: user.id,
-    token: body.telegramChallengeToken,
-    code: body.telegramCode,
-    purpose: "ACCOUNT_DELETION",
-  });
+  if (user.telegramId) {
+    if (!body.telegramCode || body.telegramCode.trim().length !== 6) {
+      return NextResponse.json({ error: "Введите код из Telegram." }, { status: 400 });
+    }
 
-  if (!telegramRecord) {
-    return NextResponse.json({ error: "Код из Telegram неверный или уже истёк." }, { status: 400 });
+    if (!body.telegramChallengeToken) {
+      return NextResponse.json({ error: "Сначала отправьте код в Telegram." }, { status: 400 });
+    }
+
+    const telegramRecord = await verifyTwoFactorChallenge({
+      userId: user.id,
+      token: body.telegramChallengeToken,
+      code: body.telegramCode,
+      purpose: "ACCOUNT_DELETION",
+    });
+
+    if (!telegramRecord) {
+      return NextResponse.json({ error: "Код из Telegram неверный или уже истёк." }, { status: 400 });
+    }
   }
 
   await db.$transaction(async (tx) => {
-    await tx.emailVerificationCode.update({
-      where: { id: emailRecord.id },
-      data: {
-        usedAt: new Date(),
-      },
-    });
+    if (emailRecord) {
+      await tx.emailVerificationCode.update({
+        where: { id: emailRecord.id },
+        data: {
+          usedAt: new Date(),
+        },
+      });
+    }
 
     await tx.user.delete({
       where: { id: user.id },

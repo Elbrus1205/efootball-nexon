@@ -172,12 +172,12 @@ function DangerSection({
               <div className="mb-4 space-y-1">
                 <div className="text-sm font-semibold text-white">Подтвердите удаление аккаунта</div>
                 <div className="text-sm text-zinc-400">
-                  Для удаления нужны пароль от аккаунта, код с почты и код из Telegram. После подтверждения профиль будет удалён навсегда.
+                  Пароль от аккаунта обязателен всегда. Коды с почты и из Telegram нужны только если эти привязки есть у аккаунта. После подтверждения профиль будет удалён навсегда.
                 </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
+                <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="dangerPassword">Пароль от аккаунта</Label>
                   <Input
                     id="dangerPassword"
@@ -188,39 +188,57 @@ function DangerSection({
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="dangerEmailCode">Код из письма</Label>
-                  <Input
-                    id="dangerEmailCode"
-                    inputMode="numeric"
-                    placeholder="6-значный код"
-                    value={emailCode}
-                    onChange={(event) => onEmailCodeChange(event.target.value)}
-                  />
-                </div>
+                {hasBoundEmail ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="dangerEmailCode">Код из письма</Label>
+                    <Input
+                      id="dangerEmailCode"
+                      inputMode="numeric"
+                      placeholder="6-значный код"
+                      value={emailCode}
+                      onChange={(event) => onEmailCodeChange(event.target.value)}
+                    />
+                  </div>
+                ) : null}
+                {telegramLinked ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="dangerTelegramCode">Код из Telegram</Label>
+                    <Input
+                      id="dangerTelegramCode"
+                      inputMode="numeric"
+                      placeholder="6-значный код из Telegram"
+                      value={telegramCode}
+                      onChange={(event) => onTelegramCodeChange(event.target.value)}
+                    />
+                  </div>
+                ) : null}
               </div>
 
-              <div className="mt-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_220px] md:items-end">
-                <div className="space-y-2">
-                  <Label htmlFor="dangerTelegramCode">Код из Telegram</Label>
-                  <Input
-                    id="dangerTelegramCode"
-                    inputMode="numeric"
-                    placeholder="6-значный код из Telegram"
-                    value={telegramCode}
-                    onChange={(event) => onTelegramCodeChange(event.target.value)}
-                  />
+              {hasBoundEmail || telegramLinked ? (
+                <div className="mt-4 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"
+                    disabled={codePending || !hasPassword}
+                    onClick={onSendCodes}
+                  >
+                    {codePending ? "Отправляем коды..." : "Получить коды"}
+                  </Button>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"
-                  disabled={codePending || !hasPassword || !hasBoundEmail || !telegramLinked}
-                  onClick={onSendCodes}
-                >
-                  {codePending ? "Отправляем коды..." : "Получить коды"}
-                </Button>
-              </div>
+              ) : null}
+
+              {!hasBoundEmail && !telegramLinked ? (
+                <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-300">
+                  У аккаунта нет привязанной почты и Telegram, поэтому для удаления нужен только пароль.
+                </div>
+              ) : null}
+
+              {!hasPassword ? (
+                <div className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                  Без пароля удалить аккаунт нельзя. Сначала создайте пароль в разделе безопасности.
+                </div>
+              ) : null}
 
               <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/8 px-4 py-3 text-sm text-red-100/85">
                 Если это были не вы, просто закройте этот раздел. Никому не передавайте коды подтверждения.
@@ -234,11 +252,9 @@ function DangerSection({
                 disabled={
                   pending ||
                   !hasPassword ||
-                  !hasBoundEmail ||
-                  !telegramLinked ||
                   confirmPassword.trim().length === 0 ||
-                  emailCode.trim().length < 6 ||
-                  telegramCode.trim().length < 6
+                  (hasBoundEmail && emailCode.trim().length < 6) ||
+                  (telegramLinked && telegramCode.trim().length < 6)
                 }
                 onClick={onDelete}
               >
@@ -533,13 +549,21 @@ export function SecurityPanel({
       }
 
       setDeleteTelegramChallengeToken(payload?.telegramChallengeToken ?? "");
-      toast.success("Коды отправлены на почту и в Telegram.");
+      if (payload?.emailSent && payload?.telegramSent) {
+        toast.success("Коды отправлены на почту и в Telegram.");
+      } else if (payload?.emailSent) {
+        toast.success("Код отправлен на почту.");
+      } else if (payload?.telegramSent) {
+        toast.success("Код отправлен в Telegram.");
+      } else {
+        toast.success("Коды подтверждения не требуются.");
+      }
     });
   };
 
   const deleteAccount = () => {
     startAccountDeleteTransition(async () => {
-      if (!deleteTelegramChallengeToken) {
+      if (telegramLinked && !deleteTelegramChallengeToken) {
         toast.error("Сначала нажмите «Получить коды».");
         return;
       }

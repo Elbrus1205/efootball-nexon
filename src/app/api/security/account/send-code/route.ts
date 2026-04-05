@@ -28,45 +28,52 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Сначала задайте пароль для аккаунта." }, { status: 400 });
   }
 
-  if (!user.email) {
-    return NextResponse.json({ error: "Сначала привяжите почту к аккаунту." }, { status: 400 });
+  if (!user.email && !user.telegramId) {
+    return NextResponse.json({ error: "Нет привязанной почты или Telegram для отправки кодов." }, { status: 400 });
+  }
+
+  if (user.email) {
+    const emailCode = generateVerificationCode();
+
+    await db.emailVerificationCode.updateMany({
+      where: {
+        userId: user.id,
+        email: user.email,
+        purpose: VerificationCodePurpose.ACCOUNT_DELETION,
+        usedAt: null,
+      },
+      data: {
+        usedAt: new Date(),
+      },
+    });
+
+    await db.emailVerificationCode.create({
+      data: {
+        userId: user.id,
+        email: user.email,
+        purpose: VerificationCodePurpose.ACCOUNT_DELETION,
+        codeHash: hashVerificationCode(emailCode),
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      },
+    });
+
+    try {
+      await sendAccountDeletionCode({
+        email: user.email,
+        code: emailCode,
+      });
+    } catch {
+      return NextResponse.json({ error: "Не удалось отправить код на почту." }, { status: 500 });
+    }
   }
 
   if (!user.telegramId) {
-    return NextResponse.json({ error: "Сначала привяжите Telegram к аккаунту." }, { status: 400 });
-  }
-
-  const emailCode = generateVerificationCode();
-
-  await db.emailVerificationCode.updateMany({
-    where: {
-      userId: user.id,
-      email: user.email,
-      purpose: VerificationCodePurpose.ACCOUNT_DELETION,
-      usedAt: null,
-    },
-    data: {
-      usedAt: new Date(),
-    },
-  });
-
-  await db.emailVerificationCode.create({
-    data: {
-      userId: user.id,
-      email: user.email,
-      purpose: VerificationCodePurpose.ACCOUNT_DELETION,
-      codeHash: hashVerificationCode(emailCode),
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-    },
-  });
-
-  try {
-    await sendAccountDeletionCode({
-      email: user.email,
-      code: emailCode,
+    return NextResponse.json({
+      ok: true,
+      emailSent: Boolean(user.email),
+      telegramSent: false,
+      telegramChallengeToken: "",
     });
-  } catch {
-    return NextResponse.json({ error: "Не удалось отправить код на почту." }, { status: 500 });
   }
 
   try {
@@ -79,9 +86,14 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
+      emailSent: Boolean(user.email),
+      telegramSent: true,
       telegramChallengeToken,
     });
   } catch {
-    return NextResponse.json({ error: "Код на почту отправлен, но Telegram-код не отправился." }, { status: 500 });
+    return NextResponse.json(
+      { error: user.email ? "Код на почту отправлен, но Telegram-код не отправился." : "Не удалось отправить Telegram-код." },
+      { status: 500 },
+    );
   }
 }
