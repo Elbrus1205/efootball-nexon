@@ -83,7 +83,9 @@ export function RegisterTournamentButton({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-xl font-semibold text-white">Выберите клуб</h3>
-                <p className="mt-2 text-sm text-zinc-400">Один клуб может быть только у одного участника. Занятые клубы недоступны для выбора.</p>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Один клуб может быть только у одного участника. Уже занятые клубы недоступны для выбора.
+                </p>
               </div>
               <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
                 <X className="h-5 w-5" />
@@ -94,6 +96,7 @@ export function RegisterTournamentButton({
               {clubs.map((club) => {
                 const taken = takenClubSlugs.includes(club.slug);
                 const selected = selectedClubSlug === club.slug;
+
                 return (
                   <button
                     key={club.slug}

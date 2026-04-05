@@ -361,8 +361,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           />
         ) : tournament.status === TournamentStatus.REGISTRATION_OPEN ? (
           <Button size="lg" disabled>
-            {tournament.participants.length >= tournament.maxParticipants ? "Матч переведён в спор. Теперь результат выставляет администрация." : "Оба игрока должны ввести один и тот же счёт. Если результаты не совпадут три раза, матч уйдёт в спор."
-                    }
+            {tournament.participants.length >= tournament.maxParticipants ? "Лимит достигнут" : "Регистрация недоступна"}
           </Button>
         ) : null}
       </div>
