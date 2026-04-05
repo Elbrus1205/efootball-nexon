@@ -1580,8 +1580,8 @@ export async function closeTournamentRegistration(tournamentId: string) {
     tournament.participants.map((player) =>
       createNotification({
         userId: player.user.id,
-        title: "Р РµРіРёСЃС‚СЂР°С†РёСЏ Р·Р°РєСЂС‹С‚Р°",
-        body: `${tournament.title}: СЂРµРіРёСЃС‚СЂР°С†РёСЏ Р·Р°РєСЂС‹С‚Р°. РћР¶РёРґР°РµС‚СЃСЏ Р·Р°РїСѓСЃРє С‚СѓСЂРЅРёСЂР° Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂРѕРј.`,
+        title: "Регистрация закрыта",
+        body: `${tournament.title}: регистрация закрыта. Ожидается запуск турнира администратором.`,
         type: NotificationType.TOURNAMENT,
         link: `/tournaments/${tournament.id}`,
       }),
@@ -1607,23 +1607,23 @@ export async function startTournament(tournamentId: string) {
 
   if (!tournament) throw new Error("Tournament not found");
   if (tournament.status !== TournamentStatus.REGISTRATION_CLOSED) {
-    throw new Error("РўСѓСЂРЅРёСЂ РјРѕР¶РЅРѕ Р·Р°РїСѓСЃС‚РёС‚СЊ С‚РѕР»СЊРєРѕ РїРѕСЃР»Рµ Р·Р°РєСЂС‹С‚РёСЏ СЂРµРіРёСЃС‚СЂР°С†РёРё.");
+    throw new Error("Турнир можно запустить только после закрытия регистрации.");
   }
 
   const confirmedParticipants = tournament.participants.length;
   if (confirmedParticipants < 2) {
-    throw new Error("Р”Р»СЏ СЃС‚Р°СЂС‚Р° С‚СѓСЂРЅРёСЂР° РЅСѓР¶РЅРѕ РјРёРЅРёРјСѓРј 2 СѓС‡Р°СЃС‚РЅРёРєР°.");
+    throw new Error("Для старта турнира нужно минимум 2 участника.");
   }
 
   if (isDirectPlayoffFormat(tournament.format) && !isPowerOfTwo(confirmedParticipants)) {
-    throw new Error("Р”Р»СЏ РїР»РµР№-РѕС„С„ РЅСѓР¶РЅРѕ 2, 4, 8, 16 РёР»Рё 32 СѓС‡Р°СЃС‚РЅРёРєР°.");
+    throw new Error("Для плей-офф нужно 2, 4, 8, 16 или 32 участника.");
   }
 
   const missingClub = tournament.participants.find(
     (participant) => !participant.clubSlug || !participant.clubName || !participant.clubBadgePath,
   );
   if (missingClub) {
-    throw new Error("РџРµСЂРµРґ СЃС‚Р°СЂС‚РѕРј С‚СѓСЂРЅРёСЂР° РІСЃРµРј СѓС‡Р°СЃС‚РЅРёРєР°Рј РЅСѓР¶РЅРѕ РЅР°Р·РЅР°С‡РёС‚СЊ РєР»СѓР±С‹.");
+    throw new Error("Перед стартом турнира всем участникам нужно назначить клубы.");
   }
 
   if (!tournament.stages.length) {
