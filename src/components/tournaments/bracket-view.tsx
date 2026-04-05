@@ -1,4 +1,4 @@
-import { Match, TournamentRegistration, User } from "@prisma/client";
+import { Match, MatchStatus, TournamentRegistration, User } from "@prisma/client";
 import { GitBranch, Trophy } from "lucide-react";
 import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
 import { Card } from "@/components/ui/card";
@@ -18,6 +18,17 @@ type BracketMatch = Match & {
   participant2Entry: TournamentRegistration | null;
 };
 
+type BracketSeries = {
+  key: string;
+  round: number;
+  matchNumber: number;
+  bracket: string;
+  isThirdPlaceMatch: boolean;
+  referenceMatch: BracketMatch;
+  regularMatches: BracketMatch[];
+  penaltyMatch: BracketMatch | null;
+};
+
 function roundTitle(round: number, totalRounds: number) {
   const roundsRemaining = totalRounds - round;
 
@@ -29,28 +40,20 @@ function roundTitle(round: number, totalRounds: number) {
   return `1/${2 ** roundsRemaining} финала`;
 }
 
-function bracketLabel(match: BracketMatch) {
-  if (match.isThirdPlaceMatch) {
+function seriesLabel(series: BracketSeries) {
+  if (series.isThirdPlaceMatch) {
     return "Матч за 3-е место";
   }
 
-  if (match.isPenaltyTiebreak) {
-    return `Серия пенальти • Матч #${match.matchNumber}`;
+  if (series.bracket === "lower") {
+    return `Lower bracket • Матч #${series.matchNumber}`;
   }
 
-  if (match.bracket === "lower") {
-    return `Lower bracket • Матч #${match.matchNumber}`;
+  if (series.referenceMatch.loserNextMatchId || series.referenceMatch.loserNextMatchSlot) {
+    return `Upper bracket • Матч #${series.matchNumber}`;
   }
 
-  if (match.loserNextMatchId || match.loserNextMatchSlot) {
-    return `Upper bracket • Матч #${match.matchNumber}`;
-  }
-
-  if (match.legNumber && match.legNumber > 1) {
-    return `Матч #${match.matchNumber} • Игра ${match.legNumber}`;
-  }
-
-  return `Матч #${match.matchNumber}`;
+  return `Матч #${series.matchNumber}`;
 }
 
 function resolveClubMeta(match: BracketMatch, slot: 1 | 2, clubsByUserId: Record<string, ClubMeta>): ClubMeta {
@@ -75,6 +78,95 @@ function resolveClubMeta(match: BracketMatch, slot: 1 | 2, clubsByUserId: Record
   };
 }
 
+function isResolvedMatch(match: BracketMatch) {
+  return match.status === MatchStatus.CONFIRMED || match.status === MatchStatus.FINISHED;
+}
+
+function buildSeries(matches: BracketMatch[]) {
+  const grouped = new Map<string, BracketMatch[]>();
+
+  for (const match of matches) {
+    const key = match.seriesKey ?? match.id;
+    const bucket = grouped.get(key) ?? [];
+    bucket.push(match);
+    grouped.set(key, bucket);
+  }
+
+  return Array.from(grouped.entries())
+    .map(([key, bucket]) => {
+      const ordered = [...bucket].sort((a, b) => {
+        if (a.isPenaltyTiebreak !== b.isPenaltyTiebreak) return Number(a.isPenaltyTiebreak) - Number(b.isPenaltyTiebreak);
+        if ((a.legNumber ?? 1) !== (b.legNumber ?? 1)) return (a.legNumber ?? 1) - (b.legNumber ?? 1);
+        return a.matchNumber - b.matchNumber;
+      });
+
+      const regularMatches = ordered.filter((item) => !item.isPenaltyTiebreak);
+      const referenceMatch = regularMatches[regularMatches.length - 1] ?? ordered[ordered.length - 1];
+
+      return {
+        key,
+        round: referenceMatch.round,
+        matchNumber: referenceMatch.matchNumber,
+        bracket: referenceMatch.bracket,
+        isThirdPlaceMatch: referenceMatch.isThirdPlaceMatch,
+        referenceMatch,
+        regularMatches,
+        penaltyMatch: ordered.find((item) => item.isPenaltyTiebreak) ?? null,
+      } satisfies BracketSeries;
+    })
+    .sort((a, b) => a.matchNumber - b.matchNumber);
+}
+
+function getSeriesWinner(series: BracketSeries) {
+  if (series.penaltyMatch && isResolvedMatch(series.penaltyMatch) && series.penaltyMatch.winnerId) {
+    return series.penaltyMatch.winnerId;
+  }
+
+  const thirdMatch = series.regularMatches.find((item) => item.legNumber === 3);
+  if (thirdMatch && isResolvedMatch(thirdMatch) && thirdMatch.winnerId) {
+    return thirdMatch.winnerId;
+  }
+
+  const confirmedBaseMatches = series.regularMatches.filter((item) => (item.legNumber ?? 1) <= 2 && isResolvedMatch(item));
+  if (!confirmedBaseMatches.length) {
+    return null;
+  }
+
+  const aggregatePlayer1 = confirmedBaseMatches.reduce((sum, item) => sum + (item.player1Score ?? 0), 0);
+  const aggregatePlayer2 = confirmedBaseMatches.reduce((sum, item) => sum + (item.player2Score ?? 0), 0);
+
+  if (aggregatePlayer1 === aggregatePlayer2) {
+    return null;
+  }
+
+  return aggregatePlayer1 > aggregatePlayer2 ? series.referenceMatch.player1Id : series.referenceMatch.player2Id;
+}
+
+function getAggregateScore(series: BracketSeries) {
+  const confirmedRegularMatches = series.regularMatches.filter(isResolvedMatch);
+
+  if (!confirmedRegularMatches.length) {
+    return { player1: null, player2: null };
+  }
+
+  return {
+    player1: confirmedRegularMatches.reduce((sum, item) => sum + (item.player1Score ?? 0), 0),
+    player2: confirmedRegularMatches.reduce((sum, item) => sum + (item.player2Score ?? 0), 0),
+  };
+}
+
+function getPenaltyText(series: BracketSeries) {
+  if (!series.penaltyMatch || !isResolvedMatch(series.penaltyMatch)) {
+    return null;
+  }
+
+  if (series.penaltyMatch.player1Score === null || series.penaltyMatch.player2Score === null) {
+    return null;
+  }
+
+  return `пен. ${series.penaltyMatch.player1Score}:${series.penaltyMatch.player2Score}`;
+}
+
 export function BracketView({
   matches,
   clubsByUserId = {},
@@ -82,10 +174,11 @@ export function BracketView({
   matches: BracketMatch[];
   clubsByUserId?: Record<string, ClubMeta>;
 }) {
-  const rounds = matches.reduce<Map<number, BracketMatch[]>>((map, match) => {
-    const bucket = map.get(match.round) ?? [];
-    bucket.push(match);
-    map.set(match.round, bucket);
+  const seriesList = buildSeries(matches);
+  const rounds = seriesList.reduce<Map<number, BracketSeries[]>>((map, series) => {
+    const bucket = map.get(series.round) ?? [];
+    bucket.push(series);
+    map.set(series.round, bucket);
     return map;
   }, new Map());
 
@@ -109,27 +202,29 @@ export function BracketView({
 
       <div className="overflow-x-auto px-4 py-5">
         <div className="flex min-w-max gap-5">
-          {orderedRounds.map(([round, roundMatches]) => (
+          {orderedRounds.map(([round, roundSeries]) => (
             <div key={round} className="w-[320px] shrink-0 space-y-4">
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-medium text-white">
                 {roundTitle(round, totalRounds)}
               </div>
 
-              {roundMatches.map((match) => {
+              {roundSeries.map((series) => {
+                const match = series.referenceMatch;
                 const playerOneClub = resolveClubMeta(match, 1, clubsByUserId);
                 const playerTwoClub = resolveClubMeta(match, 2, clubsByUserId);
+                const aggregateScore = getAggregateScore(series);
+                const penaltyText = getPenaltyText(series);
+                const seriesWinnerId = getSeriesWinner(series);
 
                 return (
-                  <Card key={match.id} className="space-y-4 border-white/10 bg-black/20 p-4">
-                    <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                      {bracketLabel(match)}
-                    </div>
+                  <Card key={series.key} className="space-y-4 border-white/10 bg-black/20 p-4">
+                    <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">{seriesLabel(series)}</div>
 
                     <div className="space-y-3">
                       <div
                         className={cn(
                           "rounded-2xl border p-3",
-                          match.winnerId === match.player1Id
+                          seriesWinnerId && seriesWinnerId === match.player1Id
                             ? "border-emerald-400/20 bg-emerald-400/5"
                             : "border-white/10 bg-white/[0.03]",
                         )}
@@ -141,14 +236,14 @@ export function BracketView({
                             clubName={playerOneClub.clubName}
                             badgePath={playerOneClub.clubBadgePath}
                           />
-                          <div className="text-lg font-semibold text-white">{match.player1Score ?? "-"}</div>
+                          <div className="text-lg font-semibold text-white">{aggregateScore.player1 ?? "-"}</div>
                         </div>
                       </div>
 
                       <div
                         className={cn(
                           "rounded-2xl border p-3",
-                          match.winnerId === match.player2Id
+                          seriesWinnerId && seriesWinnerId === match.player2Id
                             ? "border-emerald-400/20 bg-emerald-400/5"
                             : "border-white/10 bg-white/[0.03]",
                         )}
@@ -160,7 +255,10 @@ export function BracketView({
                             clubName={playerTwoClub.clubName}
                             badgePath={playerTwoClub.clubBadgePath}
                           />
-                          <div className="text-lg font-semibold text-white">{match.player2Score ?? "-"}</div>
+                          <div className="flex items-center gap-2 text-right">
+                            {penaltyText ? <span className="text-xs font-medium text-amber-300">{penaltyText}</span> : null}
+                            <span className="text-lg font-semibold text-white">{aggregateScore.player2 ?? "-"}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
