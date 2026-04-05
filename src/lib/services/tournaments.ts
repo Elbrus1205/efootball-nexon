@@ -27,6 +27,115 @@ function nextPowerOfTwo(value: number) {
   return Math.pow(2, Math.ceil(Math.log2(Math.max(value, 2))));
 }
 
+function createSeriesKey(bracketId: string, bracket: string, round: number, matchNumber: number, kind: "main" | "third-place" = "main") {
+  return `${bracketId}:${bracket}:${round}:${matchNumber}:${kind}`;
+}
+
+function getMatchWinnerAndLoser(match: {
+  player1Id: string | null;
+  player2Id: string | null;
+  participant1EntryId: string | null;
+  participant2EntryId: string | null;
+  winnerId: string | null;
+}) {
+  const winnerEntryId = match.winnerId === match.player1Id ? match.participant1EntryId : match.winnerId === match.player2Id ? match.participant2EntryId : null;
+  const loserId = match.winnerId === match.player1Id ? match.player2Id : match.winnerId === match.player2Id ? match.player1Id : null;
+  const loserEntryId =
+    match.winnerId === match.player1Id ? match.participant2EntryId : match.winnerId === match.player2Id ? match.participant1EntryId : null;
+
+  return { winnerEntryId, loserId, loserEntryId };
+}
+
+async function assignParticipantToSeries(params: {
+  matchId: string;
+  slot: 1 | 2;
+  userId: string | null;
+  entryId: string | null;
+}) {
+  const seedMatch = await db.match.findUnique({
+    where: { id: params.matchId },
+    select: {
+      id: true,
+      seriesKey: true,
+      isPenaltyTiebreak: true,
+      player1Id: true,
+      player2Id: true,
+    },
+  });
+
+  if (!seedMatch) {
+    throw new Error("Match not found");
+  }
+
+  const targetMatches = seedMatch.seriesKey
+    ? await db.match.findMany({
+        where: {
+          seriesKey: seedMatch.seriesKey,
+          isPenaltyTiebreak: false,
+        },
+        select: { id: true, player1Id: true, player2Id: true, status: true },
+      })
+    : [{ id: seedMatch.id, player1Id: seedMatch.player1Id, player2Id: seedMatch.player2Id, status: MatchStatus.PENDING }];
+
+  for (const targetMatch of targetMatches) {
+    const nextPlayer1Id = params.slot === 1 ? params.userId : targetMatch.player1Id;
+    const nextPlayer2Id = params.slot === 2 ? params.userId : targetMatch.player2Id;
+
+    await db.match.update({
+      where: { id: targetMatch.id },
+      data: {
+        ...(params.slot === 1
+          ? { player1Id: params.userId, participant1EntryId: params.entryId }
+          : { player2Id: params.userId, participant2EntryId: params.entryId }),
+        status:
+          nextPlayer1Id && nextPlayer2Id && targetMatch.status === MatchStatus.PENDING
+            ? MatchStatus.READY
+            : nextPlayer1Id && nextPlayer2Id && targetMatch.status === MatchStatus.SCHEDULED
+              ? MatchStatus.SCHEDULED
+              : targetMatch.status,
+      },
+    });
+  }
+}
+
+async function advanceResolvedWinnerForMatch(matchId: string, winnerId: string, loserId?: string | null, winnerEntryId?: string | null, loserEntryId?: string | null) {
+  const match = await db.match.findUnique({
+    where: { id: matchId },
+    select: {
+      id: true,
+      tournamentId: true,
+      nextMatchId: true,
+      nextMatchSlot: true,
+      loserNextMatchId: true,
+      loserNextMatchSlot: true,
+    },
+  });
+
+  if (!match) {
+    throw new Error("Match not found");
+  }
+
+  if (match.nextMatchId && match.nextMatchSlot) {
+    await assignParticipantToSeries({
+      matchId: match.nextMatchId,
+      slot: match.nextMatchSlot as 1 | 2,
+      userId: winnerId,
+      entryId: winnerEntryId ?? null,
+    });
+  }
+
+  if (match.loserNextMatchId && match.loserNextMatchSlot && loserId) {
+    await assignParticipantToSeries({
+      matchId: match.loserNextMatchId,
+      slot: match.loserNextMatchSlot as 1 | 2,
+      userId: loserId,
+      entryId: loserEntryId ?? null,
+    });
+  }
+
+  await syncTournamentLifecycleStatus(match.tournamentId);
+}
+
 function isPowerOfTwo(value: number) {
   return value >= 2 && (value & (value - 1)) === 0;
 }
@@ -104,39 +213,50 @@ async function createPlayoffMatches({
   bracketId,
   entries,
   type,
+  legsCount,
+  thirdPlaceMatch,
 }: {
   tournamentId: string;
   stageId: string;
   bracketId: string;
   entries: { id: string; userId: string; seed: number | null }[];
   type: PlayoffType;
+  legsCount: number;
+  thirdPlaceMatch: boolean;
 }) {
   const orderedEntries = [...entries].sort((a, b) => (a.seed ?? Number.MAX_SAFE_INTEGER) - (b.seed ?? Number.MAX_SAFE_INTEGER));
   const bracketSize = nextPowerOfTwo(orderedEntries.length);
   const rounds = Math.log2(bracketSize);
-  const createdMatches: { id: string; round: number; matchNumber: number }[] = [];
+  const effectiveLegsCount = type === PlayoffType.DOUBLE ? 1 : Math.max(1, Math.min(legsCount, 2));
+  const createdMatches: { id: string; round: number; matchNumber: number; legNumber: number; seriesKey: string }[] = [];
 
   for (let round = 1; round <= rounds; round += 1) {
     const count = bracketSize / Math.pow(2, round);
     for (let matchNumber = 1; matchNumber <= count; matchNumber += 1) {
-      const created = await db.match.create({
-        data: {
-          tournamentId,
-          stageId,
-          bracketId,
-          round,
-          matchNumber,
-          bracket: "upper",
-          status: round === 1 ? MatchStatus.READY : MatchStatus.PENDING,
-        },
-      });
-      createdMatches.push({ id: created.id, round, matchNumber });
+      const seriesKey = createSeriesKey(bracketId, "upper", round, matchNumber);
+
+      for (let legNumber = 1; legNumber <= effectiveLegsCount; legNumber += 1) {
+        const created = await db.match.create({
+          data: {
+            tournamentId,
+            stageId,
+            bracketId,
+            round,
+            matchNumber,
+            bracket: "upper",
+            seriesKey,
+            legNumber,
+            status: round === 1 ? MatchStatus.READY : MatchStatus.PENDING,
+          },
+        });
+        createdMatches.push({ id: created.id, round, matchNumber, legNumber, seriesKey });
+      }
     }
   }
 
   for (const match of createdMatches.filter((item) => item.round < rounds)) {
     const next = createdMatches.find(
-      (item) => item.round === match.round + 1 && item.matchNumber === Math.ceil(match.matchNumber / 2),
+      (item) => item.round === match.round + 1 && item.matchNumber === Math.ceil(match.matchNumber / 2) && item.legNumber === 1,
     );
 
     if (next) {
@@ -152,19 +272,25 @@ async function createPlayoffMatches({
 
   const firstRound = createdMatches.filter((item) => item.round === 1);
   await Promise.all(
-    firstRound.map(async (match, index) => {
+    firstRound.filter((item) => item.legNumber === 1).map(async (match, index) => {
       const player1 = orderedEntries[index * 2];
       const player2 = orderedEntries[index * 2 + 1];
+      const seriesMatches = createdMatches.filter((item) => item.seriesKey === match.seriesKey);
 
-      await db.match.update({
-        where: { id: match.id },
-        data: {
-          participant1EntryId: player1?.id,
-          participant2EntryId: player2?.id,
-          player1Id: player1?.userId,
-          player2Id: player2?.userId,
-        },
-      });
+      await Promise.all(
+        seriesMatches.map((seriesMatch) =>
+          db.match.update({
+            where: { id: seriesMatch.id },
+            data: {
+              participant1EntryId: player1?.id,
+              participant2EntryId: player2?.id,
+              player1Id: player1?.userId,
+              player2Id: player2?.userId,
+              status: player1 && player2 ? MatchStatus.READY : MatchStatus.PENDING,
+            },
+          }),
+        ),
+      );
 
       if (player1) {
         await db.bracketSlot.upsert({
@@ -214,7 +340,9 @@ async function createPlayoffMatches({
 
   if (type === PlayoffType.DOUBLE) {
     await Promise.all(
-      firstRound.map((match) =>
+      firstRound
+        .filter((match) => match.legNumber === 1)
+        .map((match) =>
         db.match.create({
           data: {
             tournamentId,
@@ -224,6 +352,36 @@ async function createPlayoffMatches({
             matchNumber: match.matchNumber,
             bracket: "lower",
             status: MatchStatus.PENDING,
+          },
+        }),
+        ),
+    );
+  }
+
+  if (thirdPlaceMatch && type !== PlayoffType.DOUBLE && rounds >= 2) {
+    const semifinalLegs = createdMatches.filter((match) => match.round === rounds - 1 && match.legNumber === 1);
+    const thirdPlace = await db.match.create({
+      data: {
+        tournamentId,
+        stageId,
+        bracketId,
+        round: rounds,
+        matchNumber: 2,
+        bracket: "upper",
+        seriesKey: createSeriesKey(bracketId, "upper", rounds, 2, "third-place"),
+        legNumber: 1,
+        isThirdPlaceMatch: true,
+        status: MatchStatus.PENDING,
+      },
+    });
+
+    await Promise.all(
+      semifinalLegs.slice(0, 2).map((semifinal, index) =>
+        db.match.updateMany({
+          where: { seriesKey: semifinal.seriesKey },
+          data: {
+            loserNextMatchId: thirdPlace.id,
+            loserNextMatchSlot: index === 0 ? 1 : 2,
           },
         }),
       ),
@@ -332,12 +490,22 @@ export async function generateTournamentStages(tournamentId: string, options?: {
 
     await db.playoffBracket.create({
       data: {
-        tournamentId,
-        stageId: playoffStage.id,
         type:
           tournament.playoffType ??
           (tournament.format === TournamentFormat.DOUBLE_ELIMINATION ? PlayoffType.DOUBLE : PlayoffType.SINGLE),
+        tournamentId,
+        stageId: playoffStage.id,
         size: nextPowerOfTwo(Math.max(tournament.participants.length, 2)),
+        legsCount:
+          (tournament.playoffType ??
+            (tournament.format === TournamentFormat.DOUBLE_ELIMINATION ? PlayoffType.DOUBLE : PlayoffType.SINGLE)) === PlayoffType.DOUBLE
+            ? 1
+            : tournament.playoffLegs,
+        thirdPlaceMatch:
+          (tournament.playoffType ??
+            (tournament.format === TournamentFormat.DOUBLE_ELIMINATION ? PlayoffType.DOUBLE : PlayoffType.SINGLE)) === PlayoffType.DOUBLE
+            ? false
+            : tournament.playoffThirdPlace,
       },
     });
 
@@ -473,6 +641,8 @@ export async function generateTournamentMatches(tournamentId: string) {
         bracketId: stage.bracket.id,
         entries: tournament.participants.map((entry) => ({ id: entry.id, userId: entry.userId, seed: entry.seed })),
         type: stage.bracket.type,
+        legsCount: stage.bracket.legsCount,
+        thirdPlaceMatch: stage.bracket.thirdPlaceMatch,
       });
     }
   }
@@ -1196,9 +1366,267 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
   });
 }
 
+async function createPenaltyMatch(match: {
+  id: string;
+  tournamentId: string;
+  stageId: string | null;
+  bracketId: string | null;
+  round: number;
+  matchNumber: number;
+  bracket: string;
+  seriesKey: string | null;
+  player1Id: string | null;
+  player2Id: string | null;
+  participant1EntryId: string | null;
+  participant2EntryId: string | null;
+  nextMatchId: string | null;
+  nextMatchSlot: number | null;
+  loserNextMatchId: string | null;
+  loserNextMatchSlot: number | null;
+  isThirdPlaceMatch: boolean;
+}) {
+  if (!match.seriesKey) {
+    return null;
+  }
+
+  const existingPenalty = await db.match.findFirst({
+    where: {
+      seriesKey: match.seriesKey,
+      isPenaltyTiebreak: true,
+    },
+  });
+
+  if (existingPenalty) {
+    return existingPenalty;
+  }
+
+  return db.match.create({
+    data: {
+      tournamentId: match.tournamentId,
+      stageId: match.stageId,
+      bracketId: match.bracketId,
+      round: match.round,
+      matchNumber: match.matchNumber,
+      bracket: match.bracket,
+      seriesKey: match.seriesKey,
+      isPenaltyTiebreak: true,
+      isThirdPlaceMatch: match.isThirdPlaceMatch,
+      player1Id: match.player1Id,
+      player2Id: match.player2Id,
+      participant1EntryId: match.participant1EntryId,
+      participant2EntryId: match.participant2EntryId,
+      nextMatchId: match.nextMatchId,
+      nextMatchSlot: match.nextMatchSlot,
+      loserNextMatchId: match.loserNextMatchId,
+      loserNextMatchSlot: match.loserNextMatchSlot,
+      status: match.player1Id && match.player2Id ? MatchStatus.READY : MatchStatus.PENDING,
+    },
+  });
+}
+
+async function createThirdSeriesMatch(match: {
+  id: string;
+  tournamentId: string;
+  stageId: string | null;
+  bracketId: string | null;
+  round: number;
+  matchNumber: number;
+  bracket: string;
+  seriesKey: string | null;
+  player1Id: string | null;
+  player2Id: string | null;
+  participant1EntryId: string | null;
+  participant2EntryId: string | null;
+  nextMatchId: string | null;
+  nextMatchSlot: number | null;
+  loserNextMatchId: string | null;
+  loserNextMatchSlot: number | null;
+  isThirdPlaceMatch: boolean;
+}) {
+  if (!match.seriesKey) {
+    return null;
+  }
+
+  const existingThirdMatch = await db.match.findFirst({
+    where: {
+      seriesKey: match.seriesKey,
+      legNumber: 3,
+      isPenaltyTiebreak: false,
+    },
+  });
+
+  if (existingThirdMatch) {
+    return existingThirdMatch;
+  }
+
+  return db.match.create({
+    data: {
+      tournamentId: match.tournamentId,
+      stageId: match.stageId,
+      bracketId: match.bracketId,
+      round: match.round,
+      matchNumber: match.matchNumber,
+      bracket: match.bracket,
+      seriesKey: match.seriesKey,
+      legNumber: 3,
+      isThirdPlaceMatch: match.isThirdPlaceMatch,
+      player1Id: match.player1Id,
+      player2Id: match.player2Id,
+      participant1EntryId: match.participant1EntryId,
+      participant2EntryId: match.participant2EntryId,
+      nextMatchId: match.nextMatchId,
+      nextMatchSlot: match.nextMatchSlot,
+      loserNextMatchId: match.loserNextMatchId,
+      loserNextMatchSlot: match.loserNextMatchSlot,
+      status: match.player1Id && match.player2Id ? MatchStatus.READY : MatchStatus.PENDING,
+    },
+  });
+}
+
+export async function resolveConfirmedMatch(matchId: string) {
+  const match = await db.match.findUnique({
+    where: { id: matchId },
+    include: {
+      playoffBracket: true,
+    },
+  });
+  if (!match) throw new Error("Match not found");
+
+  if (!match.bracketId || !match.seriesKey) {
+    if (match.winnerId) {
+      const { winnerEntryId, loserId, loserEntryId } = getMatchWinnerAndLoser(match);
+      await advanceResolvedWinnerForMatch(match.id, match.winnerId, loserId, winnerEntryId, loserEntryId);
+    } else {
+      await syncTournamentLifecycleStatus(match.tournamentId);
+    }
+
+    return;
+  }
+
+  if (match.isPenaltyTiebreak) {
+    if (match.winnerId) {
+      const { winnerEntryId, loserId, loserEntryId } = getMatchWinnerAndLoser(match);
+      await advanceResolvedWinnerForMatch(match.id, match.winnerId, loserId, winnerEntryId, loserEntryId);
+    } else {
+      await syncTournamentLifecycleStatus(match.tournamentId);
+    }
+
+    return;
+  }
+
+  const seriesMatches = await db.match.findMany({
+    where: {
+      seriesKey: match.seriesKey,
+    },
+    orderBy: [{ isPenaltyTiebreak: "asc" }, { legNumber: "asc" }, { createdAt: "asc" }],
+  });
+
+  const penaltyMatch = seriesMatches.find((item) => item.isPenaltyTiebreak);
+  const regularMatches = seriesMatches.filter((item) => !item.isPenaltyTiebreak);
+  const legsCount = Math.max(1, Math.min(match.playoffBracket?.legsCount ?? 1, 2));
+
+  if (legsCount === 1) {
+    const firstMatch = regularMatches.find((item) => item.legNumber === 1) ?? regularMatches[0];
+    if (!firstMatch || !(firstMatch.status === MatchStatus.CONFIRMED || firstMatch.status === MatchStatus.FINISHED)) {
+      return;
+    }
+
+    if (firstMatch.winnerId) {
+      const { winnerEntryId, loserId, loserEntryId } = getMatchWinnerAndLoser(firstMatch);
+      await advanceResolvedWinnerForMatch(firstMatch.id, firstMatch.winnerId, loserId, winnerEntryId, loserEntryId);
+      return;
+    }
+
+    if (!penaltyMatch) {
+      await createPenaltyMatch(firstMatch);
+    }
+
+    await syncTournamentLifecycleStatus(firstMatch.tournamentId);
+    return;
+  }
+
+  const baseLegs = regularMatches.filter((item) => (item.legNumber ?? 1) <= 2);
+  const confirmedBaseLegs = baseLegs.filter((item) => item.status === MatchStatus.CONFIRMED || item.status === MatchStatus.FINISHED);
+
+  if (confirmedBaseLegs.length < 2) {
+    return;
+  }
+
+  const aggregatePlayer1 = confirmedBaseLegs.reduce((sum, item) => sum + (item.player1Score ?? 0), 0);
+  const aggregatePlayer2 = confirmedBaseLegs.reduce((sum, item) => sum + (item.player2Score ?? 0), 0);
+  const player1Wins = confirmedBaseLegs.filter((item) => item.winnerId && item.winnerId === item.player1Id).length;
+  const player2Wins = confirmedBaseLegs.filter((item) => item.winnerId && item.winnerId === item.player2Id).length;
+  const splitWins = player1Wins > 0 && player2Wins > 0;
+  const allDraws = player1Wins === 0 && player2Wins === 0;
+
+  if (allDraws) {
+    if (!penaltyMatch) {
+      await createPenaltyMatch(match);
+    }
+    await syncTournamentLifecycleStatus(match.tournamentId);
+    return;
+  }
+
+  if (splitWins) {
+    if (aggregatePlayer1 === aggregatePlayer2) {
+      if (!penaltyMatch) {
+        await createPenaltyMatch(match);
+      }
+      await syncTournamentLifecycleStatus(match.tournamentId);
+      return;
+    }
+
+    const thirdMatch = regularMatches.find((item) => item.legNumber === 3);
+    if (!thirdMatch) {
+      await createThirdSeriesMatch(match);
+      await syncTournamentLifecycleStatus(match.tournamentId);
+      return;
+    }
+
+    if (!(thirdMatch.status === MatchStatus.CONFIRMED || thirdMatch.status === MatchStatus.FINISHED)) {
+      return;
+    }
+
+    if (thirdMatch.winnerId) {
+      const { winnerEntryId, loserId, loserEntryId } = getMatchWinnerAndLoser(thirdMatch);
+      await advanceResolvedWinnerForMatch(thirdMatch.id, thirdMatch.winnerId, loserId, winnerEntryId, loserEntryId);
+      return;
+    }
+
+    if (!penaltyMatch) {
+      await createPenaltyMatch(thirdMatch);
+    }
+
+    await syncTournamentLifecycleStatus(match.tournamentId);
+    return;
+  }
+
+  if (aggregatePlayer1 === aggregatePlayer2) {
+    if (!penaltyMatch) {
+      await createPenaltyMatch(match);
+    }
+    await syncTournamentLifecycleStatus(match.tournamentId);
+    return;
+  }
+
+  const aggregateWinnerId = aggregatePlayer1 > aggregatePlayer2 ? match.player1Id : match.player2Id;
+  const aggregateWinnerEntryId = aggregatePlayer1 > aggregatePlayer2 ? match.participant1EntryId : match.participant2EntryId;
+  const aggregateLoserId = aggregateWinnerId === match.player1Id ? match.player2Id : match.player1Id;
+  const aggregateLoserEntryId = aggregateWinnerId === match.player1Id ? match.participant2EntryId : match.participant1EntryId;
+
+  if (aggregateWinnerId) {
+    await advanceResolvedWinnerForMatch(match.id, aggregateWinnerId, aggregateLoserId, aggregateWinnerEntryId, aggregateLoserEntryId);
+  } else {
+    await syncTournamentLifecycleStatus(match.tournamentId);
+  }
+}
+
 export async function advanceMatch(matchId: string, winnerId: string, loserId?: string | null) {
   const match = await db.match.findUnique({ where: { id: matchId } });
   if (!match) throw new Error("Match not found");
+
+  const winnerEntryId = winnerId === match.player1Id ? match.participant1EntryId : winnerId === match.player2Id ? match.participant2EntryId : null;
+  const loserEntryId = loserId === match.player1Id ? match.participant1EntryId : loserId === match.player2Id ? match.participant2EntryId : null;
 
   await db.match.update({
     where: { id: matchId },
@@ -1208,23 +1636,6 @@ export async function advanceMatch(matchId: string, winnerId: string, loserId?: 
     },
   });
 
-  if (match.nextMatchId && match.nextMatchSlot) {
-    await db.match.update({
-      where: { id: match.nextMatchId },
-      data:
-        match.nextMatchSlot === 1
-          ? { player1Id: winnerId, status: MatchStatus.READY }
-          : { player2Id: winnerId, status: MatchStatus.READY },
-    });
-  }
-
-  if (match.loserNextMatchId && match.loserNextMatchSlot && loserId) {
-    await db.match.update({
-      where: { id: match.loserNextMatchId },
-      data: match.loserNextMatchSlot === 1 ? { player1Id: loserId } : { player2Id: loserId },
-    });
-  }
-
-  await syncTournamentLifecycleStatus(match.tournamentId);
+  await advanceResolvedWinnerForMatch(matchId, winnerId, loserId, winnerEntryId, loserEntryId);
 }
 

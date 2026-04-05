@@ -250,6 +250,8 @@ model Tournament {
   prizePool              String?
   format                 TournamentFormat
   playoffType            PlayoffType?
+  playoffLegs            Int                      @default(1)
+  playoffThirdPlace      Boolean                  @default(false)
   seedingMethod          SeedingMethod            @default(MANUAL)
   status                 TournamentStatus         @default(DRAFT)
   startsAt               DateTime
@@ -394,6 +396,7 @@ model PlayoffBracket {
   stageId         String          @unique
   type            PlayoffType
   size            Int
+  legsCount       Int             @default(1)
   thirdPlaceMatch Boolean         @default(false)
   settingsJson    Json?
   createdAt       DateTime        @default(now())
@@ -432,6 +435,10 @@ model Match {
   round               Int
   matchNumber         Int
   bracket             String                  @default("upper")
+  seriesKey           String?
+  legNumber           Int?
+  isPenaltyTiebreak   Boolean                 @default(false)
+  isThirdPlaceMatch   Boolean                 @default(false)
   scheduledAt         DateTime?
   startsAt            DateTime?
   finishedAt          DateTime?
@@ -468,6 +475,7 @@ model Match {
   @@index([tournamentId, round, matchNumber])
   @@index([stageId, status])
   @@index([groupId, status])
+  @@index([bracketId, seriesKey])
 }
 
 model MatchSchedule {

@@ -38,6 +38,8 @@ export default async function AdminTournamentEditPage({ params }: { params: { id
           status: tournament.status,
           coverImage: tournament.coverImage ?? "",
           playoffType: tournament.playoffType ?? "",
+          playoffLegs: tournament.playoffLegs,
+          playoffThirdPlace: tournament.playoffThirdPlace,
           seedingMethod: tournament.seedingMethod,
           roundsInLeague: tournament.roundsInLeague,
           groupsCount: tournament.groupsCount,

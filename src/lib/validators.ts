@@ -128,6 +128,8 @@ export const tournamentBuilderSchema = z.object({
     .optional()
     .or(z.literal("")),
   playoffType: z.nativeEnum(PlayoffType).optional().nullable(),
+  playoffLegs: optionalIntField(1, 2, "В плей-офф можно выбрать 1 или 2 матча в серии."),
+  playoffThirdPlace: z.coerce.boolean().default(false),
   seedingMethod: z.nativeEnum(SeedingMethod).default(SeedingMethod.MANUAL),
   roundsInLeague: optionalIntField(1, 4, "В лиге должен быть минимум 1 круг."),
   groupsCount: optionalIntField(1, 16, "Количество групп должно быть от 1 до 16."),

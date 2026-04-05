@@ -22,6 +22,8 @@ type BuilderValues = {
   status?: TournamentStatus;
   coverImage?: string;
   playoffType?: PlayoffType | "";
+  playoffLegs?: number;
+  playoffThirdPlace?: boolean;
   seedingMethod?: SeedingMethod;
   roundsInLeague?: number;
   groupsCount?: number | null;
@@ -247,6 +249,21 @@ export function TournamentBuilderForm({
             </div>
           ) : null}
 
+          {showPlayoff ? (
+            <div className="space-y-2">
+              <Label htmlFor="playoffLegs">Матчей в серии</Label>
+              <select
+                id="playoffLegs"
+                name="playoffLegs"
+                defaultValue={initialValues?.playoffLegs ?? 1}
+                className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white"
+              >
+                <option value="1">1 матч</option>
+                <option value="2">2 матча</option>
+              </select>
+            </div>
+          ) : null}
+
           <div className="space-y-2">
             <Label htmlFor="seedingMethod">Посев</Label>
             <select
@@ -333,6 +350,12 @@ export function TournamentBuilderForm({
               ))}
             </div>
           </div>
+          {showPlayoff ? (
+            <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-sm text-zinc-300 md:col-span-2 xl:col-span-3">
+              <input type="checkbox" name="playoffThirdPlace" value="true" defaultChecked={Boolean(initialValues?.playoffThirdPlace)} />
+              Добавить матч за 3-е место
+            </label>
+          ) : null}
         </CardContent>
       </Card>
 

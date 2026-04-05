@@ -30,12 +30,24 @@ function roundTitle(round: number, totalRounds: number) {
 }
 
 function bracketLabel(match: BracketMatch) {
+  if (match.isThirdPlaceMatch) {
+    return "Матч за 3-е место";
+  }
+
+  if (match.isPenaltyTiebreak) {
+    return `Серия пенальти • Матч #${match.matchNumber}`;
+  }
+
   if (match.bracket === "lower") {
     return `Lower bracket • Матч #${match.matchNumber}`;
   }
 
   if (match.loserNextMatchId || match.loserNextMatchSlot) {
     return `Upper bracket • Матч #${match.matchNumber}`;
+  }
+
+  if (match.legNumber && match.legNumber > 1) {
+    return `Матч #${match.matchNumber} • Игра ${match.legNumber}`;
   }
 
   return `Матч #${match.matchNumber}`;

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { createNotification } from "@/lib/services/notifications";
-import { advanceMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
+import { resolveConfirmedMatch } from "@/lib/services/tournaments";
 import { resultSubmissionSchema } from "@/lib/validators";
 
 const AUTO_MISMATCH_COMMENT = "AUTO_MISMATCH";
@@ -38,6 +38,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   if (match.status === MatchStatus.CONFIRMED || match.status === MatchStatus.FINISHED) {
     return NextResponse.json({ error: "Результат этого матча уже подтверждён." }, { status: 409 });
+  }
+
+  if (match.isPenaltyTiebreak && body.player1Score === body.player2Score) {
+    return NextResponse.json({ error: "В серии пенальти не может быть ничьей." }, { status: 400 });
   }
 
   const pendingOwnSubmission = match.submissions.find(
@@ -126,8 +130,6 @@ export async function POST(request: Request, { params }: { params: { id: string 
           ? match.player2Id
           : null;
 
-    const loserId = winnerId === match.player1Id ? match.player2Id : winnerId === match.player2Id ? match.player1Id : null;
-
     await db.match.update({
       where: { id: params.id },
       data: {
@@ -138,11 +140,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       },
     });
 
-    if (winnerId) {
-      await advanceMatch(match.id, winnerId, loserId);
-    } else {
-      await syncTournamentLifecycleStatus(match.tournamentId);
-    }
+    await resolveConfirmedMatch(match.id);
 
     await Promise.all(
       [match.player1Id, match.player2Id]

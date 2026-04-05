@@ -3,7 +3,7 @@ import { MatchStatus, NotificationType, UserRole } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/session";
 import { logAdminAction } from "@/lib/services/admin-actions";
-import { advanceMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
+import { resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { createNotification } from "@/lib/services/notifications";
 import { reviewSchema } from "@/lib/validators";
 
@@ -39,17 +39,21 @@ export async function POST(request: Request, { params }: { params: { id: string 
   });
 
   if (body.action === "approve") {
-    const winnerId = submission.player1Score >= submission.player2Score ? match.player1Id : match.player2Id;
-    const loserId = winnerId === match.player1Id ? match.player2Id : match.player1Id;
-
-    if (winnerId) {
-      await advanceMatch(match.id, winnerId, loserId);
+    if (match.isPenaltyTiebreak && submission.player1Score === submission.player2Score) {
+      return NextResponse.json({ error: "В серии пенальти нельзя подтвердить ничью." }, { status: 400 });
     }
 
     await db.match.update({
       where: { id: params.id },
-      data: { status: MatchStatus.CONFIRMED },
+      data: {
+        player1Score: submission.player1Score,
+        player2Score: submission.player2Score,
+        winnerId: submission.player1Score > submission.player2Score ? match.player1Id : submission.player1Score < submission.player2Score ? match.player2Id : null,
+        status: MatchStatus.CONFIRMED,
+      },
     });
+
+    await resolveConfirmedMatch(match.id);
   } else if (body.action === "reject") {
     await db.match.update({
       where: { id: params.id },
