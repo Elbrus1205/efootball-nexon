@@ -1630,6 +1630,15 @@ export async function startTournament(tournamentId: string) {
     await generateTournamentStages(tournamentId);
   }
 
+  const requiresGroupAssignments =
+    tournament.format === TournamentFormat.CUSTOM ||
+    tournament.format === TournamentFormat.GROUPS ||
+    tournament.format === TournamentFormat.GROUPS_PLAYOFF;
+
+  if (requiresGroupAssignments) {
+    await assignParticipantsToGroups(tournamentId, { mode: "auto" });
+  }
+
   const playoffStage = await db.tournamentStage.findFirst({
     where: { tournamentId, type: StageType.PLAYOFF },
     include: { bracket: true },
@@ -1660,7 +1669,11 @@ export async function startTournament(tournamentId: string) {
     where: { bracket: { tournamentId } },
   });
 
-  await generateTournamentMatches(tournamentId);
+  const createdMatches = await generateTournamentMatches(tournamentId);
+
+  if (!createdMatches.length) {
+    throw new Error("Не удалось создать матчи. Проверьте распределение участников по лигам и настройки формата.");
+  }
 
   await generateTournamentSchedule(tournamentId, { overwrite: true });
 
