@@ -563,7 +563,9 @@ async function seedCustomPlayoffBracket(params: {
 
   const upperRefs = expandSelectionRefs(params.groups, settings.selections, "upper");
   const lowerRefs = expandSelectionRefs(params.groups, settings.selections, "lower");
-  const upperMatches = bracket.matches.filter((match) => match.bracket === "upper" && match.round === 1 && !match.isThirdPlaceMatch);
+  const upperMatches = bracket.matches.filter(
+    (match) => match.bracket === "upper" && match.round === 1 && !match.isThirdPlaceMatch && (match.legNumber ?? 1) === 1 && !match.isPenaltyTiebreak,
+  );
   const lowerMatches = bracket.matches.filter((match) => match.bracket === "lower" && match.round === 1);
 
   await Promise.all(
@@ -648,6 +650,46 @@ async function seedCustomPlayoffBracket(params: {
     where: { id: bracket.id },
     include: { slots: { include: { participant: { include: { user: true } } } }, matches: true },
   });
+}
+
+async function ensureCustomPlayoffMatchesGenerated(tournamentId: string) {
+  const tournament = await db.tournament.findUnique({
+    where: { id: tournamentId },
+    include: {
+      stages: {
+        where: { type: StageType.PLAYOFF },
+        include: {
+          bracket: {
+            include: {
+              matches: true,
+            },
+          },
+        },
+        orderBy: { orderIndex: "asc" },
+      },
+    },
+  });
+
+  if (!tournament) throw new Error("Tournament not found");
+
+  for (const stage of tournament.stages) {
+    if (!stage.bracket) continue;
+    if (stage.bracket.matches.length) continue;
+
+    const customSettings = parseCustomBracketSettings(stage.bracket.settingsJson);
+    if (!customSettings) continue;
+
+    await createPlayoffMatches({
+      tournamentId,
+      stageId: stage.id,
+      bracketId: stage.bracket.id,
+      entries: [],
+      type: stage.bracket.type,
+      legsCount: stage.bracket.legsCount,
+      thirdPlaceMatch: stage.bracket.thirdPlaceMatch,
+      sizeOverride: nextPowerOfTwo(Math.max(customSettings.upperEntriesCount, customSettings.lowerEntriesCount, 2)),
+    });
+  }
 }
 
 export async function generateTournamentStages(tournamentId: string, options?: { regenerate?: boolean }) {
@@ -914,28 +956,7 @@ export async function generateTournamentMatches(tournamentId: string) {
       const customSettings = tournament.format === TournamentFormat.CUSTOM ? parseCustomBracketSettings(stage.bracket.settingsJson) : null;
 
       if (customSettings) {
-        await createPlayoffMatches({
-          tournamentId,
-          stageId: stage.id,
-          bracketId: stage.bracket.id,
-          entries: [],
-          type: stage.bracket.type,
-          legsCount: stage.bracket.legsCount,
-          thirdPlaceMatch: stage.bracket.thirdPlaceMatch,
-          sizeOverride: nextPowerOfTwo(Math.max(customSettings.upperEntriesCount, customSettings.lowerEntriesCount, 2)),
-        });
-
-        const leagueStage = tournament.stages.find((item) => item.type === StageType.GROUP_STAGE);
-        if (leagueStage?.groups.length) {
-          await seedCustomPlayoffBracket({
-            bracketId: stage.bracket.id,
-            groups: leagueStage.groups.map((group) => ({
-              id: group.id,
-              orderIndex: group.orderIndex,
-              standings: [],
-            })),
-          });
-        }
+        continue;
       } else {
         await createPlayoffMatches({
           tournamentId,
@@ -1253,6 +1274,8 @@ export async function generatePlayoffFromGroups(tournamentId: string) {
 
     const playoffStages = tournament.stages.filter((stage) => stage.type === StageType.PLAYOFF && stage.bracket);
     if (!playoffStages.length) throw new Error("Playoff stages are not configured");
+
+    await ensureCustomPlayoffMatchesGenerated(tournamentId);
 
     const seeded = await Promise.all(
       playoffStages.map((stage) =>
@@ -1690,7 +1713,32 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
         select: { id: true },
       },
       matches: {
-        select: { id: true, status: true },
+        select: { id: true, status: true, stageId: true },
+      },
+      stages: {
+        include: {
+          bracket: {
+            include: {
+              matches: {
+                select: { id: true },
+              },
+            },
+          },
+          groups: {
+            include: {
+              standings: {
+                include: {
+                  participant: {
+                    select: {
+                      userId: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        orderBy: { orderIndex: "asc" },
       },
     },
   });
@@ -1703,6 +1751,52 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
   const hasMatches = tournament.matches.length > 0;
   const allMatchesCompleted =
     hasMatches && tournament.matches.every((match) => TERMINAL_MATCH_STATUSES.has(match.status));
+
+  if (tournament.format === TournamentFormat.CUSTOM) {
+    const leagueStage = tournament.stages.find((stage) => stage.type === StageType.GROUP_STAGE);
+    const playoffStages = tournament.stages.filter((stage) => stage.type === StageType.PLAYOFF && stage.bracket);
+    const hasLeagueMatches = !!leagueStage && tournament.matches.some((match) => match.stageId === leagueStage.id);
+    const hasPlayoffMatches = playoffStages.some((stage) => (stage.bracket?.matches.length ?? 0) > 0);
+    const leagueMatchesCompleted =
+      !!leagueStage &&
+      tournament.matches.filter((match) => match.stageId === leagueStage.id).length > 0 &&
+      tournament.matches
+        .filter((match) => match.stageId === leagueStage.id)
+        .every((match) => TERMINAL_MATCH_STATUSES.has(match.status));
+
+    if (leagueMatchesCompleted && playoffStages.length && !hasPlayoffMatches) {
+      await ensureCustomPlayoffMatchesGenerated(tournamentId);
+      await generatePlayoffFromGroups(tournamentId);
+      await generateTournamentSchedule(tournamentId, { overwrite: false });
+
+      if (leagueStage) {
+        await db.tournamentStage.update({
+          where: { id: leagueStage.id },
+          data: { status: StageStatus.COMPLETED },
+        });
+      }
+
+      const firstPlayoffStage = playoffStages[0];
+      if (firstPlayoffStage) {
+        await db.tournamentStage.update({
+          where: { id: firstPlayoffStage.id },
+          data: { status: StageStatus.ACTIVE },
+        });
+      }
+
+      return db.tournament.update({
+        where: { id: tournamentId },
+        data: { status: TournamentStatus.IN_PROGRESS },
+      });
+    }
+
+    if (leagueStage && hasLeagueMatches && !hasPlayoffMatches && allMatchesCompleted) {
+      return db.tournament.update({
+        where: { id: tournamentId },
+        data: { status: TournamentStatus.IN_PROGRESS },
+      });
+    }
+  }
 
   const nextStatus =
     allMatchesCompleted
