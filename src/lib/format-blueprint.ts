@@ -40,14 +40,21 @@ export function createDefaultPlayoffSelection(partial?: Partial<PlayoffSelection
 }
 
 export function createDefaultPlayoffStage(partial?: Partial<PlayoffStageBlueprint>): PlayoffStageBlueprint {
+  const type = partial?.type ?? PlayoffType.SINGLE;
+
   return {
     id: partial?.id ?? randomId("playoff"),
     name: partial?.name?.trim() || "Плей-офф",
-    type: partial?.type ?? PlayoffType.SINGLE,
+    type,
     legsCount: Math.max(1, Math.min(2, partial?.legsCount ?? 1)),
     thirdPlaceMatch: Boolean(partial?.thirdPlaceMatch),
     selections:
-      partial?.selections?.map((selection) => createDefaultPlayoffSelection(selection)) ?? [createDefaultPlayoffSelection()],
+      partial?.selections?.map((selection) =>
+        createDefaultPlayoffSelection({
+          ...selection,
+          targetBracket: type === PlayoffType.SINGLE ? "upper" : selection.targetBracket,
+        }),
+      ) ?? [createDefaultPlayoffSelection()],
   };
 }
 

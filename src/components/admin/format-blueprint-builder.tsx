@@ -48,8 +48,8 @@ export function FormatBlueprintBuilder({
       <div className="space-y-2">
         <div className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Кастомный формат</div>
         <div className="text-sm text-zinc-400">
-          Настрой одну общую стадию лиг с несколькими дивизионами, затем добавь один или несколько плей-офф и укажи, какие места
-          и из какой лиги попадают в верхнюю или нижнюю сетку.
+          Настрой общую стадию лиг с несколькими дивизионами, затем добавь один или несколько плей-офф и укажи, какие места
+          из какой лиги попадают в сетку.
         </div>
       </div>
 
@@ -63,6 +63,7 @@ export function FormatBlueprintBuilder({
             placeholder="Лиги"
           />
         </div>
+
         <div className="space-y-2">
           <Label htmlFor="divisionsCount">Сколько лиг / дивизионов</Label>
           <Input
@@ -85,7 +86,7 @@ export function FormatBlueprintBuilder({
         <div className="flex items-center justify-between gap-3">
           <div>
             <div className="text-sm font-semibold text-white">Плей-офф блоки</div>
-            <div className="text-sm text-zinc-400">Можно добавить несколько отдельных плей-офф с разными именами и правилами выхода.</div>
+            <div className="text-sm text-zinc-400">Можно добавить несколько отдельных плей-офф с разными названиями и логикой выхода.</div>
           </div>
           <Button
             type="button"
@@ -135,12 +136,19 @@ export function FormatBlueprintBuilder({
                   <select
                     value={playoff.type}
                     onChange={(event) =>
-                      updatePlayoff(playoff.id, (current) => ({
-                        ...current,
-                        type: event.target.value as PlayoffType,
-                        legsCount: event.target.value === PlayoffType.DOUBLE ? 1 : current.legsCount,
-                        thirdPlaceMatch: event.target.value === PlayoffType.DOUBLE ? false : current.thirdPlaceMatch,
-                      }))
+                      updatePlayoff(playoff.id, (current) => {
+                        const nextType = event.target.value as PlayoffType;
+                        return {
+                          ...current,
+                          type: nextType,
+                          legsCount: nextType === PlayoffType.DOUBLE ? 1 : current.legsCount,
+                          thirdPlaceMatch: nextType === PlayoffType.DOUBLE ? false : current.thirdPlaceMatch,
+                          selections:
+                            nextType === PlayoffType.SINGLE
+                              ? current.selections.map((item) => ({ ...item, targetBracket: "upper" }))
+                              : current.selections,
+                        };
+                      })
                     }
                     className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white"
                   >
@@ -187,7 +195,15 @@ export function FormatBlueprintBuilder({
                     onClick={() =>
                       updatePlayoff(playoff.id, (current) => ({
                         ...current,
-                        selections: [...current.selections, createDefaultPlayoffSelection({ divisionIndex: 1, fromRank: 1, toRank: 1 })],
+                        selections: [
+                          ...current.selections,
+                          createDefaultPlayoffSelection({
+                            divisionIndex: 1,
+                            fromRank: 1,
+                            toRank: 1,
+                            targetBracket: current.type === PlayoffType.SINGLE ? "upper" : "upper",
+                          }),
+                        ],
                       }))
                     }
                   >
@@ -198,7 +214,12 @@ export function FormatBlueprintBuilder({
 
                 <div className="space-y-3">
                   {playoff.selections.map((selection) => (
-                    <div key={selection.id} className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3 md:grid-cols-[1fr_1fr_1fr_1fr_auto]">
+                    <div
+                      key={selection.id}
+                      className={`grid gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3 ${
+                        playoff.type === PlayoffType.DOUBLE ? "md:grid-cols-[1fr_1fr_1fr_1fr_auto]" : "md:grid-cols-[1fr_1fr_1fr_auto]"
+                      }`}
+                    >
                       <div className="space-y-2">
                         <Label>Из лиги</Label>
                         <Input
@@ -253,24 +274,26 @@ export function FormatBlueprintBuilder({
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <Label>Куда попадают</Label>
-                        <select
-                          value={selection.targetBracket}
-                          onChange={(event) =>
-                            updatePlayoff(playoff.id, (current) => ({
-                              ...current,
-                              selections: current.selections.map((item) =>
-                                item.id === selection.id ? { ...item, targetBracket: event.target.value as "upper" | "lower" } : item,
-                              ),
-                            }))
-                          }
-                          className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white"
-                        >
-                          <option value="upper">Верхняя сетка</option>
-                          <option value="lower">Нижняя сетка</option>
-                        </select>
-                      </div>
+                      {playoff.type === PlayoffType.DOUBLE ? (
+                        <div className="space-y-2">
+                          <Label>Куда попадают</Label>
+                          <select
+                            value={selection.targetBracket}
+                            onChange={(event) =>
+                              updatePlayoff(playoff.id, (current) => ({
+                                ...current,
+                                selections: current.selections.map((item) =>
+                                  item.id === selection.id ? { ...item, targetBracket: event.target.value as "upper" | "lower" } : item,
+                                ),
+                              }))
+                            }
+                            className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white"
+                          >
+                            <option value="upper">Верхняя сетка</option>
+                            <option value="lower">Нижняя сетка</option>
+                          </select>
+                        </div>
+                      ) : null}
 
                       <div className="flex items-end">
                         <Button
@@ -291,6 +314,12 @@ export function FormatBlueprintBuilder({
                     </div>
                   ))}
                 </div>
+
+                {playoff.type === PlayoffType.SINGLE ? (
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-400">
+                    В single elimination все участники автоматически попадают в одну основную сетку.
+                  </div>
+                ) : null}
               </div>
             </div>
           ))}
