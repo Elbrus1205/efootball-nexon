@@ -1031,10 +1031,10 @@ export async function generateTournamentSchedule(
     const startsAt = new Date(cursor);
     const endsAt = new Date(startsAt.getTime() + slotMinutes * 60_000);
     const slotLabel = match.group?.name
-      ? `${match.group.name} вЂў РўСѓСЂ ${match.round}`
+      ? `${match.group.name} • Тур ${match.round}`
       : match.stage?.name
-        ? `${match.stage.name} вЂў Р Р°СѓРЅРґ ${match.round}`
-        : `Р Р°СѓРЅРґ ${match.round} вЂў РњР°С‚С‡ ${match.matchNumber}`;
+        ? `${match.stage.name} • Раунд ${match.round}`
+        : `Раунд ${match.round} • Матч ${match.matchNumber}`;
 
     const existingSchedule = match.schedules[0];
     const schedule = existingSchedule
@@ -1561,11 +1561,11 @@ export async function closeTournamentRegistration(tournamentId: string) {
   if (!tournament) throw new Error("Tournament not found");
   const confirmedParticipants = tournament.participants.length;
   if (confirmedParticipants < 2) {
-    throw new Error("Р”Р»СЏ Р·Р°РєСЂС‹С‚РёСЏ СЂРµРіРёСЃС‚СЂР°С†РёРё РЅСѓР¶РЅРѕ РјРёРЅРёРјСѓРј 2 СѓС‡Р°СЃС‚РЅРёРєР°.");
+    throw new Error("Для закрытия регистрации нужно минимум 2 участника.");
   }
 
   if (isDirectPlayoffFormat(tournament.format) && !isPowerOfTwo(confirmedParticipants)) {
-    throw new Error("Р”Р»СЏ РїР»РµР№-РѕС„С„ РЅСѓР¶РЅРѕ 2, 4, 8, 16 РёР»Рё 32 СѓС‡Р°СЃС‚РЅРёРєР°.");
+    throw new Error("Для плей-офф нужно 2, 4, 8, 16 или 32 участника.");
   }
 
   await db.tournament.update({
@@ -1706,8 +1706,8 @@ export async function startTournament(tournamentId: string) {
     tournament.participants.map((player) =>
       createNotification({
         userId: player.user.id,
-        title: "РўСѓСЂРЅРёСЂ СЃС‚Р°СЂС‚РѕРІР°Р»",
-        body: `${tournament.title}: РјР°С‚С‡Рё, СЂР°СЃРїРёСЃР°РЅРёРµ Рё С‚СѓСЂРЅРёСЂРЅР°СЏ СЃС‚СЂСѓРєС‚СѓСЂР° СѓР¶Рµ РґРѕСЃС‚СѓРїРЅС‹.`,
+        title: "Турнир стартовал",
+        body: `${tournament.title}: матчи, расписание и турнирная структура уже доступны.`,
         type: NotificationType.TOURNAMENT,
         link: `/tournaments/${tournament.id}`,
       }),
