@@ -2,7 +2,6 @@ import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth/session";
-import { generateFallbackNickname } from "@/lib/player-name";
 import { profileSchema, registerSchema } from "@/lib/validators";
 
 export async function POST(request: Request) {
@@ -28,7 +27,6 @@ export async function POST(request: Request) {
       email: normalizedEmail,
       passwordHash,
       name: body.name,
-      nickname: generateFallbackNickname(normalizedEmail),
     },
   });
 
@@ -42,7 +40,7 @@ export async function PATCH(request: Request) {
   const user = await db.user.update({
     where: { id: session.user.id },
     data: {
-      nickname: body.nickname,
+      name: body.name,
       favoriteTeam: body.favoriteTeam || null,
       bio: body.bio || null,
       bannerImage: body.bannerImage || null,

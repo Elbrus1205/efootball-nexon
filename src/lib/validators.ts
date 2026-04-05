@@ -35,7 +35,7 @@ export const loginSchema = z.object({
 });
 
 export const profileSchema = z.object({
-  nickname: z.string().min(2),
+  name: z.string().min(2),
   favoriteTeam: z.string().optional().or(z.literal("")),
   bio: z.string().max(300).optional().or(z.literal("")),
   bannerImage: z

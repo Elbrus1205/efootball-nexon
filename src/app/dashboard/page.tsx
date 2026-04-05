@@ -26,7 +26,7 @@ export default async function DashboardPage() {
 
   if (!user) return null;
 
-  const displayName = user.nickname || "Игрок eFootball Nexon";
+  const displayName = user.name || user.nickname || "Игрок eFootball Nexon";
   const favoriteClub = clubs.find((club) => club.slug === user.favoriteTeam || club.name === user.favoriteTeam) ?? null;
   const socialLinks = getUserSocialLinks(user);
   const registeredAt = new Intl.DateTimeFormat("ru-RU", {

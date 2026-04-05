@@ -8,7 +8,6 @@ import { buildSecurityContext, createLoginHistory, createSecuritySession, touchS
 import { verifyTelegramAuth } from "@/lib/auth/telegram";
 import { fetchVkUserProfile } from "@/lib/auth/vk";
 import { db } from "@/lib/db";
-import { generateFallbackNickname } from "@/lib/player-name";
 import { verifyTwoFactorChallenge } from "@/lib/two-factor";
 
 const TELEGRAM_ADMIN_ID = "6595067194";
@@ -159,7 +158,6 @@ export const authOptions: NextAuthOptions = {
 
         const context = buildSecurityContext(req?.headers);
         const vkProfile = await fetchVkUserProfile(accessToken);
-        const fallbackNickname = generateFallbackNickname(vkProfile.vkId);
 
         let user = await db.user.findUnique({
           where: { vkId: vkProfile.vkId },
@@ -193,7 +191,6 @@ export const authOptions: NextAuthOptions = {
               vkId: user.vkId ?? vkProfile.vkId,
               email: user.email ?? vkProfile.email ?? undefined,
               name: user.name?.trim() ? user.name : vkProfile.fullName ?? undefined,
-              nickname: user.nickname?.trim() ? user.nickname : fallbackNickname,
               image: user.image ?? vkProfile.avatar ?? undefined,
             },
           });
@@ -203,7 +200,6 @@ export const authOptions: NextAuthOptions = {
               vkId: vkProfile.vkId,
               email: vkProfile.email,
               name: vkProfile.fullName ?? "VK Player",
-              nickname: fallbackNickname,
               image: vkProfile.avatar,
             },
           });
@@ -268,13 +264,11 @@ export const authOptions: NextAuthOptions = {
 
         const displayName = [credentials.first_name, credentials.last_name].filter(Boolean).join(" ");
         const role = credentials.id === TELEGRAM_ADMIN_ID ? UserRole.ADMIN : UserRole.PLAYER;
-        const fallbackNickname = generateFallbackNickname(credentials.id);
 
         const user = await db.user.upsert({
           where: { telegramId: credentials.id },
           update: {
             name: displayName || credentials.username || "Telegram Player",
-            nickname: credentials.username || fallbackNickname,
             telegramUsername: credentials.username,
             image: credentials.photo_url,
             role,
@@ -284,7 +278,6 @@ export const authOptions: NextAuthOptions = {
             telegramUsername: credentials.username,
             image: credentials.photo_url,
             name: displayName || credentials.username || "Telegram Player",
-            nickname: credentials.username || fallbackNickname,
             role,
           },
         });
@@ -357,15 +350,6 @@ export const authOptions: NextAuthOptions = {
 
         const dbUser = await db.user.findUnique({ where: { id: token.sub } });
         if (dbUser) {
-          if (!dbUser.nickname?.trim()) {
-            const generatedNickname = generateFallbackNickname(dbUser.id);
-            await db.user.update({
-              where: { id: dbUser.id },
-              data: { nickname: generatedNickname },
-            });
-            dbUser.nickname = generatedNickname;
-          }
-
           token.role = dbUser.role;
           token.nickname = dbUser.nickname;
           token.efootballUid = dbUser.efootballUid;

@@ -17,7 +17,7 @@ export function ProfileForm({
   clubs,
 }: {
   initialValues: {
-    nickname: string;
+    name: string;
     favoriteTeam: string;
     bio: string;
     image: string;
@@ -31,7 +31,7 @@ export function ProfileForm({
   const [bannerPreview, setBannerPreview] = useState(initialValues.bannerImage);
   const [pending, startTransition] = useTransition();
 
-  const displayName = draft.nickname || "Игрок eFootball Nexon";
+  const displayName = draft.name || "Игрок eFootball Nexon";
 
   const optimizeImage = (file: File, type: "avatar" | "banner") =>
     new Promise<string>((resolve, reject) => {
@@ -103,7 +103,7 @@ export function ProfileForm({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nickname: draft.nickname,
+          name: draft.name,
           favoriteTeam: draft.favoriteTeam,
           bio: draft.bio,
           image: draft.image,
@@ -176,11 +176,11 @@ export function ProfileForm({
           <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
-                <Label className="block text-[11px] uppercase tracking-[0.24em] text-zinc-500">Никнейм</Label>
+                <Label className="block text-[11px] uppercase tracking-[0.24em] text-zinc-500">Имя</Label>
                 <Input
-                  value={draft.nickname}
+                  value={draft.name}
                   className="h-10 border-white/10 bg-white/[0.04]"
-                  onChange={(e) => setDraft((v) => ({ ...v, nickname: e.target.value }))}
+                  onChange={(e) => setDraft((v) => ({ ...v, name: e.target.value }))}
                 />
               </div>
 

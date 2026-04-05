@@ -27,7 +27,7 @@ export default async function DashboardEditPage() {
 
       <ProfileForm
         initialValues={{
-          nickname: user.nickname ?? "",
+          name: user.name ?? user.nickname ?? "",
           favoriteTeam: user.favoriteTeam ?? "",
           bio: user.bio ?? "",
           image: user.image ?? "",

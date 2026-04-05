@@ -50,6 +50,7 @@ export function getPlayerDisplayName(user: {
   name?: string | null;
   email?: string | null;
 }) {
+  if (user.name?.trim()) return user.name.trim();
   if (user.nickname?.trim()) return user.nickname.trim();
 
   const seed = user.id || user.email || user.name || "player";

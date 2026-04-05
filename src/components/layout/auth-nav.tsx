@@ -45,13 +45,13 @@ export function AuthNav({ unread = 0 }: { unread?: number }) {
           <button className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 p-0 hover:bg-white/5">
             <Avatar className="h-10 w-10">
               <AvatarImage src={session.user.image ?? undefined} alt={session.user.name ?? "Avatar"} />
-              <AvatarFallback>{(session.user.nickname ?? session.user.name ?? "U").slice(0, 1)}</AvatarFallback>
+              <AvatarFallback>{(session.user.name ?? session.user.nickname ?? "U").slice(0, 1)}</AvatarFallback>
             </Avatar>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64 rounded-3xl border-white/10 bg-[#12161f]/95 p-2 text-white backdrop-blur-xl">
           <div className="px-3 py-2">
-            <div className="text-sm font-medium">{session.user.nickname ?? session.user.name}</div>
+            <div className="text-sm font-medium">{session.user.name ?? session.user.nickname}</div>
             <div className="text-xs text-zinc-500">{session.user.email ?? "Telegram/VK"}</div>
           </div>
 
