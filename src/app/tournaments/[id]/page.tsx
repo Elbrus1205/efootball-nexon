@@ -43,12 +43,11 @@ function scheduleStageLabel(match: {
   stage?: { name: string | null; type?: StageType | null } | null;
 }) {
   if (match.group?.name) return match.group.name;
+  if (match.stage?.name?.trim()) return match.stage.name;
 
   if (match.stage?.type === StageType.PLAYOFF) return "Плей-офф";
   if (match.stage?.type === StageType.GROUP_STAGE) return "Групповой этап";
   if (match.stage?.type === StageType.LEAGUE) return "Лига";
-
-  if (match.stage?.name?.trim()) return match.stage.name;
 
   return `Раунд ${match.round}`;
 }
@@ -299,9 +298,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
     !tournament.participants.some((entry) => entry.userId === session.user.id);
 
   const groupStage = tournament.stages.find((stage) => stage.type === StageType.GROUP_STAGE);
-  const playoffStage = tournament.stages.find((stage) => stage.type === StageType.PLAYOFF);
+  const playoffStages = tournament.stages.filter((stage) => stage.type === StageType.PLAYOFF && stage.bracket);
   const leagueStage = tournament.stages.find((stage) => stage.type === StageType.LEAGUE);
-  const bracketMatches = playoffStage?.bracket?.matches ?? [];
 
   const scheduledMatches = tournament.matches
     .filter((match) => match.scheduledAt || match.schedules.length)
@@ -425,7 +423,16 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
             </Card>
           ) : null}
 
-          {playoffStage ? <BracketView matches={bracketMatches} clubsByUserId={participantClubMap} /> : null}
+          {playoffStages.length
+            ? playoffStages.map((stage) => (
+                <div key={stage.id} className="space-y-3">
+                  {playoffStages.length > 1 ? (
+                    <div className="text-sm uppercase tracking-[0.24em] text-zinc-500">{stage.name}</div>
+                  ) : null}
+                  <BracketView matches={stage.bracket?.matches ?? []} clubsByUserId={participantClubMap} />
+                </div>
+              ))
+            : null}
         </TabsContent>
 
         <TabsContent value="matches">

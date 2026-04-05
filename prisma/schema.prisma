@@ -20,6 +20,7 @@ enum TournamentFormat {
   LEAGUE
   GROUPS
   GROUPS_PLAYOFF
+  CUSTOM
 }
 
 enum TournamentStatus {
@@ -249,6 +250,7 @@ model Tournament {
   coverImage             String?
   prizePool              String?
   format                 TournamentFormat
+  formatBlueprintJson    Json?
   playoffType            PlayoffType?
   playoffLegs            Int                      @default(1)
   playoffThirdPlace      Boolean                  @default(false)

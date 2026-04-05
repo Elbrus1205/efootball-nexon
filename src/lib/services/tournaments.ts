@@ -11,11 +11,19 @@
 } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getAvailableClubs } from "@/lib/clubs";
+import { normalizeFormatBlueprint, type FormatBlueprint, type PlayoffSelectionRule } from "@/lib/format-blueprint";
 
 function createGroupSourceRef(groupId: string, rank: number) {
   return `group:${groupId}:rank:${rank}`;
 }
 import { createNotification } from "@/lib/services/notifications";
+
+type CustomPlayoffSettings = {
+  mode: "custom";
+  selections: PlayoffSelectionRule[];
+  upperEntriesCount: number;
+  lowerEntriesCount: number;
+};
 
 const TERMINAL_MATCH_STATUSES = new Set<MatchStatus>([
   MatchStatus.CONFIRMED,
@@ -144,6 +152,44 @@ function isDirectPlayoffFormat(format: TournamentFormat) {
   return format === TournamentFormat.SINGLE_ELIMINATION || format === TournamentFormat.DOUBLE_ELIMINATION;
 }
 
+function getStageStatus(hasPreviousStages: boolean, tournamentStatus: TournamentStatus) {
+  if (hasPreviousStages) return StageStatus.PENDING;
+  return tournamentStatus === TournamentStatus.IN_PROGRESS ? StageStatus.ACTIVE : StageStatus.PENDING;
+}
+
+function countSelectionEntries(selections: PlayoffSelectionRule[], targetBracket?: "upper" | "lower") {
+  return selections
+    .filter((selection) => !targetBracket || selection.targetBracket === targetBracket)
+    .reduce((total, selection) => total + Math.max(0, selection.toRank - selection.fromRank + 1), 0);
+}
+
+function expandSelectionRefs(groups: { id: string; orderIndex: number }[], selections: PlayoffSelectionRule[], targetBracket: "upper" | "lower") {
+  return selections
+    .filter((selection) => selection.targetBracket === targetBracket)
+    .flatMap((selection) => {
+      const group = groups.find((item) => item.orderIndex === selection.divisionIndex);
+      if (!group) return [];
+
+      return Array.from({ length: Math.max(0, selection.toRank - selection.fromRank + 1) }, (_, index) =>
+        createGroupSourceRef(group.id, selection.fromRank + index),
+      );
+    });
+}
+
+function parseCustomBracketSettings(value: unknown): CustomPlayoffSettings | null {
+  if (!value || typeof value !== "object") return null;
+
+  const data = value as Partial<CustomPlayoffSettings>;
+  if (data.mode !== "custom" || !Array.isArray(data.selections)) return null;
+
+  return {
+    mode: "custom",
+    selections: data.selections,
+    upperEntriesCount: Math.max(0, Number(data.upperEntriesCount ?? 0) || 0),
+    lowerEntriesCount: Math.max(0, Number(data.lowerEntriesCount ?? 0) || 0),
+  };
+}
+
 function shuffle<T>(items: T[]) {
   return [...items].sort(() => Math.random() - 0.5);
 }
@@ -215,6 +261,7 @@ async function createPlayoffMatches({
   type,
   legsCount,
   thirdPlaceMatch,
+  sizeOverride,
 }: {
   tournamentId: string;
   stageId: string;
@@ -223,9 +270,10 @@ async function createPlayoffMatches({
   type: PlayoffType;
   legsCount: number;
   thirdPlaceMatch: boolean;
+  sizeOverride?: number;
 }) {
   const orderedEntries = [...entries].sort((a, b) => (a.seed ?? Number.MAX_SAFE_INTEGER) - (b.seed ?? Number.MAX_SAFE_INTEGER));
-  const bracketSize = nextPowerOfTwo(orderedEntries.length);
+  const bracketSize = sizeOverride && isPowerOfTwo(sizeOverride) ? sizeOverride : nextPowerOfTwo(orderedEntries.length);
   const rounds = Math.log2(bracketSize);
   const effectiveLegsCount = type === PlayoffType.DOUBLE ? 1 : Math.max(1, Math.min(legsCount, 2));
   const createdMatches: { id: string; round: number; matchNumber: number; legNumber: number; seriesKey: string }[] = [];
@@ -246,7 +294,7 @@ async function createPlayoffMatches({
             bracket: "upper",
             seriesKey,
             legNumber,
-            status: round === 1 ? MatchStatus.READY : MatchStatus.PENDING,
+            status: MatchStatus.PENDING,
           },
         });
         createdMatches.push({ id: created.id, round, matchNumber, legNumber, seriesKey });
@@ -271,72 +319,74 @@ async function createPlayoffMatches({
   }
 
   const firstRound = createdMatches.filter((item) => item.round === 1);
-  await Promise.all(
-    firstRound.filter((item) => item.legNumber === 1).map(async (match, index) => {
-      const player1 = orderedEntries[index * 2];
-      const player2 = orderedEntries[index * 2 + 1];
-      const seriesMatches = createdMatches.filter((item) => item.seriesKey === match.seriesKey);
+  if (orderedEntries.length) {
+    await Promise.all(
+      firstRound.filter((item) => item.legNumber === 1).map(async (match, index) => {
+        const player1 = orderedEntries[index * 2];
+        const player2 = orderedEntries[index * 2 + 1];
+        const seriesMatches = createdMatches.filter((item) => item.seriesKey === match.seriesKey);
 
-      await Promise.all(
-        seriesMatches.map((seriesMatch) =>
-          db.match.update({
-            where: { id: seriesMatch.id },
-            data: {
-              participant1EntryId: player1?.id,
-              participant2EntryId: player2?.id,
-              player1Id: player1?.userId,
-              player2Id: player2?.userId,
-              status: player1 && player2 ? MatchStatus.READY : MatchStatus.PENDING,
+        await Promise.all(
+          seriesMatches.map((seriesMatch) =>
+            db.match.update({
+              where: { id: seriesMatch.id },
+              data: {
+                participant1EntryId: player1?.id,
+                participant2EntryId: player2?.id,
+                player1Id: player1?.userId,
+                player2Id: player2?.userId,
+                status: player1 && player2 ? MatchStatus.READY : MatchStatus.PENDING,
+              },
+            }),
+          ),
+        );
+
+        if (player1) {
+          await db.bracketSlot.upsert({
+            where: {
+              bracketId_round_matchNumber_slotNumber: {
+                bracketId,
+                round: 1,
+                matchNumber: match.matchNumber,
+                slotNumber: 1,
+              },
             },
-          }),
-        ),
-      );
-
-      if (player1) {
-        await db.bracketSlot.upsert({
-          where: {
-            bracketId_round_matchNumber_slotNumber: {
+            update: { participantId: player1.id, sourceType: "MANUAL" },
+            create: {
               bracketId,
               round: 1,
               matchNumber: match.matchNumber,
               slotNumber: 1,
+              participantId: player1.id,
+              sourceType: "MANUAL",
             },
-          },
-          update: { participantId: player1.id, sourceType: "MANUAL" },
-          create: {
-            bracketId,
-            round: 1,
-            matchNumber: match.matchNumber,
-            slotNumber: 1,
-            participantId: player1.id,
-            sourceType: "MANUAL",
-          },
-        });
-      }
+          });
+        }
 
-      if (player2) {
-        await db.bracketSlot.upsert({
-          where: {
-            bracketId_round_matchNumber_slotNumber: {
+        if (player2) {
+          await db.bracketSlot.upsert({
+            where: {
+              bracketId_round_matchNumber_slotNumber: {
+                bracketId,
+                round: 1,
+                matchNumber: match.matchNumber,
+                slotNumber: 2,
+              },
+            },
+            update: { participantId: player2.id, sourceType: "MANUAL" },
+            create: {
               bracketId,
               round: 1,
               matchNumber: match.matchNumber,
               slotNumber: 2,
+              participantId: player2.id,
+              sourceType: "MANUAL",
             },
-          },
-          update: { participantId: player2.id, sourceType: "MANUAL" },
-          create: {
-            bracketId,
-            round: 1,
-            matchNumber: match.matchNumber,
-            slotNumber: 2,
-            participantId: player2.id,
-            sourceType: "MANUAL",
-          },
-        });
-      }
-    }),
-  );
+          });
+        }
+      }),
+    );
+  }
 
   if (type === PlayoffType.DOUBLE) {
     await Promise.all(
@@ -389,6 +439,217 @@ async function createPlayoffMatches({
   }
 }
 
+async function createCustomFormatStages(params: {
+  tournamentId: string;
+  tournament: {
+    status: TournamentStatus;
+    pointsForWin: number;
+    pointsForDraw: number;
+    pointsForLoss: number;
+    sortRules: import("@prisma/client").SortRule[];
+  };
+  blueprint: FormatBlueprint;
+}) {
+  const stages = [];
+
+  const leagueStage = await db.tournamentStage.create({
+    data: {
+      tournamentId: params.tournamentId,
+      name: params.blueprint.leagueStageName,
+      type: StageType.GROUP_STAGE,
+      status: getStageStatus(false, params.tournament.status),
+      orderIndex: 1,
+      groupsCount: params.blueprint.divisionsCount,
+      pointsForWin: params.tournament.pointsForWin,
+      pointsForDraw: params.tournament.pointsForDraw,
+      pointsForLoss: params.tournament.pointsForLoss,
+      sortRules: params.tournament.sortRules,
+      settingsJson: {
+        mode: "custom-leagues",
+        divisionsCount: params.blueprint.divisionsCount,
+      },
+    },
+  });
+
+  for (let index = 0; index < params.blueprint.divisionsCount; index += 1) {
+    await db.tournamentGroup.create({
+      data: {
+        stageId: leagueStage.id,
+        name:
+          params.blueprint.divisionsCount === 1
+            ? params.blueprint.leagueStageName
+            : `${params.blueprint.leagueStageName} ${index + 1}`,
+        orderIndex: index + 1,
+      },
+    });
+  }
+
+  stages.push(leagueStage);
+
+  for (let index = 0; index < params.blueprint.playoffs.length; index += 1) {
+    const playoff = params.blueprint.playoffs[index];
+    const upperEntriesCount = countSelectionEntries(playoff.selections, "upper");
+    const lowerEntriesCount = countSelectionEntries(playoff.selections, "lower");
+    const roundsCount = Math.log2(nextPowerOfTwo(Math.max(upperEntriesCount, lowerEntriesCount, 2)));
+
+    const stage = await db.tournamentStage.create({
+      data: {
+        tournamentId: params.tournamentId,
+        name: playoff.name,
+        type: StageType.PLAYOFF,
+        status: StageStatus.PENDING,
+        orderIndex: index + 2,
+        roundsCount,
+        settingsJson: {
+          mode: "custom-playoff-stage",
+          upperEntriesCount,
+          lowerEntriesCount,
+        },
+      },
+    });
+
+    await db.playoffBracket.create({
+      data: {
+        tournamentId: params.tournamentId,
+        stageId: stage.id,
+        type: playoff.type,
+        size: nextPowerOfTwo(Math.max(upperEntriesCount, lowerEntriesCount, 2)),
+        legsCount: playoff.type === PlayoffType.DOUBLE ? 1 : playoff.legsCount,
+        thirdPlaceMatch: playoff.type === PlayoffType.DOUBLE ? false : playoff.thirdPlaceMatch,
+        settingsJson: {
+          mode: "custom",
+          selections: playoff.selections,
+          upperEntriesCount,
+          lowerEntriesCount,
+        } satisfies CustomPlayoffSettings,
+      },
+    });
+
+    stages.push(stage);
+  }
+
+  return stages;
+}
+
+async function seedCustomPlayoffBracket(params: {
+  bracketId: string;
+  groups: Array<{
+    id: string;
+    orderIndex: number;
+    standings: Array<{ participantId: string; rank: number | null; participant: { userId: string } }>;
+  }>;
+}) {
+  const bracket = await db.playoffBracket.findUnique({
+    where: { id: params.bracketId },
+    include: { matches: { orderBy: [{ bracket: "asc" }, { round: "asc" }, { matchNumber: "asc" }] } },
+  });
+
+  if (!bracket) throw new Error("Bracket not found");
+
+  const settings = parseCustomBracketSettings(bracket.settingsJson);
+  if (!settings) return bracket;
+
+  const standingMap = new Map(
+    params.groups.flatMap((group) =>
+      group.standings.map((standing) => [
+        createGroupSourceRef(group.id, standing.rank ?? 999),
+        {
+          participantId: standing.participantId,
+          userId: standing.participant.userId,
+        },
+      ]),
+    ),
+  );
+
+  const upperRefs = expandSelectionRefs(params.groups, settings.selections, "upper");
+  const lowerRefs = expandSelectionRefs(params.groups, settings.selections, "lower");
+  const upperMatches = bracket.matches.filter((match) => match.bracket === "upper" && match.round === 1 && !match.isThirdPlaceMatch);
+  const lowerMatches = bracket.matches.filter((match) => match.bracket === "lower" && match.round === 1);
+
+  await Promise.all(
+    upperMatches.map((match) =>
+      match.seriesKey
+        ? db.match.updateMany({
+            where: { seriesKey: match.seriesKey },
+            data: {
+              participant1EntryId: null,
+              participant2EntryId: null,
+              player1Id: null,
+              player2Id: null,
+              status: MatchStatus.PENDING,
+            },
+          })
+        : db.match.update({
+            where: { id: match.id },
+            data: {
+              participant1EntryId: null,
+              participant2EntryId: null,
+              player1Id: null,
+              player2Id: null,
+              status: MatchStatus.PENDING,
+            },
+          }),
+    ),
+  );
+
+  await Promise.all(
+    lowerMatches.map((match) =>
+      db.match.update({
+        where: { id: match.id },
+        data: {
+          participant1EntryId: null,
+          participant2EntryId: null,
+          player1Id: null,
+          player2Id: null,
+          status: MatchStatus.PENDING,
+        },
+      }),
+    ),
+  );
+
+  await Promise.all(
+    upperMatches.flatMap((match, index) => {
+      const refs = [upperRefs[index * 2] ?? null, upperRefs[index * 2 + 1] ?? null];
+      return refs.map((sourceRef, slotIndex) =>
+        setBracketSlot({
+          bracketId: bracket.id,
+          round: 1,
+          matchNumber: match.matchNumber,
+          slotNumber: slotIndex === 0 ? 1 : 2,
+          participantId: sourceRef ? standingMap.get(sourceRef)?.participantId ?? null : null,
+          sourceType: sourceRef ? "GROUP_RESULTS" : "MANUAL",
+          sourceRef: sourceRef ?? undefined,
+        }),
+      );
+    }),
+  );
+
+  await Promise.all(
+    lowerMatches.map(async (match, index) => {
+      const firstRef = lowerRefs[index * 2] ?? null;
+      const secondRef = lowerRefs[index * 2 + 1] ?? null;
+      const firstParticipant = firstRef ? standingMap.get(firstRef) ?? null : null;
+      const secondParticipant = secondRef ? standingMap.get(secondRef) ?? null : null;
+
+      await db.match.update({
+        where: { id: match.id },
+        data: {
+          participant1EntryId: firstParticipant?.participantId ?? null,
+          participant2EntryId: secondParticipant?.participantId ?? null,
+          player1Id: firstParticipant?.userId ?? null,
+          player2Id: secondParticipant?.userId ?? null,
+          status: firstParticipant && secondParticipant ? MatchStatus.READY : MatchStatus.PENDING,
+        },
+      });
+    }),
+  );
+
+  return db.playoffBracket.findUnique({
+    where: { id: bracket.id },
+    include: { slots: { include: { participant: { include: { user: true } } } }, matches: true },
+  });
+}
+
 export async function generateTournamentStages(tournamentId: string, options?: { regenerate?: boolean }) {
   const tournament = await db.tournament.findUnique({
     where: { id: tournamentId },
@@ -418,6 +679,21 @@ export async function generateTournamentStages(tournamentId: string, options?: {
   }
 
   const stages = [];
+
+  if (tournament.format === TournamentFormat.CUSTOM) {
+    const blueprint = normalizeFormatBlueprint(tournament.formatBlueprintJson);
+    return createCustomFormatStages({
+      tournamentId,
+      tournament: {
+        status: tournament.status,
+        pointsForWin: tournament.pointsForWin,
+        pointsForDraw: tournament.pointsForDraw,
+        pointsForLoss: tournament.pointsForLoss,
+        sortRules: tournament.sortRules,
+      },
+      blueprint,
+    });
+  }
 
   if (tournament.format === TournamentFormat.LEAGUE || tournament.format === TournamentFormat.ROUND_ROBIN) {
     stages.push(
@@ -635,15 +911,42 @@ export async function generateTournamentMatches(tournamentId: string) {
     }
 
     if (stage.type === StageType.PLAYOFF && stage.bracket) {
-      await createPlayoffMatches({
-        tournamentId,
-        stageId: stage.id,
-        bracketId: stage.bracket.id,
-        entries: tournament.participants.map((entry) => ({ id: entry.id, userId: entry.userId, seed: entry.seed })),
-        type: stage.bracket.type,
-        legsCount: stage.bracket.legsCount,
-        thirdPlaceMatch: stage.bracket.thirdPlaceMatch,
-      });
+      const customSettings = tournament.format === TournamentFormat.CUSTOM ? parseCustomBracketSettings(stage.bracket.settingsJson) : null;
+
+      if (customSettings) {
+        await createPlayoffMatches({
+          tournamentId,
+          stageId: stage.id,
+          bracketId: stage.bracket.id,
+          entries: [],
+          type: stage.bracket.type,
+          legsCount: stage.bracket.legsCount,
+          thirdPlaceMatch: stage.bracket.thirdPlaceMatch,
+          sizeOverride: nextPowerOfTwo(Math.max(customSettings.upperEntriesCount, customSettings.lowerEntriesCount, 2)),
+        });
+
+        const leagueStage = tournament.stages.find((item) => item.type === StageType.GROUP_STAGE);
+        if (leagueStage?.groups.length) {
+          await seedCustomPlayoffBracket({
+            bracketId: stage.bracket.id,
+            groups: leagueStage.groups.map((group) => ({
+              id: group.id,
+              orderIndex: group.orderIndex,
+              standings: [],
+            })),
+          });
+        }
+      } else {
+        await createPlayoffMatches({
+          tournamentId,
+          stageId: stage.id,
+          bracketId: stage.bracket.id,
+          entries: tournament.participants.map((entry) => ({ id: entry.id, userId: entry.userId, seed: entry.seed })),
+          type: stage.bracket.type,
+          legsCount: stage.bracket.legsCount,
+          thirdPlaceMatch: stage.bracket.thirdPlaceMatch,
+        });
+      }
     }
   }
 
@@ -944,6 +1247,33 @@ export async function generatePlayoffFromGroups(tournamentId: string) {
 
   if (!tournament) throw new Error("Tournament not found");
 
+  if (tournament.format === TournamentFormat.CUSTOM) {
+    const leagueStage = tournament.stages.find((stage) => stage.type === StageType.GROUP_STAGE);
+    if (!leagueStage) throw new Error("League stage not found");
+
+    const playoffStages = tournament.stages.filter((stage) => stage.type === StageType.PLAYOFF && stage.bracket);
+    if (!playoffStages.length) throw new Error("Playoff stages are not configured");
+
+    const seeded = await Promise.all(
+      playoffStages.map((stage) =>
+        seedCustomPlayoffBracket({
+          bracketId: stage.bracket!.id,
+          groups: leagueStage.groups.map((group) => ({
+            id: group.id,
+            orderIndex: group.orderIndex,
+            standings: group.standings.map((standing) => ({
+              participantId: standing.participantId,
+              rank: standing.rank,
+              participant: { userId: standing.participant.userId },
+            })),
+          })),
+        }),
+      ),
+    );
+
+    return seeded[0];
+  }
+
   const groupStage = tournament.stages.find((stage) => stage.type === StageType.GROUP_STAGE);
   const playoffStage = tournament.stages.find((stage) => stage.type === StageType.PLAYOFF);
   if (!groupStage || !playoffStage?.bracket) throw new Error("Stages for groups/playoff are not configured");
@@ -1141,22 +1471,51 @@ export async function setBracketSlot(input: {
       matchNumber: input.matchNumber,
       bracket: "upper",
     },
+    select: {
+      id: true,
+      seriesKey: true,
+    },
   });
 
   if (match) {
-    await db.match.update({
-      where: { id: match.id },
-      data:
-        input.slotNumber === 1
-          ? {
-              participant1EntryId: slot.participantId ?? null,
-              player1Id: slot.participant?.userId ?? null,
-            }
-          : {
-              participant2EntryId: slot.participantId ?? null,
-              player2Id: slot.participant?.userId ?? null,
-            },
-    });
+    const targetMatches = match.seriesKey
+      ? await db.match.findMany({
+          where: {
+            seriesKey: match.seriesKey,
+            isPenaltyTiebreak: false,
+          },
+          select: { id: true, player1Id: true, player2Id: true, status: true },
+        })
+      : await db.match.findMany({
+          where: { id: match.id },
+          select: { id: true, player1Id: true, player2Id: true, status: true },
+        });
+
+    await Promise.all(
+      targetMatches.map((targetMatch) =>
+        db.match.update({
+          where: { id: targetMatch.id },
+          data:
+            input.slotNumber === 1
+              ? {
+                  participant1EntryId: slot.participantId ?? null,
+                  player1Id: slot.participant?.userId ?? null,
+                  status:
+                    (slot.participant?.userId ?? null) && targetMatch.player2Id && targetMatch.status === MatchStatus.PENDING
+                      ? MatchStatus.READY
+                      : targetMatch.status,
+                }
+              : {
+                  participant2EntryId: slot.participantId ?? null,
+                  player2Id: slot.participant?.userId ?? null,
+                  status:
+                    (slot.participant?.userId ?? null) && targetMatch.player1Id && targetMatch.status === MatchStatus.PENDING
+                      ? MatchStatus.READY
+                      : targetMatch.status,
+                },
+        }),
+      ),
+    );
   }
 
   return slot;

@@ -40,6 +40,7 @@ export const tournamentFormatLabel: Record<TournamentFormat, string> = {
   LEAGUE: "Лига",
   GROUPS: "Группы",
   GROUPS_PLAYOFF: "Группы + плей-офф",
+  CUSTOM: "Гибкий конструктор",
 };
 
 export const playoffTypeLabel: Record<PlayoffType, string> = {

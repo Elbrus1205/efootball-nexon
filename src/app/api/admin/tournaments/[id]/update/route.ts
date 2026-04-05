@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { UserRole } from "@prisma/client";
+import { Prisma, UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { parseFormatBlueprintJson } from "@/lib/format-blueprint";
 import { tournamentBuilderSchema } from "@/lib/validators";
 
 function checkboxValue(value: FormDataEntryValue | null) {
@@ -24,6 +25,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     format: formData.get("format"),
     status: formData.get("status"),
     coverImage: formData.get("coverImage"),
+    formatBlueprintJson: formData.get("formatBlueprintJson"),
     playoffType: formData.get("playoffType") || null,
     playoffLegs: formData.get("playoffLegs") || 1,
     playoffThirdPlace: checkboxValue(formData.get("playoffThirdPlace")),
@@ -46,6 +48,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
     sortRules: formData.getAll("sortRules"),
   });
 
+  const formatBlueprint = parseFormatBlueprintJson(typeof body.formatBlueprintJson === "string" ? body.formatBlueprintJson : "");
+
   await db.tournament.update({
     where: { id: params.id },
     data: {
@@ -58,6 +62,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       maxParticipants: body.maxParticipants,
       prizePool: body.prizePool || null,
       format: body.format,
+      formatBlueprintJson: body.format === "CUSTOM" ? formatBlueprint ?? Prisma.DbNull : Prisma.DbNull,
       status: body.status,
       coverImage: body.coverImage || null,
       playoffType: body.playoffType ?? null,

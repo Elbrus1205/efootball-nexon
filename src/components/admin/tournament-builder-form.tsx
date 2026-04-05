@@ -3,11 +3,13 @@
 import { ClubSelectionMode, PlayoffType, SeedingMethod, SortRule, TournamentFormat, TournamentStatus } from "@prisma/client";
 import { ChangeEvent, useState } from "react";
 import { playoffTypeLabel, seedingMethodLabel, sortRuleLabel, tournamentFormatLabel, tournamentStatusLabel } from "@/lib/admin-display";
+import { FormatBlueprintBuilder } from "@/components/admin/format-blueprint-builder";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { type FormatBlueprint } from "@/lib/format-blueprint";
 
 type BuilderValues = {
   title?: string;
@@ -24,6 +26,7 @@ type BuilderValues = {
   playoffType?: PlayoffType | "";
   playoffLegs?: number;
   playoffThirdPlace?: boolean;
+  formatBlueprint?: FormatBlueprint | null;
   seedingMethod?: SeedingMethod;
   roundsInLeague?: number;
   groupsCount?: number | null;
@@ -65,6 +68,7 @@ export function TournamentBuilderForm({
 
   const showGroups = format === TournamentFormat.GROUPS || format === TournamentFormat.GROUPS_PLAYOFF;
   const showLeague = format === TournamentFormat.LEAGUE || format === TournamentFormat.ROUND_ROBIN;
+  const showCustom = format === TournamentFormat.CUSTOM;
   const showPlayoff =
     format === TournamentFormat.SINGLE_ELIMINATION ||
     format === TournamentFormat.DOUBLE_ELIMINATION ||
@@ -223,6 +227,8 @@ export function TournamentBuilderForm({
           </div>
         </CardContent>
       </Card>
+
+      <FormatBlueprintBuilder name="formatBlueprintJson" initialValue={initialValues?.formatBlueprint ?? null} visible={showCustom} />
 
       <Card>
         <CardHeader>

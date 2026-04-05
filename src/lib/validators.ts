@@ -120,6 +120,7 @@ export const tournamentBuilderSchema = z.object({
   prizePool: z.string().optional().or(z.literal("")),
   format: z.nativeEnum(TournamentFormat),
   status: z.nativeEnum(TournamentStatus).default(TournamentStatus.DRAFT),
+  formatBlueprintJson: z.string().optional().or(z.literal("")),
   coverImage: z
     .string()
     .refine((value) => !value || value.startsWith("data:image/") || value.startsWith("http://") || value.startsWith("https://"), {

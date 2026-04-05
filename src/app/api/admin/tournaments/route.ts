@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { UserRole } from "@prisma/client";
+import { Prisma, UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { parseFormatBlueprintJson } from "@/lib/format-blueprint";
 import { generateTournamentMatches, generateTournamentSchedule, generateTournamentStages } from "@/lib/services/tournaments";
 import { tournamentBuilderSchema } from "@/lib/validators";
 import { slugify } from "@/lib/utils";
@@ -29,6 +30,7 @@ export async function POST(request: Request) {
       format: formData.get("format"),
       status: formData.get("status"),
       coverImage: formData.get("coverImage"),
+      formatBlueprintJson: formData.get("formatBlueprintJson"),
       playoffType: formData.get("playoffType") || null,
       playoffLegs: formData.get("playoffLegs") || 1,
       playoffThirdPlace: checkboxValue(formData.get("playoffThirdPlace")),
@@ -57,6 +59,7 @@ export async function POST(request: Request) {
     }
 
     const body = parsed.data;
+    const formatBlueprint = parseFormatBlueprintJson(typeof body.formatBlueprintJson === "string" ? body.formatBlueprintJson : "");
 
     const tournament = await db.tournament.create({
       data: {
@@ -70,6 +73,7 @@ export async function POST(request: Request) {
         maxParticipants: body.maxParticipants,
         prizePool: body.prizePool || null,
         format: body.format,
+        formatBlueprintJson: body.format === "CUSTOM" ? formatBlueprint ?? Prisma.DbNull : Prisma.DbNull,
         status: body.status,
         coverImage: body.coverImage || null,
         playoffType: body.playoffType ?? null,
