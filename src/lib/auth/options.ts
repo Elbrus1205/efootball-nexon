@@ -8,6 +8,7 @@ import { buildSecurityContext, createLoginHistory, createSecuritySession, touchS
 import { verifyTelegramAuth } from "@/lib/auth/telegram";
 import { fetchVkUserProfile } from "@/lib/auth/vk";
 import { db } from "@/lib/db";
+import { generateFallbackNickname } from "@/lib/player-name";
 import { verifyTwoFactorChallenge } from "@/lib/two-factor";
 
 const TELEGRAM_ADMIN_ID = "6595067194";
@@ -262,13 +263,13 @@ export const authOptions: NextAuthOptions = {
 
         if (!verified) return null;
 
-        const displayName = [credentials.first_name, credentials.last_name].filter(Boolean).join(" ");
+        const telegramUsername = credentials.username?.trim() || generateFallbackNickname(credentials.id);
         const role = credentials.id === TELEGRAM_ADMIN_ID ? UserRole.ADMIN : UserRole.PLAYER;
 
         const user = await db.user.upsert({
           where: { telegramId: credentials.id },
           update: {
-            name: displayName || credentials.username || "Telegram Player",
+            name: undefined,
             telegramUsername: credentials.username,
             image: credentials.photo_url,
             role,
@@ -277,10 +278,21 @@ export const authOptions: NextAuthOptions = {
             telegramId: credentials.id,
             telegramUsername: credentials.username,
             image: credentials.photo_url,
-            name: displayName || credentials.username || "Telegram Player",
+            name: telegramUsername,
             role,
           },
         });
+
+        const normalizedCurrentName = user.name?.trim() || "";
+        if (!normalizedCurrentName) {
+          await db.user.update({
+            where: { id: user.id },
+            data: {
+              name: telegramUsername,
+            },
+          });
+          user.name = telegramUsername;
+        }
 
         const authSessionId = await createSecuritySession({
           userId: user.id,

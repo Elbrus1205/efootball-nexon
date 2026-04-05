@@ -35,7 +35,11 @@ export const loginSchema = z.object({
 });
 
 export const profileSchema = z.object({
-  name: z.string().min(2),
+  name: z
+    .string()
+    .min(2, "Имя должно быть не короче 2 символов.")
+    .max(32, "Имя должно быть не длиннее 32 символов.")
+    .regex(/^[A-Za-z0-9_]+$/, "Имя может содержать только английские буквы, цифры и нижнее подчёркивание."),
   favoriteTeam: z.string().optional().or(z.literal("")),
   bio: z.string().max(300).optional().or(z.literal("")),
   bannerImage: z

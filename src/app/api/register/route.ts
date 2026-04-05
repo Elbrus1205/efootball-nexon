@@ -36,11 +36,45 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   const session = await requireAuth();
   const body = profileSchema.parse(await request.json());
+  const existingUser = await db.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      id: true,
+      name: true,
+      nameUpdatedAt: true,
+    },
+  });
+
+  if (!existingUser) {
+    return NextResponse.json({ error: "Пользователь не найден." }, { status: 404 });
+  }
+
+  const normalizedName = body.name.trim();
+  const nameChanged = normalizedName !== (existingUser.name ?? "");
+
+  if (nameChanged && existingUser.nameUpdatedAt) {
+    const nextAvailableAt = new Date(existingUser.nameUpdatedAt);
+    nextAvailableAt.setMonth(nextAvailableAt.getMonth() + 6);
+
+    if (nextAvailableAt > new Date()) {
+      return NextResponse.json(
+        {
+          error: `Имя можно менять только раз в 6 месяцев. Следующая смена будет доступна после ${new Intl.DateTimeFormat("ru-RU", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }).format(nextAvailableAt)}.`,
+        },
+        { status: 400 },
+      );
+    }
+  }
 
   const user = await db.user.update({
     where: { id: session.user.id },
     data: {
-      name: body.name,
+      name: normalizedName,
+      ...(nameChanged ? { nameUpdatedAt: new Date() } : {}),
       favoriteTeam: body.favoriteTeam || null,
       bio: body.bio || null,
       bannerImage: body.bannerImage || null,

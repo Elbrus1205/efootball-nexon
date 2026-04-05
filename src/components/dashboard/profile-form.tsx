@@ -182,6 +182,7 @@ export function ProfileForm({
                   className="h-10 border-white/10 bg-white/[0.04]"
                   onChange={(e) => setDraft((v) => ({ ...v, name: e.target.value }))}
                 />
+                <div className="text-xs text-zinc-500">Только английские буквы, цифры и `_`. Изменить можно раз в 6 месяцев.</div>
               </div>
 
               <div className="space-y-2">
