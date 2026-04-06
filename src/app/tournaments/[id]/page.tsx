@@ -176,19 +176,19 @@ function StandingsTable({ rows }: { rows: LeagueRow[] }) {
             </StickyHeader>
             <StickyHeader>Команда</StickyHeader>
             <StickyHeader>
-              <div className="text-center">Очки</div>
+              <div className="text-center">И</div>
             </StickyHeader>
             <StickyHeader>
-              <div className="text-center">Очки</div>
+              <div className="text-center">В</div>
             </StickyHeader>
             <StickyHeader>
-              <div className="text-center">Очки</div>
+              <div className="text-center">Н</div>
             </StickyHeader>
             <StickyHeader>
-              <div className="text-center">Очки</div>
+              <div className="text-center">П</div>
             </StickyHeader>
             <StickyHeader>
-              <div className="text-center">Очки</div>
+              <div className="text-center">+/-</div>
             </StickyHeader>
             <StickyHeader>
               <div className="text-center">Очки</div>
@@ -214,8 +214,15 @@ function StandingsTable({ rows }: { rows: LeagueRow[] }) {
               <td className="px-1 py-3 text-center text-zinc-300">{row.wins}</td>
               <td className="px-1 py-3 text-center text-zinc-300">{row.draws}</td>
               <td className="px-1 py-3 text-center text-zinc-300">{row.losses}</td>
-              <td className={row.goalDifference > 0 ? "Матч переведён в спор. Теперь результат выставляет администрация." : "Оба игрока должны ввести один и тот же счёт. Если результаты не совпадут три раза, матч уйдёт в спор."
-                    }>
+              <td
+                className={
+                  row.goalDifference > 0
+                    ? "px-1 py-3 text-center font-medium text-emerald-300"
+                    : row.goalDifference < 0
+                      ? "px-1 py-3 text-center font-medium text-rose-300"
+                      : "px-1 py-3 text-center font-medium text-zinc-300"
+                }
+              >
                 {row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}
               </td>
               <td className="px-1 py-3 text-center font-semibold text-white">{row.points}</td>
@@ -229,8 +236,7 @@ function StandingsTable({ rows }: { rows: LeagueRow[] }) {
 
 export async function generateMetadata({ params }: { params: { id: string } }) {
   const tournament = await db.tournament.findUnique({ where: { id: params.id } });
-  return tournament ? { title: tournament.title, description: tournament.description } : { title: "Счёт ещё не подтверждён"
-                    };
+  return tournament ? { title: tournament.title, description: tournament.description } : { title: "Турнир не найден" };
 }
 
 export default async function TournamentDetailsPage({ params }: { params: { id: string } }) {
