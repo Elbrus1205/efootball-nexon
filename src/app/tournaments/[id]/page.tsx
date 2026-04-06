@@ -217,6 +217,45 @@ function buildCustomStandingHighlights(tournament: {
   return byDivision;
 }
 
+function formatRankRange(fromRank: number, toRank: number) {
+  if (fromRank === toRank) {
+    return `${fromRank} место`;
+  }
+
+  return `${fromRank}–${toRank} места`;
+}
+
+function getEliminatedRanges(highlights: StandingHighlight[], totalRows: number) {
+  const occupied = new Set<number>();
+
+  for (const highlight of highlights) {
+    for (let rank = highlight.fromRank; rank <= highlight.toRank; rank += 1) {
+      occupied.add(rank);
+    }
+  }
+
+  const ranges: Array<{ fromRank: number; toRank: number }> = [];
+  let currentStart: number | null = null;
+
+  for (let rank = 1; rank <= totalRows; rank += 1) {
+    if (!occupied.has(rank)) {
+      if (currentStart === null) currentStart = rank;
+      continue;
+    }
+
+    if (currentStart !== null) {
+      ranges.push({ fromRank: currentStart, toRank: rank - 1 });
+      currentStart = null;
+    }
+  }
+
+  if (currentStart !== null) {
+    ranges.push({ fromRank: currentStart, toRank: totalRows });
+  }
+
+  return ranges;
+}
+
 function getSubmissionState({
   matchStatus,
   latestSubmission,
@@ -247,74 +286,109 @@ function StickyHeader({ children }: { children: React.ReactNode }) {
 }
 
 function StandingsTable({ rows, highlights = [] }: { rows: LeagueRow[]; highlights?: StandingHighlight[] }) {
-  return (
-    <div className="overflow-x-auto rounded-[1.5rem] border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:w-5 [&_td:nth-child(1)]:px-0 [&_td:nth-child(1)]:text-center [&_td:nth-child(2)]:w-[1%] [&_td:nth-child(2)]:whitespace-nowrap [&_td:nth-child(2)]:pl-2 [&_td:nth-child(2)]:pr-[15px] [&_td:nth-child(n+3)]:w-7 [&_td:nth-child(n+3)]:px-1 [&_th:nth-child(1)]:w-5 [&_th:nth-child(1)]:px-0 [&_th:nth-child(2)]:w-[1%] [&_th:nth-child(2)]:whitespace-nowrap [&_th:nth-child(2)]:pl-2 [&_th:nth-child(2)]:pr-[15px] [&_th:nth-child(n+3)]:w-7 [&_th:nth-child(n+3)]:px-1">
-      <table className="w-max min-w-[560px] table-auto text-left text-sm">
-        <thead>
-          <tr>
-            <StickyHeader>
-              <div className="flex justify-center">№</div>
-            </StickyHeader>
-            <StickyHeader>Команда</StickyHeader>
-            <StickyHeader>
-              <div className="text-center">И</div>
-            </StickyHeader>
-            <StickyHeader>
-              <div className="text-center">В</div>
-            </StickyHeader>
-            <StickyHeader>
-              <div className="text-center">Н</div>
-            </StickyHeader>
-            <StickyHeader>
-              <div className="text-center">П</div>
-            </StickyHeader>
-            <StickyHeader>
-              <div className="text-center">+/-</div>
-            </StickyHeader>
-            <StickyHeader>
-              <div className="text-center">Очки</div>
-            </StickyHeader>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => {
-            const rowRank = row.rank ?? index + 1;
-            const highlight = highlights.find((item) => rowRank >= item.fromRank && rowRank <= item.toRank);
+  const orderedHighlights = [...highlights].sort((a, b) => a.fromRank - b.fromRank || a.toRank - b.toRank);
+  const eliminatedRanges = getEliminatedRanges(orderedHighlights, rows.length);
 
-            return (
-            <tr key={row.id} className={highlight?.rowClass ?? defaultRowHighlight(index)} title={highlight?.label}>
-              <td className="w-5 px-0 py-3 text-zinc-300">
-                <span className={highlight?.badgeClass ?? defaultRankBadge(index)}>{rowRank}</span>
-              </td>
-              <td className="px-3 py-3">
-                <ClubPlayerLine
-                  clubName={row.clubName}
-                  badgePath={row.clubBadgePath}
-                  playerId={row.playerId}
-                  playerName={row.playerName}
-                  compact
-                />
-              </td>
-              <td className="px-1 py-3 text-center text-zinc-300">{row.played}</td>
-              <td className="px-1 py-3 text-center text-zinc-300">{row.wins}</td>
-              <td className="px-1 py-3 text-center text-zinc-300">{row.draws}</td>
-              <td className="px-1 py-3 text-center text-zinc-300">{row.losses}</td>
-              <td
-                className={
-                  row.goalDifference > 0
-                    ? "px-1 py-3 text-center font-medium text-emerald-300"
-                    : row.goalDifference < 0
-                      ? "px-1 py-3 text-center font-medium text-rose-300"
-                      : "px-1 py-3 text-center font-medium text-zinc-300"
-                }
-              >
-                {row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}
-              </td>
-              <td className="px-1 py-3 text-center font-semibold text-white">{row.points}</td>
+  return (
+    <div className="space-y-3">
+      <div className="overflow-x-auto rounded-[1.5rem] border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:w-5 [&_td:nth-child(1)]:px-0 [&_td:nth-child(1)]:text-center [&_td:nth-child(2)]:w-[1%] [&_td:nth-child(2)]:whitespace-nowrap [&_td:nth-child(2)]:pl-2 [&_td:nth-child(2)]:pr-[15px] [&_td:nth-child(n+3)]:w-7 [&_td:nth-child(n+3)]:px-1 [&_th:nth-child(1)]:w-5 [&_th:nth-child(1)]:px-0 [&_th:nth-child(2)]:w-[1%] [&_th:nth-child(2)]:whitespace-nowrap [&_th:nth-child(2)]:pl-2 [&_th:nth-child(2)]:pr-[15px] [&_th:nth-child(n+3)]:w-7 [&_th:nth-child(n+3)]:px-1">
+        <table className="w-max min-w-[560px] table-auto text-left text-sm">
+          <thead>
+            <tr>
+              <StickyHeader>
+                <div className="flex justify-center">№</div>
+              </StickyHeader>
+              <StickyHeader>Команда</StickyHeader>
+              <StickyHeader>
+                <div className="text-center">И</div>
+              </StickyHeader>
+              <StickyHeader>
+                <div className="text-center">В</div>
+              </StickyHeader>
+              <StickyHeader>
+                <div className="text-center">Н</div>
+              </StickyHeader>
+              <StickyHeader>
+                <div className="text-center">П</div>
+              </StickyHeader>
+              <StickyHeader>
+                <div className="text-center">+/-</div>
+              </StickyHeader>
+              <StickyHeader>
+                <div className="text-center">Очки</div>
+              </StickyHeader>
             </tr>
-          )})}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => {
+              const rowRank = row.rank ?? index + 1;
+              const highlight = orderedHighlights.find((item) => rowRank >= item.fromRank && rowRank <= item.toRank);
+
+              return (
+                <tr key={row.id} className={highlight?.rowClass ?? defaultRowHighlight(index)} title={highlight?.label}>
+                  <td className="w-5 px-0 py-3 text-zinc-300">
+                    <span className={highlight?.badgeClass ?? defaultRankBadge(index)}>{rowRank}</span>
+                  </td>
+                  <td className="px-3 py-3">
+                    <ClubPlayerLine
+                      clubName={row.clubName}
+                      badgePath={row.clubBadgePath}
+                      playerId={row.playerId}
+                      playerName={row.playerName}
+                      compact
+                    />
+                  </td>
+                  <td className="px-1 py-3 text-center text-zinc-300">{row.played}</td>
+                  <td className="px-1 py-3 text-center text-zinc-300">{row.wins}</td>
+                  <td className="px-1 py-3 text-center text-zinc-300">{row.draws}</td>
+                  <td className="px-1 py-3 text-center text-zinc-300">{row.losses}</td>
+                  <td
+                    className={
+                      row.goalDifference > 0
+                        ? "px-1 py-3 text-center font-medium text-emerald-300"
+                        : row.goalDifference < 0
+                          ? "px-1 py-3 text-center font-medium text-rose-300"
+                          : "px-1 py-3 text-center font-medium text-zinc-300"
+                    }
+                  >
+                    {row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}
+                  </td>
+                  <td className="px-1 py-3 text-center font-semibold text-white">{row.points}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {orderedHighlights.length || eliminatedRanges.length ? (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+          <div className="mb-3 text-xs uppercase tracking-[0.18em] text-zinc-500">Выход из таблицы</div>
+          <div className="flex flex-wrap gap-2">
+            {orderedHighlights.map((highlight) => (
+              <div
+                key={`${highlight.label}-${highlight.fromRank}-${highlight.toRank}`}
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-2 text-xs text-zinc-200"
+              >
+                <span className={`h-2.5 w-2.5 rounded-full ${highlight.badgeClass.split(" ").find((item) => item.startsWith("bg-")) ?? "bg-primary/40"}`} />
+                <span className="font-medium text-white">{formatRankRange(highlight.fromRank, highlight.toRank)}</span>
+                <span className="text-zinc-400">→ {highlight.label}</span>
+              </div>
+            ))}
+
+            {eliminatedRanges.map((range) => (
+              <div
+                key={`eliminated-${range.fromRank}-${range.toRank}`}
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-2 text-xs text-zinc-200"
+              >
+                <span className="h-2.5 w-2.5 rounded-full bg-zinc-500/70" />
+                <span className="font-medium text-white">{formatRankRange(range.fromRank, range.toRank)}</span>
+                <span className="text-zinc-400">→ Вылет</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
