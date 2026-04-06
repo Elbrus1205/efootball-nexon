@@ -19,6 +19,7 @@ import {
   tournamentStatusVariant,
 } from "@/lib/admin-display";
 import { db } from "@/lib/db";
+import { normalizeFormatBlueprint } from "@/lib/format-blueprint";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { formatDate } from "@/lib/utils";
 
@@ -36,6 +37,41 @@ type LeagueRow = {
   goalDifference: number;
   points: number;
 };
+
+type StandingHighlight = {
+  fromRank: number;
+  toRank: number;
+  label: string;
+  rowClass: string;
+  badgeClass: string;
+};
+
+const CUSTOM_STANDING_HIGHLIGHT_STYLES = [
+  {
+    rowClass: "border-t border-sky-400/20 bg-sky-400/8",
+    badgeClass: "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-sky-400/15 px-1 text-[10px] font-semibold text-sky-300",
+  },
+  {
+    rowClass: "border-t border-emerald-400/20 bg-emerald-400/8",
+    badgeClass: "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-400/15 px-1 text-[10px] font-semibold text-emerald-300",
+  },
+  {
+    rowClass: "border-t border-amber-400/20 bg-amber-400/8",
+    badgeClass: "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-400/15 px-1 text-[10px] font-semibold text-amber-300",
+  },
+  {
+    rowClass: "border-t border-violet-400/20 bg-violet-400/8",
+    badgeClass: "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-400/15 px-1 text-[10px] font-semibold text-violet-300",
+  },
+  {
+    rowClass: "border-t border-rose-400/20 bg-rose-400/8",
+    badgeClass: "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-400/15 px-1 text-[10px] font-semibold text-rose-300",
+  },
+  {
+    rowClass: "border-t border-cyan-400/20 bg-cyan-400/8",
+    badgeClass: "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-cyan-400/15 px-1 text-[10px] font-semibold text-cyan-300",
+  },
+] as const;
 
 function scheduleStageLabel(match: {
   round: number;
@@ -122,18 +158,63 @@ function buildLeagueTable(
   });
 }
 
-function rowHighlight(index: number) {
+function defaultRowHighlight(index: number) {
   if (index === 0) return "border-t border-primary/20 bg-primary/10";
   if (index === 1) return "border-t border-emerald-400/10 bg-emerald-400/5";
   if (index === 2) return "border-t border-amber-400/10 bg-amber-400/5";
   return "border-t border-white/10";
 }
 
-function rankBadge(index: number) {
+function defaultRankBadge(index: number) {
   if (index === 0) return "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/20 px-1 text-[10px] font-semibold text-primary";
   if (index === 1) return "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-400/15 px-1 text-[10px] font-semibold text-emerald-300";
   if (index === 2) return "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-400/15 px-1 text-[10px] font-semibold text-amber-300";
   return "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white/5 px-1 text-[10px] font-medium text-zinc-300";
+}
+
+function buildCustomStandingHighlights(tournament: {
+  format: TournamentFormat;
+  formatBlueprintJson: unknown;
+}) {
+  if (tournament.format !== TournamentFormat.CUSTOM) {
+    return new Map<number, StandingHighlight[]>();
+  }
+
+  const blueprint = normalizeFormatBlueprint(tournament.formatBlueprintJson);
+  const byDivision = new Map<number, StandingHighlight[]>();
+  const styleByTarget = new Map<string, (typeof CUSTOM_STANDING_HIGHLIGHT_STYLES)[number]>();
+  let styleIndex = 0;
+
+  for (const playoff of blueprint.playoffs) {
+    for (const selection of playoff.selections) {
+      const targetKey = playoff.type === "SINGLE" ? `${playoff.id}:main` : `${playoff.id}:${selection.targetBracket}`;
+
+      if (!styleByTarget.has(targetKey)) {
+        styleByTarget.set(targetKey, CUSTOM_STANDING_HIGHLIGHT_STYLES[styleIndex % CUSTOM_STANDING_HIGHLIGHT_STYLES.length]);
+        styleIndex += 1;
+      }
+
+      const style = styleByTarget.get(targetKey)!;
+      const bucket = byDivision.get(selection.divisionIndex) ?? [];
+      const targetLabel =
+        playoff.type === "SINGLE"
+          ? playoff.name
+          : selection.targetBracket === "upper"
+            ? `${playoff.name} • Верхняя сетка`
+            : `${playoff.name} • Нижняя сетка`;
+
+      bucket.push({
+        fromRank: selection.fromRank,
+        toRank: selection.toRank,
+        label: targetLabel,
+        rowClass: style.rowClass,
+        badgeClass: style.badgeClass,
+      });
+      byDivision.set(selection.divisionIndex, bucket);
+    }
+  }
+
+  return byDivision;
 }
 
 function getSubmissionState({
@@ -165,7 +246,7 @@ function StickyHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
-function StandingsTable({ rows }: { rows: LeagueRow[] }) {
+function StandingsTable({ rows, highlights = [] }: { rows: LeagueRow[]; highlights?: StandingHighlight[] }) {
   return (
     <div className="overflow-x-auto rounded-[1.5rem] border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:w-5 [&_td:nth-child(1)]:px-0 [&_td:nth-child(1)]:text-center [&_td:nth-child(2)]:w-[1%] [&_td:nth-child(2)]:whitespace-nowrap [&_td:nth-child(2)]:pl-2 [&_td:nth-child(2)]:pr-[15px] [&_td:nth-child(n+3)]:w-7 [&_td:nth-child(n+3)]:px-1 [&_th:nth-child(1)]:w-5 [&_th:nth-child(1)]:px-0 [&_th:nth-child(2)]:w-[1%] [&_th:nth-child(2)]:whitespace-nowrap [&_th:nth-child(2)]:pl-2 [&_th:nth-child(2)]:pr-[15px] [&_th:nth-child(n+3)]:w-7 [&_th:nth-child(n+3)]:px-1">
       <table className="w-max min-w-[560px] table-auto text-left text-sm">
@@ -196,10 +277,14 @@ function StandingsTable({ rows }: { rows: LeagueRow[] }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, index) => (
-            <tr key={row.id} className={rowHighlight(index)}>
+          {rows.map((row, index) => {
+            const rowRank = row.rank ?? index + 1;
+            const highlight = highlights.find((item) => rowRank >= item.fromRank && rowRank <= item.toRank);
+
+            return (
+            <tr key={row.id} className={highlight?.rowClass ?? defaultRowHighlight(index)} title={highlight?.label}>
               <td className="w-5 px-0 py-3 text-zinc-300">
-                <span className={rankBadge(index)}>{row.rank ?? index + 1}</span>
+                <span className={highlight?.badgeClass ?? defaultRankBadge(index)}>{rowRank}</span>
               </td>
               <td className="px-3 py-3">
                 <ClubPlayerLine
@@ -227,7 +312,7 @@ function StandingsTable({ rows }: { rows: LeagueRow[] }) {
               </td>
               <td className="px-1 py-3 text-center font-semibold text-white">{row.points}</td>
             </tr>
-          ))}
+          )})}
         </tbody>
       </table>
     </div>
@@ -331,6 +416,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   const availableClubs = await getAvailableClubs();
   const takenClubSlugs = tournament.participants.map((entry) => entry.clubSlug).filter(Boolean) as string[];
   const structureSectionTitle = tournament.format === TournamentFormat.CUSTOM ? groupStage?.name?.trim() || "Лиги" : "Группы";
+  const customStandingHighlights = buildCustomStandingHighlights(tournament);
   const participantClubMap = Object.fromEntries(
     tournament.participants.map((entry) => [
       entry.userId,
@@ -416,6 +502,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                           goalDifference: row.goalDifference,
                           points: row.points,
                         }))}
+                        highlights={customStandingHighlights.get(group.orderIndex) ?? []}
                       />
                     ) : (
                       <div className="px-4 py-4 text-sm text-zinc-500">Таблица лиги заполнится после первых сыгранных матчей.</div>
