@@ -10,6 +10,42 @@ import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { formatDate } from "@/lib/utils";
 
+type SubmissionItem = {
+  player1Score: number;
+  player2Score: number;
+  createdAt: Date;
+  submittedById: string;
+  submittedBy: {
+    id: string;
+    nickname: string | null;
+    name: string | null;
+    email: string | null;
+  };
+};
+
+function getLatestSubmissionByPlayer(submissions: SubmissionItem[], playerId: string | null) {
+  if (!playerId) return null;
+  return submissions.find((submission) => submission.submittedById === playerId) ?? null;
+}
+
+function SubmissionPill({
+  playerName,
+  submission,
+}: {
+  playerName: string;
+  submission: SubmissionItem | null;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+      <div className="truncate text-sm font-medium text-zinc-300">{playerName}</div>
+      <div className="mt-2 text-2xl font-semibold text-white">
+        {submission ? `${submission.player1Score} : ${submission.player2Score}` : "Не отправил"}
+      </div>
+      {submission ? <div className="mt-2 text-xs text-zinc-500">{formatDate(submission.createdAt)}</div> : null}
+    </div>
+  );
+}
+
 export default async function AdminModerationPage() {
   await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
 
@@ -36,7 +72,7 @@ export default async function AdminModerationPage() {
         </div>
         <h1 className="font-display text-3xl font-thin text-white">Модерация</h1>
         <p className="max-w-3xl text-zinc-400">
-          Здесь показываются матчи, где игроки несколько раз отправили разные результаты. Матч перешёл в спор, поэтому администратор вводит финальный счёт и подтверждает результат.
+          Здесь показываются матчи, где игроки отправили разные результаты. Администратор видит оба счёта, вводит финальный результат и подтверждает матч.
         </p>
       </div>
 
@@ -45,6 +81,8 @@ export default async function AdminModerationPage() {
           disputedMatches.map((match) => {
             const player1Name = match.player1 ? getPlayerDisplayName(match.player1) : "Игрок 1";
             const player2Name = match.player2 ? getPlayerDisplayName(match.player2) : "Игрок 2";
+            const player1Submission = getLatestSubmissionByPlayer(match.submissions, match.player1Id);
+            const player2Submission = getLatestSubmissionByPlayer(match.submissions, match.player2Id);
             const latestSubmission = match.submissions[0];
 
             return (
@@ -67,24 +105,15 @@ export default async function AdminModerationPage() {
                   </Badge>
                 </div>
 
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">Последний отправленный счёт</div>
-                    <div className="mt-2 text-2xl font-semibold text-white">
-                      {latestSubmission ? `${latestSubmission.player1Score} : ${latestSubmission.player2Score}` : "Нет отправок"}
-                    </div>
-                    {latestSubmission ? (
-                      <div className="mt-2 text-sm text-zinc-500">
-                        {latestSubmission.submittedBy ? getPlayerDisplayName(latestSubmission.submittedBy) : "Игрок"} • {formatDate(latestSubmission.createdAt)}
-                      </div>
-                    ) : null}
-                  </div>
+                <div className="grid gap-3 lg:grid-cols-[1fr_1fr_1fr]">
+                  <SubmissionPill playerName={player1Name} submission={player1Submission} />
+                  <SubmissionPill playerName={player2Name} submission={player2Submission} />
 
                   <form action={`/api/admin/matches/${match.id}/review`} method="post" className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
                     <input type="hidden" name="action" value="approve" />
                     <input type="hidden" name="moderatorComment" value="Администратор вручную подтвердил финальный счёт спорного матча." />
 
-                    <div className="text-xs uppercase tracking-[0.18em] text-primary">Решение администратора</div>
+                    <div className="text-xs uppercase tracking-[0.18em] text-primary">Финальный счёт</div>
                     <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-end gap-3">
                       <label className="space-y-2">
                         <span className="block truncate text-xs text-zinc-400">{player1Name}</span>

@@ -12,6 +12,45 @@ import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { formatDate } from "@/lib/utils";
 
+type SubmissionItem = {
+  player1Score: number;
+  player2Score: number;
+  createdAt: Date;
+  submittedById: string;
+  submittedBy: {
+    id: string;
+    nickname: string | null;
+    name: string | null;
+    email: string | null;
+  };
+};
+
+function getLatestSubmissionByPlayer(submissions: SubmissionItem[], playerId: string | null) {
+  if (!playerId) return null;
+  return submissions.find((submission) => submission.submittedById === playerId) ?? null;
+}
+
+function PlayerSubmissionCard({
+  title,
+  playerName,
+  submission,
+}: {
+  title: string;
+  playerName: string;
+  submission: SubmissionItem | null;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+      <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">{title}</div>
+      <div className="mt-1 truncate text-sm font-medium text-zinc-300">{playerName}</div>
+      <div className="mt-3 text-2xl font-semibold text-white">
+        {submission ? `${submission.player1Score} : ${submission.player2Score}` : "Не отправил"}
+      </div>
+      {submission ? <div className="mt-2 text-sm text-zinc-500">{formatDate(submission.createdAt)}</div> : null}
+    </div>
+  );
+}
+
 export default async function AdminMatchWorkspacePage({ params }: { params: { id: string } }) {
   await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
 
@@ -37,6 +76,8 @@ export default async function AdminMatchWorkspacePage({ params }: { params: { id
 
   const player1Name = match.player1 ? getPlayerDisplayName(match.player1) : "Игрок 1";
   const player2Name = match.player2 ? getPlayerDisplayName(match.player2) : "Игрок 2";
+  const player1Submission = getLatestSubmissionByPlayer(match.submissions, match.player1Id);
+  const player2Submission = getLatestSubmissionByPlayer(match.submissions, match.player2Id);
   const latestSubmission = match.submissions[0];
   const isDisputed = match.status === MatchStatus.DISPUTED;
 
@@ -105,7 +146,7 @@ export default async function AdminMatchWorkspacePage({ params }: { params: { id
         <Card>
           <CardHeader>
             <CardTitle>Карточка матча</CardTitle>
-            <CardDescription>Основная информация, текущий счёт и последняя отправка результата.</CardDescription>
+            <CardDescription>Основная информация, текущий счёт и результаты, которые отправили оба игрока.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
@@ -122,16 +163,9 @@ export default async function AdminMatchWorkspacePage({ params }: { params: { id
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">Последняя отправка</div>
-              <div className="mt-2 text-2xl font-semibold text-white">
-                {latestSubmission ? `${latestSubmission.player1Score} : ${latestSubmission.player2Score}` : "Нет отправок"}
-              </div>
-              {latestSubmission ? (
-                <div className="mt-2 text-sm text-zinc-500">
-                  {latestSubmission.submittedBy ? getPlayerDisplayName(latestSubmission.submittedBy) : "Игрок"} • {formatDate(latestSubmission.createdAt)}
-                </div>
-              ) : null}
+            <div className="grid gap-3 md:grid-cols-2">
+              <PlayerSubmissionCard title="Счёт первого игрока" playerName={player1Name} submission={player1Submission} />
+              <PlayerSubmissionCard title="Счёт второго игрока" playerName={player2Name} submission={player2Submission} />
             </div>
           </CardContent>
         </Card>
