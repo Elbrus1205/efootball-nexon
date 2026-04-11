@@ -22,7 +22,6 @@ type BracketSeries = {
   key: string;
   round: number;
   matchNumber: number;
-  bracket: string;
   isThirdPlaceMatch: boolean;
   referenceMatch: BracketMatch;
   regularMatches: BracketMatch[];
@@ -43,14 +42,6 @@ function roundTitle(round: number, totalRounds: number) {
 function seriesLabel(series: BracketSeries) {
   if (series.isThirdPlaceMatch) {
     return "Матч за 3-е место";
-  }
-
-  if (series.bracket === "lower") {
-    return `Lower bracket • Матч #${series.matchNumber}`;
-  }
-
-  if (series.referenceMatch.loserNextMatchId || series.referenceMatch.loserNextMatchSlot) {
-    return `Upper bracket • Матч #${series.matchNumber}`;
   }
 
   return `Матч #${series.matchNumber}`;
@@ -95,8 +86,14 @@ function buildSeries(matches: BracketMatch[]) {
   return Array.from(grouped.entries())
     .map(([key, bucket]) => {
       const ordered = [...bucket].sort((a, b) => {
-        if (a.isPenaltyTiebreak !== b.isPenaltyTiebreak) return Number(a.isPenaltyTiebreak) - Number(b.isPenaltyTiebreak);
-        if ((a.legNumber ?? 1) !== (b.legNumber ?? 1)) return (a.legNumber ?? 1) - (b.legNumber ?? 1);
+        if (a.isPenaltyTiebreak !== b.isPenaltyTiebreak) {
+          return Number(a.isPenaltyTiebreak) - Number(b.isPenaltyTiebreak);
+        }
+
+        if ((a.legNumber ?? 1) !== (b.legNumber ?? 1)) {
+          return (a.legNumber ?? 1) - (b.legNumber ?? 1);
+        }
+
         return a.matchNumber - b.matchNumber;
       });
 
@@ -107,7 +104,6 @@ function buildSeries(matches: BracketMatch[]) {
         key,
         round: referenceMatch.round,
         matchNumber: referenceMatch.matchNumber,
-        bracket: referenceMatch.bracket,
         isThirdPlaceMatch: referenceMatch.isThirdPlaceMatch,
         referenceMatch,
         regularMatches,
