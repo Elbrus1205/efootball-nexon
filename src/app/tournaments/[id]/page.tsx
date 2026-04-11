@@ -88,9 +88,47 @@ function scheduleStageLabel(match: {
   return `Раунд ${match.round}`;
 }
 
+function isBrokenClubName(value: string | null | undefined) {
+  const name = value?.trim();
+  if (!name) return true;
+
+  const questionMarks = name.match(/\?/g)?.length ?? 0;
+  return questionMarks >= 3 || questionMarks / name.length > 0.4;
+}
+
+function resolveClubName(
+  entry: {
+    clubSlug?: string | null;
+    clubName?: string | null;
+  },
+  clubsBySlug: Map<string, { name: string }>,
+  fallback: string,
+) {
+  if (entry.clubSlug) {
+    const club = clubsBySlug.get(entry.clubSlug);
+    if (club && isBrokenClubName(entry.clubName)) {
+      return club.name;
+    }
+  }
+
+  return entry.clubName?.trim() && !isBrokenClubName(entry.clubName) ? entry.clubName.trim() : fallback;
+}
+
+function resolveClubBadgePath(
+  entry: {
+    clubSlug?: string | null;
+    clubBadgePath?: string | null;
+  },
+  clubsBySlug: Map<string, { imagePath: string }>,
+) {
+  if (entry.clubBadgePath?.trim()) return entry.clubBadgePath;
+  return entry.clubSlug ? clubsBySlug.get(entry.clubSlug)?.imagePath ?? null : null;
+}
+
 function buildLeagueTable(
   participants: Array<{
     userId: string;
+    clubSlug: string | null;
     clubName: string | null;
     clubBadgePath: string | null;
     user: { id: string; nickname: string | null; name: string | null };
@@ -101,6 +139,7 @@ function buildLeagueTable(
     player1Score: number | null;
     player2Score: number | null;
   }>,
+  clubsBySlug: Map<string, { name: string; imagePath: string }>,
 ) {
   const table = new Map<string, LeagueRow>();
 
@@ -110,8 +149,8 @@ function buildLeagueTable(
       id: entry.user.id,
       playerId: entry.user.id,
       playerName,
-      clubName: entry.clubName?.trim() || playerName,
-      clubBadgePath: entry.clubBadgePath,
+      clubName: resolveClubName(entry, clubsBySlug, playerName),
+      clubBadgePath: resolveClubBadgePath(entry, clubsBySlug),
       played: 0,
       wins: 0,
       draws: 0,
@@ -478,16 +517,18 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
     ? scheduledMatches.filter((match) => match.player1Id === session.user.id || match.player2Id === session.user.id)
     : [];
 
+  const availableClubs = await getAvailableClubs();
+  const clubsBySlug = new Map(availableClubs.map((club) => [club.slug, club]));
+
   const leagueMatches = leagueStage
     ? tournament.matches.filter((match) => match.stageId === leagueStage.id)
     : tournament.matches.filter((match) => !match.groupId && !match.bracketId);
 
   const leagueTable =
     tournament.format === TournamentFormat.ROUND_ROBIN || tournament.format === TournamentFormat.LEAGUE
-      ? buildLeagueTable(tournament.participants, leagueMatches)
+      ? buildLeagueTable(tournament.participants, leagueMatches, clubsBySlug)
       : [];
 
-  const availableClubs = await getAvailableClubs();
   const takenClubSlugs = tournament.participants.map((entry) => entry.clubSlug).filter(Boolean) as string[];
   const structureSectionTitle = tournament.format === TournamentFormat.CUSTOM ? groupStage?.name?.trim() || "Лиги" : "Группы";
   const customStandingHighlights = buildCustomStandingHighlights(tournament);
@@ -495,8 +536,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
     tournament.participants.map((entry) => [
       entry.userId,
       {
-        clubName: entry.clubName,
-        clubBadgePath: entry.clubBadgePath,
+        clubName: resolveClubName(entry, clubsBySlug, getPlayerDisplayName(entry.user)),
+        clubBadgePath: resolveClubBadgePath(entry, clubsBySlug),
       },
     ]),
   );
@@ -565,8 +606,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                         rows={group.standings.map((row) => ({
                           id: row.id,
                           rank: row.rank,
-                          clubName: row.participant.clubName?.trim() || getPlayerDisplayName(row.participant.user),
-                          clubBadgePath: row.participant.clubBadgePath,
+                          clubName: resolveClubName(row.participant, clubsBySlug, getPlayerDisplayName(row.participant.user)),
+                          clubBadgePath: resolveClubBadgePath(row.participant, clubsBySlug),
                           playerId: row.participant.user.id,
                           playerName: getPlayerDisplayName(row.participant.user),
                           played: row.played,
@@ -744,8 +785,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                 <ClubPlayerLine
                   playerId={entry.user.id}
                   playerName={getPlayerDisplayName(entry.user)}
-                  clubName={entry.clubName}
-                  badgePath={entry.clubBadgePath}
+                  clubName={resolveClubName(entry, clubsBySlug, getPlayerDisplayName(entry.user))}
+                  badgePath={resolveClubBadgePath(entry, clubsBySlug)}
                 />
               </Card>
             ))}
