@@ -195,6 +195,8 @@ export const resultSubmissionSchema = z.object({
 export const reviewSchema = z.object({
   action: z.enum(["approve", "reject", "dispute"]),
   moderatorComment: z.string().min(3),
+  player1Score: z.coerce.number().min(0).max(99).optional(),
+  player2Score: z.coerce.number().min(0).max(99).optional(),
 });
 
 export const stageGenerationSchema = z.object({

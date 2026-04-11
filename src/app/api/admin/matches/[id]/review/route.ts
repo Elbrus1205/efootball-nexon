@@ -14,6 +14,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const body = reviewSchema.parse({
     action: formData.get("action"),
     moderatorComment: formData.get("moderatorComment"),
+    player1Score: formData.get("player1Score") || undefined,
+    player2Score: formData.get("player2Score") || undefined,
   });
 
   const submission = await db.matchResultSubmission.findFirst({
@@ -26,29 +28,38 @@ export async function POST(request: Request, { params }: { params: { id: string 
     include: { player1: true, player2: true },
   });
 
-  if (!submission || !match) {
-    return NextResponse.json({ error: "Submission not found" }, { status: 404 });
+  if (!match) {
+    return NextResponse.json({ error: "Match not found" }, { status: 404 });
   }
 
-  await db.matchResultSubmission.update({
-    where: { id: submission.id },
-    data: {
-      moderatorComment: body.moderatorComment,
-      reviewedAt: new Date(),
-    },
-  });
+  if (submission) {
+    await db.matchResultSubmission.update({
+      where: { id: submission.id },
+      data: {
+        moderatorComment: body.moderatorComment,
+        reviewedAt: new Date(),
+      },
+    });
+  }
 
   if (body.action === "approve") {
-    if (match.isPenaltyTiebreak && submission.player1Score === submission.player2Score) {
+    const player1Score = body.player1Score ?? submission?.player1Score;
+    const player2Score = body.player2Score ?? submission?.player2Score;
+
+    if (player1Score == null || player2Score == null) {
+      return NextResponse.json({ error: "Укажите финальный счёт матча." }, { status: 400 });
+    }
+
+    if (match.isPenaltyTiebreak && player1Score === player2Score) {
       return NextResponse.json({ error: "В серии пенальти нельзя подтвердить ничью." }, { status: 400 });
     }
 
     await db.match.update({
       where: { id: params.id },
       data: {
-        player1Score: submission.player1Score,
-        player2Score: submission.player2Score,
-        winnerId: submission.player1Score > submission.player2Score ? match.player1Id : submission.player1Score < submission.player2Score ? match.player2Id : null,
+        player1Score,
+        player2Score,
+        winnerId: player1Score > player2Score ? match.player1Id : player1Score < player2Score ? match.player2Id : null,
         status: MatchStatus.CONFIRMED,
       },
     });
@@ -96,6 +107,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       action: body.action,
       moderatorComment: body.moderatorComment,
       matchStatus: body.action === "approve" ? MatchStatus.CONFIRMED : body.action === "reject" ? MatchStatus.REJECTED : MatchStatus.DISPUTED,
+      player1Score: body.player1Score,
+      player2Score: body.player2Score,
     },
   });
 

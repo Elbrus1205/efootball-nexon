@@ -1,15 +1,14 @@
-import { MatchResultStatus, UserRole } from "@prisma/client";
-import { AlertTriangle, CheckCircle2, Eye, ExternalLink, FileClock, History, XCircle } from "lucide-react";
-import Link from "next/link";
+import { MatchStatus, UserRole } from "@prisma/client";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { notFound } from "next/navigation";
-import { AuditDiff } from "@/components/admin/audit-diff";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { adminActionLabel, adminEntityLabel, matchStatusLabel, matchStatusVariant, resultSubmissionLabel, resultSubmissionVariant } from "@/lib/admin-display";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { matchStatusLabel, matchStatusVariant } from "@/lib/admin-display";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { getPlayerDisplayName } from "@/lib/player-name";
 import { formatDate } from "@/lib/utils";
 
 export default async function AdminModerationWorkspacePage({ params }: { params: { id: string } }) {
@@ -25,240 +24,79 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
         include: { submittedBy: true },
         orderBy: { createdAt: "desc" },
       },
-      schedules: {
-        orderBy: { startsAt: "asc" },
-      },
     },
   });
 
   if (!match) notFound();
 
-  const actions = await db.adminAction.findMany({
-    where: {
-      OR: [{ entityId: match.id }, { tournamentId: match.tournamentId, entityType: "MATCH_REVIEW" }],
-    },
-    include: {
-      admin: true,
-    },
-    orderBy: { createdAt: "desc" },
-    take: 12,
-  });
-
+  const player1Name = match.player1 ? getPlayerDisplayName(match.player1) : "Игрок 1";
+  const player2Name = match.player2 ? getPlayerDisplayName(match.player2) : "Игрок 2";
   const latestSubmission = match.submissions[0];
-  const pendingCount = match.submissions.filter((submission) => submission.status === MatchResultStatus.PENDING).length;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-2">
-          <div className="text-sm uppercase tracking-[0.24em] text-primary">Dispute workspace</div>
-          <h1 className="font-display text-3xl font-thin text-white">Матч под модерацией</h1>
-          <p className="max-w-3xl text-sm text-zinc-400">
-            Единое рабочее пространство для проверки доказательств, истории отправок и принятия решения по спорному матчу.
-          </p>
+      <div className="space-y-2">
+        <div className="inline-flex items-center gap-2 rounded-full border border-rose-400/20 bg-rose-400/10 px-4 py-2 text-sm font-medium text-rose-200">
+          <AlertTriangle className="h-4 w-4" />
+          Матч в споре
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" asChild>
-            <Link href={`/admin/matches/${match.id}`}>Match workspace</Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href={`/tournaments/${match.tournamentId}`}>
-              <ExternalLink className="mr-2 h-4 w-4" />
-              Турнир
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/admin/moderation">Назад к очереди</Link>
-          </Button>
-        </div>
+        <h1 className="font-display text-3xl font-thin text-white">Модерация матча</h1>
+        <p className="max-w-3xl text-zinc-400">
+          Игроки отправили разные результаты несколько раз. Администратор вводит финальный счёт и подтверждает результат.
+        </p>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>{match.tournament.title}</CardTitle>
-            <CardDescription>
-              {(match.player1?.nickname ?? match.player1?.name ?? "TBD")} vs {(match.player2?.nickname ?? match.player2?.name ?? "TBD")}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Статус матча</div>
-              <div className="mt-2">
-                <Badge variant={matchStatusVariant[match.status] ?? "neutral"}>{matchStatusLabel[match.status] ?? match.status}</Badge>
-              </div>
+      <Card className="space-y-5 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-2">
+            <div className="text-sm text-zinc-500">{match.tournament.title}</div>
+            <div className="text-xl font-semibold text-white">
+              {player1Name} <span className="text-zinc-500">vs</span> {player2Name}
             </div>
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Отправок результата</div>
-              <div className="mt-2 text-2xl font-semibold text-white">{match.submissions.length}</div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Ожидают решения</div>
-              <div className="mt-2 text-2xl font-semibold text-white">{pendingCount}</div>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Ближайшие слоты</CardTitle>
-            <CardDescription>Планирование и текущие привязки матча к расписанию.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-zinc-400">
-            {match.schedules.length ? (
-              match.schedules.map((schedule) => (
-                <div key={schedule.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <div>{formatDate(schedule.startsAt)}</div>
-                  <div className="mt-1 text-zinc-500">{schedule.slotLabel ?? "Без подписи слота"}</div>
-                </div>
-              ))
-            ) : (
-              <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-4">Матч ещё не привязан к слоту расписания.</div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Таймлайн отправок</CardTitle>
-            <CardDescription>Комментарии игроков, скриншоты и история проверки результата.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {match.submissions.length ? (
-              match.submissions.map((submission) => (
-                <div key={submission.id} className="rounded-[1.75rem] border border-white/10 bg-black/20 p-5">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="font-medium text-white">{submission.submittedBy.nickname ?? submission.submittedBy.name ?? "Игрок"}</div>
-                      <div className="mt-1 text-sm text-zinc-500">{formatDate(submission.createdAt)}</div>
-                    </div>
-                    <Badge variant={resultSubmissionVariant[submission.status]}>{resultSubmissionLabel[submission.status]}</Badge>
-                  </div>
-
-                  <div className="mt-4 grid gap-4 lg:grid-cols-[auto_1fr]">
-                    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-lg font-semibold text-white">
-                      {submission.player1Score} : {submission.player2Score}
-                    </div>
-                    <div className="space-y-3">
-                      {submission.comment ? <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-zinc-300">{submission.comment}</div> : null}
-                      {submission.moderatorComment ? (
-                        <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4 text-sm text-zinc-200">Решение модератора: {submission.moderatorComment}</div>
-                      ) : null}
-                      {submission.screenshotUrl ? (
-                        <a href={submission.screenshotUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm text-primary">
-                          <Eye className="h-4 w-4" />
-                          Открыть скриншот
-                        </a>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-5 text-sm text-zinc-500">По этому матчу пока нет отправленных результатов.</div>
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Решение модератора</CardTitle>
-              <CardDescription>Подтверждение, отклонение или перевод матча в спорный сценарий.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <form action={`/api/admin/matches/${match.id}/review`} method="post" className="space-y-3">
-                <input type="hidden" name="action" value="approve" />
-                <Textarea name="moderatorComment" placeholder="Комментарий для подтверждения результата" defaultValue="Результат подтверждён после проверки отправки." />
-                <Button className="w-full">
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Подтвердить результат
-                </Button>
-              </form>
-
-              <form action={`/api/admin/matches/${match.id}/review`} method="post" className="space-y-3">
-                <input type="hidden" name="action" value="reject" />
-                <Textarea name="moderatorComment" placeholder="Причина отклонения результата" defaultValue="Нужен корректный скриншот или уточнение по счёту." />
-                <Button variant="outline" className="w-full">
-                  <XCircle className="mr-2 h-4 w-4" />
-                  Отклонить результат
-                </Button>
-              </form>
-
-              <form action={`/api/admin/matches/${match.id}/review`} method="post" className="space-y-3">
-                <input type="hidden" name="action" value="dispute" />
-                <Textarea name="moderatorComment" placeholder="Причина перевода в спор" defaultValue="Матч требует дополнительной проверки и решения модератора." />
-                <Button variant="secondary" className="w-full">
-                  <AlertTriangle className="mr-2 h-4 w-4" />
-                  Перевести в спор
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <History className="h-5 w-5 text-primary" />
-                Audit timeline
-              </CardTitle>
-              <CardDescription>История действий модераторов с before/after diff по решениям.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {actions.length ? (
-                actions.map((action) => (
-                  <div key={action.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="font-medium text-white">{adminEntityLabel(action.entityType)}</div>
-                      <Badge variant="neutral">{adminActionLabel[action.actionType] ?? action.actionType}</Badge>
-                    </div>
-                    <div className="mt-2 text-sm text-zinc-400">{action.admin.nickname ?? action.admin.name ?? action.admin.email ?? "Администратор"}</div>
-                    <div className="mt-1 text-xs uppercase tracking-[0.18em] text-zinc-500">{formatDate(action.createdAt)}</div>
-                    <div className="mt-3">
-                      <AuditDiff before={action.beforeJson} after={action.afterJson} />
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-4 text-sm text-zinc-500">Для этого матча ещё нет записей в audit timeline.</div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Что видно в workspace</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-zinc-400">
-              <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-black/20 p-4">
-                <FileClock className="mt-0.5 h-4 w-4 text-primary" />
-                <div>История всех отправок результата и комментариев игроков.</div>
-              </div>
-              <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-black/20 p-4">
-                <Eye className="mt-0.5 h-4 w-4 text-primary" />
-                <div>Быстрый доступ к скриншотам и текущему расписанию матча.</div>
-              </div>
-              <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-black/20 p-4">
-                <AlertTriangle className="mt-0.5 h-4 w-4 text-accent" />
-                <div>Единая точка решения по спорным матчам без возврата в общий список.</div>
-              </div>
-            </CardContent>
-          </Card>
+          <Badge variant={matchStatusVariant[match.status] ?? "danger"}>
+            {matchStatusLabel[match.status] ?? (match.status === MatchStatus.DISPUTED ? "Спор" : match.status)}
+          </Badge>
         </div>
-      </div>
 
-      {latestSubmission ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Последняя активность</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-zinc-400">
-            Последняя отправка пришла {formatDate(latestSubmission.createdAt)} от {latestSubmission.submittedBy.nickname ?? latestSubmission.submittedBy.name ?? "игрока"}.
-          </CardContent>
-        </Card>
-      ) : null}
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+            <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">Последний отправленный счёт</div>
+            <div className="mt-2 text-2xl font-semibold text-white">
+              {latestSubmission ? `${latestSubmission.player1Score} : ${latestSubmission.player2Score}` : "Нет отправок"}
+            </div>
+            {latestSubmission ? (
+              <div className="mt-2 text-sm text-zinc-500">
+                {latestSubmission.submittedBy ? getPlayerDisplayName(latestSubmission.submittedBy) : "Игрок"} • {formatDate(latestSubmission.createdAt)}
+              </div>
+            ) : null}
+          </div>
+
+          <form action={`/api/admin/matches/${match.id}/review`} method="post" className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+            <input type="hidden" name="action" value="approve" />
+            <input type="hidden" name="moderatorComment" value="Администратор вручную подтвердил финальный счёт спорного матча." />
+
+            <div className="text-xs uppercase tracking-[0.18em] text-primary">Финальный счёт</div>
+            <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-end gap-3">
+              <label className="space-y-2">
+                <span className="block truncate text-xs text-zinc-400">{player1Name}</span>
+                <Input name="player1Score" type="number" min={0} max={99} required defaultValue={match.player1Score ?? latestSubmission?.player1Score ?? 0} />
+              </label>
+              <div className="pb-3 text-sm font-semibold text-zinc-500">:</div>
+              <label className="space-y-2">
+                <span className="block truncate text-xs text-zinc-400">{player2Name}</span>
+                <Input name="player2Score" type="number" min={0} max={99} required defaultValue={match.player2Score ?? latestSubmission?.player2Score ?? 0} />
+              </label>
+            </div>
+
+            <Button className="mt-4 w-full">
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              Подтвердить результат
+            </Button>
+          </form>
+        </div>
+      </Card>
     </div>
   );
 }
