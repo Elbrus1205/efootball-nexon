@@ -114,7 +114,7 @@ export const tournamentBuilderSchema = z.object({
   description: z.string().min(20, "Описание турнира должно быть не короче 20 символов."),
   rules: z.string().min(20, "Правила турнира должны быть не короче 20 символов."),
   startsAt: z.string(),
-  registrationEndsAt: z.string(),
+  registrationEndsAt: z.string().optional().or(z.literal("")),
   endsAt: z.string().optional().or(z.literal("")),
   maxParticipants: z.coerce.number().min(2, "Минимум 2 участника.").max(256, "Максимум 256 участников."),
   prizePool: z.string().optional().or(z.literal("")),

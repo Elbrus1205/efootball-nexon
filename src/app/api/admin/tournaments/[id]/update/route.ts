@@ -18,8 +18,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
     description: formData.get("description"),
     rules: formData.get("rules"),
     startsAt: formData.get("startsAt"),
-    registrationEndsAt: formData.get("registrationEndsAt"),
-    endsAt: formData.get("endsAt"),
+    registrationEndsAt: formData.get("startsAt"),
+    endsAt: "",
     maxParticipants: formData.get("maxParticipants"),
     prizePool: formData.get("prizePool"),
     format: formData.get("format"),
@@ -49,6 +49,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   });
 
   const formatBlueprint = parseFormatBlueprintJson(typeof body.formatBlueprintJson === "string" ? body.formatBlueprintJson : "");
+  const startsAt = new Date(body.startsAt);
 
   await db.tournament.update({
     where: { id: params.id },
@@ -56,9 +57,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
       title: body.title,
       description: body.description,
       rules: body.rules,
-      startsAt: new Date(body.startsAt),
-      endsAt: body.endsAt ? new Date(body.endsAt) : null,
-      registrationEndsAt: new Date(body.registrationEndsAt),
+      startsAt,
+      endsAt: null,
+      registrationEndsAt: startsAt,
       maxParticipants: body.maxParticipants,
       prizePool: body.prizePool || null,
       format: body.format,

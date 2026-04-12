@@ -139,22 +139,6 @@ export function TournamentBuilderForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="endsAt">Дата завершения</Label>
-            <Input id="endsAt" name="endsAt" type="datetime-local" defaultValue={initialValues?.endsAt ?? ""} />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="registrationEndsAt">Конец регистрации</Label>
-            <Input
-              id="registrationEndsAt"
-              name="registrationEndsAt"
-              type="datetime-local"
-              defaultValue={initialValues?.registrationEndsAt ?? ""}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="maxParticipants">Лимит участников</Label>
             <Input
               id="maxParticipants"

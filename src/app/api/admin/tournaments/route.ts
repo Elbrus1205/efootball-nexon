@@ -23,8 +23,8 @@ export async function POST(request: Request) {
       description: formData.get("description"),
       rules: formData.get("rules"),
       startsAt: formData.get("startsAt"),
-      registrationEndsAt: formData.get("registrationEndsAt"),
-      endsAt: formData.get("endsAt"),
+      registrationEndsAt: formData.get("startsAt"),
+      endsAt: "",
       maxParticipants: formData.get("maxParticipants"),
       prizePool: formData.get("prizePool"),
       format: formData.get("format"),
@@ -60,6 +60,7 @@ export async function POST(request: Request) {
 
     const body = parsed.data;
     const formatBlueprint = parseFormatBlueprintJson(typeof body.formatBlueprintJson === "string" ? body.formatBlueprintJson : "");
+    const startsAt = new Date(body.startsAt);
 
     const tournament = await db.tournament.create({
       data: {
@@ -67,9 +68,9 @@ export async function POST(request: Request) {
         slug: `${slugify(body.title)}-${Date.now()}`,
         description: body.description,
         rules: body.rules,
-        startsAt: new Date(body.startsAt),
-        endsAt: body.endsAt ? new Date(body.endsAt) : null,
-        registrationEndsAt: new Date(body.registrationEndsAt),
+        startsAt,
+        endsAt: null,
+        registrationEndsAt: startsAt,
         maxParticipants: body.maxParticipants,
         prizePool: body.prizePool || null,
         format: body.format,
