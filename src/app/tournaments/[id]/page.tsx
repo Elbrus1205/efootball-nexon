@@ -88,6 +88,92 @@ function scheduleStageLabel(match: {
   return `Раунд ${match.round}`;
 }
 
+function scheduleMatchTime(match: { scheduledAt?: Date | string | null; createdAt: Date | string; schedules: Array<{ startsAt: Date | string }> }) {
+  return new Date(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt).getTime();
+}
+
+function playoffRoundLabel(round: number, totalRounds: number) {
+  const roundsRemaining = totalRounds - round;
+
+  if (roundsRemaining <= 0) return "Финал";
+  if (roundsRemaining === 1) return "1/2 финала";
+  if (roundsRemaining === 2) return "1/4 финала";
+  if (roundsRemaining === 3) return "1/8 финала";
+
+  return `1/${2 ** roundsRemaining} финала`;
+}
+
+function scheduleSectionTitle(match: {
+  round: number;
+  bracket?: string | null;
+  isThirdPlaceMatch?: boolean;
+  group?: { name: string; orderIndex?: number | null } | null;
+  stage?: { name: string | null; type?: StageType | null; roundsCount?: number | null } | null;
+}) {
+  if (match.stage?.type === StageType.PLAYOFF) {
+    if (match.isThirdPlaceMatch) return "Матч за 3-е место";
+    if (match.bracket === "lower") return `Нижняя сетка • Раунд ${match.round}`;
+
+    return playoffRoundLabel(match.round, Math.max(match.stage.roundsCount ?? match.round, match.round));
+  }
+
+  const tourTitle = `${match.round} тур`;
+  if (match.group?.name) return `${match.group.name} • ${tourTitle}`;
+
+  return tourTitle;
+}
+
+function buildScheduleSections<
+  T extends {
+    id: string;
+    round: number;
+    matchNumber: number;
+    stage?: { id: string; orderIndex: number; type?: StageType | null; roundsCount?: number | null; name: string | null } | null;
+    group?: { id: string; orderIndex: number; name: string } | null;
+    bracket?: string | null;
+    isThirdPlaceMatch?: boolean;
+    scheduledAt?: Date | string | null;
+    createdAt: Date | string;
+    schedules: Array<{ startsAt: Date | string }>;
+  },
+>(matches: T[]) {
+  const sections = new Map<string, { key: string; title: string; sort: number[]; matches: T[] }>();
+
+  for (const match of matches) {
+    const stageSort = match.stage?.orderIndex ?? 999;
+    const groupSort = match.group?.orderIndex ?? 0;
+    const bracketSort = match.stage?.type === StageType.PLAYOFF && match.bracket === "lower" ? 1 : 0;
+    const thirdPlaceSort = match.isThirdPlaceMatch ? 1 : 0;
+    const key = [match.stage?.id ?? "stage", match.group?.id ?? "all", match.bracket ?? "none", match.round, thirdPlaceSort].join(":");
+    const section = sections.get(key);
+
+    if (section) {
+      section.matches.push(match);
+    } else {
+      sections.set(key, {
+        key,
+        title: scheduleSectionTitle(match),
+        sort: [stageSort, groupSort, bracketSort, match.round, thirdPlaceSort],
+        matches: [match],
+      });
+    }
+  }
+
+  return Array.from(sections.values())
+    .sort((a, b) => {
+      for (let index = 0; index < a.sort.length; index += 1) {
+        const diff = a.sort[index] - b.sort[index];
+        if (diff !== 0) return diff;
+      }
+
+      return 0;
+    })
+    .map((section) => ({
+      ...section,
+      matches: section.matches.sort((a, b) => a.matchNumber - b.matchNumber || scheduleMatchTime(a) - scheduleMatchTime(b)),
+    }));
+}
+
 function isBrokenClubName(value: string | null | undefined) {
   const name = value?.trim();
   if (!name) return true;
@@ -509,9 +595,9 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
     .filter((match) => match.scheduledAt || match.schedules.length)
     .sort(
       (a, b) =>
-        new Date(a.scheduledAt ?? a.schedules[0]?.startsAt ?? 0).getTime() -
-        new Date(b.scheduledAt ?? b.schedules[0]?.startsAt ?? 0).getTime(),
+        scheduleMatchTime(a) - scheduleMatchTime(b),
     );
+  const scheduleSections = buildScheduleSections(scheduledMatches);
 
   const myMatches = session?.user
     ? scheduledMatches.filter((match) => match.player1Id === session.user.id || match.player2Id === session.user.id)
@@ -652,54 +738,65 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
         </TabsContent>
 
         <TabsContent value="matches">
-          <div className="grid gap-4">
-            {scheduledMatches.length ? (
-              scheduledMatches.map((match) => (
-                <Card key={match.id} className="p-5">
-                  <div className="flex flex-col gap-4">
-                    <div className="flex flex-col items-center gap-2 text-center">
-                      <div className="text-sm text-zinc-400">
-                        {scheduleStageLabel(match)} • {formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}
-                      </div>
-                    </div>
+          {scheduleSections.length ? (
+            <div className="space-y-8">
+              {scheduleSections.map((section) => (
+                <section key={section.key} className="space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-zinc-300">{section.title}</h3>
+                    <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">{section.matches.length} матчей</div>
+                  </div>
 
-                    <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-3 sm:p-5">
-                      <div className="mx-auto grid max-w-[760px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[minmax(180px,220px)_auto_minmax(180px,220px)] sm:gap-4">
-                        <div className="min-w-0 justify-self-end">
-                          <ClubPlayerLine
-                            playerId={match.player1?.id}
-                            playerName={match.player1 ? getPlayerDisplayName(match.player1) : "Игрок 1"}
-                            clubName={match.player1Id ? participantClubMap[match.player1Id]?.clubName : null}
-                            badgePath={match.player1Id ? participantClubMap[match.player1Id]?.clubBadgePath : null}
-                            align="center"
-                            compact
-                            reverse
-                          />
-                        </div>
-                        <div className="flex shrink-0 items-center justify-center self-center">
-                          <div className="flex min-w-[56px] items-center justify-center text-center text-xs font-semibold tracking-[0.24em] text-zinc-300 sm:min-w-[72px] sm:text-sm">
-                            {match.player1Score !== null && match.player2Score !== null ? `${match.player1Score} - ${match.player2Score}` : "VS"}
+                  <div className="grid gap-4">
+                    {section.matches.map((match) => (
+                      <Card key={match.id} className="p-5">
+                        <div className="flex flex-col gap-4">
+                          <div className="flex flex-col items-center gap-2 text-center">
+                            <div className="text-sm text-zinc-400">
+                              {scheduleStageLabel(match)} • {formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}
+                            </div>
+                          </div>
+
+                          <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-3 sm:p-5">
+                            <div className="mx-auto grid max-w-[760px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[minmax(180px,220px)_auto_minmax(180px,220px)] sm:gap-4">
+                              <div className="min-w-0 justify-self-end">
+                                <ClubPlayerLine
+                                  playerId={match.player1?.id}
+                                  playerName={match.player1 ? getPlayerDisplayName(match.player1) : "Игрок 1"}
+                                  clubName={match.player1Id ? participantClubMap[match.player1Id]?.clubName : null}
+                                  badgePath={match.player1Id ? participantClubMap[match.player1Id]?.clubBadgePath : null}
+                                  align="center"
+                                  compact
+                                  reverse
+                                />
+                              </div>
+                              <div className="flex shrink-0 items-center justify-center self-center">
+                                <div className="flex min-w-[56px] items-center justify-center text-center text-xs font-semibold tracking-[0.24em] text-zinc-300 sm:min-w-[72px] sm:text-sm">
+                                  {match.player1Score !== null && match.player2Score !== null ? `${match.player1Score} - ${match.player2Score}` : "VS"}
+                                </div>
+                              </div>
+                              <div className="min-w-0 justify-self-start">
+                                <ClubPlayerLine
+                                  playerId={match.player2?.id}
+                                  playerName={match.player2 ? getPlayerDisplayName(match.player2) : "Игрок 2"}
+                                  clubName={match.player2Id ? participantClubMap[match.player2Id]?.clubName : null}
+                                  badgePath={match.player2Id ? participantClubMap[match.player2Id]?.clubBadgePath : null}
+                                  align="center"
+                                  compact
+                                />
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <div className="min-w-0 justify-self-start">
-                          <ClubPlayerLine
-                            playerId={match.player2?.id}
-                            playerName={match.player2 ? getPlayerDisplayName(match.player2) : "Игрок 2"}
-                            clubName={match.player2Id ? participantClubMap[match.player2Id]?.clubName : null}
-                            badgePath={match.player2Id ? participantClubMap[match.player2Id]?.clubBadgePath : null}
-                            align="center"
-                            compact
-                          />
-                        </div>
-                      </div>
-                    </div>
+                      </Card>
+                    ))}
                   </div>
-                </Card>
-              ))
-            ) : (
-              <Card className="p-6 text-zinc-500">После публикации расписания здесь появится календарь всех матчей турнира.</Card>
-            )}
-          </div>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <Card className="p-6 text-zinc-500">После публикации расписания здесь появится календарь всех матчей турнира.</Card>
+          )}
         </TabsContent>
 
         <TabsContent value="my-matches">
