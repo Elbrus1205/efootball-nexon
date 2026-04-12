@@ -781,42 +781,38 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                     <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">{section.matches.length} матчей</div>
                   </div>
 
-                  <div className="grid gap-4">
+                  <div className="divide-y divide-white/10">
                     {section.matches.map((match) => (
-                      <Card key={match.id} className="p-5">
-                        <div className="flex flex-col gap-4">
-                          <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-3 sm:p-5">
-                            <div className="mx-auto grid max-w-[760px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[minmax(180px,220px)_auto_minmax(180px,220px)] sm:gap-4">
-                              <div className="min-w-0 justify-self-end">
-                                <ClubPlayerLine
-                                  playerId={match.player1?.id}
-                                  playerName={match.player1 ? getPlayerDisplayName(match.player1) : "Игрок 1"}
-                                  clubName={match.player1Id ? participantClubMap[match.player1Id]?.clubName : null}
-                                  badgePath={match.player1Id ? participantClubMap[match.player1Id]?.clubBadgePath : null}
-                                  align="center"
-                                  compact
-                                  reverse
-                                />
-                              </div>
-                              <div className="flex shrink-0 items-center justify-center self-center">
-                                <div className="flex min-w-[56px] items-center justify-center text-center text-xs font-semibold tracking-[0.24em] text-zinc-300 sm:min-w-[72px] sm:text-sm">
-                                  {match.player1Score !== null && match.player2Score !== null ? `${match.player1Score} - ${match.player2Score}` : "VS"}
-                                </div>
-                              </div>
-                              <div className="min-w-0 justify-self-start">
-                                <ClubPlayerLine
-                                  playerId={match.player2?.id}
-                                  playerName={match.player2 ? getPlayerDisplayName(match.player2) : "Игрок 2"}
-                                  clubName={match.player2Id ? participantClubMap[match.player2Id]?.clubName : null}
-                                  badgePath={match.player2Id ? participantClubMap[match.player2Id]?.clubBadgePath : null}
-                                  align="center"
-                                  compact
-                                />
-                              </div>
+                      <div key={match.id} className="py-4 first:pt-0 last:pb-0">
+                        <div className="mx-auto grid max-w-[760px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[minmax(180px,220px)_auto_minmax(180px,220px)] sm:gap-4">
+                          <div className="min-w-0 justify-self-end">
+                            <ClubPlayerLine
+                              playerId={match.player1?.id}
+                              playerName={match.player1 ? getPlayerDisplayName(match.player1) : "Игрок 1"}
+                              clubName={match.player1Id ? participantClubMap[match.player1Id]?.clubName : null}
+                              badgePath={match.player1Id ? participantClubMap[match.player1Id]?.clubBadgePath : null}
+                              align="center"
+                              compact
+                              reverse
+                            />
+                          </div>
+                          <div className="flex shrink-0 items-center justify-center self-center">
+                            <div className="flex min-w-[56px] items-center justify-center rounded-lg border border-white/10 bg-black/20 px-2.5 py-2 text-center text-xs font-semibold tracking-[0.18em] text-zinc-200 sm:min-w-[72px] sm:text-sm">
+                              {match.player1Score !== null && match.player2Score !== null ? `${match.player1Score} - ${match.player2Score}` : "VS"}
                             </div>
                           </div>
+                          <div className="min-w-0 justify-self-start">
+                            <ClubPlayerLine
+                              playerId={match.player2?.id}
+                              playerName={match.player2 ? getPlayerDisplayName(match.player2) : "Игрок 2"}
+                              clubName={match.player2Id ? participantClubMap[match.player2Id]?.clubName : null}
+                              badgePath={match.player2Id ? participantClubMap[match.player2Id]?.clubBadgePath : null}
+                              align="center"
+                              compact
+                            />
+                          </div>
                         </div>
-                      </Card>
+                      </div>
                     ))}
                   </div>
                 </section>
