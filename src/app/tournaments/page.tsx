@@ -13,6 +13,8 @@ export default async function TournamentsPage() {
 
   return (
     <div className="page-shell space-y-8">
+      <div className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Турниры</div>
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {tournaments.map((tournament) => (
           <TournamentCard key={tournament.id} tournament={tournament} participantsCount={tournament._count.participants} />
