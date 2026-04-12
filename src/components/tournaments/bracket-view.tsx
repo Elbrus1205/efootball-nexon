@@ -1,7 +1,6 @@
 import { Match, MatchStatus, TournamentRegistration, User } from "@prisma/client";
 import { GitBranch, Trophy } from "lucide-react";
-import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
-import { Card } from "@/components/ui/card";
+import Link from "next/link";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +25,16 @@ type BracketSeries = {
   referenceMatch: BracketMatch;
   regularMatches: BracketMatch[];
   penaltyMatch: BracketMatch | null;
+};
+
+type BracketSide = {
+  playerId?: string | null;
+  playerName: string;
+  clubName?: string | null;
+  badgePath?: string | null;
+  score: number | null;
+  penaltyText?: string | null;
+  isWinner: boolean;
 };
 
 function roundTitle(round: number, totalRounds: number) {
@@ -163,6 +172,103 @@ function getPenaltyText(series: BracketSeries) {
   return `пен. ${series.penaltyMatch.player1Score}:${series.penaltyMatch.player2Score}`;
 }
 
+function BracketTeamRow({ side }: { side: BracketSide }) {
+  return (
+    <div
+      className={cn(
+        "grid min-h-12 grid-cols-[34px_minmax(0,1fr)_42px] items-center gap-2 px-3 py-2",
+        side.isWinner ? "bg-emerald-400/10 text-white" : "text-zinc-200",
+      )}
+    >
+      <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border border-white/15 bg-black/30">
+        {side.badgePath ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={side.badgePath} alt={side.clubName ?? side.playerName} className="h-full w-full object-contain p-1" />
+        ) : (
+          <span className="text-[10px] uppercase text-zinc-500">FC</span>
+        )}
+      </div>
+
+      <div className="min-w-0">
+        <div className="truncate text-sm font-semibold leading-tight text-white">{side.clubName ?? "Клуб не назначен"}</div>
+        {side.playerId ? (
+          <Link
+            href={`/players/${side.playerId}`}
+            className="mt-0.5 block truncate text-[11px] font-medium leading-tight text-zinc-400 underline-offset-4 transition hover:text-primary hover:underline"
+          >
+            {side.playerName}
+          </Link>
+        ) : (
+          <div className="mt-0.5 truncate text-[11px] font-medium leading-tight text-zinc-500">{side.playerName}</div>
+        )}
+      </div>
+
+      <div className="flex items-baseline justify-end gap-1 text-right">
+        {side.penaltyText ? <span className="text-[10px] font-semibold text-amber-300">{side.penaltyText}</span> : null}
+        <span className="text-lg font-black leading-none text-white">{side.score ?? "-"}</span>
+      </div>
+    </div>
+  );
+}
+
+function BracketMatchBox({
+  series,
+  clubsByUserId,
+  isLastRound,
+}: {
+  series: BracketSeries;
+  clubsByUserId: Record<string, ClubMeta>;
+  isLastRound: boolean;
+}) {
+  const match = series.referenceMatch;
+  const playerOneClub = resolveClubMeta(match, 1, clubsByUserId);
+  const playerTwoClub = resolveClubMeta(match, 2, clubsByUserId);
+  const aggregateScore = getAggregateScore(series);
+  const penaltyText = getPenaltyText(series);
+  const seriesWinnerId = getSeriesWinner(series);
+
+  const sides: [BracketSide, BracketSide] = [
+    {
+      playerId: match.player1?.id,
+      playerName: match.player1 ? getPlayerDisplayName(match.player1) : "Игрок не назначен",
+      clubName: playerOneClub.clubName,
+      badgePath: playerOneClub.clubBadgePath,
+      score: aggregateScore.player1,
+      isWinner: Boolean(seriesWinnerId && seriesWinnerId === match.player1Id),
+    },
+    {
+      playerId: match.player2?.id,
+      playerName: match.player2 ? getPlayerDisplayName(match.player2) : "Игрок не назначен",
+      clubName: playerTwoClub.clubName,
+      badgePath: playerTwoClub.clubBadgePath,
+      score: aggregateScore.player2,
+      penaltyText,
+      isWinner: Boolean(seriesWinnerId && seriesWinnerId === match.player2Id),
+    },
+  ];
+
+  return (
+    <div className="relative">
+      {!isLastRound ? (
+        <>
+          <span className="pointer-events-none absolute -right-10 top-1/2 hidden h-px w-10 bg-emerald-200/45 lg:block" />
+          <span className="pointer-events-none absolute -right-10 top-1/2 hidden h-24 w-px -translate-y-1/2 bg-emerald-200/25 lg:block" />
+        </>
+      ) : null}
+
+      <div className="overflow-hidden rounded-xl border border-emerald-200/70 bg-emerald-950/35 shadow-[0_0_28px_rgba(16,185,129,0.12)] backdrop-blur">
+        <div className="flex items-center justify-between gap-3 border-b border-emerald-200/35 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-emerald-100/80">
+          <span>{seriesLabel(series)}</span>
+          {series.penaltyMatch ? <span className="text-amber-300">Пенальти</span> : null}
+        </div>
+        <BracketTeamRow side={sides[0]} />
+        <div className="h-px bg-emerald-200/35" />
+        <BracketTeamRow side={sides[1]} />
+      </div>
+    </div>
+  );
+}
+
 export function BracketView({
   matches,
   clubsByUserId = {},
@@ -182,87 +288,36 @@ export function BracketView({
   const totalRounds = orderedRounds.length;
 
   return (
-    <div className="overflow-hidden rounded-[2rem] border border-primary/15 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.14),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))]">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-black/20 px-5 py-4 backdrop-blur-xl">
-        <div className="space-y-1">
-          <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-primary">
-            <GitBranch className="h-4 w-4" />
-            Плей-офф
-          </div>
+    <div className="overflow-hidden rounded-[2rem] border border-emerald-400/20 bg-[radial-gradient(circle_at_50%_45%,rgba(34,197,94,0.22),transparent_22%),radial-gradient(circle_at_18%_10%,rgba(16,185,129,0.2),transparent_26%),linear-gradient(135deg,#03180f_0%,#052817_48%,#02110b_100%)] shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+      <div className="relative overflow-hidden px-5 pb-2 pt-7 text-center sm:px-8 sm:pt-9">
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:46px_46px] opacity-20" />
+        <div className="relative mx-auto inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-black/25 px-4 py-2 text-xs uppercase tracking-[0.28em] text-emerald-100/80">
+          <GitBranch className="h-4 w-4 text-emerald-300" />
+          Плей-офф
         </div>
-        <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/10 px-4 py-2 text-sm text-amber-200">
-          <Trophy className="h-4 w-4" />
+        <div className="relative mt-4 text-3xl font-black uppercase tracking-[0.16em] text-white sm:text-5xl">Сетка турнира</div>
+        <div className="relative mt-2 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.24em] text-emerald-100/70">
+          <Trophy className="h-4 w-4 text-amber-300" />
           Финальная часть
         </div>
       </div>
 
-      <div className="overflow-x-auto px-4 py-5">
-        <div className="flex min-w-max gap-5">
-          {orderedRounds.map(([round, roundSeries]) => (
-            <div key={round} className="w-[320px] shrink-0 space-y-4">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-medium text-white">
-                {roundTitle(round, totalRounds)}
+      <div className="overflow-x-auto px-4 pb-8 pt-5 sm:px-7">
+        <div className="flex min-w-max items-center gap-12 lg:gap-16">
+          {orderedRounds.map(([round, roundSeries], roundIndex) => {
+            const isLastRound = roundIndex === orderedRounds.length - 1;
+            const verticalGap = roundIndex === 0 ? "gap-8" : roundIndex === 1 ? "gap-20" : "gap-32";
+
+            return (
+              <div key={round} className={cn("flex w-[280px] shrink-0 flex-col justify-center", verticalGap)}>
+                <div className="mb-2 text-center text-lg font-black text-white">{roundTitle(round, totalRounds)}</div>
+
+                {roundSeries.map((series) => (
+                  <BracketMatchBox key={series.key} series={series} clubsByUserId={clubsByUserId} isLastRound={isLastRound} />
+                ))}
               </div>
-
-              {roundSeries.map((series) => {
-                const match = series.referenceMatch;
-                const playerOneClub = resolveClubMeta(match, 1, clubsByUserId);
-                const playerTwoClub = resolveClubMeta(match, 2, clubsByUserId);
-                const aggregateScore = getAggregateScore(series);
-                const penaltyText = getPenaltyText(series);
-                const seriesWinnerId = getSeriesWinner(series);
-
-                return (
-                  <Card key={series.key} className="space-y-4 border-white/10 bg-black/20 p-4">
-                    <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">{seriesLabel(series)}</div>
-
-                    <div className="space-y-3">
-                      <div
-                        className={cn(
-                          "rounded-2xl border p-3",
-                          seriesWinnerId && seriesWinnerId === match.player1Id
-                            ? "border-emerald-400/20 bg-emerald-400/5"
-                            : "border-white/10 bg-white/[0.03]",
-                        )}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <ClubPlayerLine
-                            playerId={match.player1?.id}
-                            playerName={match.player1 ? getPlayerDisplayName(match.player1) : "Игрок не назначен"}
-                            clubName={playerOneClub.clubName}
-                            badgePath={playerOneClub.clubBadgePath}
-                          />
-                          <div className="text-lg font-semibold text-white">{aggregateScore.player1 ?? "-"}</div>
-                        </div>
-                      </div>
-
-                      <div
-                        className={cn(
-                          "rounded-2xl border p-3",
-                          seriesWinnerId && seriesWinnerId === match.player2Id
-                            ? "border-emerald-400/20 bg-emerald-400/5"
-                            : "border-white/10 bg-white/[0.03]",
-                        )}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <ClubPlayerLine
-                            playerId={match.player2?.id}
-                            playerName={match.player2 ? getPlayerDisplayName(match.player2) : "Игрок не назначен"}
-                            clubName={playerTwoClub.clubName}
-                            badgePath={playerTwoClub.clubBadgePath}
-                          />
-                          <div className="flex items-center gap-2 text-right">
-                            {penaltyText ? <span className="text-xs font-medium text-amber-300">{penaltyText}</span> : null}
-                            <span className="text-lg font-semibold text-white">{aggregateScore.player2 ?? "-"}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
