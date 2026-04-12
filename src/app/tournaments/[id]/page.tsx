@@ -666,6 +666,13 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
 
   return (
     <div className="page-shell space-y-8">
+      {tournament.coverImage ? (
+        <div className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.04] shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={tournament.coverImage} alt={tournament.title} className="h-56 w-full object-cover sm:h-72 lg:h-80" />
+        </div>
+      ) : null}
+
       <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
         <div className="space-y-4">
           <div className="flex flex-wrap gap-3">

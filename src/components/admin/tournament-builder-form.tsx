@@ -74,17 +74,51 @@ export function TournamentBuilderForm({
     format === TournamentFormat.DOUBLE_ELIMINATION ||
     format === TournamentFormat.GROUPS_PLAYOFF;
 
-  const onCoverChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const optimizeCover = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onerror = () => reject(new Error("Не удалось прочитать изображение."));
+      reader.onload = () => {
+        const source = typeof reader.result === "string" ? reader.result : "";
+        const image = new window.Image();
+
+        image.onerror = () => reject(new Error("Не удалось обработать изображение."));
+        image.onload = () => {
+          const maxSize = 1600;
+          const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+          const width = Math.max(1, Math.round(image.width * scale));
+          const height = Math.max(1, Math.round(image.height * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+
+          const context = canvas.getContext("2d");
+          if (!context) {
+            reject(new Error("Не удалось подготовить изображение."));
+            return;
+          }
+
+          context.drawImage(image, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/webp", 0.88));
+        };
+
+        image.src = source;
+      };
+
+      reader.readAsDataURL(file);
+    });
+
+  const onCoverChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (!file.type.startsWith("image/")) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setCoverImage(reader.result);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      setCoverImage(await optimizeCover(file));
+    } catch {
+      setCoverImage("");
+    }
   };
 
   return (
