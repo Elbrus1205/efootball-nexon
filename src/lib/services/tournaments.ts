@@ -211,11 +211,13 @@ async function createRoundRobinMatchesForEntries({
   stageId,
   groupId,
   entries,
+  roundsCount = 1,
 }: {
   tournamentId: string;
   stageId?: string;
   groupId?: string;
   entries: { id: string; userId: string }[];
+  roundsCount?: number | null;
 }) {
   const data: {
     tournamentId: string;
@@ -231,20 +233,37 @@ async function createRoundRobinMatchesForEntries({
   }[] = [];
 
   let matchNumber = 1;
-  for (let i = 0; i < entries.length; i += 1) {
-    for (let j = i + 1; j < entries.length; j += 1) {
-      data.push({
-        tournamentId,
-        stageId,
-        groupId,
-        round: i + 1,
-        matchNumber: matchNumber++,
-        participant1EntryId: entries[i]?.id,
-        participant2EntryId: entries[j]?.id,
-        player1Id: entries[i]?.userId,
-        player2Id: entries[j]?.userId,
-        status: MatchStatus.READY,
-      });
+  const cycles = Math.max(roundsCount ?? 1, 1);
+
+  for (let cycle = 0; cycle < cycles; cycle += 1) {
+    let slots: ({ id: string; userId: string } | null)[] = entries.length % 2 === 0 ? [...entries] : [...entries, null];
+    const roundsPerCycle = slots.length - 1;
+
+    for (let roundIndex = 0; roundIndex < roundsPerCycle; roundIndex += 1) {
+      for (let pairIndex = 0; pairIndex < slots.length / 2; pairIndex += 1) {
+        const first = slots[pairIndex];
+        const second = slots[slots.length - 1 - pairIndex];
+        if (!first || !second) continue;
+
+        const shouldSwapHomeAway = (cycle + roundIndex + pairIndex) % 2 === 1;
+        const participant1 = shouldSwapHomeAway ? second : first;
+        const participant2 = shouldSwapHomeAway ? first : second;
+
+        data.push({
+          tournamentId,
+          stageId,
+          groupId,
+          round: cycle * roundsPerCycle + roundIndex + 1,
+          matchNumber: matchNumber++,
+          participant1EntryId: participant1.id,
+          participant2EntryId: participant2.id,
+          player1Id: participant1.userId,
+          player2Id: participant2.userId,
+          status: MatchStatus.READY,
+        });
+      }
+
+      slots = [slots[0] ?? null, slots[slots.length - 1] ?? null, ...slots.slice(1, -1)];
     }
   }
 
@@ -935,6 +954,7 @@ export async function generateTournamentMatches(tournamentId: string) {
         tournamentId,
         stageId: stage.id,
         entries: tournament.participants.map((entry) => ({ id: entry.id, userId: entry.userId })),
+        roundsCount: stage.roundsCount,
       });
     }
 
@@ -947,6 +967,7 @@ export async function generateTournamentMatches(tournamentId: string) {
             stageId: stage.id,
             groupId: group.id,
             entries: members,
+            roundsCount: stage.roundsCount,
           });
         }
       }

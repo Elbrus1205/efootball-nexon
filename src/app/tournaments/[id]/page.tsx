@@ -128,6 +128,8 @@ function buildScheduleSections<
     id: string;
     round: number;
     matchNumber: number;
+    player1Id?: string | null;
+    player2Id?: string | null;
     stage?: { id: string; orderIndex: number; type?: StageType | null; roundsCount?: number | null; name: string | null } | null;
     group?: { id: string; orderIndex: number; name: string } | null;
     bracket?: string | null;
@@ -138,10 +140,29 @@ function buildScheduleSections<
   },
 >(matches: T[]) {
   const sections = new Map<string, { key: string; title: string; sort: number[]; matches: T[] }>();
+  const roundRobinBuckets = new Map<string, { sort: number[]; groupName?: string; matches: T[] }>();
 
   for (const match of matches) {
     const stageSort = match.stage?.orderIndex ?? 999;
     const groupSort = match.group?.orderIndex ?? 0;
+
+    if (match.stage?.type !== StageType.PLAYOFF) {
+      const key = [match.stage?.id ?? "stage", match.group?.id ?? "all"].join(":");
+      const bucket = roundRobinBuckets.get(key);
+
+      if (bucket) {
+        bucket.matches.push(match);
+      } else {
+        roundRobinBuckets.set(key, {
+          sort: [stageSort, groupSort],
+          groupName: match.group?.name,
+          matches: [match],
+        });
+      }
+
+      continue;
+    }
+
     const bracketSort = match.stage?.type === StageType.PLAYOFF && match.bracket === "lower" ? 1 : 0;
     const thirdPlaceSort = match.isThirdPlaceMatch ? 1 : 0;
     const key = [match.stage?.id ?? "stage", match.group?.id ?? "all", match.bracket ?? "none", match.round, thirdPlaceSort].join(":");
@@ -157,6 +178,34 @@ function buildScheduleSections<
         matches: [match],
       });
     }
+  }
+
+  for (const [bucketKey, bucket] of Array.from(roundRobinBuckets.entries())) {
+    const tours: Array<{ playerIds: Set<string>; matches: T[] }> = [];
+    const orderedMatches = bucket.matches.sort((a: T, b: T) => a.matchNumber - b.matchNumber || scheduleMatchTime(a) - scheduleMatchTime(b));
+
+    for (const match of orderedMatches) {
+      const playerIds = [match.player1Id, match.player2Id].filter(Boolean) as string[];
+      const tour = tours.find((item) => playerIds.every((playerId) => !item.playerIds.has(playerId)));
+
+      if (tour) {
+        tour.matches.push(match);
+        playerIds.forEach((playerId) => tour.playerIds.add(playerId));
+      } else {
+        tours.push({ playerIds: new Set(playerIds), matches: [match] });
+      }
+    }
+
+    tours.forEach((tour, index) => {
+      const tourNumber = index + 1;
+
+      sections.set(`${bucketKey}:${tourNumber}`, {
+        key: `${bucketKey}:${tourNumber}`,
+        title: bucket.groupName ? `${bucket.groupName} • ${tourNumber} тур` : `${tourNumber} тур`,
+        sort: [...bucket.sort, 0, tourNumber, 0],
+        matches: tour.matches,
+      });
+    });
   }
 
   return Array.from(sections.values())
