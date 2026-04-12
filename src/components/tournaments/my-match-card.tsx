@@ -199,7 +199,7 @@ export function MyMatchCard({
             </div>
           </div>
         </div>
-      ) : (
+      ) : canSubmit || waitingForOpponent ? (
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:p-4">
           <div className="flex items-start gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white/5 text-zinc-300 sm:h-10 sm:w-10">
@@ -220,7 +220,7 @@ export function MyMatchCard({
             </div>
           </div>
         </div>
-      )}
+      ) : null}
 
       {canSubmit ? (
         <div className="grid gap-2 sm:gap-3 sm:grid-cols-[1fr_1fr_auto]">
