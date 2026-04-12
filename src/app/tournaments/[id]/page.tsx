@@ -625,16 +625,18 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   const playoffStages = tournament.stages.filter((stage) => stage.type === StageType.PLAYOFF && stage.bracket);
   const leagueStage = tournament.stages.find((stage) => stage.type === StageType.LEAGUE);
 
-  const scheduledMatches = tournament.matches
-    .filter((match) => match.scheduledAt || match.schedules.length)
-    .sort(
-      (a, b) =>
-        scheduleMatchTime(a) - scheduleMatchTime(b),
-    );
-  const scheduleSections = buildScheduleSections(scheduledMatches);
+  const visibleMatches = tournament.matches.sort(
+    (a, b) =>
+      (a.stage?.orderIndex ?? 999) - (b.stage?.orderIndex ?? 999) ||
+      (a.group?.orderIndex ?? 0) - (b.group?.orderIndex ?? 0) ||
+      a.round - b.round ||
+      a.matchNumber - b.matchNumber ||
+      scheduleMatchTime(a) - scheduleMatchTime(b),
+  );
+  const scheduleSections = buildScheduleSections(visibleMatches);
 
   const myMatches = session?.user
-    ? scheduledMatches.filter((match) => match.player1Id === session.user.id || match.player2Id === session.user.id)
+    ? visibleMatches.filter((match) => match.player1Id === session.user.id || match.player2Id === session.user.id)
     : [];
 
   const availableClubs = await getAvailableClubs();
