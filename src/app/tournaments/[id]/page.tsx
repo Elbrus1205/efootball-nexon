@@ -331,7 +331,7 @@ function StandingsTable({ rows, highlights = [] }: { rows: LeagueRow[]; highligh
   return (
     <div className="min-w-0 max-w-full space-y-3">
       <div className="max-w-full overflow-x-auto border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:w-5 [&_td:nth-child(1)]:px-0 [&_td:nth-child(1)]:text-center [&_td:nth-child(2)]:w-[1%] [&_td:nth-child(2)]:whitespace-nowrap [&_td:nth-child(2)]:pl-2 [&_td:nth-child(2)]:pr-[15px] [&_td:nth-child(n+3)]:w-7 [&_td:nth-child(n+3)]:px-1 [&_th:nth-child(1)]:w-5 [&_th:nth-child(1)]:px-0 [&_th:nth-child(2)]:w-[1%] [&_th:nth-child(2)]:whitespace-nowrap [&_th:nth-child(2)]:pl-2 [&_th:nth-child(2)]:pr-[15px] [&_th:nth-child(n+3)]:w-7 [&_th:nth-child(n+3)]:px-1">
-        <table className="w-max min-w-[560px] table-auto text-left text-sm">
+        <table className="w-full min-w-[560px] table-auto text-left text-sm">
           <thead>
             <tr>
               <StickyHeader>
