@@ -329,8 +329,8 @@ function StandingsTable({ rows, highlights = [] }: { rows: LeagueRow[]; highligh
   const eliminatedRanges = getEliminatedRanges(orderedHighlights, rows.length);
 
   return (
-    <div className="space-y-3">
-      <div className="overflow-x-auto border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:w-5 [&_td:nth-child(1)]:px-0 [&_td:nth-child(1)]:text-center [&_td:nth-child(2)]:w-[1%] [&_td:nth-child(2)]:whitespace-nowrap [&_td:nth-child(2)]:pl-2 [&_td:nth-child(2)]:pr-[15px] [&_td:nth-child(n+3)]:w-7 [&_td:nth-child(n+3)]:px-1 [&_th:nth-child(1)]:w-5 [&_th:nth-child(1)]:px-0 [&_th:nth-child(2)]:w-[1%] [&_th:nth-child(2)]:whitespace-nowrap [&_th:nth-child(2)]:pl-2 [&_th:nth-child(2)]:pr-[15px] [&_th:nth-child(n+3)]:w-7 [&_th:nth-child(n+3)]:px-1">
+    <div className="min-w-0 max-w-full space-y-3">
+      <div className="max-w-full overflow-x-auto border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:w-5 [&_td:nth-child(1)]:px-0 [&_td:nth-child(1)]:text-center [&_td:nth-child(2)]:w-[1%] [&_td:nth-child(2)]:whitespace-nowrap [&_td:nth-child(2)]:pl-2 [&_td:nth-child(2)]:pr-[15px] [&_td:nth-child(n+3)]:w-7 [&_td:nth-child(n+3)]:px-1 [&_th:nth-child(1)]:w-5 [&_th:nth-child(1)]:px-0 [&_th:nth-child(2)]:w-[1%] [&_th:nth-child(2)]:whitespace-nowrap [&_th:nth-child(2)]:pl-2 [&_th:nth-child(2)]:pr-[15px] [&_th:nth-child(n+3)]:w-7 [&_th:nth-child(n+3)]:px-1">
         <table className="w-max min-w-[560px] table-auto text-left text-sm">
           <thead>
             <tr>
@@ -595,9 +595,9 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           {groupStage ? (
             <div className="space-y-4">
               <div className="text-sm uppercase tracking-[0.24em] text-zinc-500">{structureSectionTitle}</div>
-              <div className="grid gap-4">
+              <div className="grid min-w-0 gap-4">
                 {groupStage.groups.map((group) => (
-                  <Card key={group.id} className="mx-auto w-fit max-w-full overflow-hidden p-0">
+                  <Card key={group.id} className="w-full min-w-0 max-w-full overflow-hidden p-0">
                     <div className="border-b border-white/10 px-5 py-4 font-medium text-white">
                       {tournament.format === TournamentFormat.CUSTOM && groupStage.groups.length > 1 ? group.name : "Таблица лиги"}
                     </div>
@@ -629,7 +629,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           ) : null}
 
           {leagueStage || tournament.format === TournamentFormat.ROUND_ROBIN ? (
-            <Card className="mx-auto w-fit max-w-full overflow-hidden p-0">
+            <Card className="w-full min-w-0 max-w-full overflow-hidden p-0">
               <div className="border-b border-white/10 px-5 py-4 font-medium text-white">Таблица лиги</div>
               {leagueTable.length ? (
                 <StandingsTable rows={leagueTable} />
