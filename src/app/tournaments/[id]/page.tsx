@@ -741,8 +741,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           {scheduleSections.length ? (
             <div className="space-y-8">
               {scheduleSections.map((section) => (
-                <section key={section.key} className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
+                <section key={section.key} className="space-y-4 rounded-[1.75rem] border border-white/10 bg-white/[0.04] p-4 shadow-[0_18px_45px_rgba(0,0,0,0.18)] sm:p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
                     <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-zinc-300">{section.title}</h3>
                     <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">{section.matches.length} матчей</div>
                   </div>
