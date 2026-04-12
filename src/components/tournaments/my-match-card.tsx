@@ -18,7 +18,7 @@ type SubmissionState = {
 type MyMatchCardProps = {
   id: string;
   title: string;
-  meta: string;
+  meta?: string;
   statusLabel: string;
   statusVariant: "primary" | "accent" | "neutral" | "success" | "danger";
   scoreText: string;
@@ -119,10 +119,12 @@ export function MyMatchCard({
       <div className="flex flex-col gap-2 sm:gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="font-medium text-white">{title}</div>
-          <div className="mt-2 inline-flex items-center gap-2 text-sm text-zinc-400">
-            <Clock3 className="h-4 w-4 shrink-0 text-zinc-500" />
-            <span>{meta}</span>
-          </div>
+          {meta ? (
+            <div className="mt-2 inline-flex items-center gap-2 text-sm text-zinc-400">
+              <Clock3 className="h-4 w-4 shrink-0 text-zinc-500" />
+              <span>{meta}</span>
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-col items-start gap-1.5 lg:items-end">
           <Badge variant={statusVariant}>{statusLabel}</Badge>

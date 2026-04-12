@@ -73,21 +73,6 @@ const CUSTOM_STANDING_HIGHLIGHT_STYLES = [
   },
 ] as const;
 
-function scheduleStageLabel(match: {
-  round: number;
-  group?: { name: string } | null;
-  stage?: { name: string | null; type?: StageType | null } | null;
-}) {
-  if (match.group?.name) return match.group.name;
-  if (match.stage?.name?.trim()) return match.stage.name;
-
-  if (match.stage?.type === StageType.PLAYOFF) return "Плей-офф";
-  if (match.stage?.type === StageType.GROUP_STAGE) return "Групповой этап";
-  if (match.stage?.type === StageType.LEAGUE) return "Лига";
-
-  return `Раунд ${match.round}`;
-}
-
 function scheduleMatchTime(match: { scheduledAt?: Date | string | null; createdAt: Date | string; schedules: Array<{ startsAt: Date | string }> }) {
   return new Date(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt).getTime();
 }
@@ -800,12 +785,6 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                     {section.matches.map((match) => (
                       <Card key={match.id} className="p-5">
                         <div className="flex flex-col gap-4">
-                          <div className="flex flex-col items-center gap-2 text-center">
-                            <div className="text-sm text-zinc-400">
-                              {scheduleStageLabel(match)} • {formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}
-                            </div>
-                          </div>
-
                           <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-3 sm:p-5">
                             <div className="mx-auto grid max-w-[760px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[minmax(180px,220px)_auto_minmax(180px,220px)] sm:gap-4">
                               <div className="min-w-0 justify-self-end">
@@ -862,7 +841,6 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                     key={match.id}
                     id={match.id}
                     title="Личный матч"
-                    meta={`${scheduleStageLabel(match)} • ${formatDate(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt)}`}
                     statusLabel={matchStatusLabel[match.status] ?? match.status}
                     statusVariant={matchStatusVariant[match.status] ?? "neutral"}
                     scoreText={
