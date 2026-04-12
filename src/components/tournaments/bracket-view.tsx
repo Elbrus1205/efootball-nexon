@@ -392,7 +392,7 @@ export function BracketView({
         </div>
 
         {thirdPlaceSeries.length ? (
-          <div className="mt-8 grid min-w-[280px] gap-4 sm:grid-cols-2">
+          <div className="mt-8 grid min-w-max gap-4" style={{ width: columnWidth }}>
             {thirdPlaceSeries.map((series) => (
               <BracketMatchBox key={series.key} series={series} clubsByUserId={clubsByUserId} />
             ))}
