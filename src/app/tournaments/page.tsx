@@ -1,6 +1,5 @@
 import { db } from "@/lib/db";
 import { TournamentCard } from "@/components/tournaments/tournament-card";
-import { SectionHeader } from "@/components/shared/section-header";
 
 export const revalidate = 3600;
 
@@ -14,12 +13,6 @@ export default async function TournamentsPage() {
 
   return (
     <div className="page-shell space-y-8">
-      <SectionHeader
-        eyebrow="Турниры"
-        title="Все турниры"
-        description="Здесь собраны все турниры и быстрый переход к каждому событию."
-      />
-
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {tournaments.map((tournament) => (
           <TournamentCard key={tournament.id} tournament={tournament} participantsCount={tournament._count.participants} />
