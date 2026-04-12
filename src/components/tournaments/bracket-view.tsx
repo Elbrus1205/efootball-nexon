@@ -1,5 +1,5 @@
 import { Match, MatchStatus, TournamentRegistration, User } from "@prisma/client";
-import { GitBranch, Trophy } from "lucide-react";
+import { GitBranch } from "lucide-react";
 import Link from "next/link";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { cn } from "@/lib/utils";
@@ -319,11 +319,6 @@ export function BracketView({
         <div className="relative mx-auto inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-black/25 px-4 py-2 text-xs uppercase tracking-[0.28em] text-emerald-100/80">
           <GitBranch className="h-4 w-4 text-emerald-300" />
           Плей-офф
-        </div>
-        <div className="relative mt-4 text-3xl font-black uppercase tracking-[0.16em] text-white sm:text-5xl">Сетка турнира</div>
-        <div className="relative mt-2 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.24em] text-emerald-100/70">
-          <Trophy className="h-4 w-4 text-amber-300" />
-          Финальная часть
         </div>
       </div>
 
