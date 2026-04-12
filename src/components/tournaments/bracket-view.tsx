@@ -214,11 +214,9 @@ function BracketTeamRow({ side }: { side: BracketSide }) {
 function BracketMatchBox({
   series,
   clubsByUserId,
-  isLastRound,
 }: {
   series: BracketSeries;
   clubsByUserId: Record<string, ClubMeta>;
-  isLastRound: boolean;
 }) {
   const match = series.referenceMatch;
   const playerOneClub = resolveClubMeta(match, 1, clubsByUserId);
@@ -248,25 +246,33 @@ function BracketMatchBox({
   ];
 
   return (
-    <div className="relative">
-      {!isLastRound ? (
-        <>
-          <span className="pointer-events-none absolute -right-10 top-1/2 hidden h-px w-10 bg-emerald-200/45 lg:block" />
-          <span className="pointer-events-none absolute -right-10 top-1/2 hidden h-24 w-px -translate-y-1/2 bg-emerald-200/25 lg:block" />
-        </>
-      ) : null}
-
-      <div className="overflow-hidden rounded-xl border border-emerald-200/70 bg-emerald-950/35 shadow-[0_0_28px_rgba(16,185,129,0.12)] backdrop-blur">
-        <div className="flex items-center justify-between gap-3 border-b border-emerald-200/35 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-emerald-100/80">
-          <span>{seriesLabel(series)}</span>
-          {series.penaltyMatch ? <span className="text-amber-300">Пенальти</span> : null}
-        </div>
-        <BracketTeamRow side={sides[0]} />
-        <div className="h-px bg-emerald-200/35" />
-        <BracketTeamRow side={sides[1]} />
+    <div className="overflow-hidden rounded-xl border border-emerald-200/70 bg-emerald-950/60 shadow-[0_0_28px_rgba(16,185,129,0.14)] backdrop-blur">
+      <div className="flex items-center justify-between gap-3 border-b border-emerald-200/35 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-emerald-100/80">
+        <span>{seriesLabel(series)}</span>
+        {series.penaltyMatch ? <span className="text-amber-300">Пенальти</span> : null}
       </div>
+      <BracketTeamRow side={sides[0]} />
+      <div className="h-px bg-emerald-200/35" />
+      <BracketTeamRow side={sides[1]} />
     </div>
   );
+}
+
+function BracketConnector({
+  startX,
+  startY,
+  endX,
+  endY,
+}: {
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+}) {
+  const middleX = startX + (endX - startX) / 2;
+  const path = `M ${startX} ${startY} H ${middleX} V ${endY} H ${endX}`;
+
+  return <path d={path} fill="none" stroke="rgba(187,247,208,0.72)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />;
 }
 
 export function BracketView({
@@ -277,7 +283,9 @@ export function BracketView({
   clubsByUserId?: Record<string, ClubMeta>;
 }) {
   const seriesList = buildSeries(matches);
-  const rounds = seriesList.reduce<Map<number, BracketSeries[]>>((map, series) => {
+  const thirdPlaceSeries = seriesList.filter((series) => series.isThirdPlaceMatch);
+  const mainSeriesList = seriesList.filter((series) => !series.isThirdPlaceMatch);
+  const rounds = mainSeriesList.reduce<Map<number, BracketSeries[]>>((map, series) => {
     const bucket = map.get(series.round) ?? [];
     bucket.push(series);
     map.set(series.round, bucket);
@@ -286,6 +294,23 @@ export function BracketView({
 
   const orderedRounds = Array.from(rounds.entries()).sort((a, b) => a[0] - b[0]);
   const totalRounds = orderedRounds.length;
+  const firstRoundSize = Math.max(orderedRounds[0]?.[1].length ?? 1, 1);
+  const columnWidth = 280;
+  const columnGap = 88;
+  const titleHeight = 56;
+  const slotHeight = 150;
+  const matchHeight = 122;
+  const boardWidth = orderedRounds.length * columnWidth + Math.max(orderedRounds.length - 1, 0) * columnGap;
+  const boardHeight = Math.max(firstRoundSize * slotHeight, 260);
+  const totalBoardHeight = titleHeight + boardHeight;
+
+  const getCenterY = (roundIndex: number, matchIndex: number) => {
+    const step = slotHeight * 2 ** roundIndex;
+    const offset = (slotHeight * (2 ** roundIndex - 1)) / 2;
+    return titleHeight + slotHeight / 2 + matchIndex * step + offset;
+  };
+
+  const getColumnX = (roundIndex: number) => roundIndex * (columnWidth + columnGap);
 
   return (
     <div className="overflow-hidden rounded-[2rem] border border-emerald-400/20 bg-[radial-gradient(circle_at_50%_45%,rgba(34,197,94,0.22),transparent_22%),radial-gradient(circle_at_18%_10%,rgba(16,185,129,0.2),transparent_26%),linear-gradient(135deg,#03180f_0%,#052817_48%,#02110b_100%)] shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
@@ -303,22 +328,81 @@ export function BracketView({
       </div>
 
       <div className="overflow-x-auto px-4 pb-8 pt-5 sm:px-7">
-        <div className="flex min-w-max items-center gap-12 lg:gap-16">
-          {orderedRounds.map(([round, roundSeries], roundIndex) => {
-            const isLastRound = roundIndex === orderedRounds.length - 1;
-            const verticalGap = roundIndex === 0 ? "gap-8" : roundIndex === 1 ? "gap-20" : "gap-32";
+        <div className="relative min-w-max" style={{ width: boardWidth, height: totalBoardHeight }}>
+          <svg
+            className="pointer-events-none absolute inset-0 z-0 overflow-visible"
+            width={boardWidth}
+            height={totalBoardHeight}
+            viewBox={`0 0 ${boardWidth} ${totalBoardHeight}`}
+            aria-hidden="true"
+          >
+            <defs>
+              <filter id="bracketLineGlow" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
+                <feMerge>
+                  <feMergeNode in="coloredBlur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
 
-            return (
-              <div key={round} className={cn("flex w-[280px] shrink-0 flex-col justify-center", verticalGap)}>
-                <div className="mb-2 text-center text-lg font-black text-white">{roundTitle(round, totalRounds)}</div>
+            <g filter="url(#bracketLineGlow)">
+              {orderedRounds.slice(0, -1).flatMap(([, roundSeries], roundIndex) =>
+                roundSeries.map((series, matchIndex) => {
+                  const targetIndex = Math.floor(matchIndex / 2);
+                  const startX = getColumnX(roundIndex) + columnWidth;
+                  const startY = getCenterY(roundIndex, matchIndex);
+                  const endX = getColumnX(roundIndex + 1);
+                  const endY = getCenterY(roundIndex + 1, targetIndex);
 
-                {roundSeries.map((series) => (
-                  <BracketMatchBox key={series.key} series={series} clubsByUserId={clubsByUserId} isLastRound={isLastRound} />
-                ))}
-              </div>
-            );
-          })}
+                  return (
+                    <BracketConnector
+                      key={`${series.key}-connector`}
+                      startX={startX}
+                      startY={startY}
+                      endX={endX}
+                      endY={endY}
+                    />
+                  );
+                }),
+              )}
+            </g>
+          </svg>
+
+          {orderedRounds.map(([round, roundSeries], roundIndex) => (
+            <div
+              key={round}
+              className="absolute top-0 z-10"
+              style={{
+                left: getColumnX(roundIndex),
+                width: columnWidth,
+              }}
+            >
+              <div className="h-12 text-center text-lg font-black text-white">{roundTitle(round, totalRounds)}</div>
+
+              {roundSeries.map((series, matchIndex) => (
+                <div
+                  key={series.key}
+                  className="absolute left-0 w-full -translate-y-1/2"
+                  style={{
+                    top: getCenterY(roundIndex, matchIndex),
+                    minHeight: matchHeight,
+                  }}
+                >
+                  <BracketMatchBox series={series} clubsByUserId={clubsByUserId} />
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
+
+        {thirdPlaceSeries.length ? (
+          <div className="mt-8 grid min-w-[280px] gap-4 sm:grid-cols-2">
+            {thirdPlaceSeries.map((series) => (
+              <BracketMatchBox key={series.key} series={series} clubsByUserId={clubsByUserId} />
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
   );
