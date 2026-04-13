@@ -5,20 +5,20 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
-export function TournamentRulesEditor({ tournamentId, initialRules }: { tournamentId: string; initialRules: string }) {
+export function RegulationsEditor({ initialText }: { initialText: string }) {
   const router = useRouter();
-  const [rules, setRules] = useState(initialRules);
+  const [text, setText] = useState(initialText);
   const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
 
-  const saveRules = () => {
+  const save = () => {
     startTransition(async () => {
       setMessage("Сохранение...");
 
-      const response = await fetch(`/api/admin/tournaments/${tournamentId}/rules`, {
+      const response = await fetch("/api/admin/regulations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rules }),
+        body: JSON.stringify({ body: text }),
       });
 
       const result = await response.json().catch(() => ({
@@ -30,7 +30,7 @@ export function TournamentRulesEditor({ tournamentId, initialRules }: { tourname
         return;
       }
 
-      setMessage("Регламент сохранен.");
+      setMessage("Регламент сохранен и обновлен на публичной странице.");
       router.refresh();
     });
   };
@@ -38,14 +38,14 @@ export function TournamentRulesEditor({ tournamentId, initialRules }: { tourname
   return (
     <div className="space-y-3">
       <Textarea
-        value={rules}
-        onChange={(event) => setRules(event.target.value)}
-        placeholder="Напишите регламент турнира: правила матчей, подтверждение результата, спорные ситуации."
-        className="min-h-[260px]"
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        placeholder="Напишите общий регламент платформы."
+        className="min-h-[420px]"
       />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm text-zinc-400">{message}</div>
-        <Button onClick={saveRules} disabled={isPending || rules.trim().length < 20}>
+        <Button onClick={save} disabled={isPending || text.trim().length < 20}>
           {isPending ? "Сохранение..." : "Сохранить регламент"}
         </Button>
       </div>

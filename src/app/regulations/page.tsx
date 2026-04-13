@@ -1,13 +1,14 @@
 import { Card } from "@/components/ui/card";
+import { getRegulationsText } from "@/lib/regulations";
 
-export default function RegulationsPage() {
+export default async function RegulationsPage() {
+  const regulations = await getRegulationsText();
+
   return (
     <div className="page-shell">
       <Card className="space-y-4 p-6">
         <h1 className="font-display text-3xl font-thin text-white">Регламент</h1>
-        <p className="text-zinc-400">
-          Заполните здесь официальный регламент турниров: сроки, подтверждение матчей, правила переигровок, технические поражения и требования к скриншотам.
-        </p>
+        <div className="whitespace-pre-wrap text-zinc-300">{regulations}</div>
       </Card>
     </div>
   );

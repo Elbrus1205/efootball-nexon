@@ -2,24 +2,21 @@ import { NextResponse } from "next/server";
 import { UserRole } from "@prisma/client";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/session";
-import { db } from "@/lib/db";
+import { saveRegulationsText } from "@/lib/regulations";
 
-const rulesSchema = z.object({
-  rules: z.string().min(20, "Регламент должен быть не короче 20 символов."),
+const regulationsSchema = z.object({
+  body: z.string().min(20, "Регламент должен быть не короче 20 символов."),
 });
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request) {
   await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
 
-  const parsed = rulesSchema.safeParse(await request.json());
+  const parsed = regulationsSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Не удалось проверить регламент." }, { status: 400 });
   }
 
-  await db.tournament.update({
-    where: { id: params.id },
-    data: { rules: parsed.data.rules },
-  });
+  await saveRegulationsText(parsed.data.body);
 
   return NextResponse.json({ ok: true });
 }
