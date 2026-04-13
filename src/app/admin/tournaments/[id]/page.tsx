@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Activity, CalendarDays, GitBranch, History, ShieldCheck, Swords, Users } from "lucide-react";
 import { AuditDiff } from "@/components/admin/audit-diff";
 import { MatchManager } from "@/components/admin/match-manager";
+import { TournamentRulesEditor } from "@/components/admin/tournament-rules-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -181,6 +182,16 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
               ) : (
                 <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-4 text-sm text-zinc-500">История действий появится после первых изменений по турниру.</div>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Регламент</CardTitle>
+              <CardDescription>Текст правил, который видят игроки на странице турнира.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TournamentRulesEditor tournamentId={tournament.id} initialRules={tournament.rules} />
             </CardContent>
           </Card>
 
