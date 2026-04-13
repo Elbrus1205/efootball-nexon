@@ -543,6 +543,12 @@ model AdminAction {
   @@index([tournamentId, createdAt])
 }
 
+model SiteContent {
+  key       String   @id
+  body      String   @db.Text
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
 model SecuritySession {
   id            String   @id @default(cuid())
   authSessionId String   @unique
