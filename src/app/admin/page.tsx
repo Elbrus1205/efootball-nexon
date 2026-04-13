@@ -13,7 +13,7 @@ export default async function AdminPage() {
   await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
 
   const now = new Date();
-  const [totalTournaments, activeTournaments, completedTournaments, totalParticipants, upcomingMatches, recentActions] = await db.$transaction([
+  const [totalTournaments, activeTournaments, completedTournaments, totalParticipants, upcomingMatches, recentActions, latestTournament] = await db.$transaction([
     db.tournament.count(),
     db.tournament.count({ where: { status: { in: [TournamentStatus.REGISTRATION_OPEN, TournamentStatus.IN_PROGRESS] } } }),
     db.tournament.count({ where: { status: TournamentStatus.COMPLETED } }),
@@ -33,6 +33,10 @@ export default async function AdminPage() {
       orderBy: { createdAt: "desc" },
       take: 6,
     }),
+    db.tournament.findFirst({
+      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+      select: { id: true },
+    }),
   ]);
 
   const stats = [
@@ -43,9 +47,9 @@ export default async function AdminPage() {
   ];
 
   const shortcuts = [
-    { href: "/admin/tournaments", label: "Открыть турниры", variant: "default" as const },
-    { href: "/admin/matches", label: "Управлять матчами", variant: "secondary" as const },
-    { href: "/admin/schedule", label: "Проверить расписание", variant: "outline" as const },
+    { href: "/admin/tournaments", label: "Редактор турниров", variant: "default" as const },
+    { href: "/admin", label: "Панель", variant: "secondary" as const },
+    { href: latestTournament ? `/admin/tournaments/${latestTournament.id}` : "/admin/tournaments", label: "Регламент", variant: "outline" as const },
   ];
 
   return (
