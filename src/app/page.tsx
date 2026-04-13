@@ -5,6 +5,7 @@ import { TournamentStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/shared/reveal";
+import { getCurrentSession } from "@/lib/auth/session";
 
 const features = [
   {
@@ -31,6 +32,7 @@ const features = [
 
 export default async function HomePage() {
   const now = new Date();
+  const session = await getCurrentSession();
 
   const [tournamentsCount, totalUsers, activeSessions, totalTournaments, prizePoolTournaments] = await db.$transaction([
     db.tournament.count({
@@ -111,7 +113,7 @@ export default async function HomePage() {
             size="lg"
             className="hero-cta mt-8 h-12 rounded-full bg-gradient-to-r from-primary via-blue-500 to-cyan-400 px-8 text-base text-white shadow-[0_0_30px_rgba(59,130,246,0.32)] transition hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(59,130,246,0.45)]"
           >
-            <Link href="/register">
+            <Link href={session?.user ? "/tournaments" : "/register"}>
               Принять участие
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
