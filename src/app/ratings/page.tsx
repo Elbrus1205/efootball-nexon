@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, Crown, Medal, Shield, Sparkles, Trophy } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { ArrowUpRight, Crown, Medal, Shield, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { getPlayerRatings } from "@/lib/ratings";
 
@@ -19,72 +18,10 @@ function RankIcon({ rank }: { rank: number }) {
 
 export default async function RatingsPage() {
   const ratings = await getPlayerRatings();
-  const podium = ratings.slice(0, 3);
-  const activePlayers = ratings.filter((player) => player.played > 0).length;
-  const totalMatches = ratings.reduce((sum, player) => sum + player.played, 0) / 2;
 
   return (
     <div className="page-shell space-y-8">
-      <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(16,185,129,0.14),rgba(59,130,246,0.11)_45%,rgba(255,255,255,0.04))] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] sm:p-7">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-              <Trophy className="h-4 w-4" />
-              Рейтинги
-            </div>
-            <h1 className="mt-5 font-display text-4xl font-thin text-white sm:text-5xl">Рейтинг игроков</h1>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-zinc-300 sm:text-base">
-              Все начинают с 500. После каждого подтвержденного матча рейтинг меняется по ожидаемому результату, а призеры завершенных турниров получают бонусные очки.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:min-w-[420px]">
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-              <div className="text-2xl font-semibold text-white">{ratings.length}</div>
-              <div className="mt-1 text-xs uppercase tracking-[0.18em] text-zinc-500">игроков</div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-              <div className="text-2xl font-semibold text-white">{activePlayers}</div>
-              <div className="mt-1 text-xs uppercase tracking-[0.18em] text-zinc-500">с матчами</div>
-            </div>
-            <div className="col-span-2 rounded-2xl border border-white/10 bg-black/20 p-4 sm:col-span-1">
-              <div className="text-2xl font-semibold text-white">{totalMatches}</div>
-              <div className="mt-1 text-xs uppercase tracking-[0.18em] text-zinc-500">матчей</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {podium.length ? (
-        <section className="grid gap-4 lg:grid-cols-3">
-          {podium.map((player, index) => {
-            const rank = index + 1;
-
-            return (
-              <Card key={player.playerId} className="relative overflow-hidden p-5">
-                <div className="absolute inset-x-0 top-0 h-1 bg-primary/70" />
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border ${rankStyle(rank)}`}>
-                      <RankIcon rank={rank} />
-                    </div>
-                    <div className="min-w-0">
-                      <Link href={`/players/${player.playerId}`} className="truncate font-semibold text-white transition hover:text-primary">
-                        {player.playerName}
-                      </Link>
-                      <div className="mt-1 text-sm text-zinc-500">{player.played} матчей</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-3xl font-black text-white">{player.rating}</div>
-                    <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">очков</div>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </section>
-      ) : null}
+      <div className="text-sm font-semibold uppercase tracking-[0.28em] text-primary drop-shadow-[0_0_16px_rgba(59,130,246,0.65)]">Рейтинги</div>
 
       <Card className="overflow-hidden p-0">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
@@ -92,7 +29,6 @@ export default async function RatingsPage() {
             <div className="font-semibold text-white">Таблица рейтинга</div>
             <div className="mt-1 text-sm text-zinc-500">Elo-очки, статистика матчей и турнирные бонусы.</div>
           </div>
-          <Badge variant="neutral">K = 30</Badge>
         </div>
 
         <div className="overflow-x-auto">
