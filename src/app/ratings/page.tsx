@@ -34,7 +34,7 @@ export default async function RatingsPage() {
             <div className="grid grid-cols-[64px_minmax(0,1fr)_84px] items-center border-b border-white/10 bg-black/20 text-xs uppercase tracking-[0.18em] text-zinc-500 sm:grid-cols-[72px_minmax(0,1fr)_110px]">
               <div className="px-3 py-3 text-center">#</div>
               <div className="py-3 pl-0 pr-2">Игрок</div>
-              <div className="py-3 pl-2 pr-4 text-right">Рейтинг</div>
+              <div className="py-3 pl-2 pr-4 text-center">Рейтинг</div>
             </div>
 
             <div className="divide-y divide-white/10">
@@ -67,7 +67,7 @@ export default async function RatingsPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="py-4 pl-2 pr-4 text-right text-lg font-black text-white">{player.rating}</div>
+                    <div className="py-4 pl-2 pr-4 text-center text-lg font-black text-white">{player.rating}</div>
                   </div>
                 );
               })}
