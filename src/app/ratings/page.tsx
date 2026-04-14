@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { ArrowUpRight, Crown, Medal, Shield, Sparkles } from "lucide-react";
+import { Crown, Medal, Shield } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { getPlayerRatings } from "@/lib/ratings";
 
@@ -27,24 +26,16 @@ export default async function RatingsPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
           <div>
             <div className="font-semibold text-white">Таблица рейтинга</div>
-            <div className="mt-1 text-sm text-zinc-500">Elo-очки, статистика матчей и турнирные бонусы.</div>
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-left text-sm">
+          <table className="w-full min-w-[420px] text-left text-sm">
             <thead className="border-b border-white/10 bg-black/20 text-xs uppercase tracking-[0.18em] text-zinc-500">
               <tr>
                 <th className="px-5 py-3">#</th>
                 <th className="px-5 py-3">Игрок</th>
                 <th className="px-5 py-3 text-center">Рейтинг</th>
-                <th className="px-5 py-3 text-center">Матчи</th>
-                <th className="px-5 py-3 text-center">В</th>
-                <th className="px-5 py-3 text-center">Н</th>
-                <th className="px-5 py-3 text-center">П</th>
-                <th className="px-5 py-3 text-center">+/-</th>
-                <th className="px-5 py-3 text-center">Бонус</th>
-                <th className="px-5 py-3 text-right">Профиль</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/10">
@@ -75,25 +66,6 @@ export default async function RatingsPage() {
                       </div>
                     </td>
                     <td className="px-5 py-4 text-center text-lg font-black text-white">{player.rating}</td>
-                    <td className="px-5 py-4 text-center text-zinc-300">{player.played}</td>
-                    <td className="px-5 py-4 text-center text-emerald-300">{player.wins}</td>
-                    <td className="px-5 py-4 text-center text-zinc-300">{player.draws}</td>
-                    <td className="px-5 py-4 text-center text-rose-300">{player.losses}</td>
-                    <td className={player.goalDifference >= 0 ? "px-5 py-4 text-center text-emerald-300" : "px-5 py-4 text-center text-rose-300"}>
-                      {player.goalDifference > 0 ? `+${player.goalDifference}` : player.goalDifference}
-                    </td>
-                    <td className="px-5 py-4 text-center">
-                      <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-xs font-semibold text-amber-200">
-                        <Sparkles className="h-3.5 w-3.5" />
-                        +{player.bonus}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-right">
-                      <Link href={`/players/${player.playerId}`} className="inline-flex items-center gap-1 text-sm font-medium text-primary transition hover:text-white">
-                        Открыть
-                        <ArrowUpRight className="h-4 w-4" />
-                      </Link>
-                    </td>
                   </tr>
                 );
               })}
