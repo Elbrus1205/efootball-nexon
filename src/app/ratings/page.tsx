@@ -30,12 +30,17 @@ export default async function RatingsPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[420px] text-left text-sm">
+          <table className="w-full min-w-[420px] table-fixed text-left text-sm">
+            <colgroup>
+              <col className="w-14" />
+              <col />
+              <col className="w-28" />
+            </colgroup>
             <thead className="border-b border-white/10 bg-black/20 text-xs uppercase tracking-[0.18em] text-zinc-500">
               <tr>
                 <th className="w-14 px-4 py-3 text-center">#</th>
-                <th className="py-3 pl-0 pr-5">Игрок</th>
-                <th className="px-5 py-3 text-center">Рейтинг</th>
+                <th className="py-3 pl-0 pr-2">Игрок</th>
+                <th className="py-3 pl-2 pr-4 text-right">Рейтинг</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/10">
@@ -49,7 +54,7 @@ export default async function RatingsPage() {
                         <RankIcon rank={rank} />
                       </div>
                     </td>
-                    <td className="py-4 pl-0 pr-5">
+                    <td className="min-w-0 py-4 pl-0 pr-2">
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/20">
                           {player.image ? (
@@ -65,7 +70,7 @@ export default async function RatingsPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-4 text-center text-lg font-black text-white">{player.rating}</td>
+                    <td className="py-4 pl-2 pr-4 text-right text-lg font-black text-white">{player.rating}</td>
                   </tr>
                 );
               })}
