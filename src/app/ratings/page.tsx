@@ -30,31 +30,25 @@ export default async function RatingsPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[420px] table-fixed text-left text-sm">
-            <colgroup>
-              <col className="w-14" />
-              <col />
-              <col className="w-28" />
-            </colgroup>
-            <thead className="border-b border-white/10 bg-black/20 text-xs uppercase tracking-[0.18em] text-zinc-500">
-              <tr>
-                <th className="w-14 px-4 py-3 text-center">#</th>
-                <th className="py-3 pl-0 pr-2">Игрок</th>
-                <th className="py-3 pl-2 pr-4 text-right">Рейтинг</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/10">
+          <div className="min-w-[360px]">
+            <div className="grid w-max grid-cols-[56px_max-content_auto] items-center border-b border-white/10 bg-black/20 text-xs uppercase tracking-[0.18em] text-zinc-500">
+              <div className="px-4 py-3 text-center">#</div>
+              <div className="py-3 pl-0 pr-3">Игрок</div>
+              <div className="py-3 pl-3 pr-5 text-left">Рейтинг</div>
+            </div>
+
+            <div className="divide-y divide-white/10">
               {ratings.map((player, index) => {
                 const rank = index + 1;
 
                 return (
-                  <tr key={player.playerId} className="transition hover:bg-white/[0.03]">
-                    <td className="w-14 px-4 py-4">
+                  <div key={player.playerId} className="grid w-max grid-cols-[56px_max-content_auto] items-center text-sm transition hover:bg-white/[0.03]">
+                    <div className="px-4 py-4">
                       <div className={`mx-auto flex h-8 w-8 items-center justify-center rounded-lg border ${rankStyle(rank)}`}>
                         <RankIcon rank={rank} />
                       </div>
-                    </td>
-                    <td className="min-w-0 py-4 pl-0 pr-2">
+                    </div>
+                    <div className="py-4 pl-0 pr-3">
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/20">
                           {player.image ? (
@@ -64,18 +58,18 @@ export default async function RatingsPage() {
                             <Shield className="h-4 w-4 text-zinc-500" />
                           )}
                         </div>
-                        <div className="min-w-0">
-                          <div className="truncate font-semibold text-white">{player.playerName}</div>
+                        <div>
+                          <div className="font-semibold text-white">{player.playerName}</div>
                           <div className="mt-1 text-xs text-zinc-500">матч-рейтинг: {player.matchRating}</div>
                         </div>
                       </div>
-                    </td>
-                    <td className="py-4 pl-2 pr-4 text-right text-lg font-black text-white">{player.rating}</td>
-                  </tr>
+                    </div>
+                    <div className="py-4 pl-3 pr-5 text-left text-lg font-black text-white">{player.rating}</div>
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
+            </div>
+          </div>
         </div>
       </Card>
     </div>
