@@ -82,7 +82,6 @@ export default async function RatingsPage() {
                           </div>
                           <div className="min-w-0">
                             <div className="truncate font-semibold text-white">{player.playerName}</div>
-                            <div className="mt-1 text-xs text-zinc-500">матч-рейтинг: {player.matchRating}</div>
                           </div>
                         </div>
                       </div>
