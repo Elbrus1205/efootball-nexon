@@ -34,7 +34,7 @@ export default async function RatingsPage() {
             <thead className="border-b border-white/10 bg-black/20 text-xs uppercase tracking-[0.18em] text-zinc-500">
               <tr>
                 <th className="w-10 px-2 py-3 text-center">#</th>
-                <th className="px-5 py-3">Игрок</th>
+                <th className="py-3 pl-0 pr-5">Игрок</th>
                 <th className="px-5 py-3 text-center">Рейтинг</th>
               </tr>
             </thead>
@@ -49,7 +49,7 @@ export default async function RatingsPage() {
                         <RankIcon rank={rank} />
                       </div>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="py-4 pl-0 pr-5">
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/20">
                           {player.image ? (
