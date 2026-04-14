@@ -67,7 +67,7 @@ function applyTournamentBonus(row: PlayerRatingRow, bonus: number) {
 }
 
 export async function getPlayerRatings() {
-  const [players, matches, completedTournaments] = await db.$transaction([
+  const [players, matches, completedTournaments, ratingOverrides] = await db.$transaction([
     db.user.findMany({
       where: { role: UserRole.PLAYER, isBanned: false },
       select: { id: true, name: true, nickname: true, image: true },
@@ -108,6 +108,10 @@ export async function getPlayerRatings() {
           orderBy: [{ round: "desc" }, { matchNumber: "asc" }],
         },
       },
+    }),
+    db.siteContent.findMany({
+      where: { key: { startsWith: "ratingOverride:" } },
+      select: { key: true, body: true },
     }),
   ]);
 
@@ -169,6 +173,16 @@ export async function getPlayerRatings() {
 
     if (thirdPlaceMatch?.winner) {
       applyTournamentBonus(ensurePlayer(rows, thirdPlaceMatch.winner), TOURNAMENT_BONUSES.thirdPlace);
+    }
+  }
+
+  for (const override of ratingOverrides) {
+    const playerId = override.key.replace("ratingOverride:", "");
+    const rating = Number(override.body);
+    const row = rows.get(playerId);
+
+    if (row && Number.isFinite(rating)) {
+      row.rating = rating;
     }
   }
 
