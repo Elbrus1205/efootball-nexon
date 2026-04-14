@@ -33,7 +33,7 @@ export default async function RatingsPage() {
           <table className="w-full min-w-[420px] text-left text-sm">
             <thead className="border-b border-white/10 bg-black/20 text-xs uppercase tracking-[0.18em] text-zinc-500">
               <tr>
-                <th className="px-5 py-3">#</th>
+                <th className="w-20 px-5 py-3 text-center">#</th>
                 <th className="px-5 py-3">Игрок</th>
                 <th className="px-5 py-3 text-center">Рейтинг</th>
               </tr>
@@ -44,8 +44,8 @@ export default async function RatingsPage() {
 
                 return (
                   <tr key={player.playerId} className="transition hover:bg-white/[0.03]">
-                    <td className="px-5 py-4">
-                      <div className={`flex h-9 w-9 items-center justify-center rounded-xl border ${rankStyle(rank)}`}>
+                    <td className="w-20 px-5 py-4">
+                      <div className={`mx-auto flex h-9 w-9 items-center justify-center rounded-xl border ${rankStyle(rank)}`}>
                         <RankIcon rank={rank} />
                       </div>
                     </td>
