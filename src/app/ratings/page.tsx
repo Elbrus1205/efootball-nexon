@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Crown, Medal, Shield } from "lucide-react";
 import { Fragment } from "react";
 import { Card } from "@/components/ui/card";
@@ -81,7 +82,9 @@ export default async function RatingsPage() {
                             )}
                           </div>
                           <div className="min-w-0">
-                            <div className="truncate font-semibold text-white">{player.playerName}</div>
+                            <Link href={`/players/${player.playerId}`} className="block truncate font-semibold text-white transition hover:text-primary">
+                              {player.playerName}
+                            </Link>
                           </div>
                         </div>
                       </div>
