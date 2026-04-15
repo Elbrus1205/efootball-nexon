@@ -18,6 +18,11 @@ function RankIcon({ rank }: { rank: number }) {
   return <span className="text-xs font-semibold">{rank}</span>;
 }
 
+function shouldShowRatingChange(changedAt: Date | null) {
+  if (!changedAt) return false;
+  return Date.now() - changedAt.getTime() <= 5 * 60 * 1000;
+}
+
 export default async function RatingsPage() {
   const session = await getCurrentSession();
   const ratings = await getPlayerRatings();
@@ -49,6 +54,8 @@ export default async function RatingsPage() {
               {visibleRatings.map((player, index) => {
                 const rank = currentUserBelowTop && index === visibleRatings.length - 1 ? currentUserIndex + 1 : index + 1;
                 const isCurrentUser = player.playerId === session?.user?.id;
+                const showRatingChange = shouldShowRatingChange(player.lastRatingChangeAt) && player.lastRatingChange !== 0;
+                const ratingChangeTone = player.lastRatingChange > 0 ? "text-emerald-300" : "text-rose-300";
 
                 return (
                   <Fragment key={player.playerId}>
@@ -88,7 +95,17 @@ export default async function RatingsPage() {
                           </div>
                         </div>
                       </div>
-                      <div className="py-4 pl-2 pr-4 text-center text-lg font-black text-white">{player.rating}</div>
+                      <div className="py-4 pl-2 pr-4 text-center">
+                        <div className="inline-flex items-baseline justify-center gap-1.5">
+                          <span className="text-lg font-black text-white">{player.rating}</span>
+                          {showRatingChange ? (
+                            <span className={`text-[11px] font-black leading-none ${ratingChangeTone}`}>
+                              {player.lastRatingChange > 0 ? "+" : ""}
+                              {player.lastRatingChange}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
                     </div>
                   </Fragment>
                 );

@@ -26,6 +26,8 @@ export type PlayerRatingRow = {
   goalsFor: number;
   goalsAgainst: number;
   goalDifference: number;
+  lastRatingChange: number;
+  lastRatingChangeAt: Date | null;
   lastMatchAt: Date | null;
 };
 
@@ -48,6 +50,8 @@ function emptyRatingRow(player: RatingPlayer): PlayerRatingRow {
     goalsFor: 0,
     goalsAgainst: 0,
     goalDifference: 0,
+    lastRatingChange: 0,
+    lastRatingChangeAt: null,
     lastMatchAt: null,
   };
 }
@@ -135,6 +139,10 @@ export async function getPlayerRatings() {
     playerTwo.matchRating += playerTwoDelta;
     playerOne.rating += playerOneDelta;
     playerTwo.rating += playerTwoDelta;
+    playerOne.lastRatingChange = playerOneDelta;
+    playerTwo.lastRatingChange = playerTwoDelta;
+    playerOne.lastRatingChangeAt = matchDate;
+    playerTwo.lastRatingChangeAt = matchDate;
 
     playerOne.played += 1;
     playerTwo.played += 1;
@@ -191,6 +199,7 @@ export async function getPlayerRatings() {
       ...row,
       rating: Math.round(row.rating),
       matchRating: Math.round(row.matchRating),
+      lastRatingChange: Math.round(row.lastRatingChange),
     }))
     .sort(
       (a, b) =>
