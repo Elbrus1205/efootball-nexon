@@ -10,6 +10,10 @@ const TOURNAMENT_BONUSES = {
   thirdPlace: 20,
 };
 
+function roundToTenths(value: number) {
+  return Math.round(value * 10) / 10;
+}
+
 type RatingPlayer = Pick<User, "id" | "name" | "nickname" | "image">;
 
 export type PlayerRatingRow = {
@@ -197,9 +201,9 @@ export async function getPlayerRatings() {
   return Array.from(rows.values())
     .map((row) => ({
       ...row,
-      rating: Math.round(row.rating),
-      matchRating: Math.round(row.matchRating),
-      lastRatingChange: Math.round(row.lastRatingChange),
+      rating: roundToTenths(row.rating),
+      matchRating: roundToTenths(row.matchRating),
+      lastRatingChange: roundToTenths(row.lastRatingChange),
     }))
     .sort(
       (a, b) =>

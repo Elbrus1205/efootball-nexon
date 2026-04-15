@@ -23,6 +23,10 @@ function shouldShowRatingChange(changedAt: Date | null) {
   return Date.now() - changedAt.getTime() <= 5 * 60 * 1000;
 }
 
+function formatRating(value: number) {
+  return value.toFixed(1);
+}
+
 export default async function RatingsPage() {
   const session = await getCurrentSession();
   const ratings = await getPlayerRatings();
@@ -97,11 +101,11 @@ export default async function RatingsPage() {
                       </div>
                       <div className="py-4 pl-2 pr-4 text-center">
                         <div className="inline-flex items-baseline justify-center gap-1.5">
-                          <span className="text-lg font-black text-white">{player.rating}</span>
+                          <span className="text-lg font-black text-white">{formatRating(player.rating)}</span>
                           {showRatingChange ? (
                             <span className={`text-[11px] font-black leading-none ${ratingChangeTone}`}>
                               {player.lastRatingChange > 0 ? "+" : ""}
-                              {player.lastRatingChange}
+                              {formatRating(player.lastRatingChange)}
                             </span>
                           ) : null}
                         </div>
