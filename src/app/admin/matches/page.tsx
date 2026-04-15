@@ -21,8 +21,7 @@ export default async function AdminMatchesPage() {
       player1: true,
       player2: true,
     },
-    orderBy: [{ scheduledAt: "asc" }, { createdAt: "desc" }],
-    take: 20,
+    orderBy: [{ tournamentId: "asc" }, { round: "asc" }, { matchNumber: "asc" }, { createdAt: "asc" }],
   });
 
   return (
@@ -49,6 +48,7 @@ export default async function AdminMatchesPage() {
                       <Badge variant={matchStatusVariant[match.status] ?? "neutral"}>{matchStatusLabel[match.status] ?? match.status}</Badge>
                       {match.stage ? <Badge>{match.stage.name}</Badge> : null}
                       {match.group ? <Badge variant="neutral">{match.group.name}</Badge> : null}
+                      {match.bracketId ? <Badge variant="accent">Плей-офф</Badge> : null}
                     </div>
                     <div className="text-sm text-zinc-300">
                       {player1Name} <span className="text-zinc-500">vs</span> {player2Name}
