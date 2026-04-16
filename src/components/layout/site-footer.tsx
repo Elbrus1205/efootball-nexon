@@ -57,7 +57,7 @@ export function SiteFooter() {
             </div>
           </div>
 
-          <div className="space-y-2 sm:space-y-4">
+          <div className="hidden space-y-2 sm:block sm:space-y-4">
             <div className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">Навигация</div>
             <div className="flex flex-wrap gap-x-4 gap-y-2 sm:grid sm:gap-3">
               {navigationLinks.map((link) => (
@@ -68,16 +68,16 @@ export function SiteFooter() {
             </div>
           </div>
 
-          <div className="hidden space-y-4 sm:block">
+          <div className="space-y-2 sm:space-y-4">
             <div className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">Документы</div>
-            <div className="grid gap-3">
+            <div className="flex flex-wrap gap-x-4 gap-y-2 sm:grid sm:gap-3">
               {legalLinks.map((link, index) => (
                 <Link
                   key={link.label}
                   href={link.href}
-                  className="inline-flex items-start gap-2 text-sm leading-6 text-zinc-300 transition hover:text-white"
+                  className="inline-flex items-start gap-1.5 text-xs leading-5 text-zinc-300 transition hover:text-white sm:gap-2 sm:text-sm sm:leading-6"
                 >
-                  {index % 2 === 0 ? <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> : <FileText className="mt-0.5 h-4 w-4 shrink-0 text-primary" />}
+                  {index % 2 === 0 ? <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary sm:h-4 sm:w-4" /> : <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary sm:h-4 sm:w-4" />}
                   {link.label}
                 </Link>
               ))}
