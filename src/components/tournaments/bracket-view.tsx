@@ -248,7 +248,7 @@ function BracketMatchBox({
   return (
     <div
       data-match-label={seriesLabel(series)}
-      className="overflow-hidden rounded-xl border border-emerald-200/70 bg-emerald-950/60 shadow-[0_0_28px_rgba(16,185,129,0.14)] backdrop-blur"
+      className="flex h-full flex-col justify-center overflow-hidden rounded-xl border border-emerald-200/70 bg-emerald-950/60 shadow-[0_0_28px_rgba(16,185,129,0.14)] backdrop-blur"
     >
       {series.penaltyMatch ? (
       <div className="flex items-center justify-end gap-3 border-b border-emerald-200/35 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-emerald-100/80">
@@ -384,7 +384,7 @@ export function BracketView({
                   className="absolute left-0 w-full -translate-y-1/2"
                   style={{
                     top: getCenterY(roundIndex, matchIndex),
-                    minHeight: matchHeight,
+                    height: matchHeight,
                   }}
                 >
                   <BracketMatchBox series={series} clubsByUserId={clubsByUserId} />
