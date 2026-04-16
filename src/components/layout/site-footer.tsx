@@ -17,7 +17,6 @@ const navigationLinks = [
 const legalLinks = [
   { href: "/privacy", label: "Политика конфиденциальности" },
   { href: "/terms", label: "Пользовательское соглашение" },
-  { href: "/cookies", label: "Файлы cookie" },
   { href: "/consent", label: "Согласие на обработку данных" },
 ];
 
