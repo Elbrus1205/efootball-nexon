@@ -2,7 +2,6 @@ import { Match, MatchStatus, TournamentRegistration, User } from "@prisma/client
 import { GitBranch } from "lucide-react";
 import Link from "next/link";
 import { getPlayerDisplayName } from "@/lib/player-name";
-import { cn } from "@/lib/utils";
 
 type ClubMeta = {
   clubName?: string | null;
@@ -174,12 +173,7 @@ function getPenaltyText(series: BracketSeries) {
 
 function BracketTeamRow({ side }: { side: BracketSide }) {
   return (
-    <div
-      className={cn(
-        "grid min-h-12 grid-cols-[34px_minmax(0,1fr)_42px] items-center gap-2 px-3 py-2",
-        side.isWinner ? "bg-emerald-400/10 text-white" : "text-zinc-200",
-      )}
-    >
+    <div className="grid min-h-12 grid-cols-[34px_minmax(0,1fr)_42px] items-center gap-2 px-3 py-2 text-zinc-200">
       <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border border-white/15 bg-black/30">
         {side.badgePath ? (
           // eslint-disable-next-line @next/next/no-img-element
