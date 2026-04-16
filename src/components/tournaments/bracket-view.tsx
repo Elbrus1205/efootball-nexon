@@ -246,11 +246,15 @@ function BracketMatchBox({
   ];
 
   return (
-    <div className="overflow-hidden rounded-xl border border-emerald-200/70 bg-emerald-950/60 shadow-[0_0_28px_rgba(16,185,129,0.14)] backdrop-blur">
-      <div className="flex items-center justify-between gap-3 border-b border-emerald-200/35 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-emerald-100/80">
-        <span>{seriesLabel(series)}</span>
+    <div
+      data-match-label={seriesLabel(series)}
+      className="overflow-hidden rounded-xl border border-emerald-200/70 bg-emerald-950/60 shadow-[0_0_28px_rgba(16,185,129,0.14)] backdrop-blur"
+    >
+      {series.penaltyMatch ? (
+      <div className="flex items-center justify-end gap-3 border-b border-emerald-200/35 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-emerald-100/80">
         {series.penaltyMatch ? <span className="text-amber-300">Пенальти</span> : null}
       </div>
+      ) : null}
       <BracketTeamRow side={sides[0]} />
       <div className="h-px bg-emerald-200/35" />
       <BracketTeamRow side={sides[1]} />
@@ -321,7 +325,6 @@ export function BracketView({
           Плей-офф
         </div>
       </div>
-
       <div className="overflow-x-auto px-4 pb-8 pt-5 sm:px-7">
         <div className="relative min-w-max" style={{ width: boardWidth, height: totalBoardHeight }}>
           <svg
