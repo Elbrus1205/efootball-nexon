@@ -1,6 +1,7 @@
 import { Match, MatchStatus, TournamentRegistration, User } from "@prisma/client";
 import { GitBranch } from "lucide-react";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { getPlayerDisplayName } from "@/lib/player-name";
 
 type ClubMeta = {
@@ -319,15 +320,19 @@ export function BracketView({
           Плей-офф
         </div>
       </div>
-      <div className="overflow-x-auto px-4 pb-8 pt-5 sm:px-7">
-        <div className="relative min-w-max" style={{ width: boardWidth, height: totalBoardHeight }}>
-          <svg
-            className="pointer-events-none absolute inset-0 z-0 overflow-visible"
-            width={boardWidth}
-            height={totalBoardHeight}
-            viewBox={`0 0 ${boardWidth} ${totalBoardHeight}`}
-            aria-hidden="true"
-          >
+      <div className="overflow-x-auto px-3 pb-6 pt-4 sm:px-7 sm:pb-8 sm:pt-5">
+        <div
+          className="relative min-w-max [height:calc(var(--bracket-height)*0.78)] [width:calc(var(--bracket-width)*0.78)] sm:[height:var(--bracket-height)] sm:[width:var(--bracket-width)]"
+          style={{ "--bracket-width": `${boardWidth}px`, "--bracket-height": `${totalBoardHeight}px` } as CSSProperties}
+        >
+          <div className="absolute left-0 top-0 origin-top-left scale-[0.78] sm:scale-100" style={{ width: boardWidth, height: totalBoardHeight }}>
+            <svg
+              className="pointer-events-none absolute inset-0 z-0 overflow-visible"
+              width={boardWidth}
+              height={totalBoardHeight}
+              viewBox={`0 0 ${boardWidth} ${totalBoardHeight}`}
+              aria-hidden="true"
+            >
             <defs>
               <filter id="bracketLineGlow" x="-30%" y="-30%" width="160%" height="160%">
                 <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
@@ -359,40 +364,48 @@ export function BracketView({
                 }),
               )}
             </g>
-          </svg>
+            </svg>
 
-          {orderedRounds.map(([round, roundSeries], roundIndex) => (
-            <div
-              key={round}
-              className="absolute top-0 z-10"
-              style={{
-                left: getColumnX(roundIndex),
-                width: columnWidth,
-              }}
-            >
-              <div className="h-12 text-center text-lg font-black text-white">{roundTitle(round, totalRounds)}</div>
+            {orderedRounds.map(([round, roundSeries], roundIndex) => (
+              <div
+                key={round}
+                className="absolute top-0 z-10"
+                style={{
+                  left: getColumnX(roundIndex),
+                  width: columnWidth,
+                }}
+              >
+                <div className="h-12 text-center text-lg font-black text-white">{roundTitle(round, totalRounds)}</div>
 
-              {roundSeries.map((series, matchIndex) => (
-                <div
-                  key={series.key}
-                  className="absolute left-0 w-full -translate-y-1/2"
-                  style={{
-                    top: getCenterY(roundIndex, matchIndex),
-                    height: matchHeight,
-                  }}
-                >
+                {roundSeries.map((series, matchIndex) => (
+                  <div
+                    key={series.key}
+                    className="absolute left-0 w-full -translate-y-1/2"
+                    style={{
+                      top: getCenterY(roundIndex, matchIndex),
+                      height: matchHeight,
+                    }}
+                  >
+                    <BracketMatchBox series={series} clubsByUserId={clubsByUserId} />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {thirdPlaceSeries.length ? (
+          <div
+            className="mt-6 min-w-max [height:calc(var(--third-place-height)*0.78)] [width:calc(var(--third-place-width)*0.78)] sm:mt-8 sm:[height:var(--third-place-height)] sm:[width:var(--third-place-width)]"
+            style={{ "--third-place-width": `${columnWidth}px`, "--third-place-height": `${thirdPlaceSeries.length * matchHeight + Math.max(thirdPlaceSeries.length - 1, 0) * 16}px` } as CSSProperties}
+          >
+            <div className="grid origin-top-left scale-[0.78] gap-4 sm:scale-100" style={{ width: columnWidth }}>
+              {thirdPlaceSeries.map((series) => (
+                <div key={series.key} style={{ height: matchHeight }}>
                   <BracketMatchBox series={series} clubsByUserId={clubsByUserId} />
                 </div>
               ))}
             </div>
-          ))}
-        </div>
-
-        {thirdPlaceSeries.length ? (
-          <div className="mt-8 grid min-w-max gap-4" style={{ width: columnWidth }}>
-            {thirdPlaceSeries.map((series) => (
-              <BracketMatchBox key={series.key} series={series} clubsByUserId={clubsByUserId} />
-            ))}
           </div>
         ) : null}
       </div>

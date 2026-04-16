@@ -438,7 +438,7 @@ function getSubmissionState({
 
 function StickyHeader({ children }: { children: React.ReactNode }) {
   return (
-    <th className="sticky top-0 z-20 border-b border-white/10 bg-[linear-gradient(180deg,rgba(18,24,34,0.98),rgba(14,18,26,0.92))] px-4 py-3 text-xs uppercase tracking-[0.18em] text-zinc-300 backdrop-blur-xl">
+    <th className="sticky top-0 z-20 border-b border-white/10 bg-[linear-gradient(180deg,rgba(18,24,34,0.98),rgba(14,18,26,0.92))] px-2 py-2 text-[10px] uppercase tracking-[0.12em] text-zinc-300 backdrop-blur-xl sm:px-4 sm:py-3 sm:text-xs sm:tracking-[0.18em]">
       {children}
     </th>
   );
@@ -450,8 +450,8 @@ function StandingsTable({ rows, highlights = [] }: { rows: LeagueRow[]; highligh
 
   return (
     <div className="min-w-0 max-w-full space-y-3">
-      <div className="max-w-full overflow-x-auto border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:w-5 [&_td:nth-child(1)]:px-0 [&_td:nth-child(1)]:text-center [&_td:nth-child(2)]:w-[1%] [&_td:nth-child(2)]:whitespace-nowrap [&_td:nth-child(2)]:pl-2 [&_td:nth-child(2)]:pr-[15px] [&_td:nth-child(n+3)]:w-7 [&_td:nth-child(n+3)]:px-1 [&_th:nth-child(1)]:w-5 [&_th:nth-child(1)]:px-0 [&_th:nth-child(2)]:w-[1%] [&_th:nth-child(2)]:whitespace-nowrap [&_th:nth-child(2)]:pl-2 [&_th:nth-child(2)]:pr-[15px] [&_th:nth-child(n+3)]:w-7 [&_th:nth-child(n+3)]:px-1">
-        <table className="w-full min-w-[560px] table-auto text-left text-sm">
+      <div className="max-w-full overflow-x-auto border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:w-4 [&_td:nth-child(1)]:px-0 [&_td:nth-child(1)]:text-center [&_td:nth-child(2)]:w-[1%] [&_td:nth-child(2)]:whitespace-nowrap [&_td:nth-child(2)]:pl-1.5 [&_td:nth-child(2)]:pr-2 [&_td:nth-child(n+3)]:w-6 [&_td:nth-child(n+3)]:px-0.5 [&_th:nth-child(1)]:w-4 [&_th:nth-child(1)]:px-0 [&_th:nth-child(2)]:w-[1%] [&_th:nth-child(2)]:whitespace-nowrap [&_th:nth-child(2)]:pl-1.5 [&_th:nth-child(2)]:pr-2 [&_th:nth-child(n+3)]:w-6 [&_th:nth-child(n+3)]:px-0.5 sm:[&_td:nth-child(1)]:w-5 sm:[&_td:nth-child(2)]:pl-2 sm:[&_td:nth-child(2)]:pr-[15px] sm:[&_td:nth-child(n+3)]:w-7 sm:[&_td:nth-child(n+3)]:px-1 sm:[&_th:nth-child(1)]:w-5 sm:[&_th:nth-child(2)]:pl-2 sm:[&_th:nth-child(2)]:pr-[15px] sm:[&_th:nth-child(n+3)]:w-7 sm:[&_th:nth-child(n+3)]:px-1">
+        <table className="w-full min-w-[430px] table-auto text-left text-xs sm:min-w-[560px] sm:text-sm">
           <thead>
             <tr>
               <StickyHeader>
@@ -485,10 +485,10 @@ function StandingsTable({ rows, highlights = [] }: { rows: LeagueRow[]; highligh
 
               return (
                 <tr key={row.id} className={highlight?.rowClass ?? defaultRowHighlight(index)} title={highlight?.label}>
-                  <td className="w-5 px-0 py-3 text-zinc-300">
+                  <td className="w-4 px-0 py-2 text-zinc-300 sm:w-5 sm:py-3">
                     <span className={highlight?.badgeClass ?? defaultRankBadge(index)}>{rowRank}</span>
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-2 py-2 sm:px-3 sm:py-3">
                     <ClubPlayerLine
                       clubName={row.clubName}
                       badgePath={row.clubBadgePath}
@@ -497,22 +497,22 @@ function StandingsTable({ rows, highlights = [] }: { rows: LeagueRow[]; highligh
                       compact
                     />
                   </td>
-                  <td className="px-1 py-3 text-center text-zinc-300">{row.played}</td>
-                  <td className="px-1 py-3 text-center text-zinc-300">{row.wins}</td>
-                  <td className="px-1 py-3 text-center text-zinc-300">{row.draws}</td>
-                  <td className="px-1 py-3 text-center text-zinc-300">{row.losses}</td>
+                  <td className="px-0.5 py-2 text-center text-zinc-300 sm:px-1 sm:py-3">{row.played}</td>
+                  <td className="px-0.5 py-2 text-center text-zinc-300 sm:px-1 sm:py-3">{row.wins}</td>
+                  <td className="px-0.5 py-2 text-center text-zinc-300 sm:px-1 sm:py-3">{row.draws}</td>
+                  <td className="px-0.5 py-2 text-center text-zinc-300 sm:px-1 sm:py-3">{row.losses}</td>
                   <td
                     className={
                       row.goalDifference > 0
-                        ? "px-1 py-3 text-center font-medium text-emerald-300"
+                        ? "px-0.5 py-2 text-center font-medium text-emerald-300 sm:px-1 sm:py-3"
                         : row.goalDifference < 0
-                          ? "px-1 py-3 text-center font-medium text-rose-300"
-                          : "px-1 py-3 text-center font-medium text-zinc-300"
+                          ? "px-0.5 py-2 text-center font-medium text-rose-300 sm:px-1 sm:py-3"
+                          : "px-0.5 py-2 text-center font-medium text-zinc-300 sm:px-1 sm:py-3"
                     }
                   >
                     {row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}
                   </td>
-                  <td className="px-1 py-3 text-center font-semibold text-white">{row.points}</td>
+                  <td className="px-0.5 py-2 text-center font-semibold text-white sm:px-1 sm:py-3">{row.points}</td>
                 </tr>
               );
             })}
