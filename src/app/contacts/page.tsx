@@ -1,8 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { AlertTriangle, Clock3, Mail, MessageCircle, ShieldCheck, Trophy, Users } from "lucide-react";
-import { ContactForm } from "@/components/contacts/contact-form";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
@@ -60,7 +58,7 @@ export default function ContactsPage() {
   return (
     <main className="page-shell space-y-8">
       <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(8,14,24,0.96),rgba(5,24,18,0.9))] shadow-[0_30px_90px_rgba(0,0,0,0.34)]">
-        <div className="grid gap-8 p-6 sm:p-8 lg:grid-cols-[1fr_380px] lg:items-center">
+        <div className="p-6 sm:p-8">
           <div className="max-w-3xl space-y-6">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-primary">
               <Trophy className="h-4 w-4" />
@@ -70,7 +68,7 @@ export default function ContactsPage() {
             <div className="space-y-4">
               <h1 className="font-display text-4xl font-thin leading-tight text-white sm:text-5xl">Связь с eFootball Nexon</h1>
               <p className="max-w-2xl text-base leading-8 text-zinc-300 sm:text-lg">
-                Напишите администрации по турнирам, спорным матчам, регистрации или аккаунту. Чем точнее описание, тем быстрее получится разобраться.
+                По турнирам, спорным матчам, регистрации и аккаунту пишите администратору в личные сообщения Telegram.
               </p>
             </div>
 
@@ -87,19 +85,6 @@ export default function ContactsPage() {
                   Написать на email
                 </Link>
               </Button>
-            </div>
-          </div>
-
-          <div className="relative min-h-[250px] overflow-hidden rounded-[2rem] border border-white/10 bg-black/25 p-5">
-            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:34px_34px] opacity-25" />
-            <div className="relative grid h-full place-items-center">
-              <div className="grid grid-cols-3 gap-3">
-                {["arsenal.png", "chelsea.png", "real-madrid.png", "barcelona.png", "inter-milan.png", "psg-big-768x768.png"].map((badge) => (
-                  <div key={badge} className="flex h-20 w-20 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] p-3 shadow-[0_18px_40px_rgba(0,0,0,0.22)]">
-                    <Image src={`/club-badges/${badge}`} alt="" width={56} height={56} className="h-full w-full object-contain" />
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </div>
@@ -128,35 +113,39 @@ export default function ContactsPage() {
         })}
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="space-y-4">
-          {helpTopics.map((topic) => {
-            const Icon = topic.icon;
+      <section className="grid gap-4 md:grid-cols-3">
+        {helpTopics.map((topic) => {
+          const Icon = topic.icon;
 
-            return (
-              <div key={topic.title} className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
-                <div className="flex gap-4">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-primary">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <div className="font-black text-white">{topic.title}</div>
-                    <p className="mt-2 text-sm leading-6 text-zinc-400">{topic.text}</p>
-                  </div>
+          return (
+            <div key={topic.title} className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
+              <div className="flex gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-primary">
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="font-black text-white">{topic.title}</div>
+                  <p className="mt-2 text-sm leading-6 text-zinc-400">{topic.text}</p>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          );
+        })}
+      </section>
 
-          <div className="rounded-[1.5rem] border border-emerald-300/20 bg-emerald-400/10 p-5">
-            <div className="text-sm font-semibold text-emerald-200">Обычно отвечаем в течение дня.</div>
-            <p className="mt-2 text-sm leading-6 text-emerald-50/75">
-              По активному спору лучше писать сразу после матча, пока у игроков есть скриншоты и переписка.
-            </p>
-          </div>
+      <section className="rounded-[1.5rem] border border-emerald-300/20 bg-emerald-400/10 p-5">
+        <div className="text-sm font-semibold text-emerald-200">Пишите админу в Telegram в личные сообщения.</div>
+        <p className="mt-2 text-sm leading-6 text-emerald-50/75">
+          По активному спору лучше писать сразу после матча, пока у игроков есть скриншоты и переписка.
+        </p>
+        <div className="mt-4">
+          <Button asChild>
+            <Link href={telegramHref} target="_blank" rel="noreferrer">
+              <MessageCircle className="mr-2 h-4 w-4" />
+              Открыть Telegram
+            </Link>
+          </Button>
         </div>
-
-        <ContactForm supportEmail={supportEmail} />
       </section>
     </main>
   );
