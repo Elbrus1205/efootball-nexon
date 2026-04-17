@@ -344,6 +344,8 @@ export const authOptions: NextAuthOptions = {
       }
 
       if (token.sub) {
+        const dbUser = await db.user.findUnique({ where: { id: token.sub } });
+
         if (!token.authSessionId) {
           token.authSessionId = await createSecuritySession({
             userId: token.sub,
@@ -364,13 +366,26 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!activeSession || activeSession.revokedAt) {
-            return {} as typeof token;
-          }
+            if (dbUser?.isBanned) {
+              return {} as typeof token;
+            }
 
-          await touchSecuritySession(token.authSessionId);
+            token.authSessionId = await createSecuritySession({
+              userId: token.sub,
+              authSessionId: randomUUID(),
+              context: {
+                device: "Текущее устройство",
+                platform: "Не определено",
+                location: "Не определено",
+                ipAddress: null,
+                userAgent: "Unknown",
+              },
+            });
+          } else {
+            await touchSecuritySession(token.authSessionId);
+          }
         }
 
-        const dbUser = await db.user.findUnique({ where: { id: token.sub } });
         if (dbUser) {
           token.role = dbUser.role;
           token.nickname = dbUser.nickname;
