@@ -1,8 +1,9 @@
 import { Match, MatchStatus, TournamentRegistration, User } from "@prisma/client";
-import { GitBranch } from "lucide-react";
+import { GitBranch, Trophy } from "lucide-react";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { getPlayerDisplayName } from "@/lib/player-name";
+import { cn } from "@/lib/utils";
 
 type ClubMeta = {
   clubName?: string | null;
@@ -34,7 +35,9 @@ type BracketSide = {
   badgePath?: string | null;
   score: number | null;
   penaltyText?: string | null;
+  isResolved: boolean;
   isWinner: boolean;
+  isChampion: boolean;
 };
 
 function roundTitle(round: number, totalRounds: number) {
@@ -132,8 +135,13 @@ function getSeriesWinner(series: BracketSeries) {
     return thirdMatch.winnerId;
   }
 
-  const confirmedBaseMatches = series.regularMatches.filter((item) => (item.legNumber ?? 1) <= 2 && isResolvedMatch(item));
+  const baseMatches = series.regularMatches.filter((item) => (item.legNumber ?? 1) <= 2);
+  const confirmedBaseMatches = baseMatches.filter(isResolvedMatch);
   if (!confirmedBaseMatches.length) {
+    return null;
+  }
+
+  if (baseMatches.length > 1 && confirmedBaseMatches.length < baseMatches.length) {
     return null;
   }
 
@@ -176,34 +184,95 @@ function getPenaltyScores(series: BracketSeries) {
 }
 
 function BracketTeamRow({ side }: { side: BracketSide }) {
+  const isLoser = side.isResolved && !side.isWinner;
+
   return (
-    <div className="grid min-h-12 grid-cols-[34px_minmax(0,1fr)_42px] items-center gap-2 px-3 py-2 text-zinc-200">
-      <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border border-white/15 bg-black/30">
+    <div
+      className={cn(
+        "relative grid min-h-12 grid-cols-[34px_minmax(0,1fr)_64px] items-center gap-2 px-3 py-2 text-zinc-200 transition",
+        side.isChampion &&
+          "min-h-14 overflow-hidden bg-[linear-gradient(100deg,rgba(250,204,21,0.26),rgba(245,158,11,0.16),rgba(255,255,255,0.05))] shadow-[inset_0_0_34px_rgba(250,204,21,0.24)]",
+        side.isWinner && !side.isChampion && "bg-emerald-400/10",
+        isLoser && "bg-zinc-950/55 opacity-55 grayscale",
+      )}
+    >
+      {side.isChampion ? (
+        <div className="pointer-events-none absolute left-12 right-14 top-0 h-6 overflow-visible" aria-hidden="true">
+          {[0, 1, 2].map((index) => (
+            <Trophy
+              key={index}
+              className="champion-cup absolute top-1 h-4 w-4 text-amber-300 drop-shadow-[0_0_8px_rgba(250,204,21,0.85)]"
+              style={{ left: `${10 + index * 33}%`, animationDelay: `${index * 0.24}s` }}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      <div
+        className={cn(
+          "relative z-10 flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border border-white/15 bg-black/30",
+          side.isChampion && "border-amber-200/70 bg-amber-400/15 shadow-[0_0_18px_rgba(250,204,21,0.35)]",
+          side.isWinner && !side.isChampion && "border-emerald-200/45 bg-emerald-400/10",
+          isLoser && "border-zinc-600/40 bg-zinc-900/70",
+        )}
+      >
         {side.badgePath ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={side.badgePath} alt={side.clubName ?? side.playerName} className="h-full w-full object-contain p-1" />
         ) : (
-          <span className="text-[10px] uppercase text-zinc-500">FC</span>
+          <span className={cn("text-[10px] uppercase text-zinc-500", side.isChampion && "text-amber-100", isLoser && "text-zinc-600")}>FC</span>
         )}
       </div>
 
-      <div className="min-w-0">
-        <div className="truncate text-sm font-semibold leading-tight text-white">{side.clubName ?? "Клуб не назначен"}</div>
+      <div className="relative z-10 min-w-0">
+        <div
+          className={cn(
+            "truncate text-sm font-semibold leading-tight text-white",
+            side.isChampion && "text-amber-100 drop-shadow-[0_0_10px_rgba(250,204,21,0.55)]",
+            isLoser && "text-zinc-500",
+          )}
+        >
+          {side.clubName ?? "Клуб не назначен"}
+        </div>
         {side.playerId ? (
           <Link
             href={`/players/${side.playerId}`}
-            className="mt-0.5 block truncate text-[11px] font-medium leading-tight text-zinc-400 underline-offset-4 transition hover:text-primary hover:underline"
+            className={cn(
+              "mt-0.5 block truncate text-[11px] font-medium leading-tight text-zinc-400 underline-offset-4 transition hover:text-primary hover:underline",
+              side.isChampion && "font-black text-amber-200 hover:text-amber-100",
+              isLoser && "text-zinc-600 hover:text-zinc-400",
+            )}
           >
             {side.playerName}
           </Link>
         ) : (
-          <div className="mt-0.5 truncate text-[11px] font-medium leading-tight text-zinc-500">{side.playerName}</div>
+          <div
+            className={cn(
+              "mt-0.5 truncate text-[11px] font-medium leading-tight text-zinc-500",
+              side.isChampion && "font-black text-amber-200",
+              isLoser && "text-zinc-600",
+            )}
+          >
+            {side.playerName}
+          </div>
         )}
       </div>
 
-      <div className="flex items-baseline justify-end gap-1 text-right">
-        <span className="text-lg font-black leading-none text-white">{side.score ?? "-"}</span>
-        {side.penaltyText ? <span className="text-xs font-black leading-none text-amber-300">({side.penaltyText})</span> : null}
+      <div className="relative z-10 flex items-baseline justify-end gap-1 text-right">
+        <span
+          className={cn(
+            "text-lg font-black leading-none text-white",
+            side.isChampion && "text-amber-100 drop-shadow-[0_0_10px_rgba(250,204,21,0.7)]",
+            isLoser && "text-zinc-500",
+          )}
+        >
+          {side.score ?? "-"}
+        </span>
+        {side.penaltyText ? (
+          <span className={cn("text-xs font-black leading-none text-amber-300", side.isChampion && "text-amber-100", isLoser && "text-zinc-600")}>
+            ({side.penaltyText})
+          </span>
+        ) : null}
       </div>
     </div>
   );
@@ -212,9 +281,11 @@ function BracketTeamRow({ side }: { side: BracketSide }) {
 function BracketMatchBox({
   series,
   clubsByUserId,
+  isFinal = false,
 }: {
   series: BracketSeries;
   clubsByUserId: Record<string, ClubMeta>;
+  isFinal?: boolean;
 }) {
   const match = series.referenceMatch;
   const playerOneClub = resolveClubMeta(match, 1, clubsByUserId);
@@ -222,6 +293,7 @@ function BracketMatchBox({
   const aggregateScore = getAggregateScore(series);
   const penaltyScores = getPenaltyScores(series);
   const seriesWinnerId = getSeriesWinner(series);
+  const isSeriesResolved = Boolean(seriesWinnerId);
 
   const sides: [BracketSide, BracketSide] = [
     {
@@ -231,7 +303,9 @@ function BracketMatchBox({
       badgePath: playerOneClub.clubBadgePath,
       score: aggregateScore.player1,
       penaltyText: penaltyScores ? String(penaltyScores.player1) : null,
+      isResolved: isSeriesResolved,
       isWinner: Boolean(seriesWinnerId && seriesWinnerId === match.player1Id),
+      isChampion: Boolean(isFinal && seriesWinnerId && seriesWinnerId === match.player1Id),
     },
     {
       playerId: match.player2?.id,
@@ -240,7 +314,9 @@ function BracketMatchBox({
       badgePath: playerTwoClub.clubBadgePath,
       score: aggregateScore.player2,
       penaltyText: penaltyScores ? String(penaltyScores.player2) : null,
+      isResolved: isSeriesResolved,
       isWinner: Boolean(seriesWinnerId && seriesWinnerId === match.player2Id),
+      isChampion: Boolean(isFinal && seriesWinnerId && seriesWinnerId === match.player2Id),
     },
   ];
 
@@ -385,7 +461,7 @@ export function BracketView({
                       height: matchHeight,
                     }}
                   >
-                    <BracketMatchBox series={series} clubsByUserId={clubsByUserId} />
+                    <BracketMatchBox series={series} clubsByUserId={clubsByUserId} isFinal={roundIndex === orderedRounds.length - 1} />
                   </div>
                 ))}
               </div>

@@ -114,6 +114,10 @@ textarea,
       0 0 30px rgba(59, 130, 246, 0.32),
       0 0 48px rgba(34, 211, 238, 0.12);    
   }
+
+  .champion-cup {
+    animation: champion-cup-float 1.9s ease-in-out infinite;
+  }
 }
 
 @keyframes float-orb {
@@ -149,5 +153,26 @@ textarea,
     opacity: 1;
     filter: blur(0);
     transform: translateX(0) translateY(0) scale(1);
+  }
+}
+
+@keyframes champion-cup-float {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate3d(0, 9px, 0) rotate(-12deg) scale(0.78);
+  }
+
+  18% {
+    opacity: 1;
+  }
+
+  52% {
+    opacity: 1;
+    transform: translate3d(0, -6px, 0) rotate(10deg) scale(1.12);
+  }
+
+  82% {
+    opacity: 0.85;
   }
 }
