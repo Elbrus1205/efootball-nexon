@@ -4,9 +4,20 @@ import { requireAuth } from "@/lib/auth/session";
 import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
 import { syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
+import { formatTournamentBanMessage } from "@/lib/user-ban";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const session = await requireAuth();
+  const user = await db.user.findUnique({
+    where: { id: session.user.id },
+    select: { isBanned: true, banReason: true, bannedUntil: true },
+  });
+  const banMessage = formatTournamentBanMessage(user);
+
+  if (banMessage) {
+    return NextResponse.json({ error: banMessage }, { status: 403 });
+  }
+
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
     include: { participants: true },

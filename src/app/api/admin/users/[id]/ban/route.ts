@@ -7,12 +7,38 @@ import { banSchema } from "@/lib/validators";
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   await requireRole([UserRole.ADMIN]);
   const formData = await request.formData();
-  const body = banSchema.parse({ isBanned: formData.get("isBanned") === "true" });
+  const body = banSchema.parse({
+    action: formData.get("action"),
+    reason: formData.get("reason"),
+    bannedUntil: formData.get("bannedUntil"),
+  });
+
+  const data =
+    body.action === "unban"
+      ? {
+          isBanned: false,
+          banReason: null,
+          bannedUntil: null,
+          bannedAt: null,
+        }
+      : body.action === "permanent"
+        ? {
+            isBanned: true,
+            banReason: body.reason?.trim() || null,
+            bannedUntil: null,
+            bannedAt: new Date(),
+          }
+        : {
+            isBanned: false,
+            banReason: body.reason?.trim() || null,
+            bannedUntil: new Date(body.bannedUntil ?? ""),
+            bannedAt: new Date(),
+          };
 
   await db.user.update({
     where: { id: params.id },
-    data: { isBanned: body.isBanned },
+    data,
   });
 
-  return NextResponse.redirect(new URL("/admin/users", process.env.NEXTAUTH_URL));
+  return NextResponse.redirect(new URL("/admin/users", request.url));
 }

@@ -303,5 +303,23 @@ export const roleSchema = z.object({
 });
 
 export const banSchema = z.object({
-  isBanned: z.boolean(),
+  action: z.enum(["permanent", "temporary", "unban"]),
+  reason: z.string().max(500).optional().or(z.literal("")),
+  bannedUntil: z.string().optional().or(z.literal("")),
+}).superRefine((data, ctx) => {
+  if (data.action === "temporary" && !data.bannedUntil) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["bannedUntil"],
+      message: "Укажите дату окончания временного бана.",
+    });
+  }
+
+  if (data.action === "temporary" && data.bannedUntil && new Date(data.bannedUntil) <= new Date()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["bannedUntil"],
+      message: "Дата окончания бана должна быть в будущем.",
+    });
+  }
 });

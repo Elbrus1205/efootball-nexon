@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { participantManageSchema } from "@/lib/validators";
+import { formatTournamentBanMessage } from "@/lib/user-ban";
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
   await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
@@ -22,6 +23,16 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const body = participantManageSchema.parse(await request.json());
 
   if (body.action === "add" && body.userId) {
+    const user = await db.user.findUnique({
+      where: { id: body.userId },
+      select: { isBanned: true, banReason: true, bannedUntil: true },
+    });
+    const banMessage = formatTournamentBanMessage(user);
+
+    if (banMessage) {
+      return NextResponse.json({ error: banMessage }, { status: 403 });
+    }
+
     const registration = await db.tournamentRegistration.create({
       data: {
         tournamentId: params.id,

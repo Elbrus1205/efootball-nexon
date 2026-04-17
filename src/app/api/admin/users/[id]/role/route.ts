@@ -14,5 +14,5 @@ export async function POST(request: Request, { params }: { params: { id: string 
     data: { role: body.role },
   });
 
-  return NextResponse.redirect(new URL("/admin/users", process.env.NEXTAUTH_URL));
+  return NextResponse.redirect(new URL("/admin/users", request.url));
 }

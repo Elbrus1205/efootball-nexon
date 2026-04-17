@@ -27,6 +27,7 @@ export default async function AdminTournamentParticipantsPage({ params }: { para
   const users = await db.user.findMany({
     where: {
       isBanned: false,
+      OR: [{ bannedUntil: null }, { bannedUntil: { lte: new Date() } }],
       id: { notIn: tournament.participants.map((item) => item.userId) },
     },
     orderBy: { createdAt: "desc" },
