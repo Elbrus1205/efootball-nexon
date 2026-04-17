@@ -328,14 +328,12 @@ function buildLeagueTable(
 function defaultRowHighlight(index: number) {
   if (index === 0) return "border-t border-primary/20 bg-primary/10";
   if (index === 1) return "border-t border-emerald-400/10 bg-emerald-400/5";
-  if (index === 2) return "border-t border-amber-400/10 bg-amber-400/5";
   return "border-t border-white/10";
 }
 
 function defaultRankBadge(index: number) {
   if (index === 0) return "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/20 px-1 text-[10px] font-semibold text-primary";
   if (index === 1) return "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-400/15 px-1 text-[10px] font-semibold text-emerald-300";
-  if (index === 2) return "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-400/15 px-1 text-[10px] font-semibold text-amber-300";
   return "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white/5 px-1 text-[10px] font-medium text-zinc-300";
 }
 
