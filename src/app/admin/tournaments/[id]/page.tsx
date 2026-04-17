@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { MatchStatus, StageType, UserRole } from "@prisma/client";
 import { notFound } from "next/navigation";
-import { Activity, CalendarDays, Dices, GitBranch, History, ShieldCheck, Swords, Users } from "lucide-react";
+import { Activity, CalendarDays, Dices, GitBranch, History, Pencil, ShieldCheck, Swords, Trash2, Trophy, Users } from "lucide-react";
 import { AuditDiff } from "@/components/admin/audit-diff";
 import { MatchManager } from "@/components/admin/match-manager";
 import { Badge } from "@/components/ui/badge";
@@ -100,23 +100,36 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
             <CardTitle className="mt-3 text-3xl">{tournament.title}</CardTitle>
             <CardDescription>{tournament.description}</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-wrap gap-3">
-            <Button asChild>
-              <Link href={`/admin/tournaments/${tournament.id}/edit`}>Редактировать турнир</Link>
+          <CardContent className="flex flex-wrap gap-2">
+            <Button asChild variant="secondary" className="h-11 rounded-xl px-4">
+              <Link href={`/admin/tournaments/${tournament.id}/edit`} className="gap-2">
+                <Pencil className="h-4 w-4" />
+                Редактировать
+              </Link>
             </Button>
-            <Button asChild variant="secondary">
-              <Link href={`/admin/tournaments/${tournament.id}/participants`}>Участники</Link>
+            <Button asChild variant="outline" className="h-11 rounded-xl px-4">
+              <Link href={`/admin/tournaments/${tournament.id}/participants`} className="gap-2">
+                <Users className="h-4 w-4" />
+                Участники
+              </Link>
             </Button>
-            <Button asChild variant="outline">
-              <Link href={`/admin/tournaments/${tournament.id}/stages`}>Этапы</Link>
+            <Button asChild variant="outline" className="h-11 rounded-xl px-4">
+              <Link href={`/admin/tournaments/${tournament.id}/stages`} className="gap-2">
+                <GitBranch className="h-4 w-4" />
+                Этапы
+              </Link>
             </Button>
-            <Button asChild variant="outline">
-              <Link href={`/admin/tournaments/${tournament.id}/bracket`}>Сетка</Link>
+            <Button asChild variant="outline" className="h-11 rounded-xl px-4">
+              <Link href={`/admin/tournaments/${tournament.id}/bracket`} className="gap-2">
+                <Trophy className="h-4 w-4" />
+                Сетка
+              </Link>
             </Button>
             <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
               <input type="hidden" name="_method" value="delete" />
-              <Button variant="outline" className="border-red-400/20 bg-red-500/10 text-red-200 hover:bg-red-500/20 hover:text-red-100">
-                Удалить турнир
+              <Button variant="outline" className="h-11 rounded-xl border-red-400/20 bg-red-500/10 px-4 text-red-200 hover:bg-red-500/20 hover:text-red-100">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Удалить
               </Button>
             </form>
           </CardContent>
