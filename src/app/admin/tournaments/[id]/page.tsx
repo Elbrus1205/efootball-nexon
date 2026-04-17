@@ -19,6 +19,10 @@ import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 
+function stageRoundUnit(stage?: { type: StageType } | null) {
+  return stage?.type === StageType.PLAYOFF ? "Раунд" : "Тур";
+}
+
 export default async function AdminTournamentWorkspacePage({ params }: { params: { id: string } }) {
   await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
 
@@ -155,7 +159,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
         <Card>
           <CardHeader>
             <CardTitle>Ручной редактор матчей</CardTitle>
-            <CardDescription>Live search, фильтры и drag-and-drop карточек внутри каждого раунда прямо в workspace турнира.</CardDescription>
+            <CardDescription>Live search, фильтры и drag-and-drop карточек внутри каждого тура или раунда прямо в workspace турнира.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="mb-5 rounded-[1.5rem] border border-amber-400/20 bg-amber-500/10 p-4">
@@ -167,7 +171,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
                   </div>
                   <div className="mt-1 text-sm text-amber-100/75">
                     {randomScoreTargetCount
-                      ? `${randomScoreStage?.name ?? "Текущий этап"} • Раунд ${randomScoreRound}: ${randomScoreTargetCount} матчей без результата`
+                      ? `${randomScoreStage?.name ?? "Текущий этап"} • ${stageRoundUnit(randomScoreStage)} ${randomScoreRound}: ${randomScoreTargetCount} матчей без результата`
                       : randomScoreRepairCount
                         ? "Проверит продвижение уже подтвержденных матчей плей-офф."
                         : "Нет матчей без результата с двумя назначенными игроками."}

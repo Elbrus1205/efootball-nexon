@@ -26,6 +26,16 @@ type CustomPlayoffSettings = {
   lowerEntriesCount: number;
 };
 
+function isCustomTourCountStage(stage: { settingsJson?: unknown }) {
+  const settings = stage.settingsJson;
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
+    return false;
+  }
+
+  const mode = (settings as { mode?: unknown }).mode;
+  return mode === "custom-groups" || mode === "custom-league";
+}
+
 const TERMINAL_MATCH_STATUSES = new Set<MatchStatus>([
   MatchStatus.CONFIRMED,
   MatchStatus.FINISHED,
@@ -212,13 +222,15 @@ async function createRoundRobinMatchesForEntries({
   stageId,
   groupId,
   entries,
-  roundsCount = 1,
+  roundsCount,
+  roundsMode = "cycles",
 }: {
   tournamentId: string;
   stageId?: string;
   groupId?: string;
   entries: { id: string; userId: string }[];
   roundsCount?: number | null;
+  roundsMode?: "cycles" | "tours";
 }) {
   const data: {
     tournamentId: string;
@@ -234,38 +246,39 @@ async function createRoundRobinMatchesForEntries({
   }[] = [];
 
   let matchNumber = 1;
-  const cycles = Math.max(roundsCount ?? 1, 1);
+  let slots: ({ id: string; userId: string } | null)[] = entries.length % 2 === 0 ? [...entries] : [...entries, null];
+  const roundsPerCycle = Math.max(slots.length - 1, 1);
+  const requestedCount = Math.max(roundsCount ?? 1, 1);
+  const totalTours = roundsMode === "tours" ? requestedCount : requestedCount * roundsPerCycle;
 
-  for (let cycle = 0; cycle < cycles; cycle += 1) {
-    let slots: ({ id: string; userId: string } | null)[] = entries.length % 2 === 0 ? [...entries] : [...entries, null];
-    const roundsPerCycle = slots.length - 1;
+  for (let tourIndex = 0; tourIndex < totalTours; tourIndex += 1) {
+    const cycle = Math.floor(tourIndex / roundsPerCycle);
+    const roundIndex = tourIndex % roundsPerCycle;
 
-    for (let roundIndex = 0; roundIndex < roundsPerCycle; roundIndex += 1) {
-      for (let pairIndex = 0; pairIndex < slots.length / 2; pairIndex += 1) {
-        const first = slots[pairIndex];
-        const second = slots[slots.length - 1 - pairIndex];
-        if (!first || !second) continue;
+    for (let pairIndex = 0; pairIndex < slots.length / 2; pairIndex += 1) {
+      const first = slots[pairIndex];
+      const second = slots[slots.length - 1 - pairIndex];
+      if (!first || !second) continue;
 
-        const shouldSwapHomeAway = (cycle + roundIndex + pairIndex) % 2 === 1;
-        const participant1 = shouldSwapHomeAway ? second : first;
-        const participant2 = shouldSwapHomeAway ? first : second;
+      const shouldSwapHomeAway = (cycle + roundIndex + pairIndex) % 2 === 1;
+      const participant1 = shouldSwapHomeAway ? second : first;
+      const participant2 = shouldSwapHomeAway ? first : second;
 
-        data.push({
-          tournamentId,
-          stageId,
-          groupId,
-          round: cycle * roundsPerCycle + roundIndex + 1,
-          matchNumber: matchNumber++,
-          participant1EntryId: participant1.id,
-          participant2EntryId: participant2.id,
-          player1Id: participant1.userId,
-          player2Id: participant2.userId,
-          status: MatchStatus.READY,
-        });
-      }
-
-      slots = [slots[0] ?? null, slots[slots.length - 1] ?? null, ...slots.slice(1, -1)];
+      data.push({
+        tournamentId,
+        stageId,
+        groupId,
+        round: tourIndex + 1,
+        matchNumber: matchNumber++,
+        participant1EntryId: participant1.id,
+        participant2EntryId: participant2.id,
+        player1Id: participant1.userId,
+        player2Id: participant2.userId,
+        status: MatchStatus.READY,
+      });
     }
+
+    slots = [slots[0] ?? null, slots[slots.length - 1] ?? null, ...slots.slice(1, -1)];
   }
 
   if (data.length) {
@@ -975,6 +988,7 @@ export async function generateTournamentMatches(tournamentId: string) {
         stageId: stage.id,
         entries: tournament.participants.map((entry) => ({ id: entry.id, userId: entry.userId })),
         roundsCount: stage.roundsCount,
+        roundsMode: isCustomTourCountStage(stage) ? "tours" : "cycles",
       });
     }
 
@@ -988,6 +1002,7 @@ export async function generateTournamentMatches(tournamentId: string) {
             groupId: group.id,
             entries: members,
             roundsCount: stage.roundsCount,
+            roundsMode: isCustomTourCountStage(stage) ? "tours" : "cycles",
           });
         }
       }
@@ -1548,37 +1563,42 @@ export async function setBracketSlot(input: {
             seriesKey: match.seriesKey,
             isPenaltyTiebreak: false,
           },
-          select: { id: true, player1Id: true, player2Id: true, status: true },
+          select: { id: true },
         })
       : await db.match.findMany({
           where: { id: match.id },
-          select: { id: true, player1Id: true, player2Id: true, status: true },
+          select: { id: true },
         });
 
     await Promise.all(
-      targetMatches.map((targetMatch) =>
-        db.match.update({
+      targetMatches.map(async (targetMatch) => {
+        const updated = await db.match.update({
           where: { id: targetMatch.id },
           data:
             input.slotNumber === 1
               ? {
                   participant1EntryId: slot.participantId ?? null,
                   player1Id: slot.participant?.userId ?? null,
-                  status:
-                    (slot.participant?.userId ?? null) && targetMatch.player2Id && targetMatch.status === MatchStatus.PENDING
-                      ? MatchStatus.READY
-                      : targetMatch.status,
                 }
               : {
                   participant2EntryId: slot.participantId ?? null,
                   player2Id: slot.participant?.userId ?? null,
-                  status:
-                    (slot.participant?.userId ?? null) && targetMatch.player1Id && targetMatch.status === MatchStatus.PENDING
-                      ? MatchStatus.READY
-                      : targetMatch.status,
                 },
-        }),
-      ),
+          select: {
+            id: true,
+            participant1EntryId: true,
+            participant2EntryId: true,
+            status: true,
+          },
+        });
+
+        if (updated.participant1EntryId && updated.participant2EntryId && updated.status === MatchStatus.PENDING) {
+          await db.match.update({
+            where: { id: updated.id },
+            data: { status: MatchStatus.READY },
+          });
+        }
+      }),
     );
   }
 

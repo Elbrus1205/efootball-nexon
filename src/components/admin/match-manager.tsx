@@ -1,6 +1,6 @@
 "use client";
 
-import { MatchStatus } from "@prisma/client";
+import { MatchStatus, StageType } from "@prisma/client";
 import { ExternalLink, GripVertical, Search, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -35,7 +35,8 @@ type MatchItem = {
   participant2EntryId: string | null;
   player1: { nickname: string | null; name: string | null } | null;
   player2: { nickname: string | null; name: string | null } | null;
-  stage?: { name: string | null } | null;
+  bracketId?: string | null;
+  stage?: { name: string | null; type: StageType } | null;
   group?: { name: string } | null;
 };
 
@@ -44,6 +45,23 @@ function toInputDate(value?: string | null) {
   const date = new Date(value);
   const pad = (num: number) => String(num).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function isTourMatch(match: MatchItem) {
+  return match.stage?.type === StageType.GROUP_STAGE || match.stage?.type === StageType.LEAGUE || Boolean(match.group);
+}
+
+function roundLabel(match: MatchItem) {
+  return `${isTourMatch(match) ? "Тур" : "Раунд"} ${match.round}`;
+}
+
+function roundSectionLabel(matches: MatchItem[], round: number) {
+  const hasTours = matches.some(isTourMatch);
+  const hasRounds = matches.some((match) => !isTourMatch(match));
+
+  if (hasTours && !hasRounds) return `Тур ${round}`;
+  if (!hasTours && hasRounds) return `Раунд ${round}`;
+  return `Тур/раунд ${round}`;
 }
 
 export function MatchManager({
@@ -155,10 +173,13 @@ export function MatchManager({
             ))}
           </select>
           <select value={roundFilter} onChange={(event) => setRoundFilter(event.target.value)} className="h-11 rounded-xl border border-white/10 bg-white/5 px-4 text-sm text-white">
-            <option value="all">Все раунды</option>
+            <option value="all">Все туры/раунды</option>
             {rounds.map((round) => (
               <option key={round} value={round}>
-                Раунд {round}
+                {roundSectionLabel(
+                  orderedMatches.filter((match) => match.round === round),
+                  round,
+                )}
               </option>
             ))}
           </select>
@@ -172,7 +193,7 @@ export function MatchManager({
         return (
           <div key={round} className="space-y-4">
             <div className="flex items-center justify-between gap-3">
-              <div className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Раунд {round}</div>
+              <div className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">{roundSectionLabel(roundMatches, round)}</div>
               <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">{roundMatches.length} матчей</div>
             </div>
 
@@ -200,7 +221,9 @@ export function MatchManager({
                         <GripVertical className="h-4 w-4" />
                       </div>
                       <div>
-                        <div className="font-medium text-white">Раунд {match.round} • Матч {match.matchNumber}</div>
+                        <div className="font-medium text-white">
+                          {roundLabel(match)} • Матч {match.matchNumber}
+                        </div>
                         <div className="mt-1 text-sm text-zinc-500">
                           {match.stage?.name ?? "Без стадии"}
                           {match.group?.name ? ` • ${match.group.name}` : ""}

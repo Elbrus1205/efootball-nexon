@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { UserRole } from "@prisma/client";
+import { StageType, UserRole } from "@prisma/client";
 import { CalendarDays, ExternalLink, Settings2, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,11 @@ import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { formatDate } from "@/lib/utils";
+
+function matchRoundLabel(match: { round: number; stage?: { type: StageType } | null; group?: unknown }) {
+  const isTour = match.stage?.type === StageType.GROUP_STAGE || match.stage?.type === StageType.LEAGUE || Boolean(match.group);
+  return `${isTour ? "Тур" : "Раунд"} ${match.round}`;
+}
 
 export default async function AdminMatchesPage() {
   await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
@@ -60,7 +65,7 @@ export default async function AdminMatchesPage() {
                       </span>
                       <span className="inline-flex items-center gap-2">
                         <Trophy className="h-4 w-4 text-accent" />
-                        Раунд {match.round} • Матч {match.matchNumber}
+                        {matchRoundLabel(match)} • Матч {match.matchNumber}
                       </span>
                     </div>
                   </div>

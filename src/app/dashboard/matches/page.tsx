@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MatchStatus } from "@prisma/client";
+import { MatchStatus, StageType } from "@prisma/client";
 import { CalendarDays, ChevronRight, ShieldCheck, Trophy } from "lucide-react";
 import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
@@ -16,6 +16,11 @@ const statusVariant: Partial<Record<MatchStatus, "primary" | "accent" | "neutral
   REJECTED: "danger",
   FORFEIT: "danger",
 };
+
+function matchRoundLabel(match: { round: number; stage?: { type: StageType } | null }) {
+  const isTour = match.stage?.type === StageType.GROUP_STAGE || match.stage?.type === StageType.LEAGUE;
+  return `${isTour ? "Тур" : "Раунд"} ${match.round}`;
+}
 
 export default async function DashboardMatchesPage() {
   const session = await requireAuth();
@@ -63,7 +68,7 @@ export default async function DashboardMatchesPage() {
                       </span>
                       <span className="inline-flex items-center gap-2">
                         <Trophy className="h-4 w-4 text-accent" />
-                        Раунд {match.round}, матч {match.matchNumber}
+                        {matchRoundLabel(match)}, матч {match.matchNumber}
                       </span>
                     </div>
                   </div>

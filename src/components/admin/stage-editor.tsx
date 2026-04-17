@@ -21,6 +21,10 @@ type StageItem = {
   roundsCount: number | null;
 };
 
+function isTourStage(stage: Pick<StageItem, "type">) {
+  return stage.type === "GROUP_STAGE" || stage.type === "LEAGUE";
+}
+
 export function StageEditor({ tournamentId, stages }: { tournamentId: string; stages: StageItem[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -124,7 +128,7 @@ export function StageEditor({ tournamentId, stages }: { tournamentId: string; st
                     {stage.groupsCount ? <span>{stage.groupsCount} групп</span> : null}
                     {stage.participantsPerGroup ? <span>{stage.participantsPerGroup} в группе</span> : null}
                     {stage.advancingPerGroup ? <span>выходят {stage.advancingPerGroup}</span> : null}
-                    {stage.roundsCount ? <span>{stage.roundsCount} раундов</span> : null}
+                    {stage.roundsCount ? <span>{stage.roundsCount} {isTourStage(stage) ? "туров" : "раундов"}</span> : null}
                   </div>
                 </button>
 
@@ -147,7 +151,7 @@ export function StageEditor({ tournamentId, stages }: { tournamentId: string; st
                   {stage.groupsCount ? <span>Групп: {stage.groupsCount}</span> : null}
                   {stage.participantsPerGroup ? <span>Игроков в группе: {stage.participantsPerGroup}</span> : null}
                   {stage.advancingPerGroup ? <span>Выходят: {stage.advancingPerGroup}</span> : null}
-                  {stage.roundsCount ? <span>Раундов: {stage.roundsCount}</span> : null}
+                  {stage.roundsCount ? <span>{isTourStage(stage) ? "Туров" : "Раундов"}: {stage.roundsCount}</span> : null}
                 </div>
               </div>
 
