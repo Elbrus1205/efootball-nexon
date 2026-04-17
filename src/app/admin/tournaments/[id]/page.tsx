@@ -102,7 +102,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
             <CardTitle className="mt-3 text-3xl">{tournament.title}</CardTitle>
             <CardDescription>{tournament.description}</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          <CardContent className="grid gap-2 space-y-0 sm:grid-cols-2 lg:grid-cols-5">
             <Link href={`/admin/tournaments/${tournament.id}/edit`} className={actionButtonClass}>
               <Pencil className="h-4 w-4" />
               Редактировать
