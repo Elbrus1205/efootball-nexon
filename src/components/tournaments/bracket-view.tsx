@@ -160,7 +160,7 @@ function getAggregateScore(series: BracketSeries) {
   };
 }
 
-function getPenaltyText(series: BracketSeries) {
+function getPenaltyScores(series: BracketSeries) {
   if (!series.penaltyMatch || !isResolvedMatch(series.penaltyMatch)) {
     return null;
   }
@@ -169,7 +169,10 @@ function getPenaltyText(series: BracketSeries) {
     return null;
   }
 
-  return `пен. ${series.penaltyMatch.player1Score}:${series.penaltyMatch.player2Score}`;
+  return {
+    player1: series.penaltyMatch.player1Score,
+    player2: series.penaltyMatch.player2Score,
+  };
 }
 
 function BracketTeamRow({ side }: { side: BracketSide }) {
@@ -199,8 +202,8 @@ function BracketTeamRow({ side }: { side: BracketSide }) {
       </div>
 
       <div className="flex items-baseline justify-end gap-1 text-right">
-        {side.penaltyText ? <span className="text-[10px] font-semibold text-amber-300">{side.penaltyText}</span> : null}
         <span className="text-lg font-black leading-none text-white">{side.score ?? "-"}</span>
+        {side.penaltyText ? <span className="text-xs font-black leading-none text-amber-300">({side.penaltyText})</span> : null}
       </div>
     </div>
   );
@@ -217,7 +220,7 @@ function BracketMatchBox({
   const playerOneClub = resolveClubMeta(match, 1, clubsByUserId);
   const playerTwoClub = resolveClubMeta(match, 2, clubsByUserId);
   const aggregateScore = getAggregateScore(series);
-  const penaltyText = getPenaltyText(series);
+  const penaltyScores = getPenaltyScores(series);
   const seriesWinnerId = getSeriesWinner(series);
 
   const sides: [BracketSide, BracketSide] = [
@@ -227,6 +230,7 @@ function BracketMatchBox({
       clubName: playerOneClub.clubName,
       badgePath: playerOneClub.clubBadgePath,
       score: aggregateScore.player1,
+      penaltyText: penaltyScores ? String(penaltyScores.player1) : null,
       isWinner: Boolean(seriesWinnerId && seriesWinnerId === match.player1Id),
     },
     {
@@ -235,7 +239,7 @@ function BracketMatchBox({
       clubName: playerTwoClub.clubName,
       badgePath: playerTwoClub.clubBadgePath,
       score: aggregateScore.player2,
-      penaltyText,
+      penaltyText: penaltyScores ? String(penaltyScores.player2) : null,
       isWinner: Boolean(seriesWinnerId && seriesWinnerId === match.player2Id),
     },
   ];
@@ -245,11 +249,6 @@ function BracketMatchBox({
       data-match-label={seriesLabel(series)}
       className="flex h-full flex-col justify-center overflow-hidden rounded-xl border border-emerald-200/70 bg-emerald-950/60 shadow-[0_0_28px_rgba(16,185,129,0.14)] backdrop-blur"
     >
-      {series.penaltyMatch ? (
-      <div className="flex items-center justify-end gap-3 border-b border-emerald-200/35 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-emerald-100/80">
-        {series.penaltyMatch ? <span className="text-amber-300">Пенальти</span> : null}
-      </div>
-      ) : null}
       <BracketTeamRow side={sides[0]} />
       <div className="h-px bg-emerald-200/35" />
       <BracketTeamRow side={sides[1]} />
