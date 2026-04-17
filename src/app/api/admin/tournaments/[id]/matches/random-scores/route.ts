@@ -40,6 +40,8 @@ async function fallbackAdvancePlayoffWinner(matchId: string) {
       tournamentId: true,
       bracketId: true,
       bracket: true,
+      seriesKey: true,
+      isPenaltyTiebreak: true,
       round: true,
       matchNumber: true,
       nextMatchId: true,
@@ -49,10 +51,14 @@ async function fallbackAdvancePlayoffWinner(matchId: string) {
       participant1EntryId: true,
       participant2EntryId: true,
       winnerId: true,
+      playoffBracket: {
+        select: { legsCount: true },
+      },
     },
   });
 
   if (!match?.bracketId || !match.winnerId) return;
+  if (match.seriesKey && !match.isPenaltyTiebreak && (match.playoffBracket?.legsCount ?? 1) > 1) return;
 
   const winnerEntryId = match.winnerId === match.player1Id ? match.participant1EntryId : match.winnerId === match.player2Id ? match.participant2EntryId : null;
   const nextMatch =

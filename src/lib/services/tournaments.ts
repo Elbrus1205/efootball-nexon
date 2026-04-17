@@ -1931,65 +1931,6 @@ async function createPenaltyMatch(match: {
   });
 }
 
-async function createThirdSeriesMatch(match: {
-  id: string;
-  tournamentId: string;
-  stageId: string | null;
-  bracketId: string | null;
-  round: number;
-  matchNumber: number;
-  bracket: string;
-  seriesKey: string | null;
-  player1Id: string | null;
-  player2Id: string | null;
-  participant1EntryId: string | null;
-  participant2EntryId: string | null;
-  nextMatchId: string | null;
-  nextMatchSlot: number | null;
-  loserNextMatchId: string | null;
-  loserNextMatchSlot: number | null;
-  isThirdPlaceMatch: boolean;
-}) {
-  if (!match.seriesKey) {
-    return null;
-  }
-
-  const existingThirdMatch = await db.match.findFirst({
-    where: {
-      seriesKey: match.seriesKey,
-      legNumber: 3,
-      isPenaltyTiebreak: false,
-    },
-  });
-
-  if (existingThirdMatch) {
-    return existingThirdMatch;
-  }
-
-  return db.match.create({
-    data: {
-      tournamentId: match.tournamentId,
-      stageId: match.stageId,
-      bracketId: match.bracketId,
-      round: match.round,
-      matchNumber: match.matchNumber,
-      bracket: match.bracket,
-      seriesKey: match.seriesKey,
-      legNumber: 3,
-      isThirdPlaceMatch: match.isThirdPlaceMatch,
-      player1Id: match.player1Id,
-      player2Id: match.player2Id,
-      participant1EntryId: match.participant1EntryId,
-      participant2EntryId: match.participant2EntryId,
-      nextMatchId: match.nextMatchId,
-      nextMatchSlot: match.nextMatchSlot,
-      loserNextMatchId: match.loserNextMatchId,
-      loserNextMatchSlot: match.loserNextMatchSlot,
-      status: match.player1Id && match.player2Id ? MatchStatus.READY : MatchStatus.PENDING,
-    },
-  });
-}
-
 export async function resolveConfirmedMatch(matchId: string) {
   const match = await db.match.findUnique({
     where: { id: matchId },
@@ -2061,52 +2002,6 @@ export async function resolveConfirmedMatch(matchId: string) {
 
   const aggregatePlayer1 = confirmedBaseLegs.reduce((sum, item) => sum + (item.player1Score ?? 0), 0);
   const aggregatePlayer2 = confirmedBaseLegs.reduce((sum, item) => sum + (item.player2Score ?? 0), 0);
-  const player1Wins = confirmedBaseLegs.filter((item) => item.winnerId && item.winnerId === item.player1Id).length;
-  const player2Wins = confirmedBaseLegs.filter((item) => item.winnerId && item.winnerId === item.player2Id).length;
-  const splitWins = player1Wins > 0 && player2Wins > 0;
-  const allDraws = player1Wins === 0 && player2Wins === 0;
-
-  if (allDraws) {
-    if (!penaltyMatch) {
-      await createPenaltyMatch(match);
-    }
-    await syncTournamentLifecycleStatus(match.tournamentId);
-    return;
-  }
-
-  if (splitWins) {
-    if (aggregatePlayer1 === aggregatePlayer2) {
-      if (!penaltyMatch) {
-        await createPenaltyMatch(match);
-      }
-      await syncTournamentLifecycleStatus(match.tournamentId);
-      return;
-    }
-
-    const thirdMatch = regularMatches.find((item) => item.legNumber === 3);
-    if (!thirdMatch) {
-      await createThirdSeriesMatch(match);
-      await syncTournamentLifecycleStatus(match.tournamentId);
-      return;
-    }
-
-    if (!(thirdMatch.status === MatchStatus.CONFIRMED || thirdMatch.status === MatchStatus.FINISHED)) {
-      return;
-    }
-
-    if (thirdMatch.winnerId) {
-      const { winnerEntryId, loserId, loserEntryId } = getMatchWinnerAndLoser(thirdMatch);
-      await advanceResolvedWinnerForMatch(thirdMatch.id, thirdMatch.winnerId, loserId, winnerEntryId, loserEntryId);
-      return;
-    }
-
-    if (!penaltyMatch) {
-      await createPenaltyMatch(thirdMatch);
-    }
-
-    await syncTournamentLifecycleStatus(match.tournamentId);
-    return;
-  }
 
   if (aggregatePlayer1 === aggregatePlayer2) {
     if (!penaltyMatch) {
