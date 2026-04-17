@@ -22,8 +22,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const returnTo = getSafeReturnTo(formData.get("returnTo"));
   const parsed = banSchema.safeParse({
     action: formData.get("action"),
-    reason: formData.get("reason"),
-    bannedUntil: formData.get("bannedUntil"),
+    reason: formData.get("reason") ?? "",
+    bannedUntil: formData.get("bannedUntil") ?? "",
   });
 
   if (!parsed.success) {
