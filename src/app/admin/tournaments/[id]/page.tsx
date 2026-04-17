@@ -86,6 +86,8 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
     { label: "Этапы", value: tournament.stages.length, icon: GitBranch },
     { label: "Ближайший слот", value: nextScheduledMatch?.scheduledAt ? formatDate(nextScheduledMatch.scheduledAt) : "—", icon: CalendarDays },
   ];
+  const actionButtonClass =
+    "inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm font-medium text-zinc-100 transition hover:border-primary/30 hover:bg-primary/10 hover:text-white sm:w-44";
 
   return (
     <div className="space-y-6">
@@ -100,37 +102,32 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
             <CardTitle className="mt-3 text-3xl">{tournament.title}</CardTitle>
             <CardDescription>{tournament.description}</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-wrap items-center gap-2">
-            <Button asChild variant="outline" className="h-11 rounded-xl border-white/10 bg-white/[0.04] px-4 text-zinc-100 hover:border-primary/30 hover:bg-primary/10 hover:text-white">
-              <Link href={`/admin/tournaments/${tournament.id}/edit`} className="gap-2">
-                <Pencil className="h-4 w-4" />
-                Редактировать
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="h-11 rounded-xl border-white/10 bg-white/[0.04] px-4 text-zinc-100 hover:border-primary/30 hover:bg-primary/10 hover:text-white">
-              <Link href={`/admin/tournaments/${tournament.id}/participants`} className="gap-2">
-                <Users className="h-4 w-4" />
-                Участники
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="h-11 rounded-xl border-white/10 bg-white/[0.04] px-4 text-zinc-100 hover:border-primary/30 hover:bg-primary/10 hover:text-white">
-              <Link href={`/admin/tournaments/${tournament.id}/stages`} className="gap-2">
-                <GitBranch className="h-4 w-4" />
-                Этапы
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="h-11 rounded-xl border-white/10 bg-white/[0.04] px-4 text-zinc-100 hover:border-primary/30 hover:bg-primary/10 hover:text-white">
-              <Link href={`/admin/tournaments/${tournament.id}/bracket`} className="gap-2">
-                <Trophy className="h-4 w-4" />
-                Сетка
-              </Link>
-            </Button>
-            <form action={`/api/admin/tournaments/${tournament.id}`} method="post" className="flex">
+          <CardContent className="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
+            <Link href={`/admin/tournaments/${tournament.id}/edit`} className={actionButtonClass}>
+              <Pencil className="h-4 w-4" />
+              Редактировать
+            </Link>
+            <Link href={`/admin/tournaments/${tournament.id}/participants`} className={actionButtonClass}>
+              <Users className="h-4 w-4" />
+              Участники
+            </Link>
+            <Link href={`/admin/tournaments/${tournament.id}/stages`} className={actionButtonClass}>
+              <GitBranch className="h-4 w-4" />
+              Этапы
+            </Link>
+            <Link href={`/admin/tournaments/${tournament.id}/bracket`} className={actionButtonClass}>
+              <Trophy className="h-4 w-4" />
+              Сетка
+            </Link>
+            <form action={`/api/admin/tournaments/${tournament.id}`} method="post" className="contents">
               <input type="hidden" name="_method" value="delete" />
-              <Button variant="outline" className="h-11 rounded-xl border-red-400/20 bg-red-500/10 px-4 text-red-200 hover:bg-red-500/20 hover:text-red-100">
-                <Trash2 className="mr-2 h-4 w-4" />
+              <button
+                type="submit"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-400/20 bg-red-500/10 px-4 text-sm font-medium text-red-200 transition hover:bg-red-500/20 hover:text-red-100 sm:w-44"
+              >
+                <Trash2 className="h-4 w-4" />
                 Удалить
-              </Button>
+              </button>
             </form>
           </CardContent>
         </Card>
