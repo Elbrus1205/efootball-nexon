@@ -80,3 +80,46 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   return NextResponse.redirect(new URL(`/tournaments/${params.id}`, origin));
 }
+
+export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+  const session = await requireAuth();
+  const tournament = await db.tournament.findUnique({
+    where: { id: params.id },
+    include: {
+      participants: {
+        where: { userId: session.user.id },
+        select: { id: true },
+      },
+    },
+  });
+
+  if (!tournament) {
+    return NextResponse.json({ error: "Турнир не найден." }, { status: 404 });
+  }
+
+  if (tournament.startsAt <= new Date()) {
+    return NextResponse.json({ error: "Отменить регистрацию можно только до начала турнира." }, { status: 400 });
+  }
+
+  if (tournament.status === TournamentStatus.IN_PROGRESS || tournament.status === TournamentStatus.COMPLETED) {
+    return NextResponse.json({ error: "Турнир уже начался или завершён." }, { status: 400 });
+  }
+
+  const registration = tournament.participants[0];
+  if (!registration) {
+    return NextResponse.json({ error: "Вы не зарегистрированы на этот турнир." }, { status: 404 });
+  }
+
+  await db.tournamentRegistration.delete({
+    where: { id: registration.id },
+  });
+
+  if (tournament.status === TournamentStatus.REGISTRATION_CLOSED && tournament.registrationEndsAt > new Date()) {
+    await db.tournament.update({
+      where: { id: params.id },
+      data: { status: TournamentStatus.REGISTRATION_OPEN, registrationClosedAt: null },
+    });
+  }
+
+  return NextResponse.json({ ok: true });
+}

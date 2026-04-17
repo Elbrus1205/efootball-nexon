@@ -1,6 +1,7 @@
 ﻿import { ClubSelectionMode, StageType, TournamentFormat, TournamentStatus } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { BracketView } from "@/components/tournaments/bracket-view";
+import { CancelTournamentRegistrationButton } from "@/components/tournaments/cancel-tournament-registration-button";
 import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
 import { MyMatchCard } from "@/components/tournaments/my-match-card";
 import { RegisterTournamentButton } from "@/components/tournaments/register-tournament-button";
@@ -620,6 +621,12 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   const isLoggedIn = Boolean(session?.user);
   const alreadyRegistered = !!session?.user && tournament.participants.some((entry) => entry.userId === session.user.id);
   const canRegister = isLoggedIn && isRegistrationOpen && hasFreeSlots && !alreadyRegistered;
+  const canCancelRegistration =
+    isLoggedIn &&
+    alreadyRegistered &&
+    tournament.startsAt > new Date() &&
+    tournament.status !== TournamentStatus.IN_PROGRESS &&
+    tournament.status !== TournamentStatus.COMPLETED;
 
   const groupStage = tournament.stages.find((stage) => stage.type === StageType.GROUP_STAGE);
   const playoffStages = tournament.stages.filter((stage) => stage.type === StageType.PLAYOFF && stage.bracket);
@@ -696,6 +703,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
             clubs={availableClubs}
             takenClubSlugs={takenClubSlugs}
           />
+        ) : canCancelRegistration ? (
+          <CancelTournamentRegistrationButton tournamentId={tournament.id} startsAt={tournament.startsAt.toISOString()} />
         ) : isRegistrationOpen ? (
           !isLoggedIn ? (
             <Button size="lg" asChild>
