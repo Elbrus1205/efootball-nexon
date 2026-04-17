@@ -7,13 +7,14 @@ import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DeleteUserAccountForm } from "@/components/admin/delete-user-account-form";
 
 export default async function AdminUsersPage({
   searchParams,
 }: {
   searchParams?: { q?: string };
 }) {
-  await requireRole([UserRole.ADMIN]);
+  const session = await requireRole([UserRole.ADMIN]);
 
   const query = searchParams?.q?.trim() ?? "";
   const users = await db.user.findMany({
@@ -85,7 +86,7 @@ export default async function AdminUsersPage({
                 </form>
               </div>
 
-              <div className="grid gap-3 lg:grid-cols-3">
+              <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
                 <form action={`/api/admin/users/${user.id}/ban`} method="post" className="min-w-0 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4">
                   <input type="hidden" name="action" value="permanent" />
                   <div>
@@ -129,6 +130,7 @@ export default async function AdminUsersPage({
                     Разбанить
                   </Button>
                 </form>
+                <DeleteUserAccountForm userId={user.id} disabled={user.id === session.user.id} />
               </div>
             </Card>
           );
