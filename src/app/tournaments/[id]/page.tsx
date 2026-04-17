@@ -632,7 +632,6 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   const canCancelRegistration =
     isLoggedIn &&
     alreadyRegistered &&
-    tournament.startsAt > new Date() &&
     tournament.status !== TournamentStatus.IN_PROGRESS &&
     tournament.status !== TournamentStatus.COMPLETED;
 
@@ -712,7 +711,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
             takenClubSlugs={takenClubSlugs}
           />
         ) : canCancelRegistration ? (
-          <CancelTournamentRegistrationButton tournamentId={tournament.id} startsAt={tournament.startsAt.toISOString()} />
+          <CancelTournamentRegistrationButton tournamentId={tournament.id} />
         ) : isRegistrationOpen ? (
           !isLoggedIn ? (
             <Button size="lg" asChild>

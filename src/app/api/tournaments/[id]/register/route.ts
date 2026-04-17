@@ -111,10 +111,6 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: "Турнир не найден." }, { status: 404 });
   }
 
-  if (tournament.startsAt <= new Date()) {
-    return NextResponse.json({ error: "Отменить регистрацию можно только до начала турнира." }, { status: 400 });
-  }
-
   if (tournament.status === TournamentStatus.IN_PROGRESS || tournament.status === TournamentStatus.COMPLETED) {
     return NextResponse.json({ error: "Турнир уже начался или завершён." }, { status: 400 });
   }

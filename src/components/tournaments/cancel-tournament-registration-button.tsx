@@ -1,26 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 
-export function CancelTournamentRegistrationButton({ tournamentId, startsAt }: { tournamentId: string; startsAt: string }) {
+export function CancelTournamentRegistrationButton({ tournamentId }: { tournamentId: string }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
-  const [isAvailable, setIsAvailable] = useState(() => new Date(startsAt).getTime() > Date.now());
   const [isPending, startTransition] = useTransition();
-
-  useEffect(() => {
-    const startsAtTime = new Date(startsAt).getTime();
-
-    if (startsAtTime <= Date.now()) {
-      setIsAvailable(false);
-      return;
-    }
-
-    const timeout = window.setTimeout(() => setIsAvailable(false), startsAtTime - Date.now());
-    return () => window.clearTimeout(timeout);
-  }, [startsAt]);
 
   const cancelRegistration = () => {
     const confirmed = window.confirm("Отменить регистрацию на турнир?");
@@ -43,8 +30,6 @@ export function CancelTournamentRegistrationButton({ tournamentId, startsAt }: {
       router.refresh();
     });
   };
-
-  if (!isAvailable) return null;
 
   return (
     <div className="space-y-2">
