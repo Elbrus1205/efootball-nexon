@@ -1,4 +1,5 @@
 import { ClubSelectionMode, TournamentStatus } from "@prisma/client";
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { getAvailableClubs } from "@/lib/clubs";
@@ -83,6 +84,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
   });
 
   await syncTournamentLifecycleStatus(params.id);
+  revalidatePath(`/tournaments/${params.id}`);
+  revalidatePath("/tournaments");
 
   const origin = new URL(request.url).origin;
   if (contentType.includes("application/json")) {
@@ -131,6 +134,9 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
       data: { status: TournamentStatus.REGISTRATION_OPEN, registrationClosedAt: null },
     });
   }
+
+  revalidatePath(`/tournaments/${params.id}`);
+  revalidatePath("/tournaments");
 
   return NextResponse.json({ ok: true });
 }

@@ -1,5 +1,6 @@
 ﻿import { ClubSelectionMode, StageType, TournamentFormat, TournamentStatus } from "@prisma/client";
 import { Send } from "lucide-react";
+import { unstable_noStore as noStore } from "next/cache";
 import { notFound } from "next/navigation";
 import { BracketView } from "@/components/tournaments/bracket-view";
 import { CancelTournamentRegistrationButton } from "@/components/tournaments/cancel-tournament-registration-button";
@@ -565,6 +566,7 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
 }
 
 export default async function TournamentDetailsPage({ params }: { params: { id: string } }) {
+  noStore();
   const session = await getCurrentSession();
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
