@@ -32,17 +32,17 @@ export function CancelTournamentRegistrationButton({ tournamentId }: { tournamen
   };
 
   return (
-    <div className="space-y-2">
+    <div className="flex w-full flex-col items-center space-y-2 sm:w-auto sm:items-start">
       <Button
         size="lg"
         variant="outline"
         onClick={cancelRegistration}
         disabled={isPending}
-        className="border-rose-400/30 bg-rose-500/10 text-rose-100 hover:bg-rose-500/15 hover:text-white"
+        className="w-full max-w-[320px] justify-center border-rose-400/30 bg-rose-500/10 text-rose-100 hover:bg-rose-500/15 hover:text-white sm:w-auto sm:max-w-none"
       >
         {isPending ? "Отмена..." : "Отменить регистрацию"}
       </Button>
-      {message ? <div className="text-sm text-red-300">{message}</div> : null}
+      {message ? <div className="max-w-[320px] text-center text-sm text-red-300 sm:max-w-none sm:text-left">{message}</div> : null}
     </div>
   );
 }
