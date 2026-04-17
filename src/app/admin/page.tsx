@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { TournamentStatus, UserRole } from "@prisma/client";
-import { Activity, ShieldCheck, Swords, Trophy, Users } from "lucide-react";
+import { Activity, FileText, Gauge, ShieldCheck, Trophy, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth/session";
@@ -24,9 +24,9 @@ export default async function AdminPage() {
   ];
 
   const shortcuts = [
-    { href: "/admin/tournaments", label: "Редактор турниров", variant: "default" as const },
-    { href: "/admin", label: "Панель", variant: "secondary" as const },
-    { href: "/admin/regulations", label: "Регламент", variant: "outline" as const },
+    { href: "/admin/tournaments", label: "Редактор турниров", variant: "default" as const, icon: Trophy },
+    { href: "/admin", label: "Панель", variant: "secondary" as const, icon: Gauge },
+    { href: "/admin/regulations", label: "Регламент", variant: "outline" as const, icon: FileText },
   ];
 
   return (
@@ -52,12 +52,12 @@ export default async function AdminPage() {
           <CardTitle>Быстрые действия</CardTitle>
           <CardDescription>Ключевые сценарии ежедневной работы по турнирам.</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-3">
+        <CardContent className="flex flex-wrap gap-3">
           {shortcuts.map((item) => (
-            <Button key={item.href} asChild variant={item.variant} className="w-full justify-between">
-              <Link href={item.href}>
+            <Button key={item.href} asChild variant={item.variant} className="h-11 rounded-xl px-4">
+              <Link href={item.href} className="gap-2">
+                <item.icon className="h-4 w-4" />
                 {item.label}
-                <Swords className="h-4 w-4" />
               </Link>
             </Button>
           ))}
