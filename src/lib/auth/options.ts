@@ -294,6 +294,16 @@ export const authOptions: NextAuthOptions = {
           user.name = telegramUsername;
         }
 
+        if (user.isBanned) {
+          await createLoginHistory({
+            userId: user.id,
+            email: user.email,
+            status: LoginAttemptStatus.FAILED,
+            context,
+          });
+          return null;
+        }
+
         const authSessionId = await createSecuritySession({
           userId: user.id,
           context,

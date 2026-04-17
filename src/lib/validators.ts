@@ -315,7 +315,17 @@ export const banSchema = z.object({
     });
   }
 
-  if (data.action === "temporary" && data.bannedUntil && new Date(data.bannedUntil) <= new Date()) {
+  const bannedUntil = data.bannedUntil ? new Date(data.bannedUntil) : null;
+
+  if (data.action === "temporary" && bannedUntil && Number.isNaN(bannedUntil.getTime())) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["bannedUntil"],
+      message: "Укажите корректную дату окончания временного бана.",
+    });
+  }
+
+  if (data.action === "temporary" && bannedUntil && !Number.isNaN(bannedUntil.getTime()) && bannedUntil <= new Date()) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["bannedUntil"],

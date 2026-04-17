@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     },
   });
 
-  if (!user?.passwordHash || user.isBanned) {
+  if (!user?.passwordHash) {
     await createLoginHistory({
       userId: user?.id,
       email,
@@ -42,6 +42,17 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ error: "Неверный email или пароль." }, { status: 401 });
+  }
+
+  if (user.isBanned) {
+    await createLoginHistory({
+      userId: user.id,
+      email,
+      status: LoginAttemptStatus.FAILED,
+      context,
+    });
+
+    return NextResponse.json({ error: "Аккаунт заблокирован навсегда." }, { status: 403 });
   }
 
   const passwordCandidates = Array.from(new Set([rawPassword, trimmedPassword].filter(Boolean)));
