@@ -160,6 +160,7 @@ export function adminEntityLabel(entityType: string) {
     TOURNAMENT: "Турнир",
     STAGE: "Этап",
     MATCH: "Матч",
+    MATCH_RANDOM_SCORES: "Случайные счета",
     MATCH_REVIEW: "Проверка результата",
     PARTICIPANT: "Участник",
     BRACKET_SLOT: "Слот сетки",

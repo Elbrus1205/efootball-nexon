@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { StageType, UserRole } from "@prisma/client";
+import { MatchStatus, StageType, UserRole } from "@prisma/client";
 import { notFound } from "next/navigation";
-import { Activity, CalendarDays, GitBranch, History, ShieldCheck, Swords, Users } from "lucide-react";
+import { Activity, CalendarDays, Dices, GitBranch, History, ShieldCheck, Swords, Users } from "lucide-react";
 import { AuditDiff } from "@/components/admin/audit-diff";
 import { MatchManager } from "@/components/admin/match-manager";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +55,30 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
   const groupStage = tournament.stages.find((stage) => stage.type === StageType.GROUP_STAGE);
   const playoffStage = tournament.stages.find((stage) => stage.type === StageType.PLAYOFF);
   const nextScheduledMatch = tournament.matches.find((match) => match.scheduledAt);
+  const randomScoreStatuses = new Set<MatchStatus>([
+    MatchStatus.PENDING,
+    MatchStatus.READY,
+    MatchStatus.SCHEDULED,
+    MatchStatus.LIVE,
+    MatchStatus.REJECTED,
+    MatchStatus.RESULT_SUBMITTED,
+    MatchStatus.DISPUTED,
+  ]);
+  const randomScoreMatches = tournament.matches.filter(
+    (match) =>
+      match.player1Id &&
+      match.player2Id &&
+      match.participant1EntryId &&
+      match.participant2EntryId &&
+      randomScoreStatuses.has(match.status) &&
+      (match.player1Score === null || match.player2Score === null),
+  );
+  const randomScoreStage =
+    tournament.stages.find((stage) => stage.status === "ACTIVE" && randomScoreMatches.some((match) => match.stageId === stage.id)) ??
+    tournament.stages.find((stage) => randomScoreMatches.some((match) => match.stageId === stage.id));
+  const randomScoreStageMatches = randomScoreStage ? randomScoreMatches.filter((match) => match.stageId === randomScoreStage.id) : randomScoreMatches;
+  const randomScoreRound = randomScoreStageMatches.length ? Math.min(...randomScoreStageMatches.map((match) => match.round)) : null;
+  const randomScoreTargetCount = randomScoreRound === null ? 0 : randomScoreStageMatches.filter((match) => match.round === randomScoreRound).length;
 
   const stats = [
     { label: "Участники", value: tournament.participants.length, icon: Users },
@@ -122,6 +146,32 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
             <CardDescription>Live search, фильтры и drag-and-drop карточек внутри каждого раунда прямо в workspace турнира.</CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="mb-5 rounded-[1.5rem] border border-amber-400/20 bg-amber-500/10 p-4">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 font-medium text-white">
+                    <Dices className="h-5 w-5 text-amber-200" />
+                    Случайные счета
+                  </div>
+                  <div className="mt-1 text-sm text-amber-100/75">
+                    {randomScoreTargetCount
+                      ? `${randomScoreStage?.name ?? "Текущий этап"} • Раунд ${randomScoreRound}: ${randomScoreTargetCount} матчей без результата`
+                      : "Нет матчей без результата с двумя назначенными игроками."}
+                  </div>
+                </div>
+                <form action={`/api/admin/tournaments/${tournament.id}/matches/random-scores`} method="post">
+                  <Button
+                    type="submit"
+                    disabled={!randomScoreTargetCount}
+                    variant="outline"
+                    className="w-full border-amber-300/30 bg-amber-400/10 text-amber-100 hover:bg-amber-400/15 sm:w-auto"
+                  >
+                    <Dices className="mr-2 h-4 w-4" />
+                    Выставить рандом
+                  </Button>
+                </form>
+              </div>
+            </div>
             <MatchManager
               tournamentId={tournament.id}
               matches={tournament.matches.map((match) => ({
