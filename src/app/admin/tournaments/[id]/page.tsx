@@ -87,7 +87,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
     { label: "Ближайший слот", value: nextScheduledMatch?.scheduledAt ? formatDate(nextScheduledMatch.scheduledAt) : "—", icon: CalendarDays },
   ];
   const actionButtonClass =
-    "inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm font-medium text-zinc-100 transition hover:border-primary/30 hover:bg-primary/10 hover:text-white sm:w-44";
+    "inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-zinc-100 transition hover:border-primary/30 hover:bg-primary/10 hover:text-white";
 
   return (
     <div className="space-y-6">
@@ -102,7 +102,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
             <CardTitle className="mt-3 text-3xl">{tournament.title}</CardTitle>
             <CardDescription>{tournament.description}</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
+          <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             <Link href={`/admin/tournaments/${tournament.id}/edit`} className={actionButtonClass}>
               <Pencil className="h-4 w-4" />
               Редактировать
@@ -123,7 +123,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
               <input type="hidden" name="_method" value="delete" />
               <button
                 type="submit"
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-400/20 bg-red-500/10 px-4 text-sm font-medium text-red-200 transition hover:bg-red-500/20 hover:text-red-100 sm:w-44"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-400/20 bg-red-500/10 px-3 text-sm font-medium text-red-200 transition hover:bg-red-500/20 hover:text-red-100"
               >
                 <Trash2 className="h-4 w-4" />
                 Удалить
