@@ -8,9 +8,10 @@ import { createNotification } from "@/lib/services/notifications";
 import { reviewSchema } from "@/lib/validators";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const session = await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
+  const session = await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
 
   const formData = await request.formData();
+  const returnTo = String(formData.get("returnTo") || `/admin/matches/${params.id}`);
   const body = reviewSchema.parse({
     action: formData.get("action"),
     moderatorComment: formData.get("moderatorComment"),
@@ -112,5 +113,5 @@ export async function POST(request: Request, { params }: { params: { id: string 
     },
   });
 
-  return NextResponse.redirect(new URL("/admin/moderation", process.env.NEXTAUTH_URL));
+  return NextResponse.redirect(new URL(returnTo, process.env.NEXTAUTH_URL));
 }

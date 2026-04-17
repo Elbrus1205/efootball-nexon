@@ -10,7 +10,16 @@ import {
   StageType,
   TournamentFormat,
   TournamentStatus,
+  UserRole,
 } from "@prisma/client";
+
+export const userRoleLabel: Record<UserRole, string> = {
+  ADMIN: "Админ",
+  MODERATOR: "Модератор",
+  HEAD_JUDGE: "Главный судья",
+  JUDGE: "Судья",
+  PLAYER: "Игрок",
+};
 
 export const matchStatusLabel: Record<MatchStatus, string> = {
   PENDING: "Не назначен",

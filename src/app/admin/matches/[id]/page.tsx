@@ -52,7 +52,7 @@ function PlayerSubmissionCard({
 }
 
 export default async function AdminMatchWorkspacePage({ params }: { params: { id: string } }) {
-  await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
+  await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
 
   const match = await db.match.findUnique({
     where: { id: params.id },
@@ -186,6 +186,7 @@ export default async function AdminMatchWorkspacePage({ params }: { params: { id
             <form action={`/api/admin/matches/${match.id}/review`} method="post" className="space-y-4">
               <input type="hidden" name="action" value="approve" />
               <input type="hidden" name="moderatorComment" value="Администратор вручную подтвердил финальный счёт матча." />
+              <input type="hidden" name="returnTo" value={`/admin/matches/${match.id}`} />
 
               <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-3">
                 <label className="space-y-2">

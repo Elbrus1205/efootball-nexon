@@ -7,7 +7,7 @@ import { participantManageSchema } from "@/lib/validators";
 import { formatTournamentBanMessage } from "@/lib/user-ban";
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
-  await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
+  await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
 
   const participants = await db.tournamentRegistration.findMany({
     where: { tournamentId: params.id },

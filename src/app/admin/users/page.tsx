@@ -1,4 +1,5 @@
 import { UserRole } from "@prisma/client";
+import { userRoleLabel } from "@/lib/admin-display";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getActiveUserBan } from "@/lib/user-ban";
@@ -57,7 +58,7 @@ export default async function AdminUsersPage({
                 <div className="min-w-0">
                   <div className="truncate font-medium text-white">{user.nickname ?? user.name ?? user.email ?? "Игрок без имени"}</div>
                   <div className="mt-1 text-sm text-zinc-500">
-                    {user.email ?? user.telegramUsername ?? "social login"} • {user.role}
+                    {user.email ?? user.telegramUsername ?? "social login"} • {userRoleLabel[user.role]}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-400">
                     {user.nickname ? <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">Ник: {user.nickname}</span> : null}
@@ -74,9 +75,11 @@ export default async function AdminUsersPage({
 
                 <form action={`/api/admin/users/${user.id}/role`} method="post" className="flex flex-wrap gap-2">
                   <select name="role" defaultValue={user.role} className="h-11 rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white">
-                    <option value="PLAYER">PLAYER</option>
-                    <option value="MODERATOR">MODERATOR</option>
-                    <option value="ADMIN">ADMIN</option>
+                    <option value="PLAYER">{userRoleLabel.PLAYER}</option>
+                    <option value="JUDGE">{userRoleLabel.JUDGE}</option>
+                    <option value="HEAD_JUDGE">{userRoleLabel.HEAD_JUDGE}</option>
+                    <option value="MODERATOR">{userRoleLabel.MODERATOR}</option>
+                    <option value="ADMIN">{userRoleLabel.ADMIN}</option>
                   </select>
                   <Button type="submit" variant="outline">
                     Сохранить роль

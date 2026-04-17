@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 
 export default async function AdminSchedulePage() {
-  await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
+  await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
 
   const schedules = await db.matchSchedule.findMany({
     include: {

@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth/session";
 import { getRegulationsText } from "@/lib/regulations";
 
 export default async function AdminRegulationsPage() {
-  await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
+  await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
 
   const regulations = await getRegulationsText();
 

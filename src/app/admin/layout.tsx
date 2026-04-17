@@ -7,7 +7,7 @@ export default async function AdminLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
+  await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
 
   return (
     <div className="page-shell space-y-6">

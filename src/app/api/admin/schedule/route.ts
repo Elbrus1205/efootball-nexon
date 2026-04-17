@@ -6,7 +6,7 @@ import { logAdminAction } from "@/lib/services/admin-actions";
 import { scheduleUpdateSchema } from "@/lib/validators";
 
 export async function PATCH(request: Request) {
-  const session = await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
+  const session = await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
   const body = scheduleUpdateSchema.parse(await request.json());
 
   const existing = await db.matchSchedule.findFirst({

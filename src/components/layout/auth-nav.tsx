@@ -77,7 +77,7 @@ export function AuthNav({ unread = 0 }: { unread?: number }) {
             </Link>
           </DropdownMenuItem>
 
-          {(session.user.role === "ADMIN" || session.user.role === "MODERATOR") && (
+          {["ADMIN", "MODERATOR", "HEAD_JUDGE", "JUDGE"].includes(session.user.role) && (
             <DropdownMenuItem asChild>
               <Link href="/admin" className="flex items-center gap-2">
                 <Shield className="h-4 w-4" />

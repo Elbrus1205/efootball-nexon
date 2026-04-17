@@ -6,7 +6,7 @@ import { logAdminAction } from "@/lib/services/admin-actions";
 import { matchUpdateSchema } from "@/lib/validators";
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const session = await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
+  const session = await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
   const body = matchUpdateSchema.parse(await request.json());
 
   const before = await db.match.findUnique({

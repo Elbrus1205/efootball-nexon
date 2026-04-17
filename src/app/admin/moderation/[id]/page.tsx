@@ -12,7 +12,7 @@ import { getPlayerDisplayName } from "@/lib/player-name";
 import { formatDate } from "@/lib/utils";
 
 export default async function AdminModerationWorkspacePage({ params }: { params: { id: string } }) {
-  await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
+  await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
 
   const match = await db.match.findUnique({
     where: { id: params.id },
@@ -76,6 +76,7 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
           <form action={`/api/admin/matches/${match.id}/review`} method="post" className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
             <input type="hidden" name="action" value="approve" />
             <input type="hidden" name="moderatorComment" value="Администратор вручную подтвердил финальный счёт спорного матча." />
+            <input type="hidden" name="returnTo" value={`/admin/moderation/${match.id}`} />
 
             <div className="text-xs uppercase tracking-[0.18em] text-primary">Финальный счёт</div>
             <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-end gap-3">

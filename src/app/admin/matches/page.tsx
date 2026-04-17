@@ -11,7 +11,7 @@ import { getPlayerDisplayName } from "@/lib/player-name";
 import { formatDate } from "@/lib/utils";
 
 export default async function AdminMatchesPage() {
-  await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
+  await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
 
   const matches = await db.match.findMany({
     include: {

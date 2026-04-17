@@ -10,7 +10,7 @@ import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 
 export default async function AdminPage() {
-  await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
+  await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
 
   const now = new Date();
   const [totalTournaments, activeTournaments, completedTournaments, totalParticipants, upcomingMatches, recentActions] = await db.$transaction([

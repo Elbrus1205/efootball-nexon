@@ -47,7 +47,7 @@ function SubmissionPill({
 }
 
 export default async function AdminModerationPage() {
-  await requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
+  await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
 
   const disputedMatches = await db.match.findMany({
     where: { status: MatchStatus.DISPUTED },
@@ -112,6 +112,7 @@ export default async function AdminModerationPage() {
                   <form action={`/api/admin/matches/${match.id}/review`} method="post" className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
                     <input type="hidden" name="action" value="approve" />
                     <input type="hidden" name="moderatorComment" value="Администратор вручную подтвердил финальный счёт спорного матча." />
+                    <input type="hidden" name="returnTo" value="/admin/moderation" />
 
                     <div className="text-xs uppercase tracking-[0.18em] text-primary">Финальный счёт</div>
                     <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-end gap-3">
