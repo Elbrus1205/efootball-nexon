@@ -1,4 +1,5 @@
 ﻿import { ClubSelectionMode, StageType, TournamentFormat, TournamentStatus } from "@prisma/client";
+import { Send } from "lucide-react";
 import { notFound } from "next/navigation";
 import { BracketView } from "@/components/tournaments/bracket-view";
 import { CancelTournamentRegistrationButton } from "@/components/tournaments/cancel-tournament-registration-button";
@@ -244,6 +245,11 @@ function resolveClubBadgePath(
 ) {
   if (entry.clubBadgePath?.trim()) return entry.clubBadgePath;
   return entry.clubSlug ? clubsBySlug.get(entry.clubSlug)?.imagePath ?? null : null;
+}
+
+function telegramProfileHref(username?: string | null) {
+  const normalized = username?.trim().replace(/^@/, "");
+  return normalized ? `https://t.me/${normalized}` : null;
 }
 
 function buildLeagueTable(
@@ -918,16 +924,42 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
 
         <TabsContent value="participants">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {tournament.participants.map((entry) => (
-              <Card key={entry.id} className="p-4">
-                <ClubPlayerLine
-                  playerId={entry.user.id}
-                  playerName={getPlayerDisplayName(entry.user)}
-                  clubName={resolveClubName(entry, clubsBySlug, getPlayerDisplayName(entry.user))}
-                  badgePath={resolveClubBadgePath(entry, clubsBySlug)}
-                />
-              </Card>
-            ))}
+            {tournament.participants.map((entry) => {
+              const telegramHref = telegramProfileHref(entry.user.telegramUsername);
+              const playerName = getPlayerDisplayName(entry.user);
+
+              return (
+                <Card key={entry.id} className="flex min-w-0 items-center justify-between gap-3 p-4">
+                  <ClubPlayerLine
+                    playerId={entry.user.id}
+                    playerName={playerName}
+                    clubName={resolveClubName(entry, clubsBySlug, playerName)}
+                    badgePath={resolveClubBadgePath(entry, clubsBySlug)}
+                  />
+
+                  {telegramHref ? (
+                    <a
+                      href={telegramHref}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`Открыть Telegram ${playerName}`}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-sky-300/20 bg-sky-500/10 text-sky-200 transition hover:border-sky-300/40 hover:bg-sky-500/20 hover:text-white"
+                    >
+                      <Send className="h-4 w-4" />
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      aria-label="Telegram не указан"
+                      className="flex h-10 w-10 shrink-0 cursor-default items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-zinc-600"
+                    >
+                      <Send className="h-4 w-4" />
+                    </button>
+                  )}
+                </Card>
+              );
+            })}
           </div>
         </TabsContent>
 
