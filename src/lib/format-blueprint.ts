@@ -1,5 +1,6 @@
 import { PlayoffType } from "@prisma/client";
 
+export type OpeningStageMode = "GROUPS" | "LEAGUE" | "NONE";
 export type PlayoffTargetBracket = "upper" | "lower";
 
 export type PlayoffSelectionRule = {
@@ -21,7 +22,10 @@ export type PlayoffStageBlueprint = {
 
 export type FormatBlueprint = {
   leagueStageName: string;
+  openingStageMode: OpeningStageMode;
   divisionsCount: number;
+  roundsCount: number;
+  participantsPerGroup: number | null;
   playoffs: PlayoffStageBlueprint[];
 };
 
@@ -60,8 +64,11 @@ export function createDefaultPlayoffStage(partial?: Partial<PlayoffStageBlueprin
 
 export function createDefaultFormatBlueprint(): FormatBlueprint {
   return {
-    leagueStageName: "Лиги",
-    divisionsCount: 3,
+    leagueStageName: "Группы",
+    openingStageMode: "GROUPS",
+    divisionsCount: 4,
+    roundsCount: 1,
+    participantsPerGroup: null,
     playoffs: [
       createDefaultPlayoffStage({
         name: "Основной плей-офф",
@@ -69,12 +76,14 @@ export function createDefaultFormatBlueprint(): FormatBlueprint {
         legsCount: 1,
         thirdPlaceMatch: false,
         selections: [
-          createDefaultPlayoffSelection({ divisionIndex: 1, fromRank: 1, toRank: 6, targetBracket: "upper" }),
-          createDefaultPlayoffSelection({ divisionIndex: 2, fromRank: 1, toRank: 5, targetBracket: "upper" }),
-          createDefaultPlayoffSelection({ divisionIndex: 3, fromRank: 1, toRank: 5, targetBracket: "upper" }),
-          createDefaultPlayoffSelection({ divisionIndex: 1, fromRank: 7, toRank: 11, targetBracket: "lower" }),
-          createDefaultPlayoffSelection({ divisionIndex: 2, fromRank: 6, toRank: 10, targetBracket: "lower" }),
-          createDefaultPlayoffSelection({ divisionIndex: 3, fromRank: 6, toRank: 10, targetBracket: "lower" }),
+          createDefaultPlayoffSelection({ divisionIndex: 1, fromRank: 1, toRank: 2, targetBracket: "upper" }),
+          createDefaultPlayoffSelection({ divisionIndex: 2, fromRank: 1, toRank: 2, targetBracket: "upper" }),
+          createDefaultPlayoffSelection({ divisionIndex: 3, fromRank: 1, toRank: 2, targetBracket: "upper" }),
+          createDefaultPlayoffSelection({ divisionIndex: 4, fromRank: 1, toRank: 2, targetBracket: "upper" }),
+          createDefaultPlayoffSelection({ divisionIndex: 1, fromRank: 3, toRank: 4, targetBracket: "lower" }),
+          createDefaultPlayoffSelection({ divisionIndex: 2, fromRank: 3, toRank: 4, targetBracket: "lower" }),
+          createDefaultPlayoffSelection({ divisionIndex: 3, fromRank: 3, toRank: 4, targetBracket: "lower" }),
+          createDefaultPlayoffSelection({ divisionIndex: 4, fromRank: 3, toRank: 4, targetBracket: "lower" }),
         ],
       }),
     ],
@@ -87,17 +96,41 @@ export function normalizeFormatBlueprint(input: unknown): FormatBlueprint {
   }
 
   const value = input as Partial<FormatBlueprint>;
-  const leagueStageName = value.leagueStageName?.trim() || "Лиги";
-  const divisionsCount = Math.max(1, Math.min(8, Number(value.divisionsCount ?? 1) || 1));
+  const leagueStageName = value.leagueStageName?.trim() || "Группы";
+  const openingStageMode: OpeningStageMode =
+    value.openingStageMode === "LEAGUE" || value.openingStageMode === "NONE" ? value.openingStageMode : "GROUPS";
+  const divisionsCount = openingStageMode === "LEAGUE" ? 1 : Math.max(1, Math.min(16, Number(value.divisionsCount ?? 1) || 1));
+  const roundsCount = Math.max(1, Math.min(4, Number(value.roundsCount ?? 1) || 1));
+  const participantsPerGroup =
+    value.participantsPerGroup === null || value.participantsPerGroup === undefined || value.participantsPerGroup === 0
+      ? null
+      : Math.max(2, Math.min(32, Number(value.participantsPerGroup) || 2));
   const playoffs =
-    value.playoffs && Array.isArray(value.playoffs) && value.playoffs.length
+    value.playoffs && Array.isArray(value.playoffs)
       ? value.playoffs.map((playoff) => createDefaultPlayoffStage(playoff))
       : createDefaultFormatBlueprint().playoffs;
+  const normalizedPlayoffs = playoffs.map((playoff) => ({
+    ...playoff,
+    selections: playoff.selections.map((selection) => {
+      const fromRank = Math.max(1, Number(selection.fromRank) || 1);
+
+      return {
+        ...selection,
+        divisionIndex: Math.max(1, Math.min(divisionsCount, Number(selection.divisionIndex) || 1)),
+        fromRank,
+        toRank: Math.max(fromRank, Number(selection.toRank) || fromRank),
+        targetBracket: playoff.type === PlayoffType.SINGLE ? "upper" : selection.targetBracket,
+      };
+    }),
+  }));
 
   return {
     leagueStageName,
+    openingStageMode,
     divisionsCount,
-    playoffs,
+    roundsCount,
+    participantsPerGroup,
+    playoffs: openingStageMode === "NONE" && !normalizedPlayoffs.length ? createDefaultFormatBlueprint().playoffs : normalizedPlayoffs,
   };
 }
 

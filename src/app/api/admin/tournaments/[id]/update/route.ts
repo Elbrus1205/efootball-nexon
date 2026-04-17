@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { Prisma, UserRole } from "@prisma/client";
+import { Prisma, TournamentFormat, UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { parseFormatBlueprintJson } from "@/lib/format-blueprint";
@@ -22,7 +22,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     endsAt: "",
     maxParticipants: formData.get("maxParticipants"),
     prizePool: formData.get("prizePool"),
-    format: formData.get("format"),
+    format: TournamentFormat.CUSTOM,
     status: formData.get("status"),
     coverImage: formData.get("coverImage"),
     formatBlueprintJson: formData.get("formatBlueprintJson"),
@@ -62,18 +62,18 @@ export async function POST(request: Request, { params }: { params: { id: string 
       registrationEndsAt: startsAt,
       maxParticipants: body.maxParticipants,
       prizePool: body.prizePool || null,
-      format: body.format,
-      formatBlueprintJson: body.format === "CUSTOM" ? formatBlueprint ?? Prisma.DbNull : Prisma.DbNull,
+      format: TournamentFormat.CUSTOM,
+      formatBlueprintJson: formatBlueprint ?? Prisma.DbNull,
       status: body.status,
       coverImage: body.coverImage || null,
-      playoffType: body.playoffType ?? null,
-      playoffLegs: body.playoffLegs ?? 1,
-      playoffThirdPlace: body.playoffThirdPlace,
+      playoffType: null,
+      playoffLegs: 1,
+      playoffThirdPlace: false,
       seedingMethod: body.seedingMethod,
-      roundsInLeague: body.roundsInLeague,
-      groupsCount: body.groupsCount ?? null,
-      participantsPerGroup: body.participantsPerGroup ?? null,
-      playoffTeamsPerGroup: body.playoffTeamsPerGroup ?? null,
+      roundsInLeague: 1,
+      groupsCount: null,
+      participantsPerGroup: null,
+      playoffTeamsPerGroup: null,
       pointsForWin: body.pointsForWin,
       pointsForDraw: body.pointsForDraw,
       pointsForLoss: body.pointsForLoss,

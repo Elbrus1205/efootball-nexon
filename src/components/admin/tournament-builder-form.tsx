@@ -1,8 +1,9 @@
 "use client";
 
-import { ClubSelectionMode, PlayoffType, SeedingMethod, SortRule, TournamentFormat, TournamentStatus } from "@prisma/client";
+import { ClubSelectionMode, SeedingMethod, SortRule, TournamentFormat, TournamentStatus } from "@prisma/client";
+import type { PlayoffType } from "@prisma/client";
 import { ChangeEvent, useState } from "react";
-import { playoffTypeLabel, seedingMethodLabel, sortRuleLabel, tournamentFormatLabel, tournamentStatusLabel } from "@/lib/admin-display";
+import { seedingMethodLabel, sortRuleLabel, tournamentStatusLabel } from "@/lib/admin-display";
 import { FormatBlueprintBuilder } from "@/components/admin/format-blueprint-builder";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,7 +57,6 @@ export function TournamentBuilderForm({
   secondaryLabel?: string;
   initialValues?: BuilderValues;
 }) {
-  const [format, setFormat] = useState<TournamentFormat>(initialValues?.format ?? TournamentFormat.SINGLE_ELIMINATION);
   const [coverImage, setCoverImage] = useState(initialValues?.coverImage ?? "");
 
   const selectedSortRules = initialValues?.sortRules ?? [
@@ -65,14 +65,6 @@ export function TournamentBuilderForm({
     SortRule.GOALS_FOR,
     SortRule.WINS,
   ];
-
-  const showGroups = format === TournamentFormat.GROUPS || format === TournamentFormat.GROUPS_PLAYOFF;
-  const showLeague = format === TournamentFormat.LEAGUE || format === TournamentFormat.ROUND_ROBIN;
-  const showCustom = format === TournamentFormat.CUSTOM;
-  const showPlayoff =
-    format === TournamentFormat.SINGLE_ELIMINATION ||
-    format === TournamentFormat.DOUBLE_ELIMINATION ||
-    format === TournamentFormat.GROUPS_PLAYOFF;
 
   const optimizeCover = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -151,20 +143,12 @@ export function TournamentBuilderForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="format">Формат</Label>
-            <select
-              id="format"
-              name="format"
-              value={format}
-              onChange={(event) => setFormat(event.target.value as TournamentFormat)}
-              className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white"
-            >
-              {Object.values(TournamentFormat).map((value) => (
-                <option key={value} value={value}>
-                  {tournamentFormatLabel[value]}
-                </option>
-              ))}
-            </select>
+            <Label>Формат</Label>
+            <input type="hidden" name="format" value={TournamentFormat.CUSTOM} />
+            <div className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm">
+              <span className="font-semibold text-white">Гибкий</span>
+              <span className="text-xs text-blue-100">группы, лига, single/double</span>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -246,48 +230,14 @@ export function TournamentBuilderForm({
         </CardContent>
       </Card>
 
-      <FormatBlueprintBuilder name="formatBlueprintJson" initialValue={initialValues?.formatBlueprint ?? null} visible={showCustom} />
+      <FormatBlueprintBuilder name="formatBlueprintJson" initialValue={initialValues?.formatBlueprint ?? null} visible />
 
       <Card>
         <CardHeader>
-          <CardTitle>Структура турнира</CardTitle>
-          <CardDescription>Настройки для лиги, групп и плей-офф с автоматикой и ручным контролем.</CardDescription>
+          <CardTitle>Матчи и таблицы</CardTitle>
+          <CardDescription>Посев, очки и сортировка таблиц для группового или лигового этапа.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {showPlayoff ? (
-            <div className="space-y-2">
-              <Label htmlFor="playoffType">Тип плей-офф</Label>
-              <select
-                id="playoffType"
-                name="playoffType"
-                defaultValue={initialValues?.playoffType ?? (format === TournamentFormat.DOUBLE_ELIMINATION ? PlayoffType.DOUBLE : "")}
-                className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white"
-              >
-                <option value="">Не использовать</option>
-                {Object.values(PlayoffType).map((type) => (
-                  <option key={type} value={type}>
-                    {playoffTypeLabel[type]}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
-
-          {showPlayoff ? (
-            <div className="space-y-2">
-              <Label htmlFor="playoffLegs">Матчей в серии</Label>
-              <select
-                id="playoffLegs"
-                name="playoffLegs"
-                defaultValue={initialValues?.playoffLegs ?? 1}
-                className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white"
-              >
-                <option value="1">1 матч</option>
-                <option value="2">2 матча</option>
-              </select>
-            </div>
-          ) : null}
-
           <div className="space-y-2">
             <Label htmlFor="seedingMethod">Посев</Label>
             <select
@@ -304,64 +254,20 @@ export function TournamentBuilderForm({
             </select>
           </div>
 
-          {showLeague ? (
-            <div className="space-y-2">
-              <Label htmlFor="roundsInLeague">Кругов в лиге</Label>
-              <Input id="roundsInLeague" name="roundsInLeague" type="number" min={1} max={4} defaultValue={initialValues?.roundsInLeague ?? 1} />
-            </div>
-          ) : null}
+          <div className="space-y-2">
+            <Label htmlFor="pointsForWin">Очки за победу</Label>
+            <Input id="pointsForWin" name="pointsForWin" type="number" defaultValue={initialValues?.pointsForWin ?? 3} />
+          </div>
 
-          {showGroups ? (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="groupsCount">Количество групп</Label>
-                <Input id="groupsCount" name="groupsCount" type="number" min={1} max={16} defaultValue={initialValues?.groupsCount ?? ""} />
-              </div>
+          <div className="space-y-2">
+            <Label htmlFor="pointsForDraw">Очки за ничью</Label>
+            <Input id="pointsForDraw" name="pointsForDraw" type="number" defaultValue={initialValues?.pointsForDraw ?? 1} />
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="participantsPerGroup">Игроков в группе</Label>
-                <Input
-                  id="participantsPerGroup"
-                  name="participantsPerGroup"
-                  type="number"
-                  min={2}
-                  max={32}
-                  defaultValue={initialValues?.participantsPerGroup ?? ""}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="playoffTeamsPerGroup">Выходят из группы</Label>
-                <Input
-                  id="playoffTeamsPerGroup"
-                  name="playoffTeamsPerGroup"
-                  type="number"
-                  min={1}
-                  max={8}
-                  defaultValue={initialValues?.playoffTeamsPerGroup ?? ""}
-                />
-              </div>
-            </>
-          ) : null}
-
-          {showLeague || showGroups ? (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="pointsForWin">Очки за победу</Label>
-                <Input id="pointsForWin" name="pointsForWin" type="number" defaultValue={initialValues?.pointsForWin ?? 3} />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="pointsForDraw">Очки за ничью</Label>
-                <Input id="pointsForDraw" name="pointsForDraw" type="number" defaultValue={initialValues?.pointsForDraw ?? 1} />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="pointsForLoss">Очки за поражение</Label>
-                <Input id="pointsForLoss" name="pointsForLoss" type="number" defaultValue={initialValues?.pointsForLoss ?? 0} />
-              </div>
-            </>
-          ) : null}
+          <div className="space-y-2">
+            <Label htmlFor="pointsForLoss">Очки за поражение</Label>
+            <Input id="pointsForLoss" name="pointsForLoss" type="number" defaultValue={initialValues?.pointsForLoss ?? 0} />
+          </div>
 
           <div className="space-y-2 md:col-span-2 xl:col-span-3">
             <Label>Правила сортировки</Label>
@@ -374,12 +280,6 @@ export function TournamentBuilderForm({
               ))}
             </div>
           </div>
-          {showPlayoff ? (
-            <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-sm text-zinc-300 md:col-span-2 xl:col-span-3">
-              <input type="checkbox" name="playoffThirdPlace" value="true" defaultChecked={Boolean(initialValues?.playoffThirdPlace)} />
-              Добавить матч за 3-е место
-            </label>
-          ) : null}
         </CardContent>
       </Card>
 

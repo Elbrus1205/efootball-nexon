@@ -8,6 +8,7 @@
   StageType,
   TournamentFormat,
   TournamentStatus,
+  type TournamentStage,
 } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getAvailableClubs } from "@/lib/clubs";
@@ -462,6 +463,7 @@ async function createCustomFormatStages(params: {
   tournamentId: string;
   tournament: {
     status: TournamentStatus;
+    maxParticipants: number;
     pointsForWin: number;
     pointsForDraw: number;
     pointsForLoss: number;
@@ -469,60 +471,73 @@ async function createCustomFormatStages(params: {
   };
   blueprint: FormatBlueprint;
 }) {
-  const stages = [];
+  const stages: TournamentStage[] = [];
+  const hasOpeningStage = params.blueprint.openingStageMode !== "NONE";
 
-  const leagueStage = await db.tournamentStage.create({
-    data: {
-      tournamentId: params.tournamentId,
-      name: params.blueprint.leagueStageName,
-      type: StageType.GROUP_STAGE,
-      status: getStageStatus(false, params.tournament.status),
-      orderIndex: 1,
-      groupsCount: params.blueprint.divisionsCount,
-      pointsForWin: params.tournament.pointsForWin,
-      pointsForDraw: params.tournament.pointsForDraw,
-      pointsForLoss: params.tournament.pointsForLoss,
-      sortRules: params.tournament.sortRules,
-      settingsJson: {
-        mode: "custom-leagues",
-        divisionsCount: params.blueprint.divisionsCount,
-      },
-    },
-  });
-
-  for (let index = 0; index < params.blueprint.divisionsCount; index += 1) {
-    await db.tournamentGroup.create({
+  if (hasOpeningStage) {
+    const leagueStage = await db.tournamentStage.create({
       data: {
-        stageId: leagueStage.id,
-        name:
-          params.blueprint.divisionsCount === 1
-            ? params.blueprint.leagueStageName
-            : `${params.blueprint.leagueStageName} ${index + 1}`,
-        orderIndex: index + 1,
+        tournamentId: params.tournamentId,
+        name: params.blueprint.leagueStageName,
+        type: StageType.GROUP_STAGE,
+        status: getStageStatus(false, params.tournament.status),
+        orderIndex: 1,
+        groupsCount: params.blueprint.divisionsCount,
+        participantsPerGroup: params.blueprint.participantsPerGroup ?? undefined,
+        roundsCount: params.blueprint.roundsCount,
+        pointsForWin: params.tournament.pointsForWin,
+        pointsForDraw: params.tournament.pointsForDraw,
+        pointsForLoss: params.tournament.pointsForLoss,
+        sortRules: params.tournament.sortRules,
+        settingsJson: {
+          mode: params.blueprint.openingStageMode === "LEAGUE" ? "custom-league" : "custom-groups",
+          divisionsCount: params.blueprint.divisionsCount,
+          roundsCount: params.blueprint.roundsCount,
+          participantsPerGroup: params.blueprint.participantsPerGroup,
+        },
       },
     });
-  }
 
-  stages.push(leagueStage);
+    for (let index = 0; index < params.blueprint.divisionsCount; index += 1) {
+      const groupLetter = String.fromCharCode(65 + index);
+      await db.tournamentGroup.create({
+        data: {
+          stageId: leagueStage.id,
+          name:
+            params.blueprint.divisionsCount === 1
+              ? params.blueprint.leagueStageName
+              : params.blueprint.openingStageMode === "GROUPS"
+                ? `Группа ${groupLetter}`
+                : `${params.blueprint.leagueStageName} ${index + 1}`,
+          orderIndex: index + 1,
+          capacity: params.blueprint.participantsPerGroup ?? undefined,
+        },
+      });
+    }
+
+    stages.push(leagueStage);
+  }
 
   for (let index = 0; index < params.blueprint.playoffs.length; index += 1) {
     const playoff = params.blueprint.playoffs[index];
     const upperEntriesCount = countSelectionEntries(playoff.selections, "upper");
     const lowerEntriesCount = countSelectionEntries(playoff.selections, "lower");
-    const roundsCount = Math.log2(nextPowerOfTwo(Math.max(upperEntriesCount, lowerEntriesCount, 2)));
+    const directEntriesCount = hasOpeningStage ? 0 : params.tournament.maxParticipants;
+    const roundsCount = Math.log2(nextPowerOfTwo(Math.max(upperEntriesCount, lowerEntriesCount, directEntriesCount, 2)));
 
     const stage = await db.tournamentStage.create({
       data: {
         tournamentId: params.tournamentId,
         name: playoff.name,
         type: StageType.PLAYOFF,
-        status: StageStatus.PENDING,
-        orderIndex: index + 2,
+        status: getStageStatus(stages.length > 0, params.tournament.status),
+        orderIndex: stages.length + 1,
         roundsCount,
         settingsJson: {
-          mode: "custom-playoff-stage",
+          mode: hasOpeningStage ? "custom-playoff-stage" : "custom-direct-playoff-stage",
           upperEntriesCount,
           lowerEntriesCount,
+          directEntriesCount,
         },
       },
     });
@@ -532,15 +547,19 @@ async function createCustomFormatStages(params: {
         tournamentId: params.tournamentId,
         stageId: stage.id,
         type: playoff.type,
-        size: nextPowerOfTwo(Math.max(upperEntriesCount, lowerEntriesCount, 2)),
+        size: nextPowerOfTwo(Math.max(upperEntriesCount, lowerEntriesCount, directEntriesCount, 2)),
         legsCount: playoff.type === PlayoffType.DOUBLE ? 1 : playoff.legsCount,
         thirdPlaceMatch: playoff.type === PlayoffType.DOUBLE ? false : playoff.thirdPlaceMatch,
-        settingsJson: {
-          mode: "custom",
-          selections: playoff.selections,
-          upperEntriesCount,
-          lowerEntriesCount,
-        } satisfies CustomPlayoffSettings,
+        settingsJson: hasOpeningStage
+          ? ({
+              mode: "custom",
+              selections: playoff.selections,
+              upperEntriesCount,
+              lowerEntriesCount,
+            } satisfies CustomPlayoffSettings)
+          : {
+              mode: "custom-direct",
+            },
       },
     });
 
@@ -739,7 +758,7 @@ export async function generateTournamentStages(tournamentId: string, options?: {
     return tournament.stages;
   }
 
-  const stages = [];
+  const stages: TournamentStage[] = [];
 
   if (tournament.format === TournamentFormat.CUSTOM) {
     const blueprint = normalizeFormatBlueprint(tournament.formatBlueprintJson);
@@ -747,6 +766,7 @@ export async function generateTournamentStages(tournamentId: string, options?: {
       tournamentId,
       tournament: {
         status: tournament.status,
+        maxParticipants: tournament.maxParticipants,
         pointsForWin: tournament.pointsForWin,
         pointsForDraw: tournament.pointsForDraw,
         pointsForLoss: tournament.pointsForLoss,
