@@ -18,14 +18,22 @@ export function AuthNav({ unread = 0 }: { unread?: number }) {
 
   if (!session?.user) {
     return (
-      <>
-        <Button asChild variant="ghost" className="hidden sm:inline-flex">
+      <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur">
+        <Button
+          asChild
+          variant="ghost"
+          className="hidden h-10 rounded-xl px-4 text-zinc-200 transition hover:bg-white/10 hover:text-white hover:shadow-[0_10px_24px_rgba(255,255,255,0.06)] sm:inline-flex"
+        >
           <Link href="/login">Войти</Link>
         </Button>
-        <Button asChild variant="accent">
+        <Button
+          asChild
+          variant="accent"
+          className="h-10 rounded-xl border border-amber-200/25 bg-[linear-gradient(135deg,#ffd15a_0%,#f5a400_48%,#ff8f1f_100%)] px-4 font-semibold text-black shadow-[0_12px_30px_rgba(245,164,0,0.28),inset_0_1px_0_rgba(255,255,255,0.45)] transition hover:-translate-y-0.5 hover:brightness-105 hover:shadow-[0_16px_36px_rgba(245,164,0,0.38),inset_0_1px_0_rgba(255,255,255,0.55)] sm:px-5"
+        >
           <Link href="/register">Регистрация</Link>
         </Button>
-      </>
+      </div>
     );
   }
 
