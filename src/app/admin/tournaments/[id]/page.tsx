@@ -79,6 +79,8 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
   const randomScoreStageMatches = randomScoreStage ? randomScoreMatches.filter((match) => match.stageId === randomScoreStage.id) : randomScoreMatches;
   const randomScoreRound = randomScoreStageMatches.length ? Math.min(...randomScoreStageMatches.map((match) => match.round)) : null;
   const randomScoreTargetCount = randomScoreRound === null ? 0 : randomScoreStageMatches.filter((match) => match.round === randomScoreRound).length;
+  const randomScoreRepairCount = tournament.matches.filter((match) => match.bracketId && match.winnerId && match.status === MatchStatus.CONFIRMED).length;
+  const canRunRandomScores = randomScoreTargetCount > 0 || randomScoreRepairCount > 0;
 
   const stats = [
     { label: "Участники", value: tournament.participants.length, icon: Users },
@@ -166,13 +168,15 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
                   <div className="mt-1 text-sm text-amber-100/75">
                     {randomScoreTargetCount
                       ? `${randomScoreStage?.name ?? "Текущий этап"} • Раунд ${randomScoreRound}: ${randomScoreTargetCount} матчей без результата`
-                      : "Нет матчей без результата с двумя назначенными игроками."}
+                      : randomScoreRepairCount
+                        ? "Проверит продвижение уже подтвержденных матчей плей-офф."
+                        : "Нет матчей без результата с двумя назначенными игроками."}
                   </div>
                 </div>
                 <form action={`/api/admin/tournaments/${tournament.id}/matches/random-scores`} method="post">
                   <Button
                     type="submit"
-                    disabled={!randomScoreTargetCount}
+                    disabled={!canRunRandomScores}
                     variant="outline"
                     className="w-full border-amber-300/30 bg-amber-400/10 text-amber-100 hover:bg-amber-400/15 sm:w-auto"
                   >

@@ -32,6 +32,79 @@ function randomScore({ allowDraw }: { allowDraw: boolean }) {
   return { player1Score, player2Score };
 }
 
+async function fallbackAdvancePlayoffWinner(matchId: string) {
+  const match = await db.match.findUnique({
+    where: { id: matchId },
+    select: {
+      id: true,
+      tournamentId: true,
+      bracketId: true,
+      bracket: true,
+      round: true,
+      matchNumber: true,
+      nextMatchId: true,
+      nextMatchSlot: true,
+      player1Id: true,
+      player2Id: true,
+      participant1EntryId: true,
+      participant2EntryId: true,
+      winnerId: true,
+    },
+  });
+
+  if (!match?.bracketId || !match.winnerId) return;
+
+  const winnerEntryId = match.winnerId === match.player1Id ? match.participant1EntryId : match.winnerId === match.player2Id ? match.participant2EntryId : null;
+  const nextMatch =
+    match.nextMatchId
+      ? await db.match.findUnique({
+          where: { id: match.nextMatchId },
+          select: { id: true, seriesKey: true, player1Id: true, player2Id: true, status: true },
+        })
+      : await db.match.findFirst({
+          where: {
+            tournamentId: match.tournamentId,
+            bracketId: match.bracketId,
+            bracket: match.bracket,
+            round: match.round + 1,
+            matchNumber: Math.ceil(match.matchNumber / 2),
+            isPenaltyTiebreak: false,
+          },
+          orderBy: [{ legNumber: "asc" }, { createdAt: "asc" }],
+          select: { id: true, seriesKey: true, player1Id: true, player2Id: true, status: true },
+        });
+
+  if (!nextMatch) return;
+
+  const slot = (match.nextMatchSlot ?? (match.matchNumber % 2 === 1 ? 1 : 2)) as 1 | 2;
+  const targetMatches = nextMatch.seriesKey
+    ? await db.match.findMany({
+        where: { seriesKey: nextMatch.seriesKey, isPenaltyTiebreak: false },
+        select: { id: true, player1Id: true, player2Id: true, status: true },
+      })
+    : [nextMatch];
+
+  for (const targetMatch of targetMatches) {
+    const nextPlayer1Id = slot === 1 ? match.winnerId : targetMatch.player1Id;
+    const nextPlayer2Id = slot === 2 ? match.winnerId : targetMatch.player2Id;
+
+    await db.match.update({
+      where: { id: targetMatch.id },
+      data: {
+        ...(slot === 1
+          ? { player1Id: match.winnerId, participant1EntryId: winnerEntryId }
+          : { player2Id: match.winnerId, participant2EntryId: winnerEntryId }),
+        status:
+          nextPlayer1Id && nextPlayer2Id && targetMatch.status === MatchStatus.PENDING
+            ? MatchStatus.READY
+            : nextPlayer1Id && nextPlayer2Id && targetMatch.status === MatchStatus.SCHEDULED
+              ? MatchStatus.SCHEDULED
+              : targetMatch.status,
+      },
+    });
+  }
+}
+
 export async function POST(_: Request, { params }: { params: { id: string } }) {
   const session = await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
   const tournament = await db.tournament.findUnique({
@@ -51,6 +124,14 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
     return NextResponse.json({ error: "Турнир не найден." }, { status: 404 });
   }
 
+  const confirmedPlayoffMatches = tournament.matches.filter(
+    (match) => match.bracketId && match.winnerId && match.status === MatchStatus.CONFIRMED,
+  );
+
+  for (const match of confirmedPlayoffMatches) {
+    await fallbackAdvancePlayoffWinner(match.id);
+  }
+
   const playableMatches = tournament.matches.filter(
     (match) =>
       match.player1Id &&
@@ -62,6 +143,7 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
   );
 
   if (!playableMatches.length) {
+    await syncTournamentLifecycleStatus(params.id);
     return NextResponse.redirect(new URL(`/admin/tournaments/${params.id}`, _.url));
   }
 
@@ -105,6 +187,7 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
 
   for (const match of updatedMatches) {
     await resolveConfirmedMatch(match.id);
+    await fallbackAdvancePlayoffWinner(match.id);
   }
 
   if (!stageWithMatches || stageWithMatches.type === StageType.GROUP_STAGE || stageWithMatches.type === StageType.LEAGUE) {
