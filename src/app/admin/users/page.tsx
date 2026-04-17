@@ -24,7 +24,6 @@ export default async function AdminUsersPage({
             { name: { contains: query, mode: "insensitive" } },
             { email: { contains: query, mode: "insensitive" } },
             { telegramUsername: { contains: query, mode: "insensitive" } },
-            { efootballUid: { contains: query, mode: "insensitive" } },
           ],
         }
       : undefined,
@@ -37,7 +36,7 @@ export default async function AdminUsersPage({
       <div className="space-y-2">
         <h1 className="font-display text-3xl font-thin text-white">Пользователи</h1>
         <p className="max-w-2xl text-sm text-zinc-400">
-          Найдите игрока по никнейму, имени, email, Telegram или eFootball UID. Бан запрещает регистрацию в турнирах, а вечный бан также блокирует вход.
+          Найдите игрока по никнейму, имени, email или Telegram. Бан запрещает регистрацию в турнирах, а вечный бан также блокирует вход.
         </p>
       </div>
 
@@ -63,7 +62,6 @@ export default async function AdminUsersPage({
                   <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-400">
                     {user.nickname ? <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">Ник: {user.nickname}</span> : null}
                     {user.telegramUsername ? <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">TG: @{user.telegramUsername}</span> : null}
-                    {user.efootballUid ? <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">UID: {user.efootballUid}</span> : null}
                   </div>
                   {activeBan ? (
                     <div className="mt-3 rounded-2xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
@@ -88,7 +86,7 @@ export default async function AdminUsersPage({
               </div>
 
               <div className="grid gap-3 lg:grid-cols-3">
-                <form action={`/api/admin/users/${user.id}/ban`} method="post" className="space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4">
+                <form action={`/api/admin/users/${user.id}/ban`} method="post" className="min-w-0 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4">
                   <input type="hidden" name="action" value="permanent" />
                   <div>
                     <div className="text-sm font-medium text-white">Бан навсегда</div>
@@ -100,20 +98,28 @@ export default async function AdminUsersPage({
                   </Button>
                 </form>
 
-                <form action={`/api/admin/users/${user.id}/ban`} method="post" className="space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4">
+                <form action={`/api/admin/users/${user.id}/ban`} method="post" className="min-w-0 space-y-3 overflow-hidden rounded-2xl border border-amber-400/20 bg-[linear-gradient(180deg,rgba(245,158,11,0.08),rgba(0,0,0,0.18))] p-4">
                   <input type="hidden" name="action" value="temporary" />
                   <div>
                     <div className="text-sm font-medium text-white">Временный бан</div>
                     <div className="mt-1 text-xs text-zinc-500">Игрок не сможет регистрироваться в турнирах до даты.</div>
                   </div>
-                  <Input name="bannedUntil" type="datetime-local" required />
+                  <label className="block min-w-0 space-y-1.5">
+                    <span className="text-xs font-medium uppercase tracking-[0.16em] text-amber-200/80">Дата окончания</span>
+                    <Input
+                      name="bannedUntil"
+                      type="datetime-local"
+                      required
+                      className="min-w-0 max-w-full appearance-none border-amber-300/20 bg-black/30 px-3 text-[13px] text-amber-50 [color-scheme:dark] sm:px-4 sm:text-sm"
+                    />
+                  </label>
                   <Input name="reason" placeholder="Причина" />
                   <Button type="submit" variant="outline" className="w-full border-amber-400/30 bg-amber-500/10 text-amber-100 hover:bg-amber-500/15">
                     Выдать временный бан
                   </Button>
                 </form>
 
-                <form action={`/api/admin/users/${user.id}/ban`} method="post" className="space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4">
+                <form action={`/api/admin/users/${user.id}/ban`} method="post" className="min-w-0 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4">
                   <input type="hidden" name="action" value="unban" />
                   <div>
                     <div className="text-sm font-medium text-white">Снять бан</div>
