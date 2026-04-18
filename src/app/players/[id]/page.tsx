@@ -1,8 +1,10 @@
 import { Globe } from "lucide-react";
 import { notFound } from "next/navigation";
+import { PlayerCareerStatsPanel } from "@/components/players/player-career-stats";
 import { Card } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
+import { getPlayerCareerStats } from "@/lib/player-stats";
 import { getUserSocialLinks } from "@/lib/social-links";
 import { formatDate } from "@/lib/utils";
 
@@ -22,6 +24,7 @@ export default async function PlayerProfilePage({ params }: { params: { id: stri
   if (!user) notFound();
 
   const socialLinks = getUserSocialLinks(user);
+  const careerStats = await getPlayerCareerStats(user.id);
 
   return (
     <div className="page-shell space-y-8">
@@ -53,6 +56,8 @@ export default async function PlayerProfilePage({ params }: { params: { id: stri
           </div>
         </div>
       </Card>
+
+      <PlayerCareerStatsPanel stats={careerStats} />
     </div>
   );
 }

@@ -3,7 +3,9 @@ import { Globe, PencilLine } from "lucide-react";
 import { requireAuth } from "@/lib/auth/session";
 import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
+import { getPlayerCareerStats } from "@/lib/player-stats";
 import { getUserSocialLinks } from "@/lib/social-links";
+import { PlayerCareerStatsPanel } from "@/components/players/player-career-stats";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +28,7 @@ export default async function DashboardPage() {
 
   if (!user) return null;
 
+  const careerStats = await getPlayerCareerStats(user.id);
   const displayName = user.name || user.nickname || "Игрок eFootball Nexon";
   const favoriteClub = clubs.find((club) => club.slug === user.favoriteTeam || club.name === user.favoriteTeam) ?? null;
   const socialLinks = getUserSocialLinks(user);
@@ -144,6 +147,8 @@ export default async function DashboardPage() {
           ) : null}
         </div>
       </Card>
+
+      <PlayerCareerStatsPanel stats={careerStats} />
     </div>
   );
 }
