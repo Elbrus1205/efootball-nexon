@@ -15,7 +15,6 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { getAvailableClubs } from "@/lib/clubs";
 import {
   playoffTypeLabel,
-  tournamentFormatLabel,
   tournamentStatusLabel,
   tournamentStatusVariant,
 } from "@/lib/admin-display";
@@ -661,7 +660,6 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
         <div className="space-y-4">
           <div className="flex flex-wrap gap-3">
             <Badge variant={tournamentStatusVariant[tournament.status]}>{tournamentStatusLabel[tournament.status]}</Badge>
-            <Badge variant="accent">{tournamentFormatLabel[tournament.format] ?? tournament.format}</Badge>
             {tournament.playoffType ? <Badge variant="neutral">{playoffTypeLabel[tournament.playoffType] ?? tournament.playoffType}</Badge> : null}
           </div>
           <h1 className="font-display text-4xl font-thin text-white">{tournament.title}</h1>

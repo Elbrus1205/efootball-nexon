@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   playoffTypeLabel,
-  tournamentFormatLabel,
   tournamentStatusLabel,
   tournamentStatusVariant,
 } from "@/lib/admin-display";
@@ -86,7 +85,6 @@ export default async function AdminTournamentsPage({
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="font-medium text-white">{tournament.title}</div>
                     <Badge variant={tournamentStatusVariant[tournament.status]}>{tournamentStatusLabel[tournament.status]}</Badge>
-                    <Badge variant="neutral">{tournamentFormatLabel[tournament.format] ?? tournament.format}</Badge>
                     {tournament.playoffType ? (
                       <Badge variant="accent">{playoffTypeLabel[tournament.playoffType] ?? tournament.playoffType}</Badge>
                     ) : null}

@@ -11,7 +11,6 @@ import {
   adminActionLabel,
   adminEntityLabel,
   playoffTypeLabel,
-  tournamentFormatLabel,
   tournamentStatusLabel,
   tournamentStatusVariant,
 } from "@/lib/admin-display";
@@ -102,7 +101,6 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
           <CardHeader>
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={tournamentStatusVariant[tournament.status]}>{tournamentStatusLabel[tournament.status]}</Badge>
-              <Badge variant="accent">{tournamentFormatLabel[tournament.format] ?? tournament.format}</Badge>
               {tournament.playoffType ? <Badge variant="neutral">{playoffTypeLabel[tournament.playoffType]}</Badge> : null}
             </div>
             <CardTitle className="mt-3 text-3xl">{tournament.title}</CardTitle>

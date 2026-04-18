@@ -34,7 +34,6 @@ export function TournamentCard({
         <CardHeader>
           <div className="mb-3 flex items-center justify-between gap-3">
             <Badge variant={status.variant}>{status.label}</Badge>
-            <Badge>{tournament.format.replaceAll("_", " ")}</Badge>
           </div>
           <CardTitle>{tournament.title}</CardTitle>
         </CardHeader>
