@@ -649,6 +649,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
 
   return (
     <div className="page-shell space-y-8">
+      <style>{`[data-site-navbar]{display:none}`}</style>
       {tournament.coverImage ? (
         <div className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.04] shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
