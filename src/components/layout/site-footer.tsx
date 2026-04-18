@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { FileText, MessageCircle, ShieldCheck, Trophy, Users } from "lucide-react";
+import { FileText, MessageCircle, ShieldCheck, Users } from "lucide-react";
+import { SiteLogoMark } from "@/components/brand/site-logo-mark";
 
 const socialLinks = [
   { href: "https://t.me/", label: "Telegram" },
@@ -28,9 +29,7 @@ export function SiteFooter() {
         <div className="grid gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-2xl sm:gap-6 sm:rounded-[2rem] sm:p-8 lg:grid-cols-[1.2fr_0.8fr_0.9fr]">
           <div className="space-y-3 sm:space-y-5">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/15 text-primary shadow-[0_0_30px_rgba(59,130,246,0.16)] sm:h-12 sm:w-12 sm:rounded-2xl">
-                <Trophy className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
+              <SiteLogoMark idPrefix="footer-en-logo" className="h-9 w-9 sm:h-12 sm:w-12" />
               <div>
                 <div className="font-display text-base font-thin text-white sm:text-xl">eFootball Nexon</div>
                 <div className="hidden text-sm text-zinc-400 sm:block">eFootball Mobile Tournaments</div>

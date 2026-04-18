@@ -158,6 +158,51 @@ textarea,
   .registration-cta:active {
     transform: translateY(0) scale(0.985);
   }
+
+  .site-logo-mark {
+    overflow: visible;
+    filter:
+      drop-shadow(0 10px 24px rgba(59, 130, 246, 0.16))
+      drop-shadow(0 0 18px rgba(245, 158, 11, 0.08));
+  }
+
+  .site-logo-grid {
+    stroke-dasharray: 18 16;
+    animation: site-logo-grid-flow 7s linear infinite;
+  }
+
+  .site-logo-pitch {
+    animation: site-logo-pitch-pulse 3.2s ease-in-out infinite;
+  }
+
+  .site-logo-glow {
+    transform-origin: center;
+    animation: site-logo-glow-pulse 3s ease-in-out infinite;
+  }
+
+  .site-logo-letter {
+    transform-origin: center;
+    animation: site-logo-letter-rise 3.6s ease-in-out infinite;
+  }
+
+  .site-logo-letter-n {
+    animation-delay: 0.16s;
+  }
+
+  .site-logo-shine {
+    opacity: 0;
+    transform: translateX(-46px);
+    animation: site-logo-shine 3.8s ease-in-out infinite;
+  }
+
+  .site-logo-dot {
+    transform-origin: center;
+    animation: site-logo-dot-pulse 2.4s ease-in-out infinite;
+  }
+
+  .site-logo-dot-gold {
+    animation-delay: 0.45s;
+  }
 }
 
 @keyframes float-orb {
@@ -251,9 +296,87 @@ textarea,
   }
 }
 
+@keyframes site-logo-grid-flow {
+  to {
+    stroke-dashoffset: -68;
+  }
+}
+
+@keyframes site-logo-pitch-pulse {
+  0%,
+  100% {
+    opacity: 0.52;
+  }
+
+  50% {
+    opacity: 0.92;
+  }
+}
+
+@keyframes site-logo-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.92;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.025);
+  }
+}
+
+@keyframes site-logo-letter-rise {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-1.2px);
+  }
+}
+
+@keyframes site-logo-shine {
+  0%,
+  42% {
+    opacity: 0;
+    transform: translateX(-46px);
+  }
+
+  54% {
+    opacity: 0.76;
+  }
+
+  72%,
+  100% {
+    opacity: 0;
+    transform: translateX(72px);
+  }
+}
+
+@keyframes site-logo-dot-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .registration-cta,
-  .registration-cta::before {
+  .registration-cta::before,
+  .site-logo-grid,
+  .site-logo-pitch,
+  .site-logo-glow,
+  .site-logo-letter,
+  .site-logo-shine,
+  .site-logo-dot {
     animation: none;
   }
 }

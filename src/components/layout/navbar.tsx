@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Trophy } from "lucide-react";
 import { getCurrentSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { SiteLogoMark } from "@/components/brand/site-logo-mark";
 import { MobileMenu } from "@/components/layout/mobile-menu";
 import { AuthNav } from "@/components/layout/auth-nav";
 
@@ -24,9 +24,7 @@ export async function Navbar() {
         <div className="min-w-0 flex items-center gap-3">
           <MobileMenu links={links} />
           <Link href="/" className="min-w-0 flex items-center gap-2 sm:gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary sm:h-11 sm:w-11">
-              <Trophy className="h-5 w-5" />
-            </div>
+            <SiteLogoMark idPrefix="navbar-en-logo" />
             <div className="min-w-0">
               <div className="truncate font-display text-base font-thin leading-none text-white sm:text-lg">eFootball Nexon</div>
               <div className="mt-1 hidden text-xs leading-tight text-zinc-400 sm:block">eFootball Mobile Tournaments</div>
