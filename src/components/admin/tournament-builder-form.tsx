@@ -14,7 +14,6 @@ import { type FormatBlueprint } from "@/lib/format-blueprint";
 
 type BuilderValues = {
   title?: string;
-  description?: string;
   rules?: string;
   startsAt?: string;
   endsAt?: string;
@@ -204,17 +203,6 @@ export function TournamentBuilderForm({
               <option value={ClubSelectionMode.ADMIN_RANDOM}>Админ распределяет клубы случайно после закрытия регистрации</option>
               <option value={ClubSelectionMode.PLAYER_PICK}>Участники выбирают клуб сами при регистрации</option>
             </select>
-          </div>
-
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="description">Описание</Label>
-            <Textarea
-              id="description"
-              name="description"
-              placeholder="Краткая подача турнира, формат и атмосфера сезона."
-              defaultValue={initialValues?.description ?? ""}
-              required
-            />
           </div>
 
           <div className="space-y-2 md:col-span-2">

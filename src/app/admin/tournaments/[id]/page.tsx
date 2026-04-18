@@ -106,7 +106,6 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
               {tournament.playoffType ? <Badge variant="neutral">{playoffTypeLabel[tournament.playoffType]}</Badge> : null}
             </div>
             <CardTitle className="mt-3 text-3xl">{tournament.title}</CardTitle>
-            <CardDescription>{tournament.description}</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2 space-y-0 sm:grid-cols-2 lg:grid-cols-5">
             <Link href={`/admin/tournaments/${tournament.id}/edit`} className={actionButtonClass}>

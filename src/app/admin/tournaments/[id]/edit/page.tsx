@@ -27,7 +27,6 @@ export default async function AdminTournamentEditPage({ params }: { params: { id
         submitLabel="Сохранить изменения"
         initialValues={{
           title: tournament.title,
-          description: tournament.description,
           rules: tournament.rules,
           startsAt: toInputDate(tournament.startsAt),
           endsAt: toInputDate(tournament.endsAt),

@@ -92,8 +92,6 @@ export default async function AdminTournamentsPage({
                     ) : null}
                   </div>
 
-                  <p className="max-w-3xl text-sm leading-6 text-zinc-400">{tournament.description}</p>
-
                   <div className="flex flex-wrap gap-4 text-sm text-zinc-500">
                     <span>Старт: {formatDate(tournament.startsAt)}</span>
                     <span>Регистрация до: {formatDate(tournament.registrationEndsAt)}</span>

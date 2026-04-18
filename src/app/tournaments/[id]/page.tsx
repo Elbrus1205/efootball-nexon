@@ -532,7 +532,7 @@ function StandingsTable({ rows, highlights = [] }: { rows: LeagueRow[]; highligh
 
 export async function generateMetadata({ params }: { params: { id: string } }) {
   const tournament = await db.tournament.findUnique({ where: { id: params.id } });
-  return tournament ? { title: tournament.title, description: tournament.description } : { title: "Турнир не найден" };
+  return tournament ? { title: tournament.title } : { title: "Турнир не найден" };
 }
 
 export default async function TournamentDetailsPage({ params }: { params: { id: string } }) {
@@ -665,7 +665,6 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
             {tournament.playoffType ? <Badge variant="neutral">{playoffTypeLabel[tournament.playoffType] ?? tournament.playoffType}</Badge> : null}
           </div>
           <h1 className="font-display text-4xl font-thin text-white">{tournament.title}</h1>
-          <p className="max-w-3xl text-zinc-400">{tournament.description}</p>
           <div className="flex flex-wrap gap-6 text-sm text-zinc-400">
             <span>Старт: {formatDate(tournament.startsAt)}</span>
             <span>Регистрация до: {formatDate(tournament.registrationEndsAt)}</span>

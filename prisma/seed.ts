@@ -26,7 +26,7 @@ async function main() {
     create: {
       slug: slugify(title),
       title,
-      description: "Стартовый демо-турнир для проверки регистрации, сетки и модерации результатов.",
+      description: "",
       rules: "Bo1, обязательный скриншот результата, задержка не более 10 минут.",
       startsAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 3),
       registrationEndsAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 2),

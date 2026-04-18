@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CalendarDays, Trophy, Users } from "lucide-react";
 import { Tournament, TournamentStatus } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils";
 
 const statusMap: Record<TournamentStatus, { label: string; variant: "primary" | "accent" | "success" | "neutral" }> = {
@@ -37,7 +37,6 @@ export function TournamentCard({
             <Badge>{tournament.format.replaceAll("_", " ")}</Badge>
           </div>
           <CardTitle>{tournament.title}</CardTitle>
-          <CardDescription>{tournament.description.slice(0, 140)}...</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 text-sm text-zinc-300">
           <div className="flex items-center gap-3">

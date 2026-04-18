@@ -20,7 +20,6 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const parsed = tournamentBuilderSchema.safeParse({
       title: formData.get("title"),
-      description: formData.get("description"),
       rules: formData.get("rules"),
       startsAt: formData.get("startsAt"),
       registrationEndsAt: formData.get("startsAt"),
@@ -66,7 +65,7 @@ export async function POST(request: Request) {
       data: {
         title: body.title,
         slug: `${slugify(body.title)}-${Date.now()}`,
-        description: body.description,
+        description: "",
         rules: body.rules,
         startsAt,
         endsAt: null,

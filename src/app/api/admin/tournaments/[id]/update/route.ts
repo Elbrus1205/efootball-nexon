@@ -15,7 +15,6 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const formData = await request.formData();
   const body = tournamentBuilderSchema.parse({
     title: formData.get("title"),
-    description: formData.get("description"),
     rules: formData.get("rules"),
     startsAt: formData.get("startsAt"),
     registrationEndsAt: formData.get("startsAt"),
@@ -55,7 +54,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     where: { id: params.id },
     data: {
       title: body.title,
-      description: body.description,
+      description: "",
       rules: body.rules,
       startsAt,
       endsAt: null,

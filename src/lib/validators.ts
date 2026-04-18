@@ -60,7 +60,6 @@ export const profileSchema = z.object({
 
 export const tournamentSchema = z.object({
   title: z.string().min(3),
-  description: z.string().min(20),
   rules: z.string().min(20),
   startsAt: z.string(),
   registrationEndsAt: z.string(),
@@ -111,7 +110,6 @@ export const securityAccountDeletionSchema = z.object({
 
 export const tournamentBuilderSchema = z.object({
   title: z.string().min(3, "Название турнира должно быть не короче 3 символов."),
-  description: z.string().min(20, "Описание турнира должно быть не короче 20 символов."),
   rules: z.string().min(20, "Правила турнира должны быть не короче 20 символов."),
   startsAt: z.string(),
   registrationEndsAt: z.string().optional().or(z.literal("")),
