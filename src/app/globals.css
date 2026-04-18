@@ -162,46 +162,50 @@ textarea,
   .site-logo-mark {
     overflow: visible;
     filter:
-      drop-shadow(0 10px 24px rgba(59, 130, 246, 0.16))
-      drop-shadow(0 0 18px rgba(245, 158, 11, 0.08));
+      drop-shadow(0 10px 24px rgba(37, 99, 235, 0.2))
+      drop-shadow(0 0 14px rgba(59, 130, 246, 0.12));
+    transform: translateZ(0);
+    transition:
+      filter 260ms ease,
+      transform 260ms ease;
   }
 
-  .site-logo-grid {
-    stroke-dasharray: 18 16;
-    animation: site-logo-grid-flow 7s linear infinite;
+  .site-logo-mark:hover {
+    filter:
+      drop-shadow(0 12px 28px rgba(37, 99, 235, 0.32))
+      drop-shadow(0 0 18px rgba(56, 189, 248, 0.18));
+    transform: translateY(-1px);
   }
 
-  .site-logo-pitch {
-    animation: site-logo-pitch-pulse 3.2s ease-in-out infinite;
+  .site-logo-backline {
+    stroke-dasharray: 28 18;
+    animation: site-logo-backline-flow 8s linear infinite;
   }
 
   .site-logo-glow {
     transform-origin: center;
-    animation: site-logo-glow-pulse 3s ease-in-out infinite;
+    animation: site-logo-glow-pulse 4.6s ease-in-out infinite;
   }
 
   .site-logo-letter {
     transform-origin: center;
-    animation: site-logo-letter-rise 3.6s ease-in-out infinite;
+    transition: transform 260ms ease;
   }
 
-  .site-logo-letter-n {
-    animation-delay: 0.16s;
+  .site-logo-accent {
+    stroke-dasharray: 56;
+    stroke-dashoffset: 56;
+    animation: site-logo-accent-in 1.2s ease-out 0.15s forwards;
   }
 
-  .site-logo-shine {
+  .site-logo-scan {
     opacity: 0;
     transform: translateX(-46px);
-    animation: site-logo-shine 3.8s ease-in-out infinite;
+    animation: site-logo-scan 5.4s ease-in-out infinite;
   }
 
-  .site-logo-dot {
-    transform-origin: center;
-    animation: site-logo-dot-pulse 2.4s ease-in-out infinite;
-  }
-
-  .site-logo-dot-gold {
-    animation-delay: 0.45s;
+  .site-logo-mark:hover .site-logo-letter {
+    transform: translateY(-1px);
   }
 }
 
@@ -296,87 +300,56 @@ textarea,
   }
 }
 
-@keyframes site-logo-grid-flow {
+@keyframes site-logo-backline-flow {
   to {
-    stroke-dashoffset: -68;
-  }
-}
-
-@keyframes site-logo-pitch-pulse {
-  0%,
-  100% {
-    opacity: 0.52;
-  }
-
-  50% {
-    opacity: 0.92;
+    stroke-dashoffset: -92;
   }
 }
 
 @keyframes site-logo-glow-pulse {
   0%,
   100% {
-    opacity: 0.92;
+    opacity: 0.88;
     transform: scale(1);
   }
 
   50% {
     opacity: 1;
-    transform: scale(1.025);
+    transform: scale(1.012);
   }
 }
 
-@keyframes site-logo-letter-rise {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-1.2px);
+@keyframes site-logo-accent-in {
+  to {
+    stroke-dashoffset: 0;
   }
 }
 
-@keyframes site-logo-shine {
+@keyframes site-logo-scan {
   0%,
-  42% {
+  62% {
     opacity: 0;
-    transform: translateX(-46px);
+    transform: translateX(-48px);
   }
 
-  54% {
-    opacity: 0.76;
+  72% {
+    opacity: 0.45;
   }
 
-  72%,
+  86%,
   100% {
     opacity: 0;
-    transform: translateX(72px);
-  }
-}
-
-@keyframes site-logo-dot-pulse {
-  0%,
-  100% {
-    opacity: 0.55;
-    transform: scale(0.85);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(1.18);
+    transform: translateX(68px);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .registration-cta,
   .registration-cta::before,
-  .site-logo-grid,
-  .site-logo-pitch,
+  .site-logo-backline,
   .site-logo-glow,
-  .site-logo-letter,
-  .site-logo-shine,
-  .site-logo-dot {
+  .site-logo-accent,
+  .site-logo-scan {
     animation: none;
   }
 }
