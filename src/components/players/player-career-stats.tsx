@@ -1,4 +1,4 @@
-import { BarChart3, Percent, Shield, Target, Trophy } from "lucide-react";
+import { BarChart3, Shield, Target, Trophy } from "lucide-react";
 import type { PlayerCareerStats } from "@/lib/player-stats";
 
 function formatGoalDifference(value: number) {
@@ -29,8 +29,7 @@ export function PlayerCareerStatsPanel({ stats }: { stats: PlayerCareerStats }) 
             <span className="pb-1 text-sm font-semibold text-zinc-400">матчей</span>
           </div>
         </div>
-        <div className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-amber-300/25 bg-amber-400/10 px-3 py-2 text-sm font-black text-amber-100">
-          <Percent className="h-4 w-4" />
+        <div className="inline-flex shrink-0 items-center rounded-lg border border-amber-300/25 bg-amber-400/10 px-3 py-2 text-sm font-black text-amber-100">
           Винрейт {stats.winRate}%
         </div>
       </div>
