@@ -19,7 +19,7 @@ export async function Navbar() {
   const unread = session?.user ? await db.notification.count({ where: { userId: session.user.id, isRead: false } }) : 0;
 
   return (
-    <header data-site-navbar className="sticky top-0 z-40 border-b border-white/10 bg-black/60 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-black/60 backdrop-blur-xl">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
         <div className="min-w-0 flex items-center gap-3">
           <MobileMenu links={links} />
