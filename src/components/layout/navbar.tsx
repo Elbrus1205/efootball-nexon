@@ -24,7 +24,7 @@ export async function Navbar() {
         <div className="min-w-0 flex items-center gap-3">
           <MobileMenu links={links} />
           <Link href="/" className="min-w-0 flex items-center gap-2 sm:gap-3">
-            <SiteLogoMark idPrefix="navbar-en-logo" />
+            <SiteLogoMark />
             <div className="min-w-0">
               <div className="truncate font-display text-base font-thin leading-none text-white sm:text-lg">eFootball Nexon</div>
               <div className="mt-1 hidden text-xs leading-tight text-zinc-400 sm:block">eFootball Mobile Tournaments</div>
