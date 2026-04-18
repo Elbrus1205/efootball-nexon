@@ -52,9 +52,9 @@ export default async function AdminPage() {
           <CardTitle>Быстрые действия</CardTitle>
           <CardDescription>Ключевые сценарии ежедневной работы по турнирам.</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-3">
+        <CardContent className="grid gap-3 space-y-0 sm:grid-cols-3 lg:flex lg:flex-wrap">
           {shortcuts.map((item) => (
-            <Button key={item.href} asChild variant={item.variant} className="h-11 rounded-xl px-4">
+            <Button key={item.href} asChild variant={item.variant} className="h-11 w-full rounded-xl px-4 lg:w-auto">
               <Link href={item.href} className="gap-2">
                 <item.icon className="h-4 w-4" />
                 {item.label}
