@@ -31,7 +31,7 @@ export function PlayerCareerStatsPanel({ stats }: { stats: PlayerCareerStats }) 
         </div>
         <div className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-amber-300/25 bg-amber-400/10 px-3 py-2 text-sm font-black text-amber-100">
           <Percent className="h-4 w-4" />
-          {stats.winRate}%
+          Винрейт {stats.winRate}%
         </div>
       </div>
 
