@@ -27,6 +27,9 @@ export const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   name: z.string().min(2),
+  legalAccepted: z.boolean().refine(Boolean, {
+    message: "Необходимо принять документы сайта.",
+  }),
 });
 
 export const loginSchema = z.object({

@@ -21,23 +21,41 @@ function normalizeTelegramBotUsername(value?: string) {
     .replace(/\/$/, "");
 }
 
-export function TelegramLogin({ botUsername }: { botUsername?: string }) {
+export function TelegramLogin({
+  botUsername,
+  legalAccepted = true,
+  requireLegalAcceptance = false,
+}: {
+  botUsername?: string;
+  legalAccepted?: boolean;
+  requireLegalAcceptance?: boolean;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [widgetError, setWidgetError] = useState<string | null>(null);
   const normalizedBotUsername = useMemo(() => normalizeTelegramBotUsername(botUsername), [botUsername]);
   const isValidUsername = /^[A-Za-z0-9_]{5,32}$/.test(normalizedBotUsername);
+  const isBlockedByLegal = requireLegalAcceptance && !legalAccepted;
   const router = useRouter();
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!normalizedBotUsername || !container || !isValidUsername) return;
+    if (!normalizedBotUsername || !container || !isValidUsername || isBlockedByLegal) {
+      container?.replaceChildren();
+      return;
+    }
 
     setWidgetError(null);
     container.replaceChildren();
 
     window.onTelegramAuth = async (user) => {
+      if (requireLegalAcceptance && !legalAccepted) {
+        setWidgetError("Сначала примите документы сайта.");
+        return;
+      }
+
       const result = await signIn("telegram", {
         ...user,
+        legalAccepted: legalAccepted ? "true" : "false",
         callbackUrl: "/dashboard",
         redirect: false,
       });
@@ -81,7 +99,7 @@ export function TelegramLogin({ botUsername }: { botUsername?: string }) {
       window.clearTimeout(timeout);
       container.replaceChildren();
     };
-  }, [isValidUsername, normalizedBotUsername, router]);
+  }, [isBlockedByLegal, isValidUsername, legalAccepted, normalizedBotUsername, requireLegalAcceptance, router]);
 
   return (
     <div className="rounded-3xl border border-[#229ED9]/25 bg-[linear-gradient(180deg,rgba(34,158,217,0.16),rgba(34,158,217,0.06))] p-4 shadow-[0_12px_30px_rgba(34,158,217,0.08)]">
@@ -95,7 +113,11 @@ export function TelegramLogin({ botUsername }: { botUsername?: string }) {
         </div>
       </div>
 
-      {normalizedBotUsername && isValidUsername ? (
+      {isBlockedByLegal ? (
+        <div className="rounded-2xl border border-dashed border-[#229ED9]/25 bg-black/20 px-4 py-3 text-sm leading-6 text-sky-100">
+          Примите документы выше, чтобы продолжить регистрацию через Telegram.
+        </div>
+      ) : normalizedBotUsername && isValidUsername ? (
         <div className="rounded-2xl bg-black/20 p-3">
           <div ref={containerRef} className="flex min-h-12 items-center justify-center" />
           {widgetError ? (

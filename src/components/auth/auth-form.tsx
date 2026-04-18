@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { Check, FileText, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { TelegramLogin } from "@/components/auth/telegram-login";
 import { Button } from "@/components/ui/button";
@@ -20,9 +21,20 @@ export function AuthForm({ type }: { type: "login" | "register" }) {
   const [twoFactorStep, setTwoFactorStep] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [challengeToken, setChallengeToken] = useState("");
+  const [legalAccepted, setLegalAccepted] = useState(false);
   const router = useRouter();
+  const requiresLegalAcceptance = type === "register";
+
+  const ensureLegalAccepted = () => {
+    if (!requiresLegalAcceptance || legalAccepted) return true;
+
+    toast.error("Сначала примите документы сайта.");
+    return false;
+  };
 
   const startVkAuth = (callbackPath: string) => {
+    if (!ensureLegalAccepted()) return;
+
     startTransition(async () => {
       try {
         if (typeof window === "undefined") return;
@@ -35,6 +47,7 @@ export function AuthForm({ type }: { type: "login" | "register" }) {
         await startVkIdAuth({
           mode: "auth",
           callbackUrl: `${canonicalOrigin}${callbackPath}`,
+          legalAccepted: requiresLegalAcceptance ? legalAccepted : undefined,
         });
       } catch {
         toast.error("Не удалось запустить вход через VK.");
@@ -48,10 +61,12 @@ export function AuthForm({ type }: { type: "login" | "register" }) {
         const normalizedEmail = email.trim().toLowerCase();
 
         if (type === "register") {
+          if (!ensureLegalAccepted()) return;
+
           const res = await fetch("/api/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: normalizedEmail, password, name }),
+            body: JSON.stringify({ email: normalizedEmail, password, name, legalAccepted }),
           });
 
           if (!res.ok) {
@@ -166,7 +181,58 @@ export function AuthForm({ type }: { type: "login" | "register" }) {
           </div>
         )}
 
-        <Button className="w-full" onClick={submit} disabled={pending}>
+        {requiresLegalAcceptance && !twoFactorStep ? (
+          <label
+            htmlFor="legalAccepted"
+            className={`group flex cursor-pointer gap-3 rounded-lg border p-3 transition ${
+              legalAccepted
+                ? "border-emerald-300/25 bg-emerald-400/10"
+                : "border-white/10 bg-black/20 hover:border-primary/30 hover:bg-white/[0.04]"
+            }`}
+          >
+            <input
+              id="legalAccepted"
+              type="checkbox"
+              checked={legalAccepted}
+              onChange={(event) => setLegalAccepted(event.target.checked)}
+              className="sr-only"
+            />
+            <span
+              className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border transition ${
+                legalAccepted ? "border-emerald-300/35 bg-emerald-400 text-black" : "border-white/15 bg-white/[0.04] text-transparent"
+              }`}
+            >
+              <Check className="h-4 w-4" />
+            </span>
+            <span className="min-w-0">
+              <span className="flex items-center gap-2 text-sm font-semibold text-white">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                Принимаю документы сайта
+              </span>
+              <span className="mt-1 block text-xs leading-5 text-zinc-400">
+                Я принимаю{" "}
+                <Link className="text-primary transition hover:text-white" href="/terms">
+                  пользовательское соглашение
+                </Link>
+                {", "}
+                <Link className="text-primary transition hover:text-white" href="/privacy">
+                  политику конфиденциальности
+                </Link>
+                {", "}
+                <Link className="text-primary transition hover:text-white" href="/consent">
+                  согласие на обработку данных
+                </Link>
+                {" и "}
+                <Link className="text-primary transition hover:text-white" href="/cookies">
+                  политику cookie
+                </Link>
+                .
+              </span>
+            </span>
+          </label>
+        ) : null}
+
+        <Button className="w-full" onClick={submit} disabled={pending || (requiresLegalAcceptance && !legalAccepted)}>
           {pending ? "Подождите..." : type === "login" ? (twoFactorStep ? "Подтвердить вход" : "Войти") : "Создать аккаунт"}
         </Button>
 
@@ -187,13 +253,23 @@ export function AuthForm({ type }: { type: "login" | "register" }) {
         {!twoFactorStep ? (
           <>
             <div className="grid gap-3">
-              <Button variant="secondary" className="w-full" onClick={() => startVkAuth("/dashboard")}>
+              <Button
+                variant="secondary"
+                className="w-full"
+                onClick={() => startVkAuth("/dashboard")}
+                disabled={pending || (requiresLegalAcceptance && !legalAccepted)}
+              >
                 Продолжить через VK
               </Button>
-              <TelegramLogin botUsername={process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME} />
+              <TelegramLogin
+                botUsername={process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME}
+                legalAccepted={legalAccepted}
+                requireLegalAcceptance={requiresLegalAcceptance}
+              />
             </div>
 
             <p className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs leading-5 text-zinc-400">
+              <FileText className="mr-1.5 inline h-3.5 w-3.5 text-primary" />
               {type === "register" ? "Нажимая «Создать аккаунт» или продолжая через VK/Telegram, вы принимаете " : "Продолжая вход, вы принимаете "}
               <Link className="text-primary transition hover:text-white" href="/terms">
                 пользовательское соглашение

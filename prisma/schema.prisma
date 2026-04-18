@@ -152,6 +152,10 @@ model User {
   banReason           String?                  @db.Text
   bannedUntil         DateTime?
   bannedAt            DateTime?
+  legalAcceptedAt     DateTime?
+  legalAcceptedVersion String?
+  legalAcceptedIp     String?
+  legalAcceptedUserAgent String?               @db.Text
   createdAt           DateTime                 @default(now())
   updatedAt           DateTime                 @updatedAt
   accounts            Account[]

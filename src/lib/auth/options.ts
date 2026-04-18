@@ -8,6 +8,7 @@ import { buildSecurityContext, createLoginHistory, createSecuritySession, touchS
 import { verifyTelegramAuth } from "@/lib/auth/telegram";
 import { fetchVkUserProfile } from "@/lib/auth/vk";
 import { db } from "@/lib/db";
+import { getLegalAcceptanceData, isLegalAccepted } from "@/lib/legal-acceptance";
 import { generateFallbackNickname } from "@/lib/player-name";
 import { verifyTwoFactorChallenge } from "@/lib/two-factor";
 
@@ -152,12 +153,14 @@ export const authOptions: NextAuthOptions = {
       name: "VK ID",
       credentials: {
         accessToken: { label: "VK Access Token", type: "text" },
+        legalAccepted: { label: "Legal Accepted", type: "text" },
       },
       async authorize(credentials, req) {
         const accessToken = credentials?.accessToken?.trim();
         if (!accessToken) return null;
 
         const context = buildSecurityContext(req?.headers);
+        const acceptedLegalDocuments = isLegalAccepted(credentials?.legalAccepted);
         const vkProfile = await fetchVkUserProfile(accessToken);
 
         let user = await db.user.findUnique({
@@ -193,15 +196,19 @@ export const authOptions: NextAuthOptions = {
               email: user.email ?? vkProfile.email ?? undefined,
               name: user.name?.trim() ? user.name : vkProfile.fullName ?? undefined,
               image: user.image ?? vkProfile.avatar ?? undefined,
+              ...(!user.legalAcceptedAt && acceptedLegalDocuments ? getLegalAcceptanceData(req?.headers) : {}),
             },
           });
         } else {
+          if (!acceptedLegalDocuments) return null;
+
           user = await db.user.create({
             data: {
               vkId: vkProfile.vkId,
               email: vkProfile.email,
               name: vkProfile.fullName ?? "VK Player",
               image: vkProfile.avatar,
+              ...getLegalAcceptanceData(req?.headers),
             },
           });
         }
@@ -242,6 +249,7 @@ export const authOptions: NextAuthOptions = {
         photo_url: { label: "Photo", type: "text" },
         auth_date: { label: "Auth date", type: "text" },
         hash: { label: "Hash", type: "text" },
+        legalAccepted: { label: "Legal Accepted", type: "text" },
       },
       async authorize(credentials, req) {
         const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -265,23 +273,37 @@ export const authOptions: NextAuthOptions = {
 
         const telegramUsername = credentials.username?.trim() || generateFallbackNickname(credentials.id);
         const role = credentials.id === TELEGRAM_ADMIN_ID ? UserRole.ADMIN : UserRole.PLAYER;
+        const acceptedLegalDocuments = isLegalAccepted(credentials.legalAccepted);
 
-        const user = await db.user.upsert({
+        let user = await db.user.findUnique({
           where: { telegramId: credentials.id },
-          update: {
-            name: undefined,
-            telegramUsername: credentials.username,
-            image: credentials.photo_url,
-            role,
-          },
-          create: {
-            telegramId: credentials.id,
-            telegramUsername: credentials.username,
-            image: credentials.photo_url,
-            name: telegramUsername,
-            role,
-          },
         });
+
+        if (user) {
+          user = await db.user.update({
+            where: { id: user.id },
+            data: {
+              name: undefined,
+              telegramUsername: credentials.username,
+              image: credentials.photo_url,
+              role,
+              ...(!user.legalAcceptedAt && acceptedLegalDocuments ? getLegalAcceptanceData(req?.headers) : {}),
+            },
+          });
+        } else {
+          if (!acceptedLegalDocuments) return null;
+
+          user = await db.user.create({
+            data: {
+              telegramId: credentials.id,
+              telegramUsername: credentials.username,
+              image: credentials.photo_url,
+              name: telegramUsername,
+              role,
+              ...getLegalAcceptanceData(req?.headers),
+            },
+          });
+        }
 
         const normalizedCurrentName = user.name?.trim() || "";
         if (!normalizedCurrentName) {

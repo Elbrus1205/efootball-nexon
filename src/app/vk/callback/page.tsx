@@ -58,6 +58,7 @@ export default function VkCallbackPage() {
 
         const result = await signIn("vkid", {
           accessToken: token.access_token,
+          legalAccepted: intent?.legalAccepted ? "true" : "false",
           redirect: false,
         });
 

@@ -2,10 +2,25 @@ import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth/session";
+import { getLegalAcceptanceData, LEGAL_ACCEPTANCE_REQUIRED_MESSAGE } from "@/lib/legal-acceptance";
 import { profileSchema, registerSchema } from "@/lib/validators";
 
 export async function POST(request: Request) {
-  const body = registerSchema.parse(await request.json());
+  const parsedBody = registerSchema.safeParse(await request.json());
+
+  if (!parsedBody.success) {
+    const fieldErrors = parsedBody.error.flatten().fieldErrors;
+    const error =
+      fieldErrors.legalAccepted?.[0] ??
+      fieldErrors.email?.[0] ??
+      fieldErrors.password?.[0] ??
+      fieldErrors.name?.[0] ??
+      LEGAL_ACCEPTANCE_REQUIRED_MESSAGE;
+
+    return NextResponse.json({ error }, { status: 400 });
+  }
+
+  const body = parsedBody.data;
   const normalizedEmail = body.email.trim().toLowerCase();
   const existing = await db.user.findFirst({
     where: {
@@ -27,6 +42,7 @@ export async function POST(request: Request) {
       email: normalizedEmail,
       passwordHash,
       name: body.name,
+      ...getLegalAcceptanceData(request.headers),
     },
   });
 
