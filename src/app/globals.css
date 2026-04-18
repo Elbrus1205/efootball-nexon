@@ -118,6 +118,46 @@ textarea,
   .champion-cup {
     animation: champion-cup-float 1.9s ease-in-out infinite;
   }
+
+  .registration-cta {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    letter-spacing: 0;
+    transform: translateZ(0);
+    animation: registration-cta-breathe 3.4s ease-in-out infinite;
+  }
+
+  .registration-cta::before {
+    content: "";
+    position: absolute;
+    inset: -45% -70%;
+    z-index: -1;
+    background: linear-gradient(115deg, transparent 35%, rgba(255, 235, 166, 0.24) 48%, rgba(245, 158, 11, 0.18) 55%, transparent 68%);
+    transform: translateX(-58%) rotate(8deg);
+    animation: registration-cta-shine 3.2s ease-in-out infinite;
+  }
+
+  .registration-cta::after {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    z-index: -2;
+    border-radius: inherit;
+    background: radial-gradient(circle at 50% 0%, rgba(251, 191, 36, 0.18), transparent 62%);
+  }
+
+  .registration-cta:hover {
+    transform: translateY(-1px) scale(1.015);
+    box-shadow:
+      0 16px 38px rgba(245, 158, 11, 0.25),
+      0 0 0 1px rgba(251, 191, 36, 0.14),
+      inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  }
+
+  .registration-cta:active {
+    transform: translateY(0) scale(0.985);
+  }
 }
 
 @keyframes float-orb {
@@ -174,5 +214,46 @@ textarea,
 
   82% {
     opacity: 0.85;
+  }
+}
+
+@keyframes registration-cta-breathe {
+  0%,
+  100% {
+    box-shadow:
+      0 12px 32px rgba(245, 158, 11, 0.16),
+      inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  }
+
+  50% {
+    box-shadow:
+      0 16px 42px rgba(245, 158, 11, 0.26),
+      0 0 0 1px rgba(251, 191, 36, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  }
+}
+
+@keyframes registration-cta-shine {
+  0%,
+  44% {
+    opacity: 0;
+    transform: translateX(-58%) rotate(8deg);
+  }
+
+  58% {
+    opacity: 1;
+  }
+
+  74%,
+  100% {
+    opacity: 0;
+    transform: translateX(58%) rotate(8deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .registration-cta,
+  .registration-cta::before {
+    animation: none;
   }
 }

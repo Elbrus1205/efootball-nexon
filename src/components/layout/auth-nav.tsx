@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { Bell, LogOut, Shield, ShieldCheck, User2 } from "lucide-react";
+import { Bell, LogOut, Shield, ShieldCheck, User2, UserPlus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -28,10 +28,13 @@ export function AuthNav({ unread = 0 }: { unread?: number }) {
         </Button>
         <Button
           asChild
-          variant="accent"
-          className="h-10 rounded-xl border border-amber-200/25 bg-[linear-gradient(135deg,#ffd15a_0%,#f5a400_48%,#ff8f1f_100%)] px-4 font-semibold text-black shadow-[0_12px_30px_rgba(245,164,0,0.28),inset_0_1px_0_rgba(255,255,255,0.45)] transition hover:-translate-y-0.5 hover:brightness-105 hover:shadow-[0_16px_36px_rgba(245,164,0,0.38),inset_0_1px_0_rgba(255,255,255,0.55)] sm:px-5"
+          variant="ghost"
+          className="registration-cta h-10 rounded-lg border border-amber-300/35 bg-[linear-gradient(135deg,rgba(18,27,42,0.98),rgba(15,19,28,0.98)_48%,rgba(70,47,10,0.94)_100%)] px-3 font-black text-amber-100 shadow-[0_12px_32px_rgba(245,158,11,0.18),inset_0_1px_0_rgba(255,255,255,0.14)] hover:bg-[linear-gradient(135deg,rgba(28,41,62,0.98),rgba(20,26,38,0.98)_48%,rgba(92,61,12,0.96)_100%)] hover:text-white sm:px-4"
         >
-          <Link href="/register">Регистрация</Link>
+          <Link href="/register">
+            <UserPlus className="h-4 w-4 text-amber-200" />
+            <span>Регистрация</span>
+          </Link>
         </Button>
       </div>
     );
