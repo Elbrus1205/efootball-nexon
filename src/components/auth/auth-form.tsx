@@ -193,6 +193,22 @@ export function AuthForm({ type }: { type: "login" | "register" }) {
               <TelegramLogin botUsername={process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME} />
             </div>
 
+            <p className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs leading-5 text-zinc-400">
+              {type === "register" ? "Нажимая «Создать аккаунт» или продолжая через VK/Telegram, вы принимаете " : "Продолжая вход, вы принимаете "}
+              <Link className="text-primary transition hover:text-white" href="/terms">
+                пользовательское соглашение
+              </Link>
+              {", "}
+              <Link className="text-primary transition hover:text-white" href="/privacy">
+                политику конфиденциальности
+              </Link>
+              {" и "}
+              <Link className="text-primary transition hover:text-white" href="/consent">
+                согласие на обработку данных
+              </Link>
+              .
+            </p>
+
             <div className="text-sm text-zinc-400">
               {type === "login" ? (
                 <>

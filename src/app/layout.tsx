@@ -40,7 +40,7 @@ const eFootballStencil = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://efoottourney.example.com"),
+  metadataBase: new URL("https://efootball-nexon.ru"),
   title: {
     default: "eFootball Nexon | Турниры по eFootball Mobile",
     template: "%s | eFootball Nexon",
