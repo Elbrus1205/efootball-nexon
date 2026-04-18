@@ -5,10 +5,10 @@ import { AlertTriangle, CheckCircle2, Clock3 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 type SubmissionState = {
   label: string;
@@ -17,11 +17,8 @@ type SubmissionState = {
 
 type MyMatchCardProps = {
   id: string;
-  title: string;
   meta?: string;
-  statusLabel: string;
-  statusVariant: "primary" | "accent" | "neutral" | "success" | "danger";
-  scoreText: string;
+  isConfirmed: boolean;
   confirmedPlayer1Score?: number | null;
   confirmedPlayer2Score?: number | null;
   canSubmit: boolean;
@@ -51,11 +48,8 @@ function submissionToneClass(tone: SubmissionState["tone"]) {
 
 export function MyMatchCard({
   id,
-  title,
   meta,
-  statusLabel,
-  statusVariant,
-  scoreText,
+  isConfirmed,
   confirmedPlayer1Score,
   confirmedPlayer2Score,
   canSubmit,
@@ -115,22 +109,18 @@ export function MyMatchCard({
   };
 
   return (
-    <Card className="space-y-3 p-4 sm:space-y-4 sm:p-5">
-      <div className="flex flex-col gap-2 sm:gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <div className="font-medium text-white">{title}</div>
-          {meta ? (
-            <div className="mt-2 inline-flex items-center gap-2 text-sm text-zinc-400">
-              <Clock3 className="h-4 w-4 shrink-0 text-zinc-500" />
-              <span>{meta}</span>
-            </div>
-          ) : null}
+    <Card
+      className={cn(
+        "space-y-3 p-4 transition sm:space-y-4 sm:p-5",
+        isConfirmed && "border-emerald-400/55 bg-emerald-400/[0.045] shadow-[0_0_28px_rgba(52,211,153,0.14)]",
+      )}
+    >
+      {meta ? (
+        <div className="inline-flex items-center gap-2 text-sm text-zinc-400">
+          <Clock3 className="h-4 w-4 shrink-0 text-zinc-500" />
+          <span>{meta}</span>
         </div>
-        <div className="flex flex-col items-start gap-1.5 lg:items-end">
-          <Badge variant={statusVariant}>{statusLabel}</Badge>
-          {hasConfirmedScore ? null : <div className="text-sm font-medium text-zinc-300">{scoreText}</div>}
-        </div>
-      </div>
+      ) : null}
 
       <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-3 sm:p-5">
         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[190px_auto_190px] sm:justify-center sm:gap-2">
@@ -144,7 +134,7 @@ export function MyMatchCard({
               compact
               reverse
             />
-            {player1SubmissionState.tone === "success" && statusLabel === "Подтверждён" ? null : (
+            {player1SubmissionState.tone === "success" && isConfirmed ? null : (
               <div
                 className={`mt-2 rounded-xl border px-2 py-1.5 text-center text-[11px] leading-4 sm:mt-3 sm:px-3 sm:py-2 sm:text-xs ${submissionToneClass(player1SubmissionState.tone)}`}
               >
@@ -168,7 +158,7 @@ export function MyMatchCard({
               align="center"
               compact
             />
-            {player2SubmissionState.tone === "success" && statusLabel === "Подтверждён" ? null : (
+            {player2SubmissionState.tone === "success" && isConfirmed ? null : (
               <div
                 className={`mt-2 rounded-xl border px-2 py-1.5 text-center text-[11px] leading-4 sm:mt-3 sm:px-3 sm:py-2 sm:text-xs ${submissionToneClass(player2SubmissionState.tone)}`}
               >

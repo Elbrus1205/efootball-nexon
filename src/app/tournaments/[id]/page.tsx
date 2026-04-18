@@ -14,8 +14,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getAvailableClubs } from "@/lib/clubs";
 import {
-  matchStatusLabel,
-  matchStatusVariant,
   playoffTypeLabel,
   tournamentFormatLabel,
   tournamentStatusLabel,
@@ -859,14 +857,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                   <MyMatchCard
                     key={match.id}
                     id={match.id}
-                    title="Личный матч"
-                    statusLabel={matchStatusLabel[match.status] ?? match.status}
-                    statusVariant={matchStatusVariant[match.status] ?? "neutral"}
-                    scoreText={
-                      match.player1Score !== null && match.player2Score !== null
-                        ? `Подтверждённый счёт: ${match.player1Score} : ${match.player2Score}`
-                        : "Счёт ещё не подтверждён"
-                    }
+                    isConfirmed={match.status === "CONFIRMED"}
                     confirmedPlayer1Score={match.player1Score}
                     confirmedPlayer2Score={match.player2Score}
                     canSubmit={match.status !== "CONFIRMED" && match.status !== "DISPUTED"}
