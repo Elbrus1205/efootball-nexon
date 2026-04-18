@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { Globe, PencilLine } from "lucide-react";
+import { PencilLine } from "lucide-react";
 import { requireAuth } from "@/lib/auth/session";
 import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
 import { getPlayerCareerStats } from "@/lib/player-stats";
 import { getUserSocialLinks } from "@/lib/social-links";
 import { PlayerCareerStatsPanel } from "@/components/players/player-career-stats";
+import { PlayerSocialLinks } from "@/components/players/player-social-links";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -128,21 +129,7 @@ export default async function DashboardPage() {
 
           {socialLinks.length > 0 ? (
             <div className="border-b border-white/10 pb-3">
-              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Соцсети</div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {socialLinks.map((link) => (
-                  <a
-                    key={link.id}
-                    href={link.href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-sm font-medium text-white transition hover:border-primary/40 hover:text-primary"
-                  >
-                    <Globe className="h-4 w-4" />
-                    <span>{link.label}</span>
-                  </a>
-                ))}
-              </div>
+              <PlayerSocialLinks links={socialLinks} />
             </div>
           ) : null}
         </div>

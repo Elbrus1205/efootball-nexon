@@ -33,11 +33,13 @@ export function getUserSocialLinks(user: SocialUser): SocialLink[] {
   }
 
   if (vkAccountId?.trim()) {
+    const normalizedVkId = vkAccountId.trim();
+
     links.push({
       id: "vk",
       label: displayLabel,
-      href: `https://vk.com/id${vkAccountId.trim()}`,
-      handle: "VK",
+      href: `https://vk.com/id${normalizedVkId}`,
+      handle: `id${normalizedVkId}`,
     });
   }
 

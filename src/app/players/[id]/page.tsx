@@ -1,6 +1,6 @@
-import { Globe } from "lucide-react";
 import { notFound } from "next/navigation";
 import { PlayerCareerStatsPanel } from "@/components/players/player-career-stats";
+import { PlayerSocialLinks } from "@/components/players/player-social-links";
 import { Card } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
@@ -36,21 +36,7 @@ export default async function PlayerProfilePage({ params }: { params: { id: stri
             <div>На платформе: {formatDate(user.createdAt, "d MMM yyyy")}</div>
             {socialLinks.length > 0 ? (
               <div className="sm:col-span-2 lg:col-span-1">
-                Соцсети:
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {socialLinks.map((link) => (
-                    <a
-                      key={link.id}
-                      href={link.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-sm font-medium text-white transition hover:border-primary/40 hover:text-primary"
-                    >
-                      <Globe className="h-4 w-4" />
-                      <span>{link.label}</span>
-                    </a>
-                  ))}
-                </div>
+                <PlayerSocialLinks links={socialLinks} />
               </div>
             ) : null}
           </div>
