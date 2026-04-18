@@ -103,10 +103,7 @@ function scheduleSectionTitle(match: {
     return playoffRoundLabel(match.round, Math.max(match.stage.roundsCount ?? match.round, match.round));
   }
 
-  const tourTitle = `${match.round} тур`;
-  if (match.group?.name) return `${match.group.name} • ${tourTitle}`;
-
-  return tourTitle;
+  return `${match.round} тур`;
 }
 
 function buildScheduleSections<
@@ -126,22 +123,22 @@ function buildScheduleSections<
   },
 >(matches: T[]) {
   const sections = new Map<string, { key: string; title: string; sort: number[]; matches: T[] }>();
-  const roundRobinBuckets = new Map<string, { sort: number[]; groupName?: string; matches: T[] }>();
 
   for (const match of matches) {
     const stageSort = match.stage?.orderIndex ?? 999;
     const groupSort = match.group?.orderIndex ?? 0;
 
     if (match.stage?.type !== StageType.PLAYOFF) {
-      const key = [match.stage?.id ?? "stage", match.group?.id ?? "all"].join(":");
-      const bucket = roundRobinBuckets.get(key);
+      const key = [match.stage?.id ?? "stage", "tour", match.round].join(":");
+      const section = sections.get(key);
 
-      if (bucket) {
-        bucket.matches.push(match);
+      if (section) {
+        section.matches.push(match);
       } else {
-        roundRobinBuckets.set(key, {
-          sort: [stageSort, groupSort],
-          groupName: match.group?.name,
+        sections.set(key, {
+          key,
+          title: scheduleSectionTitle(match),
+          sort: [stageSort, 0, 0, match.round, 0],
           matches: [match],
         });
       }
@@ -166,34 +163,6 @@ function buildScheduleSections<
     }
   }
 
-  for (const [bucketKey, bucket] of Array.from(roundRobinBuckets.entries())) {
-    const tours: Array<{ playerIds: Set<string>; matches: T[] }> = [];
-    const orderedMatches = bucket.matches.sort((a: T, b: T) => a.matchNumber - b.matchNumber || scheduleMatchTime(a) - scheduleMatchTime(b));
-
-    for (const match of orderedMatches) {
-      const playerIds = [match.player1Id, match.player2Id].filter(Boolean) as string[];
-      const tour = tours.find((item) => playerIds.every((playerId) => !item.playerIds.has(playerId)));
-
-      if (tour) {
-        tour.matches.push(match);
-        playerIds.forEach((playerId) => tour.playerIds.add(playerId));
-      } else {
-        tours.push({ playerIds: new Set(playerIds), matches: [match] });
-      }
-    }
-
-    tours.forEach((tour, index) => {
-      const tourNumber = index + 1;
-
-      sections.set(`${bucketKey}:${tourNumber}`, {
-        key: `${bucketKey}:${tourNumber}`,
-        title: bucket.groupName ? `${bucket.groupName} • ${tourNumber} тур` : `${tourNumber} тур`,
-        sort: [...bucket.sort, 0, tourNumber, 0],
-        matches: tour.matches,
-      });
-    });
-  }
-
   return Array.from(sections.values())
     .sort((a, b) => {
       for (let index = 0; index < a.sort.length; index += 1) {
@@ -205,7 +174,12 @@ function buildScheduleSections<
     })
     .map((section) => ({
       ...section,
-      matches: section.matches.sort((a, b) => a.matchNumber - b.matchNumber || scheduleMatchTime(a) - scheduleMatchTime(b)),
+      matches: section.matches.sort(
+        (a, b) =>
+          (a.group?.orderIndex ?? 0) - (b.group?.orderIndex ?? 0) ||
+          a.matchNumber - b.matchNumber ||
+          scheduleMatchTime(a) - scheduleMatchTime(b),
+      ),
     }));
 }
 
@@ -805,6 +779,11 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                   <div className="divide-y divide-white/10">
                     {section.matches.map((match) => (
                       <div key={match.id} className="py-4 first:pt-0 last:pb-0">
+                        {match.group?.name ? (
+                          <div className="mb-3 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                            {match.group.name}
+                          </div>
+                        ) : null}
                         <div className="mx-auto grid max-w-[760px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[minmax(180px,220px)_auto_minmax(180px,220px)] sm:gap-4">
                           <div className="min-w-0 justify-self-end">
                             <ClubPlayerLine
