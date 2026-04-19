@@ -1,7 +1,7 @@
 "use client";
 
 import { ClubSelectionMode } from "@prisma/client";
-import { X } from "lucide-react";
+import { CheckCircle2, ScrollText, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,12 @@ type ClubOption = {
   slug: string;
   name: string;
   imagePath: string;
+};
+
+type RegulationsState = {
+  body: string;
+  version: string;
+  updatedAt: string | null;
 };
 
 export function RegisterTournamentButton({
@@ -28,6 +34,11 @@ export function RegisterTournamentButton({
   const [isOpen, setIsOpen] = useState(false);
   const [selectedClubSlug, setSelectedClubSlug] = useState("");
   const [message, setMessage] = useState("");
+  const [regulations, setRegulations] = useState<RegulationsState | null>(null);
+  const [regulationsOpen, setRegulationsOpen] = useState(false);
+  const [regulationsAccepted, setRegulationsAccepted] = useState(false);
+  const [pendingClubSlug, setPendingClubSlug] = useState<string | undefined>();
+  const [regulationsError, setRegulationsError] = useState("");
   const [isPending, startTransition] = useTransition();
 
   const availableClubs = useMemo(
@@ -35,27 +46,149 @@ export function RegisterTournamentButton({
     [clubs, takenClubSlugs],
   );
 
-  const submit = (clubSlug?: string) => {
-    startTransition(async () => {
-      setMessage("Регистрация...");
+  const loadRegulations = async () => {
+    const response = await fetch("/api/regulations/acceptance", { cache: "no-store" });
+    const result = await response.json().catch(() => ({ error: "Не удалось загрузить регламент." }));
 
-      const response = await fetch(`/api/tournaments/${tournamentId}/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(clubSlug ? { clubSlug } : {}),
-      });
+    if (!response.ok) {
+      throw new Error(result.error ?? "Не удалось загрузить регламент.");
+    }
 
-      const result = await response.json().catch(() => ({ error: "Не удалось обработать ответ сервера." }));
-      if (!response.ok) {
-        setMessage(result.error ?? "Не удалось зарегистрироваться.");
+    if (result.regulations) {
+      setRegulations(result.regulations);
+    }
+
+    return Boolean(result.accepted);
+  };
+
+  const openRegulationsAcceptance = async (clubSlug?: string) => {
+    setPendingClubSlug(clubSlug);
+    setRegulationsAccepted(false);
+    setRegulationsError("");
+
+    if (!regulations) {
+      await loadRegulations();
+    }
+
+    setRegulationsOpen(true);
+  };
+
+  const submitRegistration = async (clubSlug?: string) => {
+    setMessage("Регистрация...");
+
+    const response = await fetch(`/api/tournaments/${tournamentId}/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(clubSlug ? { clubSlug } : {}),
+    });
+
+    const result = await response.json().catch(() => ({ error: "Не удалось обработать ответ сервера." }));
+    if (!response.ok) {
+      if (response.status === 428 && result.code === "REGULATIONS_ACCEPTANCE_REQUIRED") {
+        setMessage("");
+        await openRegulationsAcceptance(clubSlug);
         return;
       }
 
-      setIsOpen(false);
-      setMessage("");
-      router.refresh();
+      setMessage(result.error ?? "Не удалось зарегистрироваться.");
+      return;
+    }
+
+    setIsOpen(false);
+    setRegulationsOpen(false);
+    setPendingClubSlug(undefined);
+    setMessage("");
+    router.refresh();
+  };
+
+  const submit = (clubSlug?: string) => {
+    startTransition(async () => {
+      setMessage("Проверяем регламент...");
+
+      try {
+        const accepted = await loadRegulations();
+        if (!accepted) {
+          setMessage("");
+          await openRegulationsAcceptance(clubSlug);
+          return;
+        }
+
+        await submitRegistration(clubSlug);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Не удалось проверить регламент.");
+      }
     });
   };
+
+  const acceptRegulationsAndContinue = () => {
+    startTransition(async () => {
+      setRegulationsError("");
+
+      const response = await fetch("/api/regulations/acceptance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accepted: true }),
+      });
+      const result = await response.json().catch(() => ({ error: "Не удалось принять регламент." }));
+
+      if (!response.ok) {
+        setRegulationsError(result.error ?? "Не удалось принять регламент.");
+        return;
+      }
+
+      setRegulationsOpen(false);
+      await submitRegistration(pendingClubSlug);
+    });
+  };
+
+  const regulationsModal = regulationsOpen ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+      <Card className="w-full max-w-3xl overflow-hidden p-0">
+        <div className="flex items-start justify-between gap-4 border-b border-white/10 p-5">
+          <div>
+            <div className="flex items-center gap-2 text-xl font-semibold text-white">
+              <ScrollText className="h-5 w-5 text-primary" />
+              Принятие регламента
+            </div>
+            <p className="mt-2 text-sm text-zinc-400">
+              Перед регистрацией на турнир нужно прочитать и принять актуальную версию регламента.
+            </p>
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => setRegulationsOpen(false)}>
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+
+        <div className="space-y-4 p-5">
+          <div className="max-h-[48vh] overflow-y-auto rounded-xl border border-white/10 bg-black/25 p-4 text-sm leading-7 text-zinc-200">
+            <div className="whitespace-pre-wrap">{regulations?.body ?? "Загрузка регламента..."}</div>
+          </div>
+
+          <label className="flex items-start gap-3 rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+            <input
+              type="checkbox"
+              checked={regulationsAccepted}
+              onChange={(event) => setRegulationsAccepted(event.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-white/20 bg-black/40"
+            />
+            <span>Я прочитал актуальный регламент и принимаю его условия.</span>
+          </label>
+
+          {regulationsError ? <div className="rounded-xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">{regulationsError}</div> : null}
+
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={() => setRegulationsOpen(false)}>
+              Отмена
+            </Button>
+            <Button onClick={acceptRegulationsAndContinue} disabled={isPending || !regulationsAccepted} className="gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              {isPending ? "Сохраняем..." : "Принять и зарегистрироваться"}
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </div>
+  ) : null;
 
   if (clubSelectionMode === ClubSelectionMode.ADMIN_RANDOM) {
     return (
@@ -64,6 +197,7 @@ export function RegisterTournamentButton({
           {isPending ? "Регистрация..." : "Зарегистрироваться"}
         </Button>
         {message ? <div className="text-sm text-red-300">{message}</div> : null}
+        {regulationsModal}
       </div>
     );
   }
@@ -75,6 +209,7 @@ export function RegisterTournamentButton({
           Зарегистрироваться
         </Button>
         {message ? <div className="text-sm text-red-300">{message}</div> : null}
+        {regulationsModal}
       </div>
 
       {isOpen ? (

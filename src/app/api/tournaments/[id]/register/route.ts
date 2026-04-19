@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
+import { hasAcceptedCurrentRegulations } from "@/lib/regulations";
 import { createNotification } from "@/lib/services/notifications";
 import { syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { formatTournamentBanMessage } from "@/lib/user-ban";
@@ -18,6 +19,17 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   if (banMessage) {
     return NextResponse.json({ error: banMessage }, { status: 403 });
+  }
+
+  const hasAcceptedRegulations = await hasAcceptedCurrentRegulations(session.user.id);
+  if (!hasAcceptedRegulations) {
+    return NextResponse.json(
+      {
+        code: "REGULATIONS_ACCEPTANCE_REQUIRED",
+        error: "Перед регистрацией нужно прочитать и принять актуальный регламент.",
+      },
+      { status: 428 },
+    );
   }
 
   const tournament = await db.tournament.findUnique({

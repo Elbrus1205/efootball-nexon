@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 
 export const DEFAULT_REGULATIONS_TEXT =
   "Заполните здесь официальный регламент турниров: сроки, подтверждение матчей, правила переигровок, технические поражения и требования к скриншотам.";
+const DEFAULT_REGULATIONS_VERSION = "default-2026-04-19";
+const REGULATIONS_ACCEPTANCE_PREFIX = "regulations_acceptance:";
 
 async function ensureSiteContentTable() {
   await db.$executeRaw`
@@ -14,13 +16,25 @@ async function ensureSiteContentTable() {
 }
 
 export async function getRegulationsText() {
+  const document = await getRegulationsDocument();
+  return document.body;
+}
+
+export async function getRegulationsDocument() {
   await ensureSiteContentTable();
 
-  const rows = await db.$queryRaw<Array<{ body: string }>>`
-    SELECT "body" FROM "SiteContent" WHERE "key" = 'regulations' LIMIT 1
+  const rows = await db.$queryRaw<Array<{ body: string; updatedAt: Date }>>`
+    SELECT "body", "updatedAt" FROM "SiteContent" WHERE "key" = 'regulations' LIMIT 1
   `;
 
-  return rows[0]?.body ?? DEFAULT_REGULATIONS_TEXT;
+  const row = rows[0];
+  const updatedAt = row?.updatedAt ?? null;
+
+  return {
+    body: row?.body ?? DEFAULT_REGULATIONS_TEXT,
+    updatedAt,
+    version: updatedAt?.toISOString() ?? DEFAULT_REGULATIONS_VERSION,
+  };
 }
 
 export async function saveRegulationsText(body: string) {
@@ -32,4 +46,77 @@ export async function saveRegulationsText(body: string) {
     ON CONFLICT ("key")
     DO UPDATE SET "body" = EXCLUDED."body", "updatedAt" = CURRENT_TIMESTAMP
   `;
+}
+
+export async function getRegulationsAcceptance(userId: string) {
+  await ensureSiteContentTable();
+
+  const document = await getRegulationsDocument();
+  const key = createRegulationsAcceptanceKey(userId);
+  const rows = await db.$queryRaw<Array<{ body: string; updatedAt: Date }>>`
+    SELECT "body", "updatedAt" FROM "SiteContent" WHERE "key" = ${key} LIMIT 1
+  `;
+  const acceptance = parseRegulationsAcceptance(rows[0]?.body);
+
+  return {
+    accepted: acceptance?.version === document.version,
+    acceptedAt: acceptance?.acceptedAt ?? rows[0]?.updatedAt?.toISOString() ?? null,
+    acceptedVersion: acceptance?.version ?? null,
+    document,
+  };
+}
+
+export async function hasAcceptedCurrentRegulations(userId: string) {
+  const acceptance = await getRegulationsAcceptance(userId);
+  return acceptance.accepted;
+}
+
+export async function acceptCurrentRegulations(userId: string, headers?: Headers) {
+  await ensureSiteContentTable();
+
+  const document = await getRegulationsDocument();
+  const acceptedAt = new Date().toISOString();
+  const payload = JSON.stringify({
+    version: document.version,
+    acceptedAt,
+    ipAddress: readHeader(headers, "x-forwarded-for")?.split(",")[0]?.trim() ?? readHeader(headers, "x-real-ip")?.trim() ?? null,
+    userAgent: readHeader(headers, "user-agent")?.trim() ?? null,
+  });
+  const key = createRegulationsAcceptanceKey(userId);
+
+  await db.$executeRaw`
+    INSERT INTO "SiteContent" ("key", "body", "updatedAt")
+    VALUES (${key}, ${payload}, CURRENT_TIMESTAMP)
+    ON CONFLICT ("key")
+    DO UPDATE SET "body" = EXCLUDED."body", "updatedAt" = CURRENT_TIMESTAMP
+  `;
+
+  return {
+    accepted: true,
+    acceptedAt,
+    document,
+  };
+}
+
+function createRegulationsAcceptanceKey(userId: string) {
+  return `${REGULATIONS_ACCEPTANCE_PREFIX}${userId}`;
+}
+
+function parseRegulationsAcceptance(value?: string | null) {
+  if (!value) return null;
+
+  try {
+    const parsed = JSON.parse(value) as { version?: unknown; acceptedAt?: unknown };
+
+    return {
+      version: typeof parsed.version === "string" ? parsed.version : null,
+      acceptedAt: typeof parsed.acceptedAt === "string" ? parsed.acceptedAt : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function readHeader(headers: Headers | undefined, key: string) {
+  return headers?.get(key) ?? null;
 }
