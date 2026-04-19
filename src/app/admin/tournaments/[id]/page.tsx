@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { MatchStatus, ParticipantStatus, StageType, UserRole } from "@prisma/client";
 import { notFound } from "next/navigation";
-import { Activity, CalendarClock, CalendarDays, Dices, GitBranch, History, Pencil, ShieldCheck, Swords, Trash2, Trophy, Users } from "lucide-react";
+import { Activity, CalendarClock, CalendarDays, Dices, GitBranch, History, Pencil, Swords, Trash2, Trophy, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -221,34 +221,6 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5 text-primary" />
-                Быстрые переходы
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-2">
-              <Button asChild variant="outline">
-                <Link href={`/admin/tournaments/${tournament.id}/participants`}>Участники и группы</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href={`/admin/tournaments/${tournament.id}/stages`}>Редактор стадий</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href={`/admin/tournaments/${tournament.id}/standings`}>Таблицы и standings</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href={`/admin/tournaments/${tournament.id}/matches`}>Ручной редактор матчей</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href={`/admin/tournaments/${tournament.id}/deadlines`}>Дедлайны туров</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href={`/admin/tournaments/${tournament.id}/history`}>История действий</Link>
-              </Button>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
