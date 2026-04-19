@@ -9,9 +9,9 @@ export function SiteLogoMark({ className }: SiteLogoMarkProps) {
     <svg
       aria-label="eFootball Nexon"
       role="img"
-      viewBox="0 0 88 48"
+      viewBox="0 0 80 48"
       className={cn(
-        "h-10 w-[68px] shrink-0 text-white sm:h-11 sm:w-[74px]",
+        "h-10 w-[66px] shrink-0 text-white sm:h-11 sm:w-[72px]",
         className,
       )}
     >
@@ -20,7 +20,7 @@ export function SiteLogoMark({ className }: SiteLogoMarkProps) {
         <rect x="3" y="6" width="31" height="8" />
         <rect x="3" y="20" width="27" height="8" />
         <rect x="3" y="34" width="31" height="8" />
-        <path d="M44 6H54L77 30V6H85V42H75L52 18V42H44V6Z" />
+        <path d="M44 6H52L67 25V6H75V42H67L52 23V42H44V6Z" />
       </g>
     </svg>
   );
