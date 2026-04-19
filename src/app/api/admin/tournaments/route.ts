@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { parseFormatBlueprintJson } from "@/lib/format-blueprint";
 import { createNotificationForAllUsers } from "@/lib/services/notifications";
+import { getActiveSeason } from "@/lib/services/seasons";
 import { generateTournamentMatches, generateTournamentSchedule, generateTournamentStages } from "@/lib/services/tournaments";
 import { tournamentBuilderSchema } from "@/lib/validators";
 import { slugify } from "@/lib/utils";
@@ -61,9 +62,11 @@ export async function POST(request: Request) {
     const body = parsed.data;
     const formatBlueprint = parseFormatBlueprintJson(typeof body.formatBlueprintJson === "string" ? body.formatBlueprintJson : "");
     const startsAt = new Date(body.startsAt);
+    const activeSeason = await getActiveSeason();
 
     const tournament = await db.tournament.create({
       data: {
+        seasonId: activeSeason?.id ?? null,
         title: body.title,
         slug: `${slugify(body.title)}-${Date.now()}`,
         description: "",

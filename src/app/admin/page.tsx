@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { TournamentStatus, UserRole } from "@prisma/client";
-import { Activity, FileText, Gauge, Megaphone, ShieldCheck, Trophy, Users } from "lucide-react";
+import { Activity, CalendarRange, FileText, Gauge, Megaphone, ShieldCheck, Trophy, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth/session";
@@ -9,22 +9,24 @@ import { db } from "@/lib/db";
 export default async function AdminPage() {
   await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
 
-  const [totalTournaments, activeTournaments, completedTournaments, totalParticipants] = await db.$transaction([
+  const [totalTournaments, activeTournaments, completedTournaments, totalParticipants, activeSeason] = await db.$transaction([
     db.tournament.count(),
     db.tournament.count({ where: { status: { in: [TournamentStatus.REGISTRATION_OPEN, TournamentStatus.IN_PROGRESS] } } }),
     db.tournament.count({ where: { status: TournamentStatus.COMPLETED } }),
     db.tournamentRegistration.count({ where: { status: "CONFIRMED" } }),
+    db.season.findFirst({ where: { isActive: true }, orderBy: [{ startsAt: "desc" }, { createdAt: "desc" }] }),
   ]);
 
   const stats = [
     { label: "Всего турниров", value: totalTournaments, icon: Trophy },
     { label: "Активные турниры", value: activeTournaments, icon: Activity },
     { label: "Завершённые", value: completedTournaments, icon: ShieldCheck },
-    { label: "Подтверждённые участники", value: totalParticipants, icon: Users },
+    { label: "Участники", value: totalParticipants, icon: Users },
   ];
 
   const shortcuts = [
     { href: "/admin/tournaments", label: "Редактор турниров", variant: "default" as const, icon: Trophy },
+    { href: "/admin/seasons", label: "Сезоны", variant: "secondary" as const, icon: CalendarRange },
     { href: "/admin", label: "Панель", variant: "secondary" as const, icon: Gauge },
     { href: "/admin/regulations", label: "Регламент", variant: "outline" as const, icon: FileText },
     { href: "/admin/broadcasts", label: "Рассылки", variant: "outline" as const, icon: Megaphone },
@@ -51,7 +53,9 @@ export default async function AdminPage() {
       <Card>
         <CardHeader>
           <CardTitle>Быстрые действия</CardTitle>
-          <CardDescription>Ключевые сценарии ежедневной работы по турнирам.</CardDescription>
+          <CardDescription>
+            Ключевые сценарии ежедневной работы по турнирам. Активный сезон: {activeSeason?.name ?? "не выбран"}.
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 space-y-0 sm:grid-cols-4 lg:flex lg:flex-wrap">
           {shortcuts.map((item) => (

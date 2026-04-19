@@ -6,7 +6,12 @@ function formatGoalDifference(value: number) {
   return String(value);
 }
 
-export function PlayerCareerStatsPanel({ stats }: { stats: PlayerCareerStats }) {
+type PlayerCareerStatsPanelProps = {
+  stats: PlayerCareerStats;
+  periodLabel?: string;
+};
+
+export function PlayerCareerStatsPanel({ stats, periodLabel = "За всё время" }: PlayerCareerStatsPanelProps) {
   const resultItems = [
     { label: "Победы", value: stats.wins, className: "border-emerald-300/25 bg-emerald-400/10 text-emerald-100" },
     { label: "Ничьи", value: stats.draws, className: "border-sky-300/25 bg-sky-400/10 text-sky-100" },
@@ -24,6 +29,7 @@ export function PlayerCareerStatsPanel({ stats }: { stats: PlayerCareerStats }) 
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Статистика игрока</div>
+          <div className="mt-1 text-xs font-semibold text-zinc-500">{periodLabel}</div>
           <div className="mt-2 flex items-end gap-2">
             <span className="text-3xl font-black leading-none text-white">{stats.played}</span>
             <span className="pb-1 text-sm font-semibold text-zinc-400">матчей</span>

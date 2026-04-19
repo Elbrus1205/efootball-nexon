@@ -1,4 +1,4 @@
-import { MatchStatus, TournamentStatus, User, UserRole } from "@prisma/client";
+import { MatchStatus, Prisma, TournamentStatus, User, UserRole } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
 
@@ -15,6 +15,10 @@ function roundToTenths(value: number) {
 }
 
 type RatingPlayer = Pick<User, "id" | "name" | "nickname" | "image">;
+
+type PlayerRatingOptions = {
+  seasonId?: string | null;
+};
 
 export type PlayerRatingRow = {
   playerId: string;
@@ -74,7 +78,25 @@ function applyTournamentBonus(row: PlayerRatingRow, bonus: number) {
   row.rating += bonus;
 }
 
-export async function getPlayerRatings() {
+export async function getPlayerRatings(options: PlayerRatingOptions = {}) {
+  const matchWhere: Prisma.MatchWhereInput = {
+    status: { in: [MatchStatus.CONFIRMED, MatchStatus.FINISHED] },
+    player1Id: { not: null },
+    player2Id: { not: null },
+    player1Score: { not: null },
+    player2Score: { not: null },
+    isPenaltyTiebreak: false,
+  };
+
+  const tournamentWhere: Prisma.TournamentWhereInput = {
+    status: TournamentStatus.COMPLETED,
+  };
+
+  if (options.seasonId) {
+    matchWhere.tournament = { seasonId: options.seasonId };
+    tournamentWhere.seasonId = options.seasonId;
+  }
+
   const [players, matches, completedTournaments, ratingOverrides] = await db.$transaction([
     db.user.findMany({
       where: { role: UserRole.PLAYER, isBanned: false },
@@ -82,14 +104,7 @@ export async function getPlayerRatings() {
       orderBy: { createdAt: "asc" },
     }),
     db.match.findMany({
-      where: {
-        status: { in: [MatchStatus.CONFIRMED, MatchStatus.FINISHED] },
-        player1Id: { not: null },
-        player2Id: { not: null },
-        player1Score: { not: null },
-        player2Score: { not: null },
-        isPenaltyTiebreak: false,
-      },
+      where: matchWhere,
       include: {
         player1: { select: { id: true, name: true, nickname: true, image: true } },
         player2: { select: { id: true, name: true, nickname: true, image: true } },
@@ -97,7 +112,7 @@ export async function getPlayerRatings() {
       orderBy: [{ finishedAt: "asc" }, { updatedAt: "asc" }, { createdAt: "asc" }],
     }),
     db.tournament.findMany({
-      where: { status: TournamentStatus.COMPLETED },
+      where: tournamentWhere,
       include: {
         matches: {
           where: {
@@ -118,7 +133,7 @@ export async function getPlayerRatings() {
       },
     }),
     db.siteContent.findMany({
-      where: { key: { startsWith: "ratingOverride:" } },
+      where: options.seasonId ? { key: "__season-rating-overrides-disabled__" } : { key: { startsWith: "ratingOverride:" } },
       select: { key: true, body: true },
     }),
   ]);

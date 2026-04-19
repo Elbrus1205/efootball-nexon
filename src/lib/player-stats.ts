@@ -1,4 +1,4 @@
-import { MatchStatus } from "@prisma/client";
+import { MatchStatus, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 
 export type PlayerCareerStats = {
@@ -25,15 +25,25 @@ export function emptyPlayerCareerStats(): PlayerCareerStats {
   };
 }
 
-export async function getPlayerCareerStats(playerId: string): Promise<PlayerCareerStats> {
+type PlayerCareerStatsOptions = {
+  seasonId?: string | null;
+};
+
+export async function getPlayerCareerStats(playerId: string, options: PlayerCareerStatsOptions = {}): Promise<PlayerCareerStats> {
+  const where: Prisma.MatchWhereInput = {
+    isPenaltyTiebreak: false,
+    status: { in: [MatchStatus.CONFIRMED, MatchStatus.FINISHED] },
+    player1Score: { not: null },
+    player2Score: { not: null },
+    OR: [{ player1Id: playerId }, { player2Id: playerId }],
+  };
+
+  if (options.seasonId) {
+    where.tournament = { seasonId: options.seasonId };
+  }
+
   const matches = await db.match.findMany({
-    where: {
-      isPenaltyTiebreak: false,
-      status: { in: [MatchStatus.CONFIRMED, MatchStatus.FINISHED] },
-      player1Score: { not: null },
-      player2Score: { not: null },
-      OR: [{ player1Id: playerId }, { player2Id: playerId }],
-    },
+    where,
     select: {
       player1Id: true,
       player2Id: true,

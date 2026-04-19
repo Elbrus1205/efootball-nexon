@@ -1,9 +1,12 @@
 import Link from "next/link";
-import { Crown, Medal, Shield } from "lucide-react";
+import { Archive, CalendarRange, Crown, Medal, Shield } from "lucide-react";
 import { Fragment } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { getCurrentSession } from "@/lib/auth/session";
+import { db } from "@/lib/db";
 import { getPlayerRatings } from "@/lib/ratings";
+import { cn, formatDate } from "@/lib/utils";
 
 function rankStyle(rank: number) {
   if (rank === 1) return "border-amber-300/40 bg-amber-300/15 text-amber-200";
@@ -27,13 +30,44 @@ function formatRating(value: number) {
   return value.toFixed(1);
 }
 
-export default async function RatingsPage() {
-  const session = await getCurrentSession();
-  const ratings = await getPlayerRatings();
+function seasonChipClass(active: boolean) {
+  return cn(
+    "inline-flex min-h-10 items-center rounded-lg border px-3 py-2 text-sm font-semibold transition",
+    active
+      ? "border-primary/35 bg-primary/15 text-white shadow-[0_0_22px_rgba(59,130,246,0.14)]"
+      : "border-white/10 bg-white/[0.04] text-zinc-400 hover:border-primary/25 hover:text-white",
+  );
+}
+
+export default async function RatingsPage({
+  searchParams,
+}: {
+  searchParams?: { season?: string };
+}) {
+  const [session, seasons] = await Promise.all([
+    getCurrentSession(),
+    db.season.findMany({
+      orderBy: [{ isActive: "desc" }, { startsAt: "desc" }, { createdAt: "desc" }],
+    }),
+  ]);
+
+  const activeSeason = seasons.find((season) => season.isActive) ?? null;
+  const requestedSeason = searchParams?.season;
+  const selectedSeason =
+    requestedSeason && requestedSeason !== "all"
+      ? seasons.find((season) => season.id === requestedSeason || season.slug === requestedSeason) ?? null
+      : null;
+  const showAllTime = requestedSeason === "all" || (!activeSeason && !selectedSeason);
+  const ratingSeason = showAllTime ? null : selectedSeason ?? activeSeason;
+  const archivedSeasons = seasons.filter((season) => !season.isActive);
+  const ratings = await getPlayerRatings({ seasonId: ratingSeason?.id ?? null });
   const topRatings = ratings.slice(0, 10);
   const currentUserIndex = session?.user ? ratings.findIndex((player) => player.playerId === session.user.id) : -1;
   const currentUserBelowTop = currentUserIndex >= 10;
   const visibleRatings = currentUserBelowTop ? [...topRatings, ratings[currentUserIndex]] : topRatings;
+  const seasonCaption = ratingSeason
+    ? `${ratingSeason.isActive ? "Активный сезон" : "Архивный сезон"}: ${ratingSeason.name}`
+    : "Рейтинг за всё время";
 
   return (
     <div className="page-shell space-y-8">
@@ -43,7 +77,11 @@ export default async function RatingsPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
           <div>
             <div className="font-semibold text-white">Таблица рейтинга</div>
+            <div className="mt-1 text-sm text-zinc-500">{seasonCaption}</div>
           </div>
+          <Badge variant={ratingSeason?.isActive ? "success" : ratingSeason ? "neutral" : "primary"}>
+            {ratingSeason ? (ratingSeason.isActive ? "Текущий сезон" : "Архив") : "Всё время"}
+          </Badge>
         </div>
 
         <div className="overflow-hidden">
@@ -117,6 +155,47 @@ export default async function RatingsPage() {
             </div>
           </div>
         </div>
+      </Card>
+
+      <Card className="rounded-lg p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="flex items-center gap-2 font-semibold text-white">
+              <Archive className="h-4 w-4 text-primary" />
+              Архивные сезоны
+            </div>
+            <div className="mt-1 text-sm text-zinc-500">Выберите сезон, чтобы посмотреть рейтинг на тот период.</div>
+          </div>
+          {activeSeason ? (
+            <div className="flex items-center gap-2 rounded-lg border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-100">
+              <CalendarRange className="h-4 w-4" />
+              Сейчас: {activeSeason.name}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link href="/ratings?season=all" className={seasonChipClass(!ratingSeason)}>
+            За всё время
+          </Link>
+          {activeSeason ? (
+            <Link href="/ratings" className={seasonChipClass(ratingSeason?.id === activeSeason.id)}>
+              {activeSeason.name}
+            </Link>
+          ) : null}
+          {archivedSeasons.map((season) => (
+            <Link key={season.id} href={`/ratings?season=${season.id}`} className={seasonChipClass(ratingSeason?.id === season.id)}>
+              {season.name}
+              {season.endsAt ? <span className="ml-2 text-xs text-current/60">{formatDate(season.endsAt, "d MMM yyyy")}</span> : null}
+            </Link>
+          ))}
+        </div>
+
+        {!seasons.length ? (
+          <div className="mt-4 rounded-lg border border-dashed border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-500">
+            Сезоны появятся здесь после запуска первого сезона в админ-панели.
+          </div>
+        ) : null}
       </Card>
     </div>
   );
