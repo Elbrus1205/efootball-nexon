@@ -1,15 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
   <rect width="96" height="96" rx="22" fill="#080d16" />
-  <text
-    x="48"
-    y="60"
-    text-anchor="middle"
-    font-family="Arial Black, Arial, sans-serif"
-    font-size="34"
-    font-weight="900"
-    letter-spacing="0"
-    fill="#ffffff"
-  >
-    EN
-  </text>
+  <g transform="translate(9 21) scale(0.65)">
+    <path fill="#ffffff" d="M4 8H56V22H22V30H50V43H22V50H58V64H4V8Z" />
+    <path fill="#ffffff" d="M66 8H82L104 42V8H116V64H100L78 30V64H66V8Z" />
+  </g>
 </svg>

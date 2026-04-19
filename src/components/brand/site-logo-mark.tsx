@@ -6,15 +6,17 @@ type SiteLogoMarkProps = {
 
 export function SiteLogoMark({ className }: SiteLogoMarkProps) {
   return (
-    <span
-      role="img"
+    <svg
       aria-label="eFootball Nexon"
+      role="img"
+      viewBox="0 0 120 72"
       className={cn(
-        "flex h-10 w-10 shrink-0 items-center justify-center font-display text-lg font-black leading-none tracking-normal text-white sm:h-11 sm:w-11 sm:text-xl",
+        "h-10 w-14 shrink-0 text-white sm:h-11 sm:w-16",
         className,
       )}
     >
-      EN
-    </span>
+      <path fill="currentColor" d="M4 8H56V22H22V30H50V43H22V50H58V64H4V8Z" />
+      <path fill="currentColor" d="M66 8H82L104 42V8H116V64H100L78 30V64H66V8Z" />
+    </svg>
   );
 }
