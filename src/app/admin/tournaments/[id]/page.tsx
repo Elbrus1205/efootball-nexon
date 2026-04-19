@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { MatchStatus, ParticipantStatus, StageType, UserRole } from "@prisma/client";
+import { MatchStatus, StageType, UserRole } from "@prisma/client";
 import { notFound } from "next/navigation";
-import { Activity, CalendarClock, CalendarDays, Dices, GitBranch, History, Pencil, Swords, Trash2, Trophy, Users } from "lucide-react";
+import { Activity, CalendarClock, Dices, GitBranch, History, Pencil, Swords, Trash2, Trophy, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,6 @@ import {
 } from "@/lib/admin-display";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { formatDate } from "@/lib/utils";
 
 function stageRoundUnit(stage?: { type: StageType } | null) {
   return stage?.type === StageType.PLAYOFF ? "Раунд" : "Тур";
@@ -51,10 +50,6 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
 
   const groupStage = tournament.stages.find((stage) => stage.type === StageType.GROUP_STAGE);
   const playoffStage = tournament.stages.find((stage) => stage.type === StageType.PLAYOFF);
-  const nextScheduledMatch = tournament.matches.find((match) => match.scheduledAt);
-  const activeParticipantCount = tournament.participants.filter(
-    (participant) => participant.status !== ParticipantStatus.REMOVED && participant.status !== ParticipantStatus.REJECTED,
-  ).length;
   const randomScoreStatuses = new Set<MatchStatus>([
     MatchStatus.PENDING,
     MatchStatus.READY,
@@ -82,19 +77,13 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
   const randomScoreRepairCount = tournament.matches.filter((match) => match.bracketId && match.winnerId && match.status === MatchStatus.CONFIRMED).length;
   const canRunRandomScores = randomScoreTargetCount > 0 || randomScoreRepairCount > 0;
 
-  const stats = [
-    { label: "Участники", value: activeParticipantCount, icon: Users },
-    { label: "Матчи", value: tournament.matches.length, icon: Swords },
-    { label: "Этапы", value: tournament.stages.length, icon: GitBranch },
-    { label: "Ближайший слот", value: nextScheduledMatch?.scheduledAt ? formatDate(nextScheduledMatch.scheduledAt) : "—", icon: CalendarDays },
-  ];
   const actionButtonClass =
     "inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-zinc-100 transition hover:border-primary/30 hover:bg-primary/10 hover:text-white";
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <Card>
+      <div>
+        <Card className="max-w-4xl">
           <CardHeader>
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={tournamentStatusVariant[tournament.status]}>{tournamentStatusLabel[tournament.status]}</Badge>
@@ -144,21 +133,6 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
           </CardContent>
         </Card>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          {stats.map((item) => (
-            <Card key={item.label}>
-              <CardContent className="flex items-start justify-between p-5">
-                <div>
-                  <div className="text-sm text-zinc-400">{item.label}</div>
-                  <div className="mt-2 text-2xl font-semibold text-white">{item.value}</div>
-                </div>
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <item.icon className="h-5 w-5" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
       </div>
 
       <div className="grid items-start gap-6 xl:grid-cols-[1.2fr_0.8fr]">
