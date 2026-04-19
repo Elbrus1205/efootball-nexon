@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, FileText, LayoutDashboard, ShieldCheck, Swords, Trophy, Users } from "lucide-react";
+import { CalendarDays, FileText, LayoutDashboard, Megaphone, ShieldCheck, Swords, Trophy, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
@@ -13,6 +13,7 @@ const items = [
   { href: "/admin/matches", label: "Матчи", icon: Swords },
   { href: "/admin/schedule", label: "Расписание", icon: CalendarDays },
   { href: "/admin/moderation", label: "Споры", icon: ShieldCheck },
+  { href: "/admin/broadcasts", label: "Рассылки", icon: Megaphone },
 ];
 
 export function AdminNav() {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { TournamentStatus, UserRole } from "@prisma/client";
-import { Activity, FileText, Gauge, ShieldCheck, Trophy, Users } from "lucide-react";
+import { Activity, FileText, Gauge, Megaphone, ShieldCheck, Trophy, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth/session";
@@ -27,6 +27,7 @@ export default async function AdminPage() {
     { href: "/admin/tournaments", label: "Редактор турниров", variant: "default" as const, icon: Trophy },
     { href: "/admin", label: "Панель", variant: "secondary" as const, icon: Gauge },
     { href: "/admin/regulations", label: "Регламент", variant: "outline" as const, icon: FileText },
+    { href: "/admin/broadcasts", label: "Рассылки", variant: "outline" as const, icon: Megaphone },
   ];
 
   return (
@@ -52,7 +53,7 @@ export default async function AdminPage() {
           <CardTitle>Быстрые действия</CardTitle>
           <CardDescription>Ключевые сценарии ежедневной работы по турнирам.</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 space-y-0 sm:grid-cols-3 lg:flex lg:flex-wrap">
+        <CardContent className="grid gap-3 space-y-0 sm:grid-cols-4 lg:flex lg:flex-wrap">
           {shortcuts.map((item) => (
             <Button key={item.href} asChild variant={item.variant} className="h-11 w-full rounded-xl px-4 lg:w-auto">
               <Link href={item.href} className="gap-2">
