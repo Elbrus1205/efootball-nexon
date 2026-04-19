@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MatchStatus, StageType, UserRole } from "@prisma/client";
+import { MatchStatus, ParticipantStatus, StageType, UserRole } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { Activity, CalendarDays, Dices, GitBranch, History, Pencil, ShieldCheck, Swords, Trash2, Trophy, Users } from "lucide-react";
 import { AuditDiff } from "@/components/admin/audit-diff";
@@ -65,6 +65,9 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
   const groupStage = tournament.stages.find((stage) => stage.type === StageType.GROUP_STAGE);
   const playoffStage = tournament.stages.find((stage) => stage.type === StageType.PLAYOFF);
   const nextScheduledMatch = tournament.matches.find((match) => match.scheduledAt);
+  const activeParticipantCount = tournament.participants.filter(
+    (participant) => participant.status !== ParticipantStatus.REMOVED && participant.status !== ParticipantStatus.REJECTED,
+  ).length;
   const randomScoreStatuses = new Set<MatchStatus>([
     MatchStatus.PENDING,
     MatchStatus.READY,
@@ -116,7 +119,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
     .filter((stage) => stage.rounds.length > 0);
 
   const stats = [
-    { label: "Участники", value: tournament.participants.length, icon: Users },
+    { label: "Участники", value: activeParticipantCount, icon: Users },
     { label: "Матчи", value: tournament.matches.length, icon: Swords },
     { label: "Этапы", value: tournament.stages.length, icon: GitBranch },
     { label: "Ближайший слот", value: nextScheduledMatch?.scheduledAt ? formatDate(nextScheduledMatch.scheduledAt) : "—", icon: CalendarDays },

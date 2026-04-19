@@ -1,4 +1,4 @@
-﻿import { ClubSelectionMode, StageType, TournamentFormat, TournamentStatus } from "@prisma/client";
+﻿import { ClubSelectionMode, ParticipantStatus, StageType, TournamentFormat, TournamentStatus } from "@prisma/client";
 import { Clock3, Send } from "lucide-react";
 import { unstable_noStore as noStore } from "next/cache";
 import { notFound } from "next/navigation";
@@ -609,10 +609,13 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
 
   if (!tournament) notFound();
 
-  const hasFreeSlots = tournament.participants.length < tournament.maxParticipants;
+  const activeParticipants = tournament.participants.filter(
+    (entry) => entry.status !== ParticipantStatus.REMOVED && entry.status !== ParticipantStatus.REJECTED,
+  );
+  const hasFreeSlots = activeParticipants.length < tournament.maxParticipants;
   const isRegistrationOpen = tournament.status === TournamentStatus.REGISTRATION_OPEN;
   const isLoggedIn = Boolean(session?.user);
-  const alreadyRegistered = !!session?.user && tournament.participants.some((entry) => entry.userId === session.user.id);
+  const alreadyRegistered = !!session?.user && activeParticipants.some((entry) => entry.userId === session.user.id);
   const canRegister = isLoggedIn && isRegistrationOpen && hasFreeSlots && !alreadyRegistered;
   const canCancelRegistration =
     isLoggedIn &&
@@ -650,7 +653,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
       ? buildLeagueTable(tournament.participants, leagueMatches, clubsBySlug)
       : [];
 
-  const takenClubSlugs = tournament.participants.map((entry) => entry.clubSlug).filter(Boolean) as string[];
+  const takenClubSlugs = activeParticipants.map((entry) => entry.clubSlug).filter(Boolean) as string[];
   const structureSectionTitle = tournament.format === TournamentFormat.CUSTOM ? groupStage?.name?.trim() || "Лиги" : "Группы";
   const customStandingHighlights = buildCustomStandingHighlights(tournament);
   const participantClubMap = Object.fromEntries(
@@ -675,7 +678,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           <div className="flex flex-wrap gap-6 text-sm text-zinc-400">
             <span>Старт: {formatDate(tournament.startsAt)}</span>
             <span>Регистрация до: {formatDate(tournament.registrationEndsAt)}</span>
-            <span>Участники: {tournament.participants.length}/{tournament.maxParticipants}</span>
+            <span>Участники: {activeParticipants.length}/{tournament.maxParticipants}</span>
           </div>
         </div>
 
@@ -909,7 +912,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
 
         <TabsContent value="participants">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {tournament.participants.map((entry) => {
+            {activeParticipants.map((entry) => {
               const telegramHref = telegramProfileHref(entry.user.telegramUsername);
               const playerName = getPlayerDisplayName(entry.user);
 
