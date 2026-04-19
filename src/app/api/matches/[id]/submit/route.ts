@@ -9,6 +9,32 @@ import { resultSubmissionSchema } from "@/lib/validators";
 const AUTO_MISMATCH_COMMENT = "AUTO_MISMATCH";
 const AUTO_CONFIRMED_COMMENT = "AUTO_CONFIRMED";
 
+async function createMatchOutcomeNotifications(match: {
+  tournamentId: string;
+  tournament: { title: string };
+  player1Id: string | null;
+  player2Id: string | null;
+  winnerId: string | null;
+}, player1Score: number, player2Score: number) {
+  const playerIds = [match.player1Id, match.player2Id].filter(Boolean) as string[];
+
+  await Promise.all(
+    playerIds.map((userId) => {
+      const isWinner = Boolean(match.winnerId) && userId === match.winnerId;
+      const isDraw = !match.winnerId;
+
+      return createNotification({
+        userId,
+        title: isDraw ? "Ничья подтверждена" : isWinner ? "Победа в матче" : "Матч завершён",
+        body: `${match.tournament.title}: счёт ${player1Score}:${player2Score} подтверждён.${isWinner ? " Вы выиграли этот матч." : isDraw ? "" : " Победил соперник."}`,
+        type: NotificationType.RESULT,
+        link: `/tournaments/${match.tournamentId}`,
+        dedupeWithinHours: 12,
+      });
+    }),
+  );
+}
+
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const session = await requireAuth();
   const body = resultSubmissionSchema.parse(await request.json());
@@ -142,18 +168,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     await resolveConfirmedMatch(match.id);
 
-    await Promise.all(
-      [match.player1Id, match.player2Id]
-        .filter(Boolean)
-        .map((userId) =>
-          createNotification({
-            userId: userId as string,
-            title: "Результат матча подтверждён",
-            body: `Счёт ${player1Submission.player1Score}:${player1Submission.player2Score} подтверждён обоими игроками.`,
-            type: NotificationType.RESULT,
-            link: `/tournaments/${match.tournamentId}`,
-          }),
-        ),
+    await createMatchOutcomeNotifications(
+      { ...match, winnerId },
+      player1Submission.player1Score,
+      player1Submission.player2Score,
     );
 
     return NextResponse.json({

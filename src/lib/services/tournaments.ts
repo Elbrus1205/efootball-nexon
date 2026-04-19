@@ -17,7 +17,7 @@ import { normalizeFormatBlueprint, type FormatBlueprint, type PlayoffSelectionRu
 function createGroupSourceRef(groupId: string, rank: number) {
   return `group:${groupId}:rank:${rank}`;
 }
-import { createNotification } from "@/lib/services/notifications";
+import { createNotification, createNotificationsForUsers } from "@/lib/services/notifications";
 
 type CustomPlayoffSettings = {
   mode: "custom";
@@ -114,6 +114,10 @@ async function assignParticipantToSeries(params: {
               : targetMatch.status,
       },
     });
+
+    if (nextPlayer1Id && nextPlayer2Id) {
+      await notifyMatchReady(targetMatch.id);
+    }
   }
 }
 
@@ -203,6 +207,166 @@ function parseCustomBracketSettings(value: unknown): CustomPlayoffSettings | nul
 
 function shuffle<T>(items: T[]) {
   return [...items].sort(() => Math.random() - 0.5);
+}
+
+function getPlayerName(user?: { nickname?: string | null; name?: string | null; telegramUsername?: string | null; email?: string | null } | null) {
+  return user?.nickname ?? user?.name ?? (user?.telegramUsername ? `@${user.telegramUsername}` : null) ?? user?.email ?? "соперник";
+}
+
+function formatMatchDescriptor(match: { round: number; matchNumber: number; legNumber?: number | null; isPenaltyTiebreak?: boolean }) {
+  const parts = [`раунд ${match.round}`, `матч ${match.matchNumber}`];
+
+  if (match.legNumber && match.legNumber > 1) {
+    parts.push(`${match.legNumber}-я игра серии`);
+  }
+
+  if (match.isPenaltyTiebreak) {
+    parts.push("серия пенальти");
+  }
+
+  return parts.join(", ");
+}
+
+function formatScheduleDate(value?: Date | null) {
+  if (!value) return "";
+
+  return new Intl.DateTimeFormat("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(value);
+}
+
+async function notifyMatchReady(matchId: string) {
+  const match = await db.match.findUnique({
+    where: { id: matchId },
+    include: {
+      tournament: true,
+      player1: true,
+      player2: true,
+      schedules: {
+        orderBy: { startsAt: "asc" },
+        take: 1,
+      },
+    },
+  });
+
+  if (!match?.player1Id || !match.player2Id || !match.player1 || !match.player2) {
+    return;
+  }
+
+  const scheduleDate = formatScheduleDate(match.scheduledAt ?? match.schedules[0]?.startsAt);
+  const scheduleText = scheduleDate ? ` Время: ${scheduleDate}.` : "";
+  const descriptor = formatMatchDescriptor(match);
+
+  await Promise.all([
+    createNotification({
+      userId: match.player1Id,
+      title: "Матч определён",
+      body: `${match.tournament.title}: ${descriptor}. Ваш соперник: ${getPlayerName(match.player2)}.${scheduleText}`,
+      type: NotificationType.MATCH,
+      link: `/tournaments/${match.tournamentId}`,
+      dedupeWithinHours: 12,
+    }),
+    createNotification({
+      userId: match.player2Id,
+      title: "Матч определён",
+      body: `${match.tournament.title}: ${descriptor}. Ваш соперник: ${getPlayerName(match.player1)}.${scheduleText}`,
+      type: NotificationType.MATCH,
+      link: `/tournaments/${match.tournamentId}`,
+      dedupeWithinHours: 12,
+    }),
+  ]);
+}
+
+async function notifyFirstRoundMatchesReady(tournamentId: string) {
+  const matches = await db.match.findMany({
+    where: {
+      tournamentId,
+      round: 1,
+      player1Id: { not: null },
+      player2Id: { not: null },
+      status: { in: [MatchStatus.READY, MatchStatus.SCHEDULED] },
+      isPenaltyTiebreak: false,
+    },
+    select: { id: true },
+  });
+
+  await Promise.all(matches.map((match) => notifyMatchReady(match.id)));
+}
+
+async function notifyPlayoffQualified(tournamentId: string) {
+  const tournament = await db.tournament.findUnique({
+    where: { id: tournamentId },
+    include: {
+      brackets: {
+        include: {
+          slots: {
+            where: { round: 1, participantId: { not: null } },
+            include: { participant: true },
+          },
+        },
+      },
+    },
+  });
+
+  if (!tournament) return;
+
+  const qualifiedUserIds = tournament.brackets.flatMap((bracket) => bracket.slots.map((slot) => slot.participant?.userId).filter(Boolean) as string[]);
+
+  await createNotificationsForUsers({
+    userIds: qualifiedUserIds,
+    title: "Вы вышли в плей-офф",
+    body: `${tournament.title}: вы прошли дальше. Проверьте сетку и следующий матч.`,
+    type: NotificationType.TOURNAMENT,
+    link: `/tournaments/${tournament.id}`,
+    dedupeWithinHours: 72,
+  });
+}
+
+async function notifyTournamentCompleted(tournamentId: string) {
+  const tournament = await db.tournament.findUnique({
+    where: { id: tournamentId },
+    include: {
+      participants: {
+        where: { status: ParticipantStatus.CONFIRMED },
+        select: { userId: true },
+      },
+      matches: {
+        where: {
+          status: { in: [MatchStatus.CONFIRMED, MatchStatus.FINISHED] },
+        },
+        orderBy: [{ round: "desc" }, { updatedAt: "desc" }],
+      },
+    },
+  });
+
+  if (!tournament) return;
+
+  const finalWinnerId = tournament.matches.find((match) => match.winnerId)?.winnerId ?? null;
+  const participantUserIds = tournament.participants.map((participant) => participant.userId);
+  const otherUserIds = participantUserIds.filter((userId) => userId !== finalWinnerId);
+
+  if (finalWinnerId) {
+    await createNotification({
+      userId: finalWinnerId,
+      title: "Вы выиграли турнир",
+      body: `${tournament.title}: поздравляем, вы победитель турнира.`,
+      type: NotificationType.TOURNAMENT,
+      link: `/tournaments/${tournament.id}`,
+      dedupeWithinHours: 168,
+    });
+  }
+
+  await createNotificationsForUsers({
+    userIds: otherUserIds,
+    title: "Турнир завершён",
+    body: `${tournament.title}: турнир завершён. Итоги уже доступны на странице турнира.`,
+    type: NotificationType.TOURNAMENT,
+    link: `/tournaments/${tournament.id}`,
+    dedupeWithinHours: 168,
+  });
 }
 
 async function ensureGroupStandings(groupId: string, participantIds: string[]) {
@@ -1370,6 +1534,8 @@ export async function generatePlayoffFromGroups(tournamentId: string) {
       ),
     );
 
+    await notifyPlayoffQualified(tournamentId);
+
     return seeded[0];
   }
 
@@ -1458,6 +1624,8 @@ export async function generatePlayoffFromGroups(tournamentId: string) {
       }),
     ),
   );
+
+  await notifyPlayoffQualified(tournamentId);
 
   return db.playoffBracket.findUnique({
     where: { id: playoffStage.bracket.id },
@@ -1617,6 +1785,7 @@ export async function setBracketSlot(input: {
             where: { id: updated.id },
             data: { status: MatchStatus.READY },
           });
+          await notifyMatchReady(updated.id);
         }
       }),
     );
@@ -1668,6 +1837,8 @@ export async function closeTournamentRegistration(tournamentId: string) {
       }),
     ),
   );
+
+  await notifyFirstRoundMatchesReady(tournamentId);
 
   return db.tournament.findUnique({ where: { id: tournamentId } });
 }
@@ -1804,7 +1975,7 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
     include: {
       participants: {
         where: { status: ParticipantStatus.CONFIRMED },
-        select: { id: true },
+        select: { id: true, userId: true },
       },
       matches: {
         select: { id: true, status: true, stageId: true },
@@ -1903,7 +2074,7 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
     return tournament;
   }
 
-  return db.tournament.update({
+  const updatedTournament = await db.tournament.update({
     where: { id: tournamentId },
     data: {
       status: nextStatus,
@@ -1911,6 +2082,23 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
         nextStatus === TournamentStatus.REGISTRATION_CLOSED && !tournament.registrationClosedAt ? new Date() : tournament.registrationClosedAt,
     },
   });
+
+  if (nextStatus === TournamentStatus.REGISTRATION_CLOSED) {
+    await createNotificationsForUsers({
+      userIds: tournament.participants.map((participant) => participant.userId),
+      title: "Регистрация закрыта",
+      body: `${tournament.title}: набор участников завершён. Ожидается запуск турнира.`,
+      type: NotificationType.TOURNAMENT,
+      link: `/tournaments/${tournament.id}`,
+      dedupeWithinHours: 24,
+    });
+  }
+
+  if (nextStatus === TournamentStatus.COMPLETED) {
+    await notifyTournamentCompleted(tournamentId);
+  }
+
+  return updatedTournament;
 }
 
 async function createPenaltyMatch(match: {

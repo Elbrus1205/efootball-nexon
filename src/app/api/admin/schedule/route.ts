@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { UserRole } from "@prisma/client";
+import { NotificationType, UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
+import { createNotificationsForUsers } from "@/lib/services/notifications";
 import { scheduleUpdateSchema } from "@/lib/validators";
 
 export async function PATCH(request: Request) {
@@ -41,7 +42,10 @@ export async function PATCH(request: Request) {
     },
   });
 
-  const match = await db.match.findUnique({ where: { id: body.matchId } });
+  const match = await db.match.findUnique({
+    where: { id: body.matchId },
+    include: { tournament: true },
+  });
   if (match) {
     await logAdminAction({
       adminId: session.user.id,
@@ -50,6 +54,20 @@ export async function PATCH(request: Request) {
       entityId: body.matchId,
       actionType: "RESCHEDULE",
       afterJson: schedule,
+    });
+
+    await createNotificationsForUsers({
+      userIds: [match.player1Id, match.player2Id].filter(Boolean) as string[],
+      title: existing ? "Матч перенесён" : "Матч запланирован",
+      body: `${match.tournament.title}: матч назначен на ${new Intl.DateTimeFormat("ru-RU", {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(schedule.startsAt)}.`,
+      type: NotificationType.MATCH,
+      link: `/tournaments/${match.tournamentId}`,
+      dedupeWithinHours: 3,
     });
   }
 

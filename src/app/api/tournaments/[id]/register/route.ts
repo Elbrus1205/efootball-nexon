@@ -1,9 +1,10 @@
-import { ClubSelectionMode, TournamentStatus } from "@prisma/client";
+import { ClubSelectionMode, NotificationType, TournamentStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
+import { createNotification } from "@/lib/services/notifications";
 import { syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { formatTournamentBanMessage } from "@/lib/user-ban";
 
@@ -83,6 +84,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
     },
   });
 
+  await createNotification({
+    userId: session.user.id,
+    title: "Вы зарегистрированы",
+    body: `${tournament.title}: регистрация подтверждена. Мы сообщим, когда турнир начнётся и появятся матчи.`,
+    type: NotificationType.TOURNAMENT,
+    link: `/tournaments/${tournament.id}`,
+    dedupeWithinHours: 6,
+  });
+
   await syncTournamentLifecycleStatus(params.id);
   revalidatePath(`/tournaments/${params.id}`);
   revalidatePath("/tournaments");
@@ -122,6 +132,15 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
 
   await db.tournamentRegistration.delete({
     where: { id: registration.id },
+  });
+
+  await createNotification({
+    userId: session.user.id,
+    title: "Регистрация отменена",
+    body: `${tournament.title}: вы вышли из списка участников турнира.`,
+    type: NotificationType.TOURNAMENT,
+    link: `/tournaments/${tournament.id}`,
+    dedupeWithinHours: 6,
   });
 
   if (tournament.status === TournamentStatus.REGISTRATION_CLOSED && tournament.registrationEndsAt > new Date()) {

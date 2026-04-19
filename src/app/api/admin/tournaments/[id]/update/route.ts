@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { Prisma, TournamentFormat, UserRole } from "@prisma/client";
+import { NotificationType, Prisma, TournamentFormat, TournamentStatus, UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { parseFormatBlueprintJson } from "@/lib/format-blueprint";
+import { createNotificationForAllUsers } from "@/lib/services/notifications";
 import { tournamentBuilderSchema } from "@/lib/validators";
 
 function checkboxValue(value: FormDataEntryValue | null) {
@@ -50,7 +51,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const formatBlueprint = parseFormatBlueprintJson(typeof body.formatBlueprintJson === "string" ? body.formatBlueprintJson : "");
   const startsAt = new Date(body.startsAt);
 
-  await db.tournament.update({
+  const before = await db.tournament.findUnique({
+    where: { id: params.id },
+    select: { status: true, title: true },
+  });
+
+  const updated = await db.tournament.update({
     where: { id: params.id },
     data: {
       title: body.title,
@@ -87,6 +93,16 @@ export async function POST(request: Request, { params }: { params: { id: string 
       sortRules: body.sortRules,
     },
   });
+
+  if (before?.status !== TournamentStatus.REGISTRATION_OPEN && updated.status === TournamentStatus.REGISTRATION_OPEN) {
+    await createNotificationForAllUsers({
+      title: "Регистрация на турнир началась",
+      body: `${updated.title}: регистрация открыта. Можно занимать место в турнире.`,
+      type: NotificationType.TOURNAMENT,
+      link: `/tournaments/${updated.id}`,
+      dedupeWithinHours: 24,
+    });
+  }
 
   const origin = new URL(request.url).origin;
   return NextResponse.redirect(new URL("/admin/tournaments?updated=1", origin), 303);

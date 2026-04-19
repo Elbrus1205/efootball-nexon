@@ -7,6 +7,32 @@ import { resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/serv
 import { createNotification } from "@/lib/services/notifications";
 import { reviewSchema } from "@/lib/validators";
 
+async function createMatchOutcomeNotifications(match: {
+  tournamentId: string;
+  tournament: { title: string };
+  player1Id: string | null;
+  player2Id: string | null;
+  winnerId: string | null;
+}, player1Score: number, player2Score: number) {
+  const playerIds = [match.player1Id, match.player2Id].filter(Boolean) as string[];
+
+  await Promise.all(
+    playerIds.map((userId) => {
+      const isWinner = Boolean(match.winnerId) && userId === match.winnerId;
+      const isDraw = !match.winnerId;
+
+      return createNotification({
+        userId,
+        title: isDraw ? "Ничья подтверждена" : isWinner ? "Победа в матче" : "Матч завершён",
+        body: `${match.tournament.title}: финальный счёт ${player1Score}:${player2Score}.${isWinner ? " Вы выиграли этот матч." : isDraw ? "" : " Победил соперник."}`,
+        type: NotificationType.RESULT,
+        link: `/tournaments/${match.tournamentId}`,
+        dedupeWithinHours: 12,
+      });
+    }),
+  );
+}
+
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const session = await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
 
@@ -26,7 +52,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   const match = await db.match.findUnique({
     where: { id: params.id },
-    include: { player1: true, player2: true },
+    include: { player1: true, player2: true, tournament: true },
   });
 
   if (!match) {
@@ -55,17 +81,20 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return NextResponse.json({ error: "В серии пенальти нельзя подтвердить ничью." }, { status: 400 });
     }
 
+    const winnerId = player1Score > player2Score ? match.player1Id : player1Score < player2Score ? match.player2Id : null;
+
     await db.match.update({
       where: { id: params.id },
       data: {
         player1Score,
         player2Score,
-        winnerId: player1Score > player2Score ? match.player1Id : player1Score < player2Score ? match.player2Id : null,
+        winnerId,
         status: MatchStatus.CONFIRMED,
       },
     });
 
     await resolveConfirmedMatch(match.id);
+    await createMatchOutcomeNotifications({ ...match, winnerId }, player1Score, player2Score);
   } else if (body.action === "reject") {
     await db.match.update({
       where: { id: params.id },
@@ -81,22 +110,19 @@ export async function POST(request: Request, { params }: { params: { id: string 
   await syncTournamentLifecycleStatus(match.tournamentId);
 
   const targets = [match.player1Id, match.player2Id].filter(Boolean) as string[];
-  await Promise.all(
-    targets.map((userId) =>
-      createNotification({
-        userId,
-        title:
-          body.action === "approve"
-            ? "Результат подтверждён"
-            : body.action === "reject"
-              ? "Результат отклонён"
-              : "Матч отправлен в спор",
-        body: body.moderatorComment,
-        type: NotificationType.RESULT,
-        link: `/tournaments/${match.tournamentId}`,
-      }),
-    ),
-  );
+  if (body.action !== "approve") {
+    await Promise.all(
+      targets.map((userId) =>
+        createNotification({
+          userId,
+          title: body.action === "reject" ? "Результат отклонён" : "Матч отправлен в спор",
+          body: body.moderatorComment,
+          type: NotificationType.RESULT,
+          link: `/tournaments/${match.tournamentId}`,
+        }),
+      ),
+    );
+  }
 
   await logAdminAction({
     adminId: session.user.id,

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { MatchStatus, ParticipantStatus, UserRole } from "@prisma/client";
+import { MatchStatus, NotificationType, ParticipantStatus, UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
+import { createNotification } from "@/lib/services/notifications";
 import { recalculateGroupStandings } from "@/lib/services/tournaments";
 import { participantManageSchema } from "@/lib/validators";
 import { formatTournamentBanMessage } from "@/lib/user-ban";
@@ -267,6 +268,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
       actionType: "UPDATE",
       beforeJson: before,
       afterJson: registration,
+    });
+    const tournament = await db.tournament.findUnique({ where: { id: params.id }, select: { title: true } });
+    await createNotification({
+      userId: registration.userId,
+      title: "Статус участия изменён",
+      body: `${tournament?.title ?? "Турнир"}: ваш статус участника изменён на ${registration.status}.`,
+      type: NotificationType.TOURNAMENT,
+      link: `/tournaments/${params.id}`,
+      dedupeWithinHours: 6,
     });
     return NextResponse.json({ ok: true, registration });
   }

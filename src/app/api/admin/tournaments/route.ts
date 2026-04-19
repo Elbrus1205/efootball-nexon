@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { Prisma, TournamentFormat, UserRole } from "@prisma/client";
+import { NotificationType, Prisma, TournamentFormat, TournamentStatus, UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { parseFormatBlueprintJson } from "@/lib/format-blueprint";
+import { createNotificationForAllUsers } from "@/lib/services/notifications";
 import { generateTournamentMatches, generateTournamentSchedule, generateTournamentStages } from "@/lib/services/tournaments";
 import { tournamentBuilderSchema } from "@/lib/validators";
 import { slugify } from "@/lib/utils";
@@ -116,6 +117,16 @@ export async function POST(request: Request) {
       console.error("Tournament was created, but automation failed", automationError);
       const warning = encodeURIComponent("Турнир создан, но автоматическая генерация стадий, матчей или расписания выполнилась не полностью.");
       return NextResponse.redirect(new URL(`/admin/tournaments?created=1&warning=${warning}`, origin), 303);
+    }
+
+    if (body.status === TournamentStatus.REGISTRATION_OPEN) {
+      await createNotificationForAllUsers({
+        title: "Открыта регистрация на турнир",
+        body: `${tournament.title}: новый турнир уже доступен для регистрации.`,
+        type: NotificationType.TOURNAMENT,
+        link: `/tournaments/${tournament.id}`,
+        dedupeWithinHours: 24,
+      });
     }
 
     return NextResponse.redirect(new URL("/admin/tournaments?created=1", origin), 303);
