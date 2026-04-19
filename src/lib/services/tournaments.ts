@@ -1183,7 +1183,9 @@ export async function recalculateGroupStandings(tournamentId: string) {
   const groups = await db.tournamentGroup.findMany({
     where: { stage: { tournamentId } },
     include: {
-      members: true,
+      members: {
+        where: { status: ParticipantStatus.CONFIRMED },
+      },
       matches: true,
       standings: true,
     },
@@ -1191,6 +1193,19 @@ export async function recalculateGroupStandings(tournamentId: string) {
   });
 
   for (const group of groups) {
+    const activeMemberIds = new Set(group.members.map((member) => member.id));
+    const staleStandingIds = group.standings
+      .filter((standing) => !activeMemberIds.has(standing.participantId))
+      .map((standing) => standing.id);
+
+    if (staleStandingIds.length) {
+      await db.groupStanding.deleteMany({
+        where: {
+          id: { in: staleStandingIds },
+        },
+      });
+    }
+
     const base = new Map(
       group.members.map((member) => [
         member.id,
@@ -1290,6 +1305,11 @@ export async function recalculateGroupStandings(tournamentId: string) {
     where: { stage: { tournamentId } },
     include: {
       standings: {
+        where: {
+          participant: {
+            status: ParticipantStatus.CONFIRMED,
+          },
+        },
         include: { participant: { include: { user: true } } },
         orderBy: { rank: "asc" },
       },

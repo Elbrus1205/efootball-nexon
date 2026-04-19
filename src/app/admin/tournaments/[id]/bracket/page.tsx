@@ -1,4 +1,4 @@
-import { UserRole } from "@prisma/client";
+import { ParticipantStatus, UserRole } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { BracketEditor } from "@/components/admin/bracket-editor";
 import { PlayoffMappingEditor } from "@/components/admin/playoff-mapping-editor";
@@ -21,6 +21,11 @@ export default async function AdminTournamentBracketPage({ params }: { params: {
           groups: {
             include: {
               standings: {
+                where: {
+                  participant: {
+                    status: { notIn: [ParticipantStatus.REMOVED, ParticipantStatus.REJECTED] },
+                  },
+                },
                 include: {
                   participant: {
                     include: { user: true },
@@ -47,6 +52,9 @@ export default async function AdminTournamentBracketPage({ params }: { params: {
   const bracket = tournament.brackets[0];
   const groupStage = tournament.stages.find((stage) => stage.type === "GROUP_STAGE");
   const groupAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const activeParticipants = tournament.participants.filter(
+    (participant) => participant.status !== ParticipantStatus.REMOVED && participant.status !== ParticipantStatus.REJECTED,
+  );
 
   const mappingSources =
     groupStage?.groups.flatMap((group, groupIndex) =>
@@ -106,7 +114,7 @@ export default async function AdminTournamentBracketPage({ params }: { params: {
           <BracketEditor
             tournamentId={tournament.id}
             bracketId={bracket.id}
-            participants={tournament.participants}
+            participants={activeParticipants}
             slots={bracket.slots}
             matches={bracket.matches}
           />

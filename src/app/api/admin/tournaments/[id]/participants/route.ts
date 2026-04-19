@@ -148,10 +148,19 @@ export async function POST(request: Request, { params }: { params: { id: string 
         where: { id: before.id },
         data: {
           status: ParticipantStatus.REMOVED,
+          groupId: null,
           seed: null,
           stageSeed: null,
           clubSlug: null,
+          clubName: null,
+          clubBadgePath: null,
           notes: removedNotes,
+        },
+      });
+
+      await tx.groupStanding.deleteMany({
+        where: {
+          participantId: before.id,
         },
       });
 

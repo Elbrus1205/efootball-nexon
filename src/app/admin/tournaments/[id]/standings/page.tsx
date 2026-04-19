@@ -1,4 +1,4 @@
-import { StageType, UserRole } from "@prisma/client";
+import { ParticipantStatus, StageType, UserRole } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
@@ -17,6 +17,11 @@ export default async function AdminTournamentStandingsPage({ params }: { params:
           groups: {
             include: {
               standings: {
+                where: {
+                  participant: {
+                    status: { notIn: [ParticipantStatus.REMOVED, ParticipantStatus.REJECTED] },
+                  },
+                },
                 include: {
                   participant: {
                     include: {

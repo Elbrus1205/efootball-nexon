@@ -720,34 +720,40 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
             <div className="space-y-4">
               <div className="text-sm uppercase tracking-[0.24em] text-zinc-500">{structureSectionTitle}</div>
               <div className="grid min-w-0 gap-4">
-                {groupStage.groups.map((group) => (
-                  <Card key={group.id} className="w-full min-w-0 max-w-full overflow-hidden p-0">
-                    <div className="border-b border-white/10 px-5 py-4 font-medium text-white">
-                      {tournament.format === TournamentFormat.CUSTOM && groupStage.groups.length > 1 ? group.name : "Таблица лиги"}
-                    </div>
-                    {group.standings.length ? (
-                      <StandingsTable
-                        rows={group.standings.map((row) => ({
-                          id: row.id,
-                          rank: row.rank,
-                          clubName: resolveClubName(row.participant, clubsBySlug, getPlayerDisplayName(row.participant.user)),
-                          clubBadgePath: resolveClubBadgePath(row.participant, clubsBySlug),
-                          playerId: row.participant.user.id,
-                          playerName: getPlayerDisplayName(row.participant.user),
-                          played: row.played,
-                          wins: row.wins,
-                          draws: row.draws,
-                          losses: row.losses,
-                          goalDifference: row.goalDifference,
-                          points: row.points,
-                        }))}
-                        highlights={customStandingHighlights.get(group.orderIndex) ?? []}
-                      />
-                    ) : (
-                      <div className="px-4 py-4 text-sm text-zinc-500">Таблица лиги заполнится после первых сыгранных матчей.</div>
-                    )}
-                  </Card>
-                ))}
+                {groupStage.groups.map((group) => {
+                  const activeStandings = group.standings.filter(
+                    (row) => row.participant.status !== ParticipantStatus.REMOVED && row.participant.status !== ParticipantStatus.REJECTED,
+                  );
+
+                  return (
+                    <Card key={group.id} className="w-full min-w-0 max-w-full overflow-hidden p-0">
+                      <div className="border-b border-white/10 px-5 py-4 font-medium text-white">
+                        {tournament.format === TournamentFormat.CUSTOM && groupStage.groups.length > 1 ? group.name : "Таблица лиги"}
+                      </div>
+                      {activeStandings.length ? (
+                        <StandingsTable
+                          rows={activeStandings.map((row) => ({
+                            id: row.id,
+                            rank: row.rank,
+                            clubName: resolveClubName(row.participant, clubsBySlug, getPlayerDisplayName(row.participant.user)),
+                            clubBadgePath: resolveClubBadgePath(row.participant, clubsBySlug),
+                            playerId: row.participant.user.id,
+                            playerName: getPlayerDisplayName(row.participant.user),
+                            played: row.played,
+                            wins: row.wins,
+                            draws: row.draws,
+                            losses: row.losses,
+                            goalDifference: row.goalDifference,
+                            points: row.points,
+                          }))}
+                          highlights={customStandingHighlights.get(group.orderIndex) ?? []}
+                        />
+                      ) : (
+                        <div className="px-4 py-4 text-sm text-zinc-500">Таблица лиги заполнится после первых сыгранных матчей.</div>
+                      )}
+                    </Card>
+                  );
+                })}
               </div>
             </div>
           ) : null}
