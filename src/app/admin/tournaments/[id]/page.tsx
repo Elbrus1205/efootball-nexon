@@ -2,7 +2,6 @@ import Link from "next/link";
 import { MatchStatus, ParticipantStatus, StageType, UserRole } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { Activity, CalendarClock, CalendarDays, Dices, GitBranch, History, Pencil, ShieldCheck, Swords, Trash2, Trophy, Users } from "lucide-react";
-import { MatchManager } from "@/components/admin/match-manager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -103,7 +102,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
             </div>
             <CardTitle className="mt-3 text-3xl">{tournament.title}</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-2 space-y-0 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+          <CardContent className="grid gap-2 space-y-0 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
             <Link href={`/admin/tournaments/${tournament.id}/edit`} className={actionButtonClass}>
               <Pencil className="h-4 w-4" />
               Редактировать
@@ -119,6 +118,10 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
             <Link href={`/admin/tournaments/${tournament.id}/bracket`} className={actionButtonClass}>
               <Trophy className="h-4 w-4" />
               Сетка
+            </Link>
+            <Link href={`/admin/tournaments/${tournament.id}/matches`} className={actionButtonClass}>
+              <Swords className="h-4 w-4" />
+              Матчи
             </Link>
             <Link href={`/admin/tournaments/${tournament.id}/deadlines`} className={actionButtonClass}>
               <CalendarClock className="h-4 w-4" />
@@ -161,11 +164,14 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Ручной редактор матчей</CardTitle>
-            <CardDescription>Live search, фильтры и drag-and-drop карточек внутри каждого тура или раунда прямо в workspace турнира.</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <Dices className="h-5 w-5 text-amber-200" />
+              Случайные счета
+            </CardTitle>
+            <CardDescription>Быстро выставить результаты для текущего тура или раунда без открытия ручного редактора.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="mb-5 rounded-[1.5rem] border border-amber-400/20 bg-amber-500/10 p-4">
+            <div className="rounded-[1.5rem] border border-amber-400/20 bg-amber-500/10 p-4">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 font-medium text-white">
@@ -193,14 +199,6 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
                 </form>
               </div>
             </div>
-            <MatchManager
-              tournamentId={tournament.id}
-              matches={tournament.matches.map((match) => ({
-                ...match,
-                scheduledAt: match.scheduledAt?.toISOString() ?? null,
-              }))}
-              participants={tournament.participants}
-            />
           </CardContent>
         </Card>
 
@@ -242,6 +240,9 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
               </Button>
               <Button asChild variant="outline">
                 <Link href={`/admin/tournaments/${tournament.id}/standings`}>Таблицы и standings</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href={`/admin/tournaments/${tournament.id}/matches`}>Ручной редактор матчей</Link>
               </Button>
               <Button asChild variant="outline">
                 <Link href={`/admin/tournaments/${tournament.id}/deadlines`}>Дедлайны туров</Link>
