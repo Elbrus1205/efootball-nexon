@@ -140,8 +140,8 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
         </CardContent>
       </Card>
 
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)]">
-        <Card className="self-start overflow-hidden rounded-lg p-0">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)] lg:items-stretch">
+        <Card className="h-full overflow-hidden rounded-lg p-0">
           <CardHeader className="mb-0 p-4 pb-2 sm:p-5 sm:pb-2">
             <CardTitle className="flex items-center gap-2">
               <Dices className="h-5 w-5 text-amber-200" />
@@ -178,8 +178,8 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
           </CardContent>
         </Card>
 
-        <div className="space-y-5">
-          <Card className="overflow-hidden rounded-lg p-0">
+        <div className="h-full">
+          <Card className="h-full overflow-hidden rounded-lg p-0">
             <CardHeader className="mb-0 p-4 pb-2 sm:p-5 sm:pb-2">
               <CardTitle className="flex items-center gap-2">
                 <Activity className="h-5 w-5 text-primary" />
