@@ -9,14 +9,21 @@ export function SiteLogoMark({ className }: SiteLogoMarkProps) {
     <svg
       aria-label="eFootball Nexon"
       role="img"
-      viewBox="0 0 120 72"
+      viewBox="0 0 168 72"
       className={cn(
-        "h-10 w-14 shrink-0 text-white sm:h-11 sm:w-16",
+        "h-10 w-[94px] shrink-0 text-white sm:h-11 sm:w-[104px]",
         className,
       )}
     >
-      <path fill="currentColor" d="M4 8H56V22H22V30H50V43H22V50H58V64H4V8Z" />
-      <path fill="currentColor" d="M66 8H82L104 42V8H116V64H100L78 30V64H66V8Z" />
+      <g fill="currentColor">
+        <rect x="4" y="8" width="14" height="56" />
+        <rect x="4" y="8" width="68" height="12" />
+        <rect x="4" y="30" width="58" height="12" />
+        <rect x="4" y="52" width="68" height="12" />
+        <rect x="92" y="8" width="14" height="56" />
+        <polygon points="108,8 124,8 150,64 134,64" />
+        <rect x="150" y="8" width="14" height="56" />
+      </g>
     </svg>
   );
 }
