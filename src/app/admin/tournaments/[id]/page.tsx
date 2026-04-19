@@ -1,16 +1,12 @@
 import Link from "next/link";
 import { MatchStatus, ParticipantStatus, StageType, UserRole } from "@prisma/client";
 import { notFound } from "next/navigation";
-import { Activity, CalendarDays, Dices, GitBranch, History, Pencil, ShieldCheck, Swords, Trash2, Trophy, Users } from "lucide-react";
-import { AuditDiff } from "@/components/admin/audit-diff";
+import { Activity, CalendarClock, CalendarDays, Dices, GitBranch, History, Pencil, ShieldCheck, Swords, Trash2, Trophy, Users } from "lucide-react";
 import { MatchManager } from "@/components/admin/match-manager";
-import { RoundDeadlineManager } from "@/components/admin/round-deadline-manager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  adminActionLabel,
-  adminEntityLabel,
   playoffTypeLabel,
   tournamentStatusLabel,
   tournamentStatusVariant,
@@ -46,16 +42,8 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
         include: {
           groups: true,
           bracket: true,
-          deadlines: {
-            orderBy: { round: "asc" },
-          },
         },
         orderBy: { orderIndex: "asc" },
-      },
-      actions: {
-        include: { admin: true },
-        orderBy: { createdAt: "desc" },
-        take: 8,
       },
     },
   });
@@ -94,29 +82,6 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
   const randomScoreTargetCount = randomScoreRound === null ? 0 : randomScoreStageMatches.filter((match) => match.round === randomScoreRound).length;
   const randomScoreRepairCount = tournament.matches.filter((match) => match.bracketId && match.winnerId && match.status === MatchStatus.CONFIRMED).length;
   const canRunRandomScores = randomScoreTargetCount > 0 || randomScoreRepairCount > 0;
-  const deadlineStages = tournament.stages
-    .map((stage) => {
-      const stageMatches = tournament.matches.filter((match) => match.stageId === stage.id);
-      const roundsFromMatches = Array.from(new Set(stageMatches.map((match) => match.round))).sort((a, b) => a - b);
-      const roundsCount = stage.roundsCount && stage.roundsCount > 0 ? stage.roundsCount : (roundsFromMatches.at(-1) ?? 0);
-
-      return {
-        id: stage.id,
-        name: stage.name,
-        type: stage.type,
-        rounds: Array.from({ length: roundsCount }, (_, index) => {
-          const round = index + 1;
-          const deadline = stage.deadlines.find((item) => item.round === round);
-
-          return {
-            round,
-            deadlineAt: deadline?.deadlineAt.toISOString() ?? null,
-            matchesCount: stageMatches.filter((match) => match.round === round).length,
-          };
-        }),
-      };
-    })
-    .filter((stage) => stage.rounds.length > 0);
 
   const stats = [
     { label: "Участники", value: activeParticipantCount, icon: Users },
@@ -138,7 +103,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
             </div>
             <CardTitle className="mt-3 text-3xl">{tournament.title}</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-2 space-y-0 sm:grid-cols-2 lg:grid-cols-5">
+          <CardContent className="grid gap-2 space-y-0 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
             <Link href={`/admin/tournaments/${tournament.id}/edit`} className={actionButtonClass}>
               <Pencil className="h-4 w-4" />
               Редактировать
@@ -154,6 +119,14 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
             <Link href={`/admin/tournaments/${tournament.id}/bracket`} className={actionButtonClass}>
               <Trophy className="h-4 w-4" />
               Сетка
+            </Link>
+            <Link href={`/admin/tournaments/${tournament.id}/deadlines`} className={actionButtonClass}>
+              <CalendarClock className="h-4 w-4" />
+              Дедлайны
+            </Link>
+            <Link href={`/admin/tournaments/${tournament.id}/history`} className={actionButtonClass}>
+              <History className="h-4 w-4" />
+              История
             </Link>
             <form action={`/api/admin/tournaments/${tournament.id}`} method="post" className="contents">
               <input type="hidden" name="_method" value="delete" />
@@ -184,8 +157,6 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
           ))}
         </div>
       </div>
-
-      <RoundDeadlineManager tournamentId={tournament.id} stages={deadlineStages} />
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <Card>
@@ -258,35 +229,6 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <History className="h-5 w-5 text-primary" />
-                История действий
-              </CardTitle>
-              <CardDescription>Последние действия админов с before/after diff по ключевым изменениям турнира.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {tournament.actions.length ? (
-                tournament.actions.map((action) => (
-                  <div key={action.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="font-medium text-white">{adminEntityLabel(action.entityType)}</div>
-                      <Badge variant="neutral">{adminActionLabel[action.actionType] ?? action.actionType}</Badge>
-                    </div>
-                    <div className="mt-2 text-sm text-zinc-400">{action.admin.nickname ?? action.admin.name ?? action.admin.email ?? "Администратор"}</div>
-                    <div className="mt-2 text-sm text-zinc-500">{formatDate(action.createdAt)}</div>
-                    <div className="mt-3">
-                      <AuditDiff before={action.beforeJson} after={action.afterJson} />
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-4 text-sm text-zinc-500">История действий появится после первых изменений по турниру.</div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-primary" />
                 Быстрые переходы
               </CardTitle>
@@ -300,6 +242,12 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
               </Button>
               <Button asChild variant="outline">
                 <Link href={`/admin/tournaments/${tournament.id}/standings`}>Таблицы и standings</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href={`/admin/tournaments/${tournament.id}/deadlines`}>Дедлайны туров</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href={`/admin/tournaments/${tournament.id}/history`}>История действий</Link>
               </Button>
             </CardContent>
           </Card>
