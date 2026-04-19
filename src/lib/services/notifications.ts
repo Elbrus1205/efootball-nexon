@@ -2,6 +2,7 @@ import Pusher from "pusher";
 import { NotificationType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { sendTelegramMessage } from "@/lib/telegram-bot";
+import { repairMojibake } from "@/lib/text-encoding";
 
 const pusher =
   process.env.PUSHER_APP_ID && process.env.PUSHER_KEY && process.env.PUSHER_SECRET && process.env.PUSHER_CLUSTER
@@ -29,12 +30,15 @@ export async function createNotification({
   link?: string;
   dedupeWithinHours?: number;
 }) {
+  const safeTitle = repairMojibake(title);
+  const safeBody = repairMojibake(body);
+
   if (dedupeWithinHours) {
     const existing = await db.notification.findFirst({
       where: {
         userId,
-        title,
-        body,
+        title: safeTitle,
+        body: safeBody,
         link: link ?? null,
         createdAt: {
           gte: new Date(Date.now() - dedupeWithinHours * 60 * 60 * 1000),
@@ -49,7 +53,7 @@ export async function createNotification({
   }
 
   const notification = await db.notification.create({
-    data: { userId, title, body, type, link },
+    data: { userId, title: safeTitle, body: safeBody, type, link },
     include: {
       user: {
         select: {
@@ -79,7 +83,7 @@ export async function createNotification({
   if (notification.user.telegramId && process.env.TELEGRAM_BOT_TOKEN) {
     await sendTelegramMessage({
       chatId: notification.user.telegramId,
-      text: buildTelegramNotificationText(title, body, link),
+      text: buildTelegramNotificationText(safeTitle, safeBody, link),
       disableWebPagePreview: true,
     }).catch((error) => {
       console.error("Failed to send Telegram notification", error);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth/session";
+import { repairMojibake } from "@/lib/text-encoding";
 
 export async function GET() {
   const session = await requireAuth();
@@ -15,5 +16,12 @@ export async function GET() {
     }),
   ]);
 
-  return NextResponse.json({ notifications, unreadCount });
+  return NextResponse.json({
+    notifications: notifications.map((notification) => ({
+      ...notification,
+      title: repairMojibake(notification.title),
+      body: repairMojibake(notification.body),
+    })),
+    unreadCount,
+  });
 }

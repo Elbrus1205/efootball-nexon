@@ -373,9 +373,9 @@ export const authOptions: NextAuthOptions = {
             userId: token.sub,
             authSessionId: randomUUID(),
             context: {
-              device: "РўРµРєСѓС‰РµРµ СѓСЃС‚СЂРѕР№СЃС‚РІРѕ",
-              platform: "РќРµ РѕРїСЂРµРґРµР»РµРЅРѕ",
-              location: "РќРµ РѕРїСЂРµРґРµР»РµРЅРѕ",
+              device: "Текущее устройство",
+              platform: "Не определено",
+              location: "Не определено",
               ipAddress: null,
               userAgent: "Unknown",
             },
