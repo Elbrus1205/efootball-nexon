@@ -102,7 +102,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
             </div>
             <CardTitle className="mt-3 text-3xl">{tournament.title}</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-2 space-y-0 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+          <CardContent className="grid grid-cols-2 gap-2 space-y-0">
             <Link href={`/admin/tournaments/${tournament.id}/edit`} className={actionButtonClass}>
               <Pencil className="h-4 w-4" />
               Редактировать
@@ -161,24 +161,21 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <Card>
-          <CardHeader>
+      <div className="grid items-start gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <Card className="self-start">
+          <CardHeader className="mb-3">
             <CardTitle className="flex items-center gap-2">
               <Dices className="h-5 w-5 text-amber-200" />
               Случайные счета
             </CardTitle>
             <CardDescription>Быстро выставить результаты для текущего тура или раунда без открытия ручного редактора.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="rounded-[1.5rem] border border-amber-400/20 bg-amber-500/10 p-4">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <CardContent className="space-y-0">
+            <div className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] p-3 sm:p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 font-medium text-white">
-                    <Dices className="h-5 w-5 text-amber-200" />
-                    Случайные счета
-                  </div>
-                  <div className="mt-1 text-sm text-amber-100/75">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200/80">Текущий запуск</div>
+                  <div className="mt-1 text-sm font-medium text-amber-50">
                     {randomScoreTargetCount
                       ? `${randomScoreStage?.name ?? "Текущий этап"} • ${stageRoundUnit(randomScoreStage)} ${randomScoreRound}: ${randomScoreTargetCount} матчей без результата`
                       : randomScoreRepairCount
@@ -191,7 +188,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
                     type="submit"
                     disabled={!canRunRandomScores}
                     variant="outline"
-                    className="w-full border-amber-300/30 bg-amber-400/10 text-amber-100 hover:bg-amber-400/15 sm:w-auto"
+                    className="h-10 w-full rounded-lg border-amber-300/30 bg-amber-300/10 px-4 text-amber-100 hover:bg-amber-300/15 sm:w-auto"
                   >
                     <Dices className="mr-2 h-4 w-4" />
                     Выставить рандом
