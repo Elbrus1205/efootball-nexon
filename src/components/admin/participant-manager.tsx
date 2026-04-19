@@ -1,12 +1,14 @@
 "use client";
 
 import { ParticipantStatus } from "@prisma/client";
+import { Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { participantStatusLabel } from "@/lib/admin-display";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 type ParticipantItem = {
   id: string;
@@ -36,6 +38,18 @@ type UserOption = {
   email: string | null;
 };
 
+function userLabel(user: UserOption) {
+  return user.nickname ?? user.name ?? user.email ?? user.id;
+}
+
+function userMeta(user: UserOption) {
+  return [user.nickname ? `@${user.nickname}` : null, user.name, user.email].filter(Boolean).join(" • ");
+}
+
+function normalizeSearch(value: string) {
+  return value.trim().toLowerCase();
+}
+
 export function ParticipantManager({
   tournamentId,
   participants,
@@ -51,6 +65,8 @@ export function ParticipantManager({
   const [pending, startTransition] = useTransition();
   const [selectedUserId, setSelectedUserId] = useState(users[0]?.id ?? "");
   const [replacementByParticipant, setReplacementByParticipant] = useState<Record<string, string>>({});
+  const [replacementSearchByParticipant, setReplacementSearchByParticipant] = useState<Record<string, string>>({});
+  const usersById = useMemo(() => new Map(users.map((user) => [user.id, user])), [users]);
 
   const run = (body: Record<string, unknown>, successMessage?: string) => {
     startTransition(async () => {
@@ -111,6 +127,18 @@ export function ParticipantManager({
       <div className="grid gap-3">
         {participants.map((participant) => {
           const replacementUserId = replacementByParticipant[participant.id] ?? "";
+          const replacementQuery = replacementSearchByParticipant[participant.id] ?? "";
+          const normalizedReplacementQuery = normalizeSearch(replacementQuery);
+          const selectedReplacement = usersById.get(replacementUserId);
+          const replacementMatches = normalizedReplacementQuery
+            ? users
+                .filter((user) =>
+                  [user.nickname, user.name, user.email, user.id]
+                    .filter(Boolean)
+                    .some((value) => value?.toLowerCase().includes(normalizedReplacementQuery)),
+                )
+                .slice(0, 8)
+            : [];
           const canReplace = participant.status !== ParticipantStatus.REMOVED;
           const isHistoryEntry = participant.status === ParticipantStatus.REMOVED;
 
@@ -174,27 +202,110 @@ export function ParticipantManager({
                   </div>
 
                   <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-                    <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                      <select
-                        value={replacementUserId}
-                        disabled={pending || !canReplace || !users.length}
-                        className="h-11 min-w-0 rounded-xl border border-white/10 bg-white/5 px-4 text-sm text-white"
-                        onChange={(event) =>
-                          setReplacementByParticipant((current) => ({
-                            ...current,
-                            [participant.id]: event.target.value,
-                          }))
-                        }
-                      >
-                        <option value="">Выбрать замену</option>
-                        {users.map((user) => (
-                          <option key={user.id} value={user.id}>
-                            {user.nickname ?? user.name ?? user.email ?? user.id}
-                          </option>
-                        ))}
-                      </select>
+                    <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+                      <div className="min-w-0 space-y-2">
+                        <div className="relative">
+                          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                          <Input
+                            value={replacementQuery}
+                            disabled={pending || !canReplace || !users.length}
+                            placeholder="Найти игрока по никнейму"
+                            onChange={(event) =>
+                              setReplacementSearchByParticipant((current) => ({
+                                ...current,
+                                [participant.id]: event.target.value,
+                              }))
+                            }
+                            className="h-11 rounded-xl pl-10 pr-10"
+                          />
+                          {replacementQuery ? (
+                            <button
+                              type="button"
+                              disabled={pending}
+                              onClick={() =>
+                                setReplacementSearchByParticipant((current) => ({
+                                  ...current,
+                                  [participant.id]: "",
+                                }))
+                              }
+                              className="absolute right-3 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-50"
+                              aria-label="Очистить поиск"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          ) : null}
+                        </div>
+
+                        {selectedReplacement ? (
+                          <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary/[0.08] px-3 py-2">
+                            <div className="min-w-0">
+                              <div className="truncate text-sm font-medium text-white">{userLabel(selectedReplacement)}</div>
+                              <div className="mt-0.5 truncate text-xs text-zinc-400">{userMeta(selectedReplacement) || "Игрок выбран"}</div>
+                            </div>
+                            <button
+                              type="button"
+                              disabled={pending}
+                              onClick={() =>
+                                setReplacementByParticipant((current) => ({
+                                  ...current,
+                                  [participant.id]: "",
+                                }))
+                              }
+                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 transition hover:border-white/20 hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-50"
+                              aria-label="Снять выбранного игрока"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : null}
+
+                        <div className="max-h-56 overflow-y-auto rounded-xl border border-white/10 bg-black/20 p-1">
+                          {!users.length ? (
+                            <div className="px-3 py-3 text-sm text-zinc-500">Нет доступных игроков для замены.</div>
+                          ) : normalizedReplacementQuery ? (
+                            replacementMatches.length ? (
+                              replacementMatches.map((user) => {
+                                const isSelected = user.id === replacementUserId;
+
+                                return (
+                                  <button
+                                    key={user.id}
+                                    type="button"
+                                    disabled={pending}
+                                    onClick={() => {
+                                      setReplacementByParticipant((current) => ({
+                                        ...current,
+                                        [participant.id]: user.id,
+                                      }));
+                                      setReplacementSearchByParticipant((current) => ({
+                                        ...current,
+                                        [participant.id]: "",
+                                      }));
+                                    }}
+                                    className={`flex w-full min-w-0 items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition ${
+                                      isSelected ? "bg-primary/15 text-white" : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                                    }`}
+                                  >
+                                    <span className="min-w-0">
+                                      <span className="block truncate text-sm font-medium">{userLabel(user)}</span>
+                                      <span className="mt-0.5 block truncate text-xs text-zinc-500">{userMeta(user) || user.id}</span>
+                                    </span>
+                                    {isSelected ? <Badge variant="primary">Выбран</Badge> : null}
+                                  </button>
+                                );
+                              })
+                            ) : (
+                              <div className="px-3 py-3 text-sm text-zinc-500">По такому никнейму игрок не найден.</div>
+                            )
+                          ) : (
+                            <div className="px-3 py-3 text-sm text-zinc-500">Начните вводить никнейм, имя или email игрока.</div>
+                          )}
+                        </div>
+                      </div>
+
                       <Button
                         variant="secondary"
+                        className="h-11 rounded-xl px-5"
                         disabled={pending || !canReplace || !replacementUserId}
                         onClick={() =>
                           run(
