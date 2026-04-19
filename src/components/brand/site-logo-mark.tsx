@@ -20,9 +20,7 @@ export function SiteLogoMark({ className }: SiteLogoMarkProps) {
         <rect x="3" y="6" width="31" height="8" />
         <rect x="3" y="20" width="27" height="8" />
         <rect x="3" y="34" width="31" height="8" />
-        <rect x="44" y="6" width="8" height="36" />
-        <polygon points="52,6 61,6 79,42 70,42" />
-        <rect x="77" y="6" width="8" height="36" />
+        <path d="M44 6H54L77 30V6H85V42H75L52 18V42H44V6Z" />
       </g>
     </svg>
   );
