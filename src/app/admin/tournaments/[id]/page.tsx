@@ -78,20 +78,26 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
   const canRunRandomScores = randomScoreTargetCount > 0 || randomScoreRepairCount > 0;
 
   const actionButtonClass =
-    "inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-zinc-100 transition hover:border-primary/30 hover:bg-primary/10 hover:text-white";
+    "inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-[13px] font-medium text-zinc-100 transition hover:border-primary/35 hover:bg-primary/10 hover:text-white sm:text-sm";
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Card className="max-w-4xl">
-          <CardHeader>
+    <div className="space-y-5">
+      <Card className="overflow-hidden rounded-lg border-primary/15 bg-white/[0.045] p-0 shadow-[0_22px_80px_rgba(0,0,0,0.22)]">
+        <CardContent className="grid gap-5 space-y-0 p-4 sm:p-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(360px,1.1fr)] lg:items-center">
+          <div className="min-w-0 space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={tournamentStatusVariant[tournament.status]}>{tournamentStatusLabel[tournament.status]}</Badge>
               {tournament.playoffType ? <Badge variant="neutral">{playoffTypeLabel[tournament.playoffType]}</Badge> : null}
             </div>
-            <CardTitle className="mt-3 text-3xl">{tournament.title}</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-2 space-y-0">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Workspace турнира</div>
+              <h1 className="mt-2 break-words font-display text-2xl font-thin leading-tight text-white sm:text-3xl">
+                {tournament.title}
+              </h1>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
             <Link href={`/admin/tournaments/${tournament.id}/edit`} className={actionButtonClass}>
               <Pencil className="h-4 w-4" />
               Редактировать
@@ -124,28 +130,27 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
               <input type="hidden" name="_method" value="delete" />
               <button
                 type="submit"
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-400/20 bg-red-500/10 px-3 text-sm font-medium text-red-200 transition hover:bg-red-500/20 hover:text-red-100"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-red-400/20 bg-red-500/10 px-3 text-[13px] font-medium text-red-200 transition hover:bg-red-500/20 hover:text-red-100 sm:text-sm"
               >
                 <Trash2 className="h-4 w-4" />
                 Удалить
               </button>
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
 
-      </div>
-
-      <div className="grid items-start gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <Card className="self-start">
-          <CardHeader className="mb-3">
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)]">
+        <Card className="self-start overflow-hidden rounded-lg p-0">
+          <CardHeader className="mb-0 p-4 pb-2 sm:p-5 sm:pb-2">
             <CardTitle className="flex items-center gap-2">
               <Dices className="h-5 w-5 text-amber-200" />
               Случайные счета
             </CardTitle>
             <CardDescription>Быстро выставить результаты для текущего тура или раунда без открытия ручного редактора.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-0">
-            <div className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] p-3 sm:p-4">
+          <CardContent className="space-y-0 p-4 pt-2 sm:p-5 sm:pt-3">
+            <div className="rounded-lg border border-amber-300/20 bg-amber-300/[0.08] p-3 sm:p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <div className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200/80">Текущий запуск</div>
@@ -173,22 +178,30 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
+        <div className="space-y-5">
+          <Card className="overflow-hidden rounded-lg p-0">
+            <CardHeader className="mb-0 p-4 pb-2 sm:p-5 sm:pb-2">
               <CardTitle className="flex items-center gap-2">
                 <Activity className="h-5 w-5 text-primary" />
                 Связка стадий
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm text-zinc-400">
-              <div>Группы: {groupStage ? `${groupStage.groups.length} групп` : "не настроены"}</div>
-              <div>Плей-офф: {playoffStage ? "готов к заполнению" : "не создан"}</div>
-              <div className="flex flex-wrap gap-2">
-                <Button asChild variant="secondary">
+            <CardContent className="space-y-3 p-4 pt-2 sm:p-5 sm:pt-3">
+              <div className="grid gap-2 text-sm">
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2">
+                  <span className="text-zinc-500">Группы</span>
+                  <span className="font-medium text-zinc-200">{groupStage ? `${groupStage.groups.length} групп` : "не настроены"}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2">
+                  <span className="text-zinc-500">Плей-офф</span>
+                  <span className="font-medium text-zinc-200">{playoffStage ? "готов к заполнению" : "не создан"}</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button asChild variant="secondary" className="rounded-lg">
                   <Link href={`/admin/tournaments/${tournament.id}/standings`}>Таблицы групп</Link>
                 </Button>
-                <Button asChild variant="outline">
+                <Button asChild variant="outline" className="rounded-lg">
                   <Link href={`/admin/tournaments/${tournament.id}/bracket`}>Посев в плей-офф</Link>
                 </Button>
               </div>
