@@ -16,6 +16,11 @@ export default async function AdminSchedulePage() {
           tournament: true,
           player1: true,
           player2: true,
+          stage: {
+            include: {
+              deadlines: true,
+            },
+          },
         },
       },
     },
@@ -35,11 +40,37 @@ export default async function AdminSchedulePage() {
     label: formatDate(new Date(`${key}T00:00:00`), "d MMMM"),
     items: value
       .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
-      .map((item) => ({
-        ...item,
-        startsAt: item.startsAt.toISOString(),
-        endsAt: item.endsAt?.toISOString() ?? null,
-      })),
+      .map((item) => {
+        const deadline = item.match.stage?.deadlines.find((entry) => entry.round === item.match.round)?.deadlineAt ?? null;
+
+        return {
+          id: item.id,
+          startsAt: item.startsAt.toISOString(),
+          endsAt: item.endsAt?.toISOString() ?? null,
+          slotLabel: item.slotLabel,
+          timezone: item.timezone,
+          match: {
+            id: item.match.id,
+            round: item.match.round,
+            deadlineAt: deadline?.toISOString() ?? null,
+            tournament: {
+              title: item.match.tournament.title,
+            },
+            player1: item.match.player1
+              ? {
+                  nickname: item.match.player1.nickname,
+                  name: item.match.player1.name,
+                }
+              : null,
+            player2: item.match.player2
+              ? {
+                  nickname: item.match.player2.nickname,
+                  name: item.match.player2.name,
+                }
+              : null,
+          },
+        };
+      }),
   }));
 
   return (

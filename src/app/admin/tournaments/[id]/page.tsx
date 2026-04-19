@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Activity, CalendarDays, Dices, GitBranch, History, Pencil, ShieldCheck, Swords, Trash2, Trophy, Users } from "lucide-react";
 import { AuditDiff } from "@/components/admin/audit-diff";
 import { MatchManager } from "@/components/admin/match-manager";
+import { RoundDeadlineManager } from "@/components/admin/round-deadline-manager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,7 +43,13 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
         orderBy: [{ round: "asc" }, { matchNumber: "asc" }],
       },
       stages: {
-        include: { groups: true, bracket: true },
+        include: {
+          groups: true,
+          bracket: true,
+          deadlines: {
+            orderBy: { round: "asc" },
+          },
+        },
         orderBy: { orderIndex: "asc" },
       },
       actions: {
@@ -84,6 +91,29 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
   const randomScoreTargetCount = randomScoreRound === null ? 0 : randomScoreStageMatches.filter((match) => match.round === randomScoreRound).length;
   const randomScoreRepairCount = tournament.matches.filter((match) => match.bracketId && match.winnerId && match.status === MatchStatus.CONFIRMED).length;
   const canRunRandomScores = randomScoreTargetCount > 0 || randomScoreRepairCount > 0;
+  const deadlineStages = tournament.stages
+    .map((stage) => {
+      const stageMatches = tournament.matches.filter((match) => match.stageId === stage.id);
+      const roundsFromMatches = Array.from(new Set(stageMatches.map((match) => match.round))).sort((a, b) => a - b);
+      const roundsCount = stage.roundsCount && stage.roundsCount > 0 ? stage.roundsCount : (roundsFromMatches.at(-1) ?? 0);
+
+      return {
+        id: stage.id,
+        name: stage.name,
+        type: stage.type,
+        rounds: Array.from({ length: roundsCount }, (_, index) => {
+          const round = index + 1;
+          const deadline = stage.deadlines.find((item) => item.round === round);
+
+          return {
+            round,
+            deadlineAt: deadline?.deadlineAt.toISOString() ?? null,
+            matchesCount: stageMatches.filter((match) => match.round === round).length,
+          };
+        }),
+      };
+    })
+    .filter((stage) => stage.rounds.length > 0);
 
   const stats = [
     { label: "Участники", value: tournament.participants.length, icon: Users },
@@ -151,6 +181,8 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
           ))}
         </div>
       </div>
+
+      <RoundDeadlineManager tournamentId={tournament.id} stages={deadlineStages} />
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <Card>

@@ -1,5 +1,5 @@
 ﻿import { ClubSelectionMode, StageType, TournamentFormat, TournamentStatus } from "@prisma/client";
-import { Send } from "lucide-react";
+import { Clock3, Send } from "lucide-react";
 import { unstable_noStore as noStore } from "next/cache";
 import { notFound } from "next/navigation";
 import { BracketView } from "@/components/tournaments/bracket-view";
@@ -112,7 +112,14 @@ function buildScheduleSections<
     matchNumber: number;
     player1Id?: string | null;
     player2Id?: string | null;
-    stage?: { id: string; orderIndex: number; type?: StageType | null; roundsCount?: number | null; name: string | null } | null;
+    stage?: {
+      id: string;
+      orderIndex: number;
+      type?: StageType | null;
+      roundsCount?: number | null;
+      name: string | null;
+      deadlines?: Array<{ round: number; deadlineAt: Date | string | null }>;
+    } | null;
     group?: { id: string; orderIndex: number; name: string } | null;
     bracket?: string | null;
     isThirdPlaceMatch?: boolean;
@@ -121,11 +128,12 @@ function buildScheduleSections<
     schedules: Array<{ startsAt: Date | string }>;
   },
 >(matches: T[]) {
-  const sections = new Map<string, { key: string; title: string; sort: number[]; matches: T[] }>();
+  const sections = new Map<string, { key: string; title: string; sort: number[]; deadlineAt: Date | string | null; matches: T[] }>();
 
   for (const match of matches) {
     const stageSort = match.stage?.orderIndex ?? 999;
     const groupSort = match.group?.orderIndex ?? 0;
+    const deadlineAt = match.stage?.deadlines?.find((item) => item.round === match.round)?.deadlineAt ?? null;
 
     if (match.stage?.type !== StageType.PLAYOFF) {
       const key = [match.stage?.id ?? "stage", "tour", match.round].join(":");
@@ -133,11 +141,13 @@ function buildScheduleSections<
 
       if (section) {
         section.matches.push(match);
+        section.deadlineAt ??= deadlineAt;
       } else {
         sections.set(key, {
           key,
           title: scheduleSectionTitle(match),
           sort: [stageSort, 0, 0, match.round, 0],
+          deadlineAt,
           matches: [match],
         });
       }
@@ -152,11 +162,13 @@ function buildScheduleSections<
 
     if (section) {
       section.matches.push(match);
+      section.deadlineAt ??= deadlineAt;
     } else {
       sections.set(key, {
         key,
         title: scheduleSectionTitle(match),
         sort: [stageSort, groupSort, bracketSort, match.round, thirdPlaceSort],
+        deadlineAt,
         matches: [match],
       });
     }
@@ -549,7 +561,11 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           player1: true,
           player2: true,
           winner: true,
-          stage: true,
+          stage: {
+            include: {
+              deadlines: true,
+            },
+          },
           group: true,
           schedules: true,
           submissions: { orderBy: { createdAt: "desc" } },
@@ -763,7 +779,15 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                 <section key={section.key} className="space-y-4 rounded-[1.75rem] border border-white/10 bg-white/[0.04] p-4 shadow-[0_18px_45px_rgba(0,0,0,0.18)] sm:p-5">
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
                     <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-zinc-300">{section.title}</h3>
-                    <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">{section.matches.length} матчей</div>
+                    <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.18em]">
+                      {section.deadlineAt ? (
+                        <div className="inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-amber-100">
+                          <Clock3 className="h-3.5 w-3.5" />
+                          Дедлайн: {formatDate(section.deadlineAt)}
+                        </div>
+                      ) : null}
+                      <div className="text-zinc-500">{section.matches.length} матчей</div>
+                    </div>
                   </div>
 
                   <div className="divide-y divide-white/10">
@@ -821,11 +845,13 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
               myMatches.map((match) => {
                 const player1LatestSubmission = match.submissions.find((submission) => submission.submittedById === match.player1Id);
                 const player2LatestSubmission = match.submissions.find((submission) => submission.submittedById === match.player2Id);
+                const matchDeadline = match.stage?.deadlines.find((item) => item.round === match.round)?.deadlineAt ?? null;
 
                 return (
                   <MyMatchCard
                     key={match.id}
                     id={match.id}
+                    meta={matchDeadline ? `Дедлайн: ${formatDate(matchDeadline)}` : undefined}
                     isConfirmed={match.status === "CONFIRMED"}
                     confirmedPlayer1Score={match.player1Score}
                     confirmedPlayer2Score={match.player2Score}

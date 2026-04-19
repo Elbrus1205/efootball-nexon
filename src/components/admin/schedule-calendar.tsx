@@ -1,5 +1,6 @@
 "use client";
 
+import { Clock3 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,8 @@ type ScheduleItem = {
   timezone: string | null;
   match: {
     id: string;
+    round: number;
+    deadlineAt: string | null;
     tournament: { title: string };
     player1: { nickname: string | null; name: string | null } | null;
     player2: { nickname: string | null; name: string | null } | null;
@@ -35,6 +38,15 @@ function buildSlotDate(dayKey: string, slotIndex: number) {
   const date = new Date(`${dayKey}T18:00:00`);
   date.setHours(18 + slotIndex, 0, 0, 0);
   return date.toISOString();
+}
+
+function formatDeadline(value: string) {
+  return new Date(value).toLocaleString("ru-RU", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export function ScheduleCalendar({ days }: { days: ScheduleDay[] }) {
@@ -98,6 +110,12 @@ export function ScheduleCalendar({ days }: { days: ScheduleDay[] }) {
                     <div className="mt-1 text-sm text-zinc-400">
                       {(schedule.match.player1?.nickname ?? schedule.match.player1?.name ?? "TBD")} vs {(schedule.match.player2?.nickname ?? schedule.match.player2?.name ?? "TBD")}
                     </div>
+                    {schedule.match.deadlineAt ? (
+                      <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-xs font-medium text-amber-100">
+                        <Clock3 className="h-3.5 w-3.5" />
+                        Дедлайн: {formatDeadline(schedule.match.deadlineAt)}
+                      </div>
+                    ) : null}
                   </div>
                   <button
                     draggable

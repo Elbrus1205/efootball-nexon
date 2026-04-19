@@ -283,6 +283,12 @@ export const scheduleUpdateSchema = z.object({
   timezone: z.string().optional().or(z.literal("")),
 });
 
+export const roundDeadlineSchema = z.object({
+  stageId: z.string().min(1),
+  round: z.coerce.number().int().min(1),
+  deadlineAt: z.string().optional().or(z.literal("")),
+});
+
 export const matchUpdateSchema = z.object({
   player1Id: z.string().optional().or(z.literal("")),
   player2Id: z.string().optional().or(z.literal("")),

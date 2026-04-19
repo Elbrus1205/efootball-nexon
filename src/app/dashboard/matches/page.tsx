@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { MatchStatus, StageType } from "@prisma/client";
-import { CalendarDays, ChevronRight, ShieldCheck, Trophy } from "lucide-react";
+import { CalendarDays, ChevronRight, Clock3, ShieldCheck, Trophy } from "lucide-react";
 import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +31,11 @@ export default async function DashboardMatchesPage() {
     },
     include: {
       tournament: true,
-      stage: true,
+      stage: {
+        include: {
+          deadlines: true,
+        },
+      },
       player1: true,
       player2: true,
     },
@@ -50,6 +54,7 @@ export default async function DashboardMatchesPage() {
         {matches.length ? (
           matches.map((match) => {
             const opponent = match.player1Id === session.user.id ? match.player2 : match.player1;
+            const deadline = match.stage?.deadlines.find((item) => item.round === match.round)?.deadlineAt ?? null;
 
             return (
               <Card key={match.id} className="p-5">
@@ -69,6 +74,10 @@ export default async function DashboardMatchesPage() {
                       <span className="inline-flex items-center gap-2">
                         <Trophy className="h-4 w-4 text-accent" />
                         {matchRoundLabel(match)}, матч {match.matchNumber}
+                      </span>
+                      <span className="inline-flex items-center gap-2">
+                        <Clock3 className="h-4 w-4 text-amber-300" />
+                        {deadline ? `Дедлайн: ${formatDate(deadline)}` : "Дедлайн не задан"}
                       </span>
                     </div>
                   </div>

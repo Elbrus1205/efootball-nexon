@@ -294,6 +294,7 @@ model Tournament {
   participants           TournamentRegistration[]
   matches                Match[]
   stages                 TournamentStage[]
+  deadlines              RoundDeadline[]
   brackets               PlayoffBracket[]
   actions                AdminAction[]
 
@@ -325,9 +326,26 @@ model TournamentStage {
   tournament           Tournament        @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   groups               TournamentGroup[]
   matches              Match[]
+  deadlines            RoundDeadline[]
   bracket              PlayoffBracket?
 
   @@index([tournamentId, orderIndex])
+}
+
+model RoundDeadline {
+  id           String          @id @default(cuid())
+  tournamentId String
+  stageId      String
+  round        Int
+  deadlineAt   DateTime
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  tournament   Tournament      @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  stage        TournamentStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@unique([stageId, round])
+  @@index([tournamentId, stageId, round])
+  @@index([deadlineAt])
 }
 
 model TournamentGroup {

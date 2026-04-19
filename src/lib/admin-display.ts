@@ -162,6 +162,7 @@ export function adminEntityLabel(entityType: string) {
     MATCH: "Матч",
     MATCH_RANDOM_SCORES: "Случайные счета",
     MATCH_REVIEW: "Проверка результата",
+    ROUND_DEADLINE: "Дедлайн тура",
     PARTICIPANT: "Участник",
     BRACKET_SLOT: "Слот сетки",
     SCHEDULE: "Слот расписания",
