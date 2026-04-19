@@ -19,6 +19,8 @@ type RegulationsState = {
   updatedAt: string | null;
 };
 
+type AfterRegulationsAction = "register" | "choose-club";
+
 export function RegisterTournamentButton({
   tournamentId,
   clubSelectionMode,
@@ -38,6 +40,7 @@ export function RegisterTournamentButton({
   const [regulationsOpen, setRegulationsOpen] = useState(false);
   const [regulationsAccepted, setRegulationsAccepted] = useState(false);
   const [pendingClubSlug, setPendingClubSlug] = useState<string | undefined>();
+  const [afterRegulationsAction, setAfterRegulationsAction] = useState<AfterRegulationsAction>("register");
   const [regulationsError, setRegulationsError] = useState("");
   const [isPending, startTransition] = useTransition();
 
@@ -61,8 +64,9 @@ export function RegisterTournamentButton({
     return Boolean(result.accepted);
   };
 
-  const openRegulationsAcceptance = async (clubSlug?: string) => {
+  const openRegulationsAcceptance = async (clubSlug?: string, nextAction: AfterRegulationsAction = "register") => {
     setPendingClubSlug(clubSlug);
+    setAfterRegulationsAction(nextAction);
     setRegulationsAccepted(false);
     setRegulationsError("");
 
@@ -86,7 +90,8 @@ export function RegisterTournamentButton({
     if (!response.ok) {
       if (response.status === 428 && result.code === "REGULATIONS_ACCEPTANCE_REQUIRED") {
         setMessage("");
-        await openRegulationsAcceptance(clubSlug);
+        setIsOpen(false);
+        await openRegulationsAcceptance(clubSlug, clubSlug ? "register" : clubSelectionMode === ClubSelectionMode.PLAYER_PICK ? "choose-club" : "register");
         return;
       }
 
@@ -109,7 +114,7 @@ export function RegisterTournamentButton({
         const accepted = await loadRegulations();
         if (!accepted) {
           setMessage("");
-          await openRegulationsAcceptance(clubSlug);
+          await openRegulationsAcceptance(clubSlug, "register");
           return;
         }
 
@@ -117,6 +122,32 @@ export function RegisterTournamentButton({
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Не удалось проверить регламент.");
       }
+    });
+  };
+
+  const openClubSelection = () => {
+    startTransition(async () => {
+      setMessage("Проверяем регламент...");
+
+      try {
+        const accepted = await loadRegulations();
+        setMessage("");
+
+        if (!accepted) {
+          await openRegulationsAcceptance(undefined, "choose-club");
+          return;
+        }
+
+        setIsOpen(true);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Не удалось проверить регламент.");
+      }
+    });
+  };
+
+  const submitSelectedClub = () => {
+    startTransition(async () => {
+      await submitRegistration(selectedClubSlug);
     });
   };
 
@@ -137,6 +168,13 @@ export function RegisterTournamentButton({
       }
 
       setRegulationsOpen(false);
+
+      if (afterRegulationsAction === "choose-club") {
+        setMessage("");
+        setIsOpen(true);
+        return;
+      }
+
       await submitRegistration(pendingClubSlug);
     });
   };
@@ -182,7 +220,7 @@ export function RegisterTournamentButton({
             </Button>
             <Button onClick={acceptRegulationsAndContinue} disabled={isPending || !regulationsAccepted} className="gap-2">
               <CheckCircle2 className="h-4 w-4" />
-              {isPending ? "Сохраняем..." : "Принять и зарегистрироваться"}
+              {isPending ? "Сохраняем..." : afterRegulationsAction === "choose-club" ? "Принять и выбрать клуб" : "Принять и зарегистрироваться"}
             </Button>
           </div>
         </div>
@@ -205,8 +243,8 @@ export function RegisterTournamentButton({
   return (
     <>
       <div className="space-y-2">
-        <Button size="lg" onClick={() => setIsOpen(true)}>
-          Зарегистрироваться
+        <Button size="lg" onClick={openClubSelection} disabled={isPending}>
+          {isPending ? "Проверяем..." : "Зарегистрироваться"}
         </Button>
         {message ? <div className="text-sm text-red-300">{message}</div> : null}
         {regulationsModal}
@@ -267,7 +305,7 @@ export function RegisterTournamentButton({
                 <Button variant="outline" onClick={() => setIsOpen(false)}>
                   Отмена
                 </Button>
-                <Button onClick={() => submit(selectedClubSlug)} disabled={isPending || !selectedClubSlug}>
+                <Button onClick={submitSelectedClub} disabled={isPending || !selectedClubSlug}>
                   {isPending ? "Регистрация..." : "Подтвердить выбор"}
                 </Button>
               </div>
