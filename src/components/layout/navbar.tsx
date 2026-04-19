@@ -9,6 +9,7 @@ const links = [
   { href: "/", label: "Главная" },
   { href: "/regulations", label: "Регламент" },
   { href: "/tournaments", label: "Турниры" },
+  { href: "/coins", label: "Coins" },
   { href: "/ratings", label: "Рейтинги" },
   { href: "/faq", label: "FAQ" },
   { href: "/contacts", label: "Контакты" },
