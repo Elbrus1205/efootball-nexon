@@ -7,20 +7,12 @@ import { getPlayerCareerStats } from "@/lib/player-stats";
 import { getUserSocialLinks } from "@/lib/social-links";
 import { PlayerCareerStatsPanel } from "@/components/players/player-career-stats";
 import { PlayerSocialLinks } from "@/components/players/player-social-links";
+import { StatsPeriodSwitcher } from "@/components/players/stats-period-switcher";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { cn, formatDate } from "@/lib/utils";
-
-function statsPeriodClass(active: boolean) {
-  return cn(
-    "inline-flex min-h-10 items-center rounded-lg border px-3 py-2 text-sm font-semibold transition",
-    active
-      ? "border-primary/35 bg-primary/15 text-white shadow-[0_0_22px_rgba(59,130,246,0.14)]"
-      : "border-white/10 bg-white/[0.04] text-zinc-400 hover:border-primary/25 hover:text-white",
-  );
-}
+import { formatDate } from "@/lib/utils";
 
 export default async function DashboardPage({
   searchParams,
@@ -169,17 +161,7 @@ export default async function DashboardPage({
           ) : null}
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Link href="/dashboard" className={statsPeriodClass(!selectedSeason)}>
-            За всё время
-          </Link>
-          {seasons.map((season) => (
-            <Link key={season.id} href={`/dashboard?season=${season.id}`} className={statsPeriodClass(selectedSeason?.id === season.id)}>
-              {season.name}
-              {season.isActive ? <span className="ml-2 text-xs text-emerald-300">активный</span> : null}
-            </Link>
-          ))}
-        </div>
+        <StatsPeriodSwitcher basePath="/dashboard" seasons={seasons} selectedSeasonId={selectedSeason?.id ?? null} />
 
         {!seasons.length ? (
           <div className="mt-4 rounded-lg border border-dashed border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-500">
