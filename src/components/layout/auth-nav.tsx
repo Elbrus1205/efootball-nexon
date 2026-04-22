@@ -59,7 +59,6 @@ export function AuthNav({ unread = 0 }: { unread?: number }) {
         <DropdownMenuContent align="end" className="w-64 rounded-3xl border-white/10 bg-[#12161f]/95 p-2 text-white backdrop-blur-xl">
           <div className="px-3 py-2">
             <div className="text-sm font-medium">{session.user.name ?? session.user.nickname}</div>
-            <div className="text-xs text-zinc-500">{session.user.email ?? "Telegram/VK"}</div>
           </div>
 
           <DropdownMenuItem asChild>
