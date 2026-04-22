@@ -1,8 +1,13 @@
+export type TelegramInlineKeyboardMarkup = {
+  inline_keyboard: Array<Array<{ text: string; url: string }>>;
+};
+
 export async function sendTelegramMessage(params: {
   chatId: string;
   text: string;
   parseMode?: "HTML" | "MarkdownV2" | null;
   disableWebPagePreview?: boolean;
+  replyMarkup?: TelegramInlineKeyboardMarkup;
 }) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
@@ -20,6 +25,7 @@ export async function sendTelegramMessage(params: {
       text: params.text,
       ...(params.parseMode === null ? {} : { parse_mode: params.parseMode ?? "HTML" }),
       disable_web_page_preview: params.disableWebPagePreview ?? true,
+      ...(params.replyMarkup ? { reply_markup: params.replyMarkup } : {}),
     }),
   });
 
@@ -46,6 +52,7 @@ export async function sendTelegramMedia(params: {
   mediaFile?: File;
   caption?: string;
   parseMode?: "HTML" | "MarkdownV2" | null;
+  replyMarkup?: TelegramInlineKeyboardMarkup;
 }) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
@@ -71,6 +78,10 @@ export async function sendTelegramMedia(params: {
 
   if (params.parseMode) {
     body.set("parse_mode", params.parseMode);
+  }
+
+  if (params.replyMarkup) {
+    body.set("reply_markup", JSON.stringify(params.replyMarkup));
   }
 
   const res = await fetch(`https://api.telegram.org/bot${botToken}/${config.method}`, {

@@ -3,13 +3,22 @@ import { UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
+import {
+  buildTelegramInlineKeyboard,
+  getTelegramRenderedTextLength,
+  hasTelegramHtmlFormatting,
+  parseTelegramButtonsJson,
+  sanitizeTelegramHtml,
+  TELEGRAM_CAPTION_LIMIT,
+  TELEGRAM_TEXT_LIMIT,
+  validateTelegramHtmlStructure,
+} from "@/lib/telegram-format";
 import { sendTelegramMedia, sendTelegramMessage, type TelegramMediaType } from "@/lib/telegram-bot";
 
 export const runtime = "nodejs";
 
 const mediaTypes = new Set<TelegramMediaType>(["photo", "video", "document", "animation", "audio"]);
 const textChunkLimit = 3900;
-const mediaCaptionLimit = 1000;
 const sendConcurrency = 4;
 
 function redirectToBroadcasts(request: Request, params: Record<string, string | number>) {
@@ -73,40 +82,62 @@ async function runWithConcurrency<T, R>(items: T[], limit: number, task: (item: 
 async function sendBroadcastToChat(params: {
   chatId: string;
   text: string;
+  formattedText: string;
+  useHtml: boolean;
   mediaType: "text" | TelegramMediaType;
   mediaUrl: string;
   mediaFile: File | null;
+  replyMarkup?: { inline_keyboard: Array<Array<{ text: string; url: string }>> };
 }) {
   if (params.mediaType === "text") {
-    for (const chunk of splitTelegramText(params.text)) {
+    if (params.useHtml || params.replyMarkup) {
       await sendTelegramMessage({
         chatId: params.chatId,
-        text: chunk,
-        parseMode: null,
+        text: params.useHtml ? params.formattedText : params.text,
+        parseMode: params.useHtml ? "HTML" : null,
+        replyMarkup: params.replyMarkup,
       });
+    } else {
+      for (const chunk of splitTelegramText(params.text)) {
+        await sendTelegramMessage({
+          chatId: params.chatId,
+          text: chunk,
+          parseMode: null,
+        });
+      }
     }
 
     return;
   }
 
-  const shouldUseCaption = params.text.length > 0 && params.text.length <= mediaCaptionLimit;
+  const renderedTextLength = params.useHtml ? getTelegramRenderedTextLength(params.formattedText) : params.text.length;
+  const shouldUseCaption = renderedTextLength > 0 && renderedTextLength <= TELEGRAM_CAPTION_LIMIT;
 
   await sendTelegramMedia({
     chatId: params.chatId,
     type: params.mediaType,
     mediaUrl: params.mediaUrl || undefined,
     mediaFile: params.mediaFile ?? undefined,
-    caption: shouldUseCaption ? params.text : undefined,
-    parseMode: null,
+    caption: shouldUseCaption ? (params.useHtml ? params.formattedText : params.text) : undefined,
+    parseMode: shouldUseCaption && params.useHtml ? "HTML" : null,
+    replyMarkup: params.replyMarkup,
   });
 
-  if (!shouldUseCaption && params.text) {
-    for (const chunk of splitTelegramText(params.text)) {
+  if (!shouldUseCaption && renderedTextLength > 0) {
+    if (params.useHtml) {
       await sendTelegramMessage({
         chatId: params.chatId,
-        text: chunk,
-        parseMode: null,
+        text: params.formattedText,
+        parseMode: "HTML",
       });
+    } else {
+      for (const chunk of splitTelegramText(params.text)) {
+        await sendTelegramMessage({
+          chatId: params.chatId,
+          text: chunk,
+          parseMode: null,
+        });
+      }
     }
   }
 }
@@ -125,19 +156,52 @@ export async function POST(request: Request) {
   }
 
   const text = getString(formData.get("text"));
+  const formattedText = sanitizeTelegramHtml(text);
+  const renderedTextLength = getTelegramRenderedTextLength(formattedText);
+  const useHtml = hasTelegramHtmlFormatting(formattedText);
   const rawMediaType = getString(formData.get("mediaType"));
   const mediaType: "text" | TelegramMediaType = mediaTypes.has(rawMediaType as TelegramMediaType)
     ? (rawMediaType as TelegramMediaType)
     : "text";
   const mediaUrl = getString(formData.get("mediaUrl"));
   const mediaFile = getUploadedFile(formData.get("mediaFile"));
+  let buttons;
 
-  if (mediaType === "text" && !text) {
+  try {
+    buttons = parseTelegramButtonsJson(getString(formData.get("buttonsJson")));
+  } catch (error) {
+    return redirectToBroadcasts(request, {
+      error: error instanceof Error ? error.message : "Не удалось обработать кнопки рассылки.",
+    });
+  }
+
+  const replyMarkup = buildTelegramInlineKeyboard(buttons);
+
+  if (useHtml) {
+    const structureError = validateTelegramHtmlStructure(formattedText);
+    if (structureError) {
+      return redirectToBroadcasts(request, { error: structureError });
+    }
+  }
+
+  if (mediaType === "text" && renderedTextLength === 0) {
     return redirectToBroadcasts(request, { error: "Введите текст рассылки." });
   }
 
   if (mediaType !== "text" && !mediaUrl && !mediaFile) {
     return redirectToBroadcasts(request, { error: "Для медиа-рассылки прикрепите файл или укажите ссылку." });
+  }
+
+  if (useHtml && renderedTextLength > TELEGRAM_TEXT_LIMIT) {
+    return redirectToBroadcasts(request, {
+      error: `Сообщение с Telegram-разметкой должно помещаться в ${TELEGRAM_TEXT_LIMIT} символов после форматирования.`,
+    });
+  }
+
+  if (mediaType === "text" && buttons.length && renderedTextLength > TELEGRAM_TEXT_LIMIT) {
+    return redirectToBroadcasts(request, {
+      error: `Текстовая рассылка с кнопками должна помещаться в ${TELEGRAM_TEXT_LIMIT} символов.`,
+    });
   }
 
   const recipients = await db.user.findMany({
@@ -160,9 +224,12 @@ export async function POST(request: Request) {
       await sendBroadcastToChat({
         chatId: recipient.telegramId!,
         text,
+        formattedText,
+        useHtml,
         mediaType,
         mediaUrl,
         mediaFile,
+        replyMarkup,
       });
 
       return { ok: true as const, userId: recipient.id };
@@ -187,6 +254,9 @@ export async function POST(request: Request) {
     afterJson: {
       mediaType,
       textLength: text.length,
+      renderedTextLength,
+      useHtml,
+      buttonsCount: buttons.length,
       hasMediaFile: Boolean(mediaFile),
       mediaUrl: mediaUrl || null,
       recipients: recipients.length,
