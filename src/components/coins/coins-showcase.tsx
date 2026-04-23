@@ -305,10 +305,6 @@ export function CoinsShowcase() {
             </div>
           </div>
 
-          <div className="mt-5 rounded-[1.4rem] border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50/90">
-            Внутрь карточек уже подключены твои PNG из `public/coins`, поэтому отдельные обычные и акционные фоны теперь видны прямо в
-            сетке товаров.
-          </div>
         </div>
       </div>
 
@@ -317,10 +313,6 @@ export function CoinsShowcase() {
           <div className="max-w-2xl">
             <div className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">Каталог</div>
             <h3 className="mt-3 text-2xl font-black text-white sm:text-3xl">Обычные пакеты и акционные предложения</h3>
-            <p className="mt-3 text-sm leading-7 text-zinc-400 sm:text-base">
-              На широких экранах карточки стали крупнее, а фон с монетами теперь читается сразу. На планшете и мобильных всё остаётся
-              аккуратным и адаптивным.
-            </p>
           </div>
 
           <TabsList className="w-full overflow-x-auto p-1 sm:w-auto">
@@ -351,10 +343,6 @@ export function CoinsShowcase() {
         </TabsContent>
 
         <TabsContent value="promo" className="space-y-8">
-          <div className="rounded-[1.6rem] border border-amber-300/15 bg-amber-300/8 p-4 text-sm leading-7 text-amber-50/90">
-            Все акционные позиции используют единый прайс для Android и iOS и отдельный золотой фон карточки.
-          </div>
-
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-300/10 text-amber-200">
