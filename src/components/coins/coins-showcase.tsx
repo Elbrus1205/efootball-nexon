@@ -107,22 +107,6 @@ function getOfferSummary(platform: CoinsPlatform) {
   return "Цена для Android";
 }
 
-function getOfferDescription(tone: OfferTone, offer: CoinsOffer) {
-  if (offer.kind === "bundle") {
-    return "Лимитированный комплект с монетами и дополнительным бонусом внутри набора.";
-  }
-
-  if (tone === "ios") {
-    return "Стоимость уже рассчитана с наценкой 10% для устройств Apple.";
-  }
-
-  if (tone === "promo") {
-    return "Спецпредложение с одинаковой ценой для Android и iOS.";
-  }
-
-  return "Базовый пакет монет с быстрым переходом к оформлению оплаты.";
-}
-
 function getOfferSecondaryLabel(offer: CoinsOffer) {
   return offer.kind === "bundle" ? "Состав" : "Бонус";
 }
@@ -152,7 +136,6 @@ function OfferCard({
   const visual = toneVisuals[tone];
   const typeLabel = offer.kind === "bundle" ? "Лимитированный набор" : "Пакет монет";
   const summary = getOfferSummary(platform);
-  const description = getOfferDescription(tone, offer);
   const secondaryLabel = getOfferSecondaryLabel(offer);
   const secondaryValue = getOfferSecondaryValue(offer);
 
@@ -200,14 +183,14 @@ function OfferCard({
 
         <div className="mt-6 max-w-[54%]">
           <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-zinc-400">{typeLabel}</div>
-          <h3 className="mt-2 text-xl font-black leading-tight text-white sm:text-[1.65rem]">{offer.title}</h3>
+          {offer.kind === "bundle" ? (
+            <h3 className="mt-2 text-xl font-black leading-tight text-white sm:text-[1.65rem]">{offer.title}</h3>
+          ) : null}
 
-          <div className="mt-4 flex items-end gap-2">
+          <div className={`${offer.kind === "bundle" ? "mt-4" : "mt-3"} flex items-end gap-2`}>
             <div className={`text-4xl font-black tracking-tight sm:text-[2.8rem] ${visual.coinClass}`}>{formatCoins(offer.coins)}</div>
             <div className="pb-1 text-[10px] font-semibold uppercase tracking-[0.32em] text-zinc-400">Coins</div>
           </div>
-
-          <p className="mt-3 max-w-[26ch] text-sm leading-6 text-zinc-300">{description}</p>
         </div>
 
         <div className="space-y-3">
