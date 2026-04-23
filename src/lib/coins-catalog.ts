@@ -1,15 +1,16 @@
+export type CoinsPlatform = "android" | "ios" | "promo";
+
 export type CoinsOffer = {
   id: string;
   title: string;
   coins: number;
   paidCoins: number;
   freeCoins: number;
-  price?: string;
+  priceKopecks: number;
   kind: "coins" | "bundle";
   badge?: string;
   note?: string;
   bonus?: string;
-  priceMode?: "fixed" | "request";
 };
 
 const baseCoinPacks = [
@@ -78,31 +79,71 @@ const baseCoinPacks = [
   },
 ] as const;
 
-const androidPrices = {
-  "pack-130": "₺45,99",
-  "pack-300": "₺104,99",
-  "pack-550": "₺189,99",
-  "pack-750": "₺254,99",
-  "pack-1040": "₺349,99",
-  "pack-2130": "₺699,99",
-  "pack-3250": "₺1.029,99",
-  "pack-5700": "₺1.729,99",
-  "pack-12800": "₺3.699,99",
+const androidPriceKopecks = {
+  "pack-130": 4599,
+  "pack-300": 10499,
+  "pack-550": 18999,
+  "pack-750": 25499,
+  "pack-1040": 34999,
+  "pack-2130": 69999,
+  "pack-3250": 102999,
+  "pack-5700": 172999,
+  "pack-12800": 369999,
 } as const;
+
+const promoCoinPriceKopecks = {
+  "promo-260": 4599,
+  "promo-840": 18999,
+  "promo-3430": 69999,
+} as const;
+
+const promoBundlePriceKopecks = {
+  "starter-burak-yilmaz": 1999,
+  "mourinho-set": 12499,
+  "starter-silvestre": 2499,
+  "starter-van-nistelrooij": 7499,
+} as const;
+
+function addPercentage(priceKopecks: number, percent: number) {
+  return Math.round(priceKopecks * (1 + percent / 100));
+}
+
+export function formatRubles(priceKopecks: number) {
+  return new Intl.NumberFormat("ru-RU", {
+    style: "currency",
+    currency: "RUB",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(priceKopecks / 100);
+}
+
+export function isCoinsPlatform(value: string): value is CoinsPlatform {
+  return value === "android" || value === "ios" || value === "promo";
+}
+
+export function getCoinsPlatformLabel(platform: CoinsPlatform) {
+  if (platform === "android") return "Android";
+  if (platform === "ios") return "iOS";
+  return "Акции";
+}
+
+export function getCoinsCheckoutPath(platform: CoinsPlatform, offerId: string) {
+  return `/coins/checkout/${platform}/${encodeURIComponent(offerId)}`;
+}
 
 export const androidCoinPacks: CoinsOffer[] = baseCoinPacks.map((offer) => ({
   ...offer,
   kind: "coins",
-  price: androidPrices[offer.id],
-  priceMode: "fixed",
+  priceKopecks: androidPriceKopecks[offer.id],
+  note: "Оплата открывает страницу оформления заказа. Позже сюда подключается ЮKassa.",
 }));
 
 export const iosCoinPacks: CoinsOffer[] = baseCoinPacks.map((offer) => ({
   ...offer,
   kind: "coins",
-  badge: "iOS",
-  note: "Цена для iPhone и iPad отличается. Подтвердим актуальную стоимость в Telegram перед оплатой.",
-  priceMode: "request",
+  priceKopecks: addPercentage(androidPriceKopecks[offer.id], 10),
+  badge: "iOS +10%",
+  note: "Стоимость для iPhone и iPad автоматически считается на 10% выше Android.",
 }));
 
 export const promoCoinPacks: CoinsOffer[] = [
@@ -112,11 +153,10 @@ export const promoCoinPacks: CoinsOffer[] = [
     coins: 260,
     paidCoins: 130,
     freeCoins: 130,
-    price: "₺45,99",
+    priceKopecks: promoCoinPriceKopecks["promo-260"],
     kind: "coins",
     badge: "Акция",
-    note: "Единая цена для Android и iOS.",
-    priceMode: "fixed",
+    note: "Одинаковая цена для Android и iOS.",
   },
   {
     id: "promo-840",
@@ -124,11 +164,10 @@ export const promoCoinPacks: CoinsOffer[] = [
     coins: 840,
     paidCoins: 530,
     freeCoins: 310,
-    price: "₺189,99",
+    priceKopecks: promoCoinPriceKopecks["promo-840"],
     kind: "coins",
     badge: "Акция",
-    note: "Единая цена для Android и iOS.",
-    priceMode: "fixed",
+    note: "Одинаковая цена для Android и iOS.",
   },
   {
     id: "promo-3430",
@@ -136,11 +175,10 @@ export const promoCoinPacks: CoinsOffer[] = [
     coins: 3430,
     paidCoins: 1950,
     freeCoins: 1480,
-    price: "₺699,99",
+    priceKopecks: promoCoinPriceKopecks["promo-3430"],
     kind: "coins",
     badge: "Акция",
-    note: "Единая цена для Android и iOS.",
-    priceMode: "fixed",
+    note: "Одинаковая цена для Android и iOS.",
   },
 ];
 
@@ -151,12 +189,11 @@ export const promoBundles: CoinsOffer[] = [
     coins: 10,
     paidCoins: 10,
     freeCoins: 0,
-    price: "₺19,99",
+    priceKopecks: promoBundlePriceKopecks["starter-burak-yilmaz"],
     kind: "bundle",
     badge: "Выгодный комплект",
     bonus: "Coins + 1 бонусная карточка",
     note: "Одинаковая цена для Android и iOS.",
-    priceMode: "fixed",
   },
   {
     id: "mourinho-set",
@@ -164,12 +201,11 @@ export const promoBundles: CoinsOffer[] = [
     coins: 150,
     paidCoins: 150,
     freeCoins: 0,
-    price: "₺124,99",
+    priceKopecks: promoBundlePriceKopecks["mourinho-set"],
     kind: "bundle",
     badge: "Выгодный комплект",
     bonus: "Coins + 3 бонусные карточки",
     note: "Одинаковая цена для Android и iOS.",
-    priceMode: "fixed",
   },
   {
     id: "starter-silvestre",
@@ -177,12 +213,11 @@ export const promoBundles: CoinsOffer[] = [
     coins: 50,
     paidCoins: 50,
     freeCoins: 0,
-    price: "₺24,99",
+    priceKopecks: promoBundlePriceKopecks["starter-silvestre"],
     kind: "bundle",
     badge: "Выгодный комплект",
     bonus: "Coins + 1 бонусная карточка",
     note: "Одинаковая цена для Android и iOS.",
-    priceMode: "fixed",
   },
   {
     id: "starter-van-nistelrooij",
@@ -190,11 +225,20 @@ export const promoBundles: CoinsOffer[] = [
     coins: 100,
     paidCoins: 100,
     freeCoins: 0,
-    price: "₺74,99",
+    priceKopecks: promoBundlePriceKopecks["starter-van-nistelrooij"],
     kind: "bundle",
     badge: "Выгодный комплект",
     bonus: "Coins + 4 бонусные карточки",
     note: "Одинаковая цена для Android и iOS.",
-    priceMode: "fixed",
   },
 ];
+
+const coinsCatalogByPlatform: Record<CoinsPlatform, CoinsOffer[]> = {
+  android: androidCoinPacks,
+  ios: iosCoinPacks,
+  promo: [...promoCoinPacks, ...promoBundles],
+};
+
+export function getCoinsOffer(platform: CoinsPlatform, offerId: string) {
+  return coinsCatalogByPlatform[platform].find((offer) => offer.id === offerId) ?? null;
+}

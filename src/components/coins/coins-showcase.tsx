@@ -1,46 +1,33 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowRight, Coins, Gift, MessageCircle, ShieldCheck, Smartphone, Sparkles, WalletCards } from "lucide-react";
-import { androidCoinPacks, iosCoinPacks, promoBundles, promoCoinPacks, type CoinsOffer } from "@/lib/coins-catalog";
-import { Button } from "@/components/ui/button";
+import { ArrowRight, Coins, CreditCard, Gift, Smartphone, Sparkles, WalletCards } from "lucide-react";
+import {
+  androidCoinPacks,
+  formatRubles,
+  iosCoinPacks,
+  promoBundles,
+  promoCoinPacks,
+  type CoinsOffer,
+  type CoinsPlatform,
+} from "@/lib/coins-catalog";
 import { Reveal } from "@/components/shared/reveal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { StartCheckoutButton } from "@/components/coins/start-checkout-button";
 
 function formatCoins(value: number) {
   return new Intl.NumberFormat("ru-RU").format(value);
 }
 
-function buildTelegramOrderHref(baseUrl: string, message: string) {
-  try {
-    const url = new URL(baseUrl);
-    url.searchParams.set("text", message);
-    return url.toString();
-  } catch {
-    return `https://t.me/efootball_nexon?text=${encodeURIComponent(message)}`;
-  }
-}
-
-function buildOrderMessage(platformLabel: string, offer: CoinsOffer) {
-  const offerType = offer.kind === "bundle" ? "набор" : "монеты";
-  const priceLine = offer.price ? ` Цена: ${offer.price}.` : " Подскажите актуальную цену для этой платформы.";
-  return `Здравствуйте! Хочу купить ${offerType} "${offer.title}" для ${platformLabel}.${priceLine} Мой ник в игре: `;
-}
-
 function OfferCard({
   offer,
-  platformLabel,
-  telegramHref,
+  platform,
   tone,
 }: {
   offer: CoinsOffer;
-  platformLabel: string;
-  telegramHref: string;
+  platform: CoinsPlatform;
   tone: "android" | "ios" | "promo";
 }) {
-  const isRequestPrice = offer.priceMode === "request";
   const Icon = offer.kind === "bundle" ? Gift : Coins;
-  const orderHref = buildTelegramOrderHref(telegramHref, buildOrderMessage(platformLabel, offer));
 
   const toneClasses =
     tone === "promo"
@@ -65,7 +52,7 @@ function OfferCard({
 
       <div className="relative flex items-start justify-between gap-3">
         <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-300">
-          {offer.badge ?? platformLabel}
+          {offer.badge ?? (platform === "promo" ? "Акция" : platform === "ios" ? "iOS" : "Android")}
         </div>
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
           <Icon className="h-6 w-6" />
@@ -99,15 +86,13 @@ function OfferCard({
 
       <div className="relative mt-5 flex items-end justify-between gap-4 border-t border-white/10 pt-5">
         <div>
-          <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">{isRequestPrice ? "Цена для уточнения" : "Цена"}</div>
-          <div className="mt-2 text-3xl font-black text-white">{offer.price ?? "Уточнить"}</div>
+          <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Цена</div>
+          <div className="mt-2 text-3xl font-black text-white">{formatRubles(offer.priceKopecks)}</div>
         </div>
-        <Button asChild size="lg" className={`h-12 rounded-full px-5 ${buttonClass}`}>
-          <Link href={orderHref} target="_blank" rel="noreferrer">
-            {isRequestPrice ? "Уточнить" : "Купить"}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
+        <StartCheckoutButton offerId={offer.id} platform={platform} className={`h-12 rounded-full px-5 ${buttonClass}`}>
+          К оплате
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </StartCheckoutButton>
       </div>
 
       {offer.note ? <p className="relative mt-4 text-sm leading-6 text-zinc-400">{offer.note}</p> : null}
@@ -117,27 +102,27 @@ function OfferCard({
 
 function OfferGrid({
   offers,
-  platformLabel,
-  telegramHref,
+  platform,
   tone,
 }: {
   offers: CoinsOffer[];
-  platformLabel: string;
-  telegramHref: string;
+  platform: CoinsPlatform;
   tone: "android" | "ios" | "promo";
 }) {
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {offers.map((offer, index) => (
         <Reveal key={offer.id} delay={index * 70}>
-          <OfferCard offer={offer} platformLabel={platformLabel} telegramHref={telegramHref} tone={tone} />
+          <OfferCard offer={offer} platform={platform} tone={tone} />
         </Reveal>
       ))}
     </div>
   );
 }
 
-export function CoinsShowcase({ telegramHref }: { telegramHref: string }) {
+export function CoinsShowcase() {
+  const promoOffersCount = promoCoinPacks.length + promoBundles.length;
+
   return (
     <section className="space-y-6">
       <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
@@ -147,33 +132,33 @@ export function CoinsShowcase({ telegramHref }: { telegramHref: string }) {
             Coins Store
           </div>
           <h2 className="mt-5 max-w-3xl font-display text-3xl font-thin leading-tight text-white sm:text-4xl">
-            Выбирай платформу, пакет монет и отправляй заявку сразу в Telegram
+            Выбирай платформу, пакет монет и переходи к оформлению оплаты
           </h2>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-zinc-300 sm:text-base">
-            Для Android и iOS сделаны отдельные категории. Акционные монеты и лимитированные наборы вынесены отдельно и идут по
-            одинаковой цене для обеих платформ.
+            Каталог уже подготовлен под online checkout: цены показаны в рублях, для iOS они считаются на 10% выше Android, а нажатие
+            на кнопку покупки открывает отдельную страницу оформления. Позже сюда подключается ЮKassa.
           </p>
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
             <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4">
               <div className="text-xs uppercase tracking-[0.22em] text-zinc-500">Android</div>
-              <div className="mt-2 text-2xl font-black text-white">9</div>
+              <div className="mt-2 text-2xl font-black text-white">{androidCoinPacks.length}</div>
               <div className="mt-1 text-sm text-zinc-400">обычных пакетов</div>
             </div>
             <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4">
               <div className="text-xs uppercase tracking-[0.22em] text-zinc-500">iOS</div>
-              <div className="mt-2 text-2xl font-black text-white">9</div>
-              <div className="mt-1 text-sm text-zinc-400">пакетов с отдельной ценой</div>
+              <div className="mt-2 text-2xl font-black text-white">{iosCoinPacks.length}</div>
+              <div className="mt-1 text-sm text-zinc-400">пакетов с +10%</div>
             </div>
             <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4">
               <div className="text-xs uppercase tracking-[0.22em] text-zinc-500">Акции</div>
-              <div className="mt-2 text-2xl font-black text-white">7</div>
+              <div className="mt-2 text-2xl font-black text-white">{promoOffersCount}</div>
               <div className="mt-1 text-sm text-zinc-400">единых предложений</div>
             </div>
           </div>
         </div>
 
         <div className="rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(18,12,8,0.98),rgba(13,11,18,0.94))] p-6 shadow-[0_26px_90px_rgba(0,0,0,0.28)] sm:p-8">
-          <div className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-200/80">Как купить</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-200/80">Как это работает</div>
           <div className="mt-5 space-y-3">
             <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4">
               <div className="flex items-start gap-3">
@@ -182,7 +167,7 @@ export function CoinsShowcase({ telegramHref }: { telegramHref: string }) {
                 </div>
                 <div>
                   <div className="font-semibold text-white">1. Выберите платформу</div>
-                  <p className="mt-1 text-sm leading-6 text-zinc-400">Открой Android, iOS или вкладку акционных предложений.</p>
+                  <p className="mt-1 text-sm leading-6 text-zinc-400">Открой Android, iOS или вкладку акций с единым прайсом.</p>
                 </div>
               </div>
             </div>
@@ -192,29 +177,28 @@ export function CoinsShowcase({ telegramHref }: { telegramHref: string }) {
                   <WalletCards className="h-5 w-5" />
                 </div>
                 <div>
-                  <div className="font-semibold text-white">2. Нажмите на покупку</div>
-                  <p className="mt-1 text-sm leading-6 text-zinc-400">Кнопка откроет Telegram с уже готовым текстом заявки.</p>
+                  <div className="font-semibold text-white">2. Откройте checkout</div>
+                  <p className="mt-1 text-sm leading-6 text-zinc-400">Кнопка покупки переводит на страницу оформления выбранного пакета.</p>
                 </div>
               </div>
             </div>
             <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4">
               <div className="flex items-start gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-300/10 text-amber-200">
-                  <ShieldCheck className="h-5 w-5" />
+                  <CreditCard className="h-5 w-5" />
                 </div>
                 <div>
-                  <div className="font-semibold text-white">3. Подтвердите ник и ID</div>
-                  <p className="mt-1 text-sm leading-6 text-zinc-400">Для iOS цену подтверждаем отдельно, а акции идут по единому прайсу.</p>
+                  <div className="font-semibold text-white">3. Подключите ЮKassa позже</div>
+                  <p className="mt-1 text-sm leading-6 text-zinc-400">
+                    Страница оформления уже готова. Позже останется привязать создание платежа к финальной кнопке оплаты.
+                  </p>
                 </div>
               </div>
             </div>
           </div>
-          <Button asChild size="lg" className="mt-5 h-12 w-full rounded-full bg-amber-300 text-black hover:bg-amber-200">
-            <Link href={telegramHref} target="_blank" rel="noreferrer">
-              <MessageCircle className="mr-2 h-4 w-4" />
-              Написать в Telegram
-            </Link>
-          </Button>
+          <div className="mt-5 rounded-[1.4rem] border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50/90">
+            Поток покупки уже перестроен под оплату, а не под Telegram. Для iOS все цены автоматически выше Android на 10%.
+          </div>
         </div>
       </div>
 
@@ -224,8 +208,8 @@ export function CoinsShowcase({ telegramHref }: { telegramHref: string }) {
             <div className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">Каталог</div>
             <h3 className="mt-3 text-2xl font-black text-white sm:text-3xl">Обычные пакеты и акционные предложения</h3>
             <p className="mt-3 text-sm leading-7 text-zinc-400 sm:text-base">
-              Вкладка iOS оставлена отдельной, потому что стоимость там может отличаться от Android. Акционные предложения идут по
-              единой цене, поэтому вынесены отдельно.
+              На Android показывается базовая цена, на iOS каждый пакет автоматически дороже на 10%, а акции вынесены отдельно с
+              одинаковой стоимостью для обеих платформ.
             </p>
           </div>
 
@@ -244,23 +228,23 @@ export function CoinsShowcase({ telegramHref }: { telegramHref: string }) {
 
         <TabsContent value="android" className="space-y-5">
           <div className="rounded-[1.6rem] border border-cyan-300/10 bg-cyan-400/5 p-4 text-sm leading-7 text-cyan-100/90">
-            Android-прайс выведен прямо в карточках. Выбирай нужный пакет и отправляй заявку одной кнопкой.
+            Базовый Android-прайс уже переведён в рубли. Нажатие на кнопку открывает checkout выбранного пакета.
           </div>
-          <OfferGrid offers={androidCoinPacks} platformLabel="Android" telegramHref={telegramHref} tone="android" />
+          <OfferGrid offers={androidCoinPacks} platform="android" tone="android" />
         </TabsContent>
 
         <TabsContent value="ios" className="space-y-5">
           <div className="rounded-[1.6rem] border border-sky-200/10 bg-white/[0.04] p-4 text-sm leading-7 text-zinc-300">
-            Для iOS на странице сохранены все доступные пакеты, но итоговую цену подтверждаем вручную перед оплатой. Это избавляет от
-            ошибок, если магазин меняет стоимость.
+            Все цены для iOS рассчитываются автоматически как Android + 10%. Это правило уже зашито в каталог и будет работать дальше
+            без ручного пересчёта.
           </div>
-          <OfferGrid offers={iosCoinPacks} platformLabel="iOS" telegramHref={telegramHref} tone="ios" />
+          <OfferGrid offers={iosCoinPacks} platform="ios" tone="ios" />
         </TabsContent>
 
         <TabsContent value="promo" className="space-y-8">
           <div className="rounded-[1.6rem] border border-amber-300/15 bg-amber-300/8 p-4 text-sm leading-7 text-amber-50/90">
-            Все акционные позиции на этой вкладке идут по одинаковой цене для Android и iOS. Здесь собраны и бонусные монеты, и
-            лимитированные наборы.
+            Все акционные позиции на этой вкладке стоят одинаково для Android и iOS. Здесь собраны бонусные монеты и лимитированные
+            наборы.
           </div>
 
           <div className="space-y-4">
@@ -273,7 +257,7 @@ export function CoinsShowcase({ telegramHref }: { telegramHref: string }) {
                 <div className="text-lg font-black text-white">Усиленные пакеты с бонусом к обычному номиналу</div>
               </div>
             </div>
-            <OfferGrid offers={promoCoinPacks} platformLabel="Android или iOS" telegramHref={telegramHref} tone="promo" />
+            <OfferGrid offers={promoCoinPacks} platform="promo" tone="promo" />
           </div>
 
           <div className="space-y-4">
@@ -286,7 +270,7 @@ export function CoinsShowcase({ telegramHref }: { telegramHref: string }) {
                 <div className="text-lg font-black text-white">Стартовые комплекты и лимитированные предложения</div>
               </div>
             </div>
-            <OfferGrid offers={promoBundles} platformLabel="Android или iOS" telegramHref={telegramHref} tone="promo" />
+            <OfferGrid offers={promoBundles} platform="promo" tone="promo" />
           </div>
         </TabsContent>
       </Tabs>
