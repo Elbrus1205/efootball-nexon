@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowLeft, Coins, Gift, ShieldCheck, Smartphone, WalletCards } from "lucide-react";
+import { ArrowLeft, Coins, Gift, Smartphone, WalletCards } from "lucide-react";
 import { notFound } from "next/navigation";
 import { CoinsCheckoutForm } from "@/components/coins/coins-checkout-form";
 import { Button } from "@/components/ui/button";
@@ -43,13 +43,6 @@ export default async function CoinsCheckoutPage({ params }: CoinsCheckoutPagePro
   const session = await getCurrentSession();
   const platformLabel = getCoinsPlatformLabel(params.platform);
   const priceLabel = formatRubles(offer.priceKopecks);
-  const checkoutNote =
-    params.platform === "ios"
-      ? "Цена для iOS рассчитана автоматически с наценкой 10% относительно Android."
-      : params.platform === "promo"
-        ? "Акционный оффер доступен по одной цене для Android и iOS."
-        : "Базовая цена Android. Позже этот сценарий можно привязать к онлайн-оплате через ЮKassa.";
-
   const OfferIcon = offer.kind === "bundle" ? Gift : Coins;
 
   return (
@@ -76,7 +69,6 @@ export default async function CoinsCheckoutPage({ params }: CoinsCheckoutPagePro
           <div className="mt-6 rounded-[1.6rem] border border-white/10 bg-white/[0.04] p-5">
             <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">Стоимость</div>
             <div className="mt-3 text-4xl font-black text-emerald-300">{priceLabel}</div>
-            <p className="mt-3 text-sm leading-6 text-zinc-400">{checkoutNote}</p>
           </div>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -122,21 +114,6 @@ export default async function CoinsCheckoutPage({ params }: CoinsCheckoutPagePro
               <div className="mt-2 text-base font-semibold text-white">{offer.bonus}</div>
             </div>
           ) : null}
-
-          <div className="mt-5 rounded-[1.4rem] border border-emerald-300/20 bg-emerald-400/10 p-4">
-            <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-300/10 text-emerald-200">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="font-semibold text-white">Поток оплаты уже подготовлен</div>
-                <p className="mt-1 text-sm leading-6 text-emerald-50/80">
-                  Выбор оффера и переход на checkout уже работают. После подключения ЮKassa останется привязать создание платежа к
-                  кнопке оплаты.
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
 
         <CoinsCheckoutForm

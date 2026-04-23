@@ -352,9 +352,6 @@ export function CoinsShowcase() {
         </TabsContent>
 
         <TabsContent value="ios" className="space-y-5">
-          <div className="rounded-[1.6rem] border border-sky-200/10 bg-white/[0.04] p-4 text-sm leading-7 text-zinc-300">
-            Все цены для iOS считаются автоматически как Android + 10%, а визуально карточки получают более светлый премиальный стиль.
-          </div>
           <OfferGrid offers={iosCoinPacks} platform="ios" tone="ios" />
         </TabsContent>
 

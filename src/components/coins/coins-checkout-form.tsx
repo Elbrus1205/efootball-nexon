@@ -1,7 +1,7 @@
 "use client";
 
 import { type FormEvent, useState, useTransition } from "react";
-import { CreditCard, ShieldCheck } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,27 +85,6 @@ export function CoinsCheckoutForm({
           />
         </div>
       </div>
-
-      <div className="mt-6 rounded-[1.5rem] border border-amber-300/20 bg-amber-300/10 p-4 text-sm leading-6 text-amber-50/90">
-        Это подготовленный шаг под онлайн-оплату. После подключения ЮKassa сюда можно будет добавить создание платежа и редирект на
-        оплату без переделки страницы.
-      </div>
-
-      <div className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4">
-        <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/[0.06] text-zinc-200">
-            <ShieldCheck className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="font-semibold text-white">Что будет дальше</div>
-            <p className="mt-1 text-sm leading-6 text-zinc-400">
-              Сейчас кнопка завершает подготовленный checkout-сценарий. Позже здесь можно вызвать API создания платежа и открыть
-              страницу ЮKassa.
-            </p>
-          </div>
-        </div>
-      </div>
-
       <Button type="submit" size="lg" className="mt-6 h-12 w-full rounded-full bg-emerald-400 text-black hover:bg-emerald-300">
         {pending ? "Подготавливаем..." : "Оплатить через ЮKassa"}
       </Button>
