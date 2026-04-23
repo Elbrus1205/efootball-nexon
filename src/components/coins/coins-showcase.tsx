@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { ArrowRight, Coins, CreditCard, Gift, Smartphone, Sparkles, WalletCards } from "lucide-react";
 import { Reveal } from "@/components/shared/reveal";
 import { StartCheckoutButton } from "@/components/coins/start-checkout-button";
@@ -23,74 +24,74 @@ type OfferTone = "android" | "ios" | "promo";
 const toneVisuals: Record<
   OfferTone,
   {
-    backgroundPath: string;
-    backgroundPosition: string;
-    shellClass: string;
+    artPath: string;
+    artClass: string;
+    frameClass: string;
     badgeClass: string;
     platformClass: string;
     iconClass: string;
-    panelClass: string;
     statClass: string;
+    pricePanelClass: string;
     buttonClass: string;
-    coinValueClass: string;
-    baseLayer: string;
-    overlay: string;
-    accent: string;
+    coinClass: string;
+    glowClass: string;
+    baseBackground: string;
+    overlayBackground: string;
   }
 > = {
   android: {
-    backgroundPath: "/coins/coins-card-bg.png",
-    backgroundPosition: "86% center",
-    shellClass:
-      "border-cyan-300/15 bg-[linear-gradient(180deg,rgba(7,12,20,0.98),rgba(6,10,17,0.95))] shadow-[0_32px_90px_rgba(0,0,0,0.34)]",
-    badgeClass: "border-cyan-300/25 bg-cyan-400/12 text-cyan-50",
-    platformClass: "border-white/12 bg-black/25 text-zinc-200",
-    iconClass: "border-cyan-200/20 bg-cyan-400/12 text-cyan-100",
-    panelClass: "border-cyan-200/14 bg-slate-950/55",
-    statClass: "border-cyan-300/14 bg-slate-950/45 text-cyan-50",
-    buttonClass: "bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 text-white hover:opacity-95",
-    coinValueClass: "text-cyan-50",
-    baseLayer:
-      "radial-gradient(circle at 86% 18%, rgba(34, 211, 238, 0.22), transparent 24%), radial-gradient(circle at 80% 82%, rgba(59, 130, 246, 0.18), transparent 28%), linear-gradient(180deg, rgba(6, 10, 18, 0.64), rgba(6, 10, 18, 0.82))",
-    overlay:
-      "linear-gradient(111deg, rgba(4, 8, 15, 0.97) 0%, rgba(4, 8, 15, 0.9) 34%, rgba(4, 8, 15, 0.48) 63%, rgba(4, 8, 15, 0.85) 100%)",
-    accent: "linear-gradient(90deg, rgba(34,211,238,0), rgba(34,211,238,0.82), rgba(59,130,246,0))",
+    artPath: "/coins/coins-card-bg.png",
+    artClass: "object-right",
+    frameClass:
+      "border-cyan-300/16 bg-[linear-gradient(180deg,rgba(6,11,18,0.98),rgba(8,12,18,0.94))] shadow-[0_28px_80px_rgba(0,0,0,0.34)]",
+    badgeClass: "border-cyan-300/24 bg-cyan-400/12 text-cyan-100",
+    platformClass: "border-white/12 bg-black/30 text-zinc-100",
+    iconClass: "border-cyan-200/20 bg-cyan-400/10 text-cyan-100",
+    statClass: "border-cyan-300/12 bg-slate-950/60 text-white",
+    pricePanelClass: "border-cyan-300/14 bg-slate-950/68",
+    buttonClass: "bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-600 text-white hover:opacity-95",
+    coinClass: "text-white",
+    glowClass: "bg-cyan-400/20",
+    baseBackground:
+      "radial-gradient(circle at 83% 20%, rgba(34,211,238,0.2), transparent 18%), radial-gradient(circle at 90% 72%, rgba(59,130,246,0.18), transparent 22%), linear-gradient(180deg, rgba(4,8,14,0.95), rgba(5,9,15,0.96))",
+    overlayBackground:
+      "linear-gradient(90deg, rgba(4,8,14,0.96) 0%, rgba(4,8,14,0.93) 42%, rgba(4,8,14,0.66) 60%, rgba(4,8,14,0.18) 78%, rgba(4,8,14,0.48) 100%)",
   },
   ios: {
-    backgroundPath: "/coins/coins-card-bg.png",
-    backgroundPosition: "86% center",
-    shellClass:
-      "border-sky-100/14 bg-[linear-gradient(180deg,rgba(11,14,22,0.98),rgba(8,10,16,0.95))] shadow-[0_32px_90px_rgba(0,0,0,0.34)]",
-    badgeClass: "border-sky-100/24 bg-white/12 text-white",
-    platformClass: "border-white/12 bg-black/25 text-zinc-200",
-    iconClass: "border-sky-100/16 bg-white/12 text-white",
-    panelClass: "border-white/12 bg-black/45",
-    statClass: "border-white/12 bg-black/35 text-white",
+    artPath: "/coins/coins-card-bg.png",
+    artClass: "object-right",
+    frameClass:
+      "border-sky-100/14 bg-[linear-gradient(180deg,rgba(8,11,18,0.98),rgba(9,11,16,0.94))] shadow-[0_28px_80px_rgba(0,0,0,0.34)]",
+    badgeClass: "border-sky-100/22 bg-white/12 text-white",
+    platformClass: "border-white/12 bg-black/30 text-zinc-100",
+    iconClass: "border-white/14 bg-white/10 text-white",
+    statClass: "border-white/12 bg-black/48 text-white",
+    pricePanelClass: "border-white/14 bg-black/60",
     buttonClass: "bg-white text-black hover:bg-zinc-200",
-    coinValueClass: "text-white",
-    baseLayer:
-      "radial-gradient(circle at 86% 18%, rgba(255, 255, 255, 0.16), transparent 22%), radial-gradient(circle at 76% 84%, rgba(56, 189, 248, 0.14), transparent 28%), linear-gradient(180deg, rgba(8, 10, 18, 0.6), rgba(8, 10, 18, 0.82))",
-    overlay:
-      "linear-gradient(111deg, rgba(9, 11, 17, 0.97) 0%, rgba(9, 11, 17, 0.9) 35%, rgba(9, 11, 17, 0.48) 63%, rgba(9, 11, 17, 0.86) 100%)",
-    accent: "linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.86), rgba(125,211,252,0))",
+    coinClass: "text-white",
+    glowClass: "bg-sky-200/16",
+    baseBackground:
+      "radial-gradient(circle at 83% 20%, rgba(255,255,255,0.14), transparent 18%), radial-gradient(circle at 90% 72%, rgba(56,189,248,0.14), transparent 22%), linear-gradient(180deg, rgba(7,10,16,0.96), rgba(8,10,15,0.96))",
+    overlayBackground:
+      "linear-gradient(90deg, rgba(7,10,16,0.96) 0%, rgba(7,10,16,0.93) 42%, rgba(7,10,16,0.64) 60%, rgba(7,10,16,0.18) 78%, rgba(7,10,16,0.44) 100%)",
   },
   promo: {
-    backgroundPath: "/coins/promo-coins-card-bg.png",
-    backgroundPosition: "82% center",
-    shellClass:
-      "border-amber-300/18 bg-[linear-gradient(180deg,rgba(22,14,7,0.98),rgba(13,10,14,0.95))] shadow-[0_32px_90px_rgba(0,0,0,0.36)]",
-    badgeClass: "border-amber-300/24 bg-amber-300/14 text-amber-50",
-    platformClass: "border-amber-200/18 bg-black/25 text-amber-50/85",
+    artPath: "/coins/promo-coins-card-bg.png",
+    artClass: "object-right",
+    frameClass:
+      "border-amber-300/18 bg-[linear-gradient(180deg,rgba(18,12,7,0.98),rgba(12,9,11,0.95))] shadow-[0_28px_84px_rgba(0,0,0,0.36)]",
+    badgeClass: "border-amber-300/26 bg-amber-300/14 text-amber-50",
+    platformClass: "border-amber-100/18 bg-black/30 text-amber-50",
     iconClass: "border-amber-200/20 bg-amber-300/12 text-amber-100",
-    panelClass: "border-amber-200/18 bg-black/48",
-    statClass: "border-amber-300/14 bg-black/38 text-amber-50",
+    statClass: "border-amber-300/14 bg-black/46 text-white",
+    pricePanelClass: "border-amber-300/16 bg-black/58",
     buttonClass: "bg-amber-300 text-black hover:bg-amber-200",
-    coinValueClass: "text-amber-50",
-    baseLayer:
-      "radial-gradient(circle at 84% 18%, rgba(251, 191, 36, 0.26), transparent 24%), radial-gradient(circle at 80% 80%, rgba(249, 115, 22, 0.18), transparent 30%), linear-gradient(180deg, rgba(18, 12, 8, 0.62), rgba(18, 12, 8, 0.84))",
-    overlay:
-      "linear-gradient(111deg, rgba(13, 8, 4, 0.97) 0%, rgba(13, 8, 4, 0.9) 34%, rgba(13, 8, 4, 0.46) 63%, rgba(13, 8, 4, 0.88) 100%)",
-    accent: "linear-gradient(90deg, rgba(251,191,36,0), rgba(251,191,36,0.86), rgba(249,115,22,0))",
+    coinClass: "text-amber-50",
+    glowClass: "bg-amber-300/20",
+    baseBackground:
+      "radial-gradient(circle at 82% 20%, rgba(251,191,36,0.22), transparent 18%), radial-gradient(circle at 88% 72%, rgba(249,115,22,0.16), transparent 24%), linear-gradient(180deg, rgba(13,8,4,0.97), rgba(12,8,6,0.96))",
+    overlayBackground:
+      "linear-gradient(90deg, rgba(12,8,4,0.97) 0%, rgba(12,8,4,0.93) 42%, rgba(12,8,4,0.62) 60%, rgba(12,8,4,0.16) 78%, rgba(12,8,4,0.44) 100%)",
   },
 };
 
@@ -100,10 +101,30 @@ function getPlatformPill(platform: CoinsPlatform) {
   return "Акция";
 }
 
-function getOfferSummary(tone: OfferTone) {
-  if (tone === "ios") return "Android + 10%";
-  if (tone === "promo") return "Одинаковая цена";
-  return "Базовый Android";
+function getOfferSummary(platform: CoinsPlatform) {
+  if (platform === "ios") return "Цена для iOS";
+  if (platform === "promo") return "Единая цена";
+  return "Цена для Android";
+}
+
+function getOfferDescription(tone: OfferTone, offer: CoinsOffer) {
+  if (offer.kind === "bundle") {
+    return "Лимитированный комплект с монетами и дополнительным бонусом внутри набора.";
+  }
+
+  if (tone === "ios") {
+    return "Стоимость уже рассчитана с наценкой 10% для устройств Apple.";
+  }
+
+  if (tone === "promo") {
+    return "Спецпредложение с одинаковой ценой для Android и iOS.";
+  }
+
+  return "Базовый пакет монет с быстрым переходом к оформлению оплаты.";
+}
+
+function getOfferSecondaryLabel(offer: CoinsOffer) {
+  return offer.kind === "bundle" ? "Состав" : "Бонус";
 }
 
 function getOfferSecondaryValue(offer: CoinsOffer) {
@@ -112,7 +133,7 @@ function getOfferSecondaryValue(offer: CoinsOffer) {
   }
 
   if (offer.freeCoins > 0) {
-    return `${formatCoins(offer.freeCoins)} бонусных`;
+    return `+${formatCoins(offer.freeCoins)} бонусных`;
   }
 
   return "Без бонуса";
@@ -130,28 +151,32 @@ function OfferCard({
   const Icon = offer.kind === "bundle" ? Gift : Coins;
   const visual = toneVisuals[tone];
   const typeLabel = offer.kind === "bundle" ? "Лимитированный набор" : "Пакет монет";
-  const summary = getOfferSummary(tone);
+  const summary = getOfferSummary(platform);
+  const description = getOfferDescription(tone, offer);
+  const secondaryLabel = getOfferSecondaryLabel(offer);
   const secondaryValue = getOfferSecondaryValue(offer);
 
   return (
     <article
-      className={`group relative aspect-[4/3] overflow-hidden rounded-[2rem] border transition duration-300 hover:-translate-y-1 hover:shadow-[0_38px_110px_rgba(0,0,0,0.42)] ${visual.shellClass}`}
+      className={`group relative aspect-[4/3] overflow-hidden rounded-[2rem] border transition duration-300 hover:-translate-y-1 hover:shadow-[0_34px_95px_rgba(0,0,0,0.42)] ${visual.frameClass}`}
     >
-      <div className="absolute inset-0" style={{ background: visual.baseLayer }} />
-      <div
-        className="absolute inset-0 scale-[1.02] bg-cover bg-no-repeat opacity-95 transition duration-500 group-hover:scale-[1.06]"
-        style={{
-          backgroundImage: `url('${visual.backgroundPath}')`,
-          backgroundPosition: visual.backgroundPosition,
-          backgroundSize: "cover",
-        }}
-      />
-      <div className="absolute inset-0" style={{ background: visual.overlay }} />
-      <div className="absolute inset-x-6 bottom-[6.15rem] h-px opacity-80" style={{ backgroundImage: visual.accent }} />
-      <div className="absolute inset-x-0 bottom-0 h-32 bg-[linear-gradient(180deg,transparent,rgba(3,6,11,0.46)_45%,rgba(3,6,11,0.82))]" />
-      <div className="absolute -right-10 top-6 h-32 w-32 rounded-full bg-white/10 blur-3xl transition duration-500 group-hover:scale-110" />
+      <div className="absolute inset-0" style={{ background: visual.baseBackground }} />
+      <div className={`absolute -right-8 top-10 h-44 w-44 rounded-full blur-3xl ${visual.glowClass}`} />
 
-      <div className="relative z-10 flex h-full flex-col p-5 sm:p-6">
+      <div className="absolute inset-y-0 right-0 w-[56%]">
+        <Image
+          src={visual.artPath}
+          alt=""
+          fill
+          sizes="(min-width: 1536px) 30vw, (min-width: 1280px) 46vw, (min-width: 768px) 48vw, 100vw"
+          className={`pointer-events-none select-none object-cover opacity-100 transition duration-500 group-hover:scale-[1.05] ${visual.artClass}`}
+        />
+      </div>
+
+      <div className="absolute inset-0" style={{ background: visual.overlayBackground }} />
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-[linear-gradient(180deg,transparent,rgba(3,6,10,0.14)_22%,rgba(3,6,10,0.84))]" />
+
+      <div className="relative z-10 flex h-full flex-col justify-between p-5 sm:p-6">
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-wrap gap-2">
             <span
@@ -173,43 +198,43 @@ function OfferCard({
           </div>
         </div>
 
-        <div className="mt-auto space-y-4">
-          <div className="max-w-[70%]">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-zinc-400">{typeLabel}</div>
-            <h3 className="mt-1.5 text-lg font-black leading-tight text-white sm:text-xl">{offer.title}</h3>
-            <div className="mt-3 flex items-end gap-2">
-              <div className={`text-3xl font-black tracking-tight sm:text-[2.3rem] ${visual.coinValueClass}`}>
-                {formatCoins(offer.coins)}
-              </div>
-              <div className="pb-1 text-[10px] font-semibold uppercase tracking-[0.34em] text-zinc-400">Coins</div>
-            </div>
+        <div className="mt-6 max-w-[54%]">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-zinc-400">{typeLabel}</div>
+          <h3 className="mt-2 text-xl font-black leading-tight text-white sm:text-[1.65rem]">{offer.title}</h3>
+
+          <div className="mt-4 flex items-end gap-2">
+            <div className={`text-4xl font-black tracking-tight sm:text-[2.8rem] ${visual.coinClass}`}>{formatCoins(offer.coins)}</div>
+            <div className="pb-1 text-[10px] font-semibold uppercase tracking-[0.32em] text-zinc-400">Coins</div>
           </div>
 
+          <p className="mt-3 max-w-[26ch] text-sm leading-6 text-zinc-300">{description}</p>
+        </div>
+
+        <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
             <div className={`rounded-[1rem] border px-3 py-2 backdrop-blur-md ${visual.statClass}`}>
-              <div className="text-[10px] uppercase tracking-[0.22em] text-zinc-400">Оплаченные</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-400">Оплаченные</div>
               <div className="mt-1 text-sm font-bold text-white">{formatCoins(offer.paidCoins)}</div>
             </div>
             <div className={`rounded-[1rem] border px-3 py-2 backdrop-blur-md ${visual.statClass}`}>
-              <div className="text-[10px] uppercase tracking-[0.22em] text-zinc-400">
-                {offer.kind === "bundle" ? "Бонус" : "Дополнительно"}
-              </div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-400">{secondaryLabel}</div>
               <div className="mt-1 text-sm font-bold text-white">{secondaryValue}</div>
             </div>
           </div>
 
-          <div className={`rounded-[1.35rem] border px-4 py-3 backdrop-blur-xl ${visual.panelClass}`}>
+          <div className={`rounded-[1.35rem] border px-4 py-3 backdrop-blur-xl ${visual.pricePanelClass}`}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-zinc-400">{summary}</div>
                 <div className="mt-1 text-2xl font-black text-white">{formatRubles(offer.priceKopecks)}</div>
               </div>
+
               <StartCheckoutButton
                 offerId={offer.id}
                 platform={platform}
-                className={`h-10 min-w-[8.75rem] shrink-0 justify-center rounded-full px-4 shadow-[0_18px_40px_rgba(0,0,0,0.28)] ${visual.buttonClass}`}
+                className={`h-11 min-w-[9.25rem] shrink-0 justify-center rounded-full px-5 shadow-[0_16px_38px_rgba(0,0,0,0.3)] ${visual.buttonClass}`}
               >
-                К оплате
+                Оформить
                 <ArrowRight className="ml-2 h-4 w-4" />
               </StartCheckoutButton>
             </div>
@@ -230,7 +255,7 @@ function OfferGrid({
   tone: OfferTone;
 }) {
   return (
-    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
       {offers.map((offer, index) => (
         <Reveal key={offer.id} delay={index * 70}>
           <OfferCard offer={offer} platform={platform} tone={tone} />
@@ -245,18 +270,18 @@ export function CoinsShowcase() {
 
   return (
     <section className="space-y-6">
-      <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(5,18,34,0.95),rgba(9,13,20,0.96))] p-6 shadow-[0_26px_90px_rgba(0,0,0,0.28)] sm:p-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-400/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.26em] text-cyan-200">
             <Coins className="h-4 w-4" />
             Coins Store
           </div>
           <h2 className="mt-5 max-w-3xl font-display text-3xl font-thin leading-tight text-white sm:text-4xl">
-            Витрина монет и акционных наборов уже готова под красивые карточки и checkout
+            Выбирай платформу, пакет монет или акцию и сразу переходи к оплате
           </h2>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-zinc-300 sm:text-base">
-            Обычные пакеты и акционные предложения теперь можно показывать как полноценные товарные карточки с фоном 4:3.
-            Для iOS цена считается автоматически как Android + 10%, а покупка сразу ведёт к оформлению оплаты.
+            Карточки оформлены как полноценная витрина: обычные пакеты, отдельный прайс для iOS и акционные предложения с единым
+            ценником. Фоновые PNG подставляются прямо в карточку и теперь действительно видны.
           </p>
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
             <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4">
@@ -272,7 +297,7 @@ export function CoinsShowcase() {
             <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4">
               <div className="text-xs uppercase tracking-[0.22em] text-zinc-500">Акции</div>
               <div className="mt-2 text-2xl font-black text-white">{promoOffersCount}</div>
-              <div className="mt-1 text-sm text-zinc-400">единых предложений</div>
+              <div className="mt-1 text-sm text-zinc-400">спецпредложений</div>
             </div>
           </div>
         </div>
@@ -287,35 +312,39 @@ export function CoinsShowcase() {
                 </div>
                 <div>
                   <div className="font-semibold text-white">1. Выберите платформу</div>
-                  <p className="mt-1 text-sm leading-6 text-zinc-400">Android, iOS или вкладку с акциями и единым прайсом.</p>
+                  <p className="mt-1 text-sm leading-6 text-zinc-400">Открой Android, iOS или вкладку акций с единым прайсом.</p>
                 </div>
               </div>
             </div>
+
             <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4">
               <div className="flex items-start gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-300/10 text-amber-200">
                   <WalletCards className="h-5 w-5" />
                 </div>
                 <div>
-                  <div className="font-semibold text-white">2. Откройте checkout</div>
-                  <p className="mt-1 text-sm leading-6 text-zinc-400">Кнопка покупки переводит на оформление выбранного пакета.</p>
+                  <div className="font-semibold text-white">2. Выберите пакет</div>
+                  <p className="mt-1 text-sm leading-6 text-zinc-400">Каждая карточка показывает цену, состав и бонусы без лишней путаницы.</p>
                 </div>
               </div>
             </div>
+
             <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4">
               <div className="flex items-start gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-300/10 text-amber-200">
                   <CreditCard className="h-5 w-5" />
                 </div>
                 <div>
-                  <div className="font-semibold text-white">3. Подключите ЮKassa позже</div>
-                  <p className="mt-1 text-sm leading-6 text-zinc-400">Страница оплаты уже готова, останется только привязать создание платежа.</p>
+                  <div className="font-semibold text-white">3. Перейдите к оплате</div>
+                  <p className="mt-1 text-sm leading-6 text-zinc-400">Кнопка внутри карточки ведёт на checkout выбранного предложения.</p>
                 </div>
               </div>
             </div>
           </div>
+
           <div className="mt-5 rounded-[1.4rem] border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50/90">
-            Под карточки уже заложены два фоновых PNG формата 4:3: один для обычных монет и один для акционных предложений.
+            Внутрь карточек уже подключены твои PNG из `public/coins`, поэтому отдельные обычные и акционные фоны теперь видны прямо в
+            сетке товаров.
           </div>
         </div>
       </div>
@@ -326,8 +355,8 @@ export function CoinsShowcase() {
             <div className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">Каталог</div>
             <h3 className="mt-3 text-2xl font-black text-white sm:text-3xl">Обычные пакеты и акционные предложения</h3>
             <p className="mt-3 text-sm leading-7 text-zinc-400 sm:text-base">
-              Каждая карточка теперь собрана под фоновый арт 4:3: текст читается с левой стороны, справа остаётся место под монеты
-              и визуал пакета.
+              На широких экранах карточки стали крупнее, а фон с монетами теперь читается сразу. На планшете и мобильных всё остаётся
+              аккуратным и адаптивным.
             </p>
           </div>
 
@@ -346,22 +375,21 @@ export function CoinsShowcase() {
 
         <TabsContent value="android" className="space-y-5">
           <div className="rounded-[1.6rem] border border-cyan-300/10 bg-cyan-400/5 p-4 text-sm leading-7 text-cyan-100/90">
-            Базовый Android-прайс в рублях. Карточки используют общий фон для обычных пакетов монет.
+            Базовый Android-прайс в рублях. Фон карточек показывает обычные пакеты монет.
           </div>
           <OfferGrid offers={androidCoinPacks} platform="android" tone="android" />
         </TabsContent>
 
         <TabsContent value="ios" className="space-y-5">
           <div className="rounded-[1.6rem] border border-sky-200/10 bg-white/[0.04] p-4 text-sm leading-7 text-zinc-300">
-            Все цены для iOS рассчитываются автоматически как Android + 10%. Визуально карточки совпадают с Android, но имеют
-            отдельный стиль и подпись.
+            Все цены для iOS считаются автоматически как Android + 10%, а визуально карточки получают более светлый премиальный стиль.
           </div>
           <OfferGrid offers={iosCoinPacks} platform="ios" tone="ios" />
         </TabsContent>
 
         <TabsContent value="promo" className="space-y-8">
           <div className="rounded-[1.6rem] border border-amber-300/15 bg-amber-300/8 p-4 text-sm leading-7 text-amber-50/90">
-            Все позиции в акциях используют единый прайс для Android и iOS и получают отдельный золотой фон карточки.
+            Все акционные позиции используют единый прайс для Android и iOS и отдельный золотой фон карточки.
           </div>
 
           <div className="space-y-4">
@@ -371,7 +399,7 @@ export function CoinsShowcase() {
               </div>
               <div>
                 <div className="text-sm font-semibold uppercase tracking-[0.22em] text-amber-200/80">Акционные монеты</div>
-                <div className="text-lg font-black text-white">Усиленные пакеты с бонусом к обычному номиналу</div>
+                <div className="text-lg font-black text-white">Пакеты с усиленным бонусом к обычному номиналу</div>
               </div>
             </div>
             <OfferGrid offers={promoCoinPacks} platform="promo" tone="promo" />
