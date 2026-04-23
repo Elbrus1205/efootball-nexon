@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+
+const TELEGRAM_CONTACT_REGEX = /^(?:@[\w_]{5,32}|(?:https?:\/\/)?(?:t\.me|telegram\.me)\/[A-Za-z0-9_]{5,32}\/?)$/i;
 
 export function CoinsCheckoutForm({
   offerTitle,
@@ -22,13 +23,17 @@ export function CoinsCheckoutForm({
   const [pending, startTransition] = useTransition();
   const [playerName, setPlayerName] = useState(initialPlayerName);
   const [contact, setContact] = useState("");
-  const [comment, setComment] = useState("");
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (playerName.trim().length < 2) {
-      toast.error("Укажи ник или имя игрока для оформления.");
+      toast.error("Укажи ваше имя для оформления.");
+      return;
+    }
+
+    if (!TELEGRAM_CONTACT_REGEX.test(contact.trim())) {
+      toast.error("Укажи Telegram: @username или ссылку t.me/username.");
       return;
     }
 
@@ -53,36 +58,26 @@ export function CoinsCheckoutForm({
 
       <div className="mt-6 space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="player-name">Ник или имя игрока</Label>
+          <Label htmlFor="player-name">Ваше имя</Label>
           <Input
             id="player-name"
             value={playerName}
             onChange={(event) => setPlayerName(event.target.value)}
-            placeholder="Например, ElbrusEN"
+            placeholder="Например, Эльбрус"
             className="bg-white/[0.04]"
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="contact">Telegram или email</Label>
+          <Label htmlFor="contact">Telegram</Label>
           <Input
             id="contact"
             value={contact}
             onChange={(event) => setContact(event.target.value)}
-            placeholder="@nickname или email@example.com"
+            placeholder="@username или https://t.me/username"
             className="bg-white/[0.04]"
           />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="comment">Комментарий к заказу</Label>
-          <Textarea
-            id="comment"
-            value={comment}
-            onChange={(event) => setComment(event.target.value)}
-            placeholder="Можно указать ID, пожелания по заказу или удобный способ связи."
-            className="min-h-[140px] bg-white/[0.04]"
-          />
+          <p className="text-xs text-zinc-500">Только Telegram: username или ссылка.</p>
         </div>
       </div>
       <Button type="submit" size="lg" className="mt-6 h-12 w-full rounded-full bg-emerald-400 text-black hover:bg-emerald-300">
