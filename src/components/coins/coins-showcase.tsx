@@ -106,6 +106,18 @@ function getOfferSummary(tone: OfferTone) {
   return "Базовый Android";
 }
 
+function getOfferSecondaryValue(offer: CoinsOffer) {
+  if (offer.kind === "bundle") {
+    return offer.bonus ?? "Спецпредложение";
+  }
+
+  if (offer.freeCoins > 0) {
+    return `${formatCoins(offer.freeCoins)} бонусных`;
+  }
+
+  return "Без бонуса";
+}
+
 function OfferCard({
   offer,
   platform,
@@ -119,10 +131,7 @@ function OfferCard({
   const visual = toneVisuals[tone];
   const typeLabel = offer.kind === "bundle" ? "Лимитированный набор" : "Пакет монет";
   const summary = getOfferSummary(tone);
-  const secondaryValue =
-    offer.kind === "bundle"
-      ? offer.bonus ?? "Спецпредложение"
-      : `${formatCoins(offer.freeCoins)} бонусных`;
+  const secondaryValue = getOfferSecondaryValue(offer);
 
   return (
     <article
@@ -134,6 +143,7 @@ function OfferCard({
         style={{
           backgroundImage: `url('${visual.backgroundPath}')`,
           backgroundPosition: visual.backgroundPosition,
+          backgroundSize: "cover",
         }}
       />
       <div className="absolute inset-0" style={{ background: visual.overlay }} />
@@ -164,7 +174,7 @@ function OfferCard({
         </div>
 
         <div className="mt-auto space-y-4">
-          <div className="max-w-[72%]">
+          <div className="max-w-[70%]">
             <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-zinc-400">{typeLabel}</div>
             <h3 className="mt-1.5 text-lg font-black leading-tight text-white sm:text-xl">{offer.title}</h3>
             <div className="mt-3 flex items-end gap-2">
@@ -189,7 +199,7 @@ function OfferCard({
           </div>
 
           <div className={`rounded-[1.35rem] border px-4 py-3 backdrop-blur-xl ${visual.panelClass}`}>
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-zinc-400">{summary}</div>
                 <div className="mt-1 text-2xl font-black text-white">{formatRubles(offer.priceKopecks)}</div>
@@ -197,7 +207,7 @@ function OfferCard({
               <StartCheckoutButton
                 offerId={offer.id}
                 platform={platform}
-                className={`h-10 shrink-0 rounded-full px-4 shadow-[0_18px_40px_rgba(0,0,0,0.28)] ${visual.buttonClass}`}
+                className={`h-10 min-w-[8.75rem] shrink-0 justify-center rounded-full px-4 shadow-[0_18px_40px_rgba(0,0,0,0.28)] ${visual.buttonClass}`}
               >
                 К оплате
                 <ArrowRight className="ml-2 h-4 w-4" />
