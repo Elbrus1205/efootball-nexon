@@ -97,17 +97,6 @@ export default async function CoinsCheckoutPage({ params }: CoinsCheckoutPagePro
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Оплаченные</div>
-              <div className="mt-2 text-2xl font-black text-white">{new Intl.NumberFormat("ru-RU").format(offer.paidCoins)}</div>
-            </div>
-            <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Бесплатные</div>
-              <div className="mt-2 text-2xl font-black text-white">{new Intl.NumberFormat("ru-RU").format(offer.freeCoins)}</div>
-            </div>
-          </div>
-
           {offer.bonus ? (
             <div className="mt-5 rounded-[1.4rem] border border-amber-300/20 bg-amber-300/10 p-4">
               <div className="text-xs uppercase tracking-[0.2em] text-amber-100/80">Бонус набора</div>
