@@ -8,6 +8,7 @@ declare module "next-auth" {
       role: UserRole;
       nickname?: string | null;
       efootballUid?: string | null;
+      telegramUsername?: string | null;
       isBanned: boolean;
       authSessionId?: string | null;
     };
@@ -17,6 +18,7 @@ declare module "next-auth" {
     role?: UserRole;
     nickname?: string | null;
     efootballUid?: string | null;
+    telegramUsername?: string | null;
     isBanned?: boolean;
     authSessionId?: string | null;
   }
@@ -27,6 +29,7 @@ declare module "next-auth/jwt" {
     role?: UserRole;
     nickname?: string | null;
     efootballUid?: string | null;
+    telegramUsername?: string | null;
     isBanned?: boolean;
     authSessionId?: string | null;
   }

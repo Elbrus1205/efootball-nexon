@@ -361,6 +361,7 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.nickname = user.nickname;
         token.efootballUid = user.efootballUid;
+        token.telegramUsername = user.telegramUsername;
         token.isBanned = user.isBanned;
         token.authSessionId = user.authSessionId ?? token.authSessionId;
       }
@@ -412,6 +413,7 @@ export const authOptions: NextAuthOptions = {
           token.role = dbUser.role;
           token.nickname = dbUser.nickname;
           token.efootballUid = dbUser.efootballUid;
+          token.telegramUsername = dbUser.telegramUsername;
           token.isBanned = dbUser.isBanned;
           token.picture = dbUser.image;
           token.name = dbUser.name ?? dbUser.nickname ?? token.name;
@@ -427,6 +429,7 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role ?? "PLAYER";
         session.user.nickname = token.nickname;
         session.user.efootballUid = token.efootballUid;
+        session.user.telegramUsername = token.telegramUsername;
         session.user.isBanned = Boolean(token.isBanned);
         session.user.authSessionId = token.authSessionId;
       }

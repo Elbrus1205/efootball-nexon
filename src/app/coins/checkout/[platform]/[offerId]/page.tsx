@@ -109,7 +109,7 @@ export default async function CoinsCheckoutPage({ params }: CoinsCheckoutPagePro
           offerTitle={offer.title}
           priceLabel={priceLabel}
           platformLabel={platformLabel}
-          initialPlayerName={session?.user.nickname ?? session?.user.name ?? ""}
+          initialTelegram={session?.user.telegramUsername ? `@${session.user.telegramUsername}` : ""}
         />
       </section>
     </main>

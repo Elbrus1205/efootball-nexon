@@ -13,16 +13,16 @@ export function CoinsCheckoutForm({
   offerTitle,
   priceLabel,
   platformLabel,
-  initialPlayerName = "",
+  initialTelegram = "",
 }: {
   offerTitle: string;
   priceLabel: string;
   platformLabel: string;
-  initialPlayerName?: string;
+  initialTelegram?: string;
 }) {
   const [pending, startTransition] = useTransition();
-  const [playerName, setPlayerName] = useState(initialPlayerName);
-  const [contact, setContact] = useState("");
+  const [playerName, setPlayerName] = useState("");
+  const [contact, setContact] = useState(initialTelegram);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -77,7 +77,7 @@ export function CoinsCheckoutForm({
             placeholder="@username или https://t.me/username"
             className="bg-white/[0.04]"
           />
-          <p className="text-xs text-zinc-500">Только Telegram: username или ссылка.</p>
+          <p className="text-xs text-zinc-500">Если Telegram привязан к профилю, он подставится автоматически.</p>
         </div>
       </div>
       <Button type="submit" size="lg" className="mt-6 h-12 w-full rounded-full bg-emerald-400 text-black hover:bg-emerald-300">
