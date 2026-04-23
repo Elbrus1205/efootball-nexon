@@ -265,10 +265,6 @@ export function CoinsShowcase() {
           <h2 className="mt-5 max-w-3xl font-display text-3xl font-thin leading-tight text-white sm:text-4xl">
             Выбирай платформу, пакет монет или акцию и сразу переходи к оплате
           </h2>
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-zinc-300 sm:text-base">
-            Карточки оформлены как полноценная витрина: обычные пакеты, отдельный прайс для iOS и акционные предложения с единым
-            ценником. Фоновые PNG подставляются прямо в карточку и теперь действительно видны.
-          </p>
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
             <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4">
               <div className="text-xs uppercase tracking-[0.22em] text-zinc-500">Android</div>
@@ -352,9 +348,6 @@ export function CoinsShowcase() {
         </div>
 
         <TabsContent value="android" className="space-y-5">
-          <div className="rounded-[1.6rem] border border-cyan-300/10 bg-cyan-400/5 p-4 text-sm leading-7 text-cyan-100/90">
-            Базовый Android-прайс в рублях. Фон карточек показывает обычные пакеты монет.
-          </div>
           <OfferGrid offers={androidCoinPacks} platform="android" tone="android" />
         </TabsContent>
 
