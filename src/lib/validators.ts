@@ -9,6 +9,7 @@ import {
   UserRole,
 } from "@prisma/client";
 import { z } from "zod";
+import { PROFILE_BIO_MAX_LENGTH } from "@/lib/profile";
 
 const optionalIntField = (minimum: number, maximum: number, message?: string) =>
   z.preprocess(
@@ -44,7 +45,11 @@ export const profileSchema = z.object({
     .max(32, "Имя должно быть не длиннее 32 символов.")
     .regex(/^[A-Za-z0-9_]+$/, "Имя может содержать только английские буквы, цифры и нижнее подчёркивание."),
   favoriteTeam: z.string().optional().or(z.literal("")),
-  bio: z.string().max(300).optional().or(z.literal("")),
+  bio: z
+    .string()
+    .max(PROFILE_BIO_MAX_LENGTH, `Описание профиля должно быть не длиннее ${PROFILE_BIO_MAX_LENGTH} символов.`)
+    .optional()
+    .or(z.literal("")),
   bannerImage: z
     .string()
     .refine((value) => !value || value.startsWith("data:image/") || value.startsWith("http://") || value.startsWith("https://"), {

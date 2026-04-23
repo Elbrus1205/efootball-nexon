@@ -51,7 +51,22 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   const session = await requireAuth();
-  const body = profileSchema.parse(await request.json());
+  const parsedBody = profileSchema.safeParse(await request.json());
+
+  if (!parsedBody.success) {
+    const fieldErrors = parsedBody.error.flatten().fieldErrors;
+    const error =
+      fieldErrors.name?.[0] ??
+      fieldErrors.favoriteTeam?.[0] ??
+      fieldErrors.bio?.[0] ??
+      fieldErrors.bannerImage?.[0] ??
+      fieldErrors.image?.[0] ??
+      "Не удалось проверить данные профиля.";
+
+    return NextResponse.json({ error }, { status: 400 });
+  }
+
+  const body = parsedBody.data;
   const existingUser = await db.user.findUnique({
     where: { id: session.user.id },
     select: {

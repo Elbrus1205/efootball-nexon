@@ -5,6 +5,7 @@ import { ChangeEvent, useState, useTransition } from "react";
 import { ArrowLeft, Camera, ImagePlus, Save } from "lucide-react";
 import { toast } from "sonner";
 import type { ClubOption } from "@/lib/clubs";
+import { PROFILE_BIO_MAX_LENGTH } from "@/lib/profile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,10 +27,14 @@ export function ProfileForm({
   };
   clubs: ClubOption[];
 }) {
-  const [draft, setDraft] = useState(initialValues);
+  const [draft, setDraft] = useState(() => ({
+    ...initialValues,
+    bio: initialValues.bio.slice(0, PROFILE_BIO_MAX_LENGTH),
+  }));
   const [avatarPreview, setAvatarPreview] = useState(initialValues.image);
   const [bannerPreview, setBannerPreview] = useState(initialValues.bannerImage);
   const [pending, startTransition] = useTransition();
+  const bioCharactersLeft = PROFILE_BIO_MAX_LENGTH - draft.bio.length;
 
   const displayName = draft.name || "Игрок eFootball Nexon";
 
@@ -105,7 +110,7 @@ export function ProfileForm({
         body: JSON.stringify({
           name: draft.name,
           favoriteTeam: draft.favoriteTeam,
-          bio: draft.bio,
+          bio: draft.bio.slice(0, PROFILE_BIO_MAX_LENGTH),
           image: draft.image,
           bannerImage: draft.bannerImage,
         }),
@@ -216,12 +221,21 @@ export function ProfileForm({
             <Label className="mb-2 block text-[11px] uppercase tracking-[0.24em] text-zinc-500">Описание профиля</Label>
             <Textarea
               rows={5}
-              maxLength={300}
+              maxLength={PROFILE_BIO_MAX_LENGTH}
               className="border-white/10 bg-white/[0.04]"
               placeholder="Короткое описание игрока, любимый стиль игры, достижения или любые детали о профиле."
               value={draft.bio}
-              onChange={(e) => setDraft((v) => ({ ...v, bio: e.target.value }))}
+              onChange={(e) =>
+                setDraft((v) => ({
+                  ...v,
+                  bio: e.target.value.slice(0, PROFILE_BIO_MAX_LENGTH),
+                }))
+              }
             />
+            <div className="mt-2 flex items-center justify-between text-xs text-zinc-500">
+              <span>Максимум {PROFILE_BIO_MAX_LENGTH} символов</span>
+              <span>Осталось {bioCharactersLeft}</span>
+            </div>
           </div>
 
           <div className="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm text-zinc-400">
