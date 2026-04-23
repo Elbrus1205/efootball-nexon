@@ -107,22 +107,6 @@ function getOfferSummary(platform: CoinsPlatform) {
   return "Цена для Android";
 }
 
-function getOfferSecondaryLabel(offer: CoinsOffer) {
-  return offer.kind === "bundle" ? "Состав" : "Бонус";
-}
-
-function getOfferSecondaryValue(offer: CoinsOffer) {
-  if (offer.kind === "bundle") {
-    return offer.bonus ?? "Спецпредложение";
-  }
-
-  if (offer.freeCoins > 0) {
-    return `+${formatCoins(offer.freeCoins)} бонусных`;
-  }
-
-  return "Без бонуса";
-}
-
 function OfferCard({
   offer,
   platform,
@@ -136,8 +120,6 @@ function OfferCard({
   const visual = toneVisuals[tone];
   const typeLabel = offer.kind === "bundle" ? "Лимитированный набор" : "Пакет монет";
   const summary = getOfferSummary(platform);
-  const secondaryLabel = getOfferSecondaryLabel(offer);
-  const secondaryValue = getOfferSecondaryValue(offer);
 
   return (
     <article
@@ -194,17 +176,6 @@ function OfferCard({
         </div>
 
         <div className="space-y-3">
-          <div className="flex flex-wrap gap-2">
-            <div className={`rounded-[1rem] border px-3 py-2 backdrop-blur-md ${visual.statClass}`}>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-400">Оплаченные</div>
-              <div className="mt-1 text-sm font-bold text-white">{formatCoins(offer.paidCoins)}</div>
-            </div>
-            <div className={`rounded-[1rem] border px-3 py-2 backdrop-blur-md ${visual.statClass}`}>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-400">{secondaryLabel}</div>
-              <div className="mt-1 text-sm font-bold text-white">{secondaryValue}</div>
-            </div>
-          </div>
-
           <div className={`rounded-[1.35rem] border px-4 py-3 backdrop-blur-xl ${visual.pricePanelClass}`}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
