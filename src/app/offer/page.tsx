@@ -7,7 +7,8 @@ const document = getLegalDocument("offer");
 
 export const metadata: Metadata = {
   title: "Публичная оферта | eFootball Nexon",
-  description: "Публичная оферта на оказание услуг по содействию в пополнении игровых аккаунтов на сайте eFootball Nexon.",
+  description:
+    "Публичная оферта eFootball Nexon об оказании информационно-технических услуг по сопровождению заказа клиента и техническому содействию в оформлении цифрового пополнения.",
 };
 
 export default function OfferPage() {
