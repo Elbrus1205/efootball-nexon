@@ -5,6 +5,7 @@ import { ArrowRight, Coins, CreditCard, Gift, Smartphone, Sparkles, WalletCards 
 import { Reveal } from "@/components/shared/reveal";
 import { StartCheckoutButton } from "@/components/coins/start-checkout-button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import {
   androidCoinPacks,
   formatRubles,
@@ -124,8 +125,12 @@ function OfferCard({
 }) {
   const Icon = offer.kind === "bundle" ? Gift : Coins;
   const visual = toneVisuals[tone];
+  const isPromoBundle = tone === "promo" && offer.kind === "bundle";
   const typeLabel = offer.kind === "bundle" ? "Лимитированный набор" : "Пакет монет";
   const summary = getOfferSummary(platform);
+  const overlayBackground = isPromoBundle
+    ? "linear-gradient(90deg, rgba(12,8,4,0.97) 0%, rgba(12,8,4,0.94) 48%, rgba(12,8,4,0.76) 64%, rgba(12,8,4,0.22) 84%, rgba(12,8,4,0.3) 100%)"
+    : visual.overlayBackground;
 
   return (
     <article
@@ -134,17 +139,20 @@ function OfferCard({
       <div className="absolute inset-0" style={{ background: visual.baseBackground }} />
       <div className={`absolute -right-8 top-6 h-32 w-32 rounded-full blur-3xl sm:top-8 sm:h-40 sm:w-40 ${visual.glowClass}`} />
 
-      <div className="absolute inset-y-0 right-0 w-[52%] sm:w-[55%]">
+      <div className={cn("absolute inset-y-0 right-0", isPromoBundle ? "w-[49%] sm:w-[50%]" : "w-[52%] sm:w-[55%]")}>
         <Image
           src={visual.artPath}
           alt=""
           fill
           sizes="(min-width: 1536px) 30vw, (min-width: 1280px) 46vw, (min-width: 768px) 48vw, 100vw"
-          className={`pointer-events-none select-none object-cover opacity-100 transition duration-500 group-hover:scale-[1.05] ${visual.artClass}`}
+          className={cn(
+            "pointer-events-none select-none object-cover opacity-100 transition duration-500 group-hover:scale-[1.05]",
+            isPromoBundle ? "object-[86%_58%] scale-[1.04] group-hover:scale-[1.08]" : visual.artClass,
+          )}
         />
       </div>
 
-      <div className="absolute inset-0" style={{ background: visual.overlayBackground }} />
+      <div className="absolute inset-0" style={{ background: overlayBackground }} />
       <div className="absolute inset-x-0 bottom-0 h-28 bg-[linear-gradient(180deg,transparent,rgba(3,6,10,0.14)_20%,rgba(3,6,10,0.84))] sm:h-36" />
 
       <div className="relative z-10 flex h-full flex-col justify-between p-3.5 sm:p-5">
@@ -169,9 +177,11 @@ function OfferCard({
           </div>
         </div>
 
-        <div className="mt-3.5 max-w-[50%] sm:mt-5 sm:max-w-[52%]">
+        <div className={cn("mt-3.5 sm:mt-5", isPromoBundle ? "max-w-[56%] sm:max-w-[58%]" : "max-w-[50%] sm:max-w-[52%]")}>
           {offer.kind === "bundle" ? (
-            <h3 className="line-clamp-2 text-[1.05rem] font-black leading-tight text-white sm:text-[1.4rem]">{offer.title}</h3>
+            <h3 className={cn("line-clamp-2 font-black leading-tight text-white", isPromoBundle ? "text-[1rem] sm:text-[1.32rem]" : "text-[1.05rem] sm:text-[1.4rem]")}>
+              {offer.title}
+            </h3>
           ) : null}
 
           <div className={`${offer.kind === "bundle" ? "mt-2.5 sm:mt-3.5" : "mt-1.5 sm:mt-2.5"} flex items-end gap-1.5 sm:gap-2`}>
@@ -183,8 +193,14 @@ function OfferCard({
         </div>
 
         <div>
-          <div className={`rounded-[1.05rem] border px-3 py-2 backdrop-blur-2xl sm:rounded-[1.25rem] sm:px-4 sm:py-3 ${visual.pricePanelClass}`}>
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2.5 sm:gap-3">
+          <div
+            className={cn(
+              "rounded-[1.05rem] border px-3 py-2 backdrop-blur-2xl sm:rounded-[1.25rem] sm:px-4 sm:py-3",
+              visual.pricePanelClass,
+              isPromoBundle && "border-amber-200/18 bg-[linear-gradient(135deg,rgba(21,13,6,0.88),rgba(78,51,11,0.72))]",
+            )}
+          >
+            <div className={cn(isPromoBundle ? "space-y-2.5" : "grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2.5 sm:gap-3")}>
               <div className="min-w-0">
                 <div className="text-[8px] font-semibold uppercase tracking-[0.18em] text-zinc-400 sm:text-[10px] sm:tracking-[0.28em]">{summary}</div>
                 <div className="mt-1 text-[1.18rem] font-black leading-none text-white sm:text-[1.7rem]">{formatRubles(offer.priceKopecks)}</div>
@@ -193,7 +209,12 @@ function OfferCard({
               <StartCheckoutButton
                 offerId={offer.id}
                 platform={platform}
-                className={`min-h-0 h-9 min-w-[6.9rem] shrink-0 justify-center gap-2 rounded-[0.95rem] px-3 text-[13px] font-bold sm:h-10 sm:min-w-[7.8rem] sm:rounded-[1.05rem] sm:px-4 sm:text-[15px] ${visual.buttonClass}`}
+                className={cn(
+                  "min-h-0 shrink-0 font-bold",
+                  isPromoBundle
+                    ? `h-10 w-full justify-between rounded-[1rem] px-4 text-[14px] sm:h-11 sm:rounded-[1.05rem] sm:px-4.5 sm:text-[15px] ${visual.buttonClass}`
+                    : `h-9 min-w-[6.9rem] justify-center gap-2 rounded-[0.95rem] px-3 text-[13px] sm:h-10 sm:min-w-[7.8rem] sm:rounded-[1.05rem] sm:px-4 sm:text-[15px] ${visual.buttonClass}`,
+                )}
               >
                 <span>Оформить</span>
                 <span className={`flex h-5 w-5 items-center justify-center rounded-full sm:h-6 sm:w-6 ${visual.buttonArrowClass}`}>
@@ -212,13 +233,15 @@ function OfferGrid({
   offers,
   platform,
   tone,
+  className,
 }: {
   offers: CoinsOffer[];
   platform: CoinsPlatform;
   tone: OfferTone;
+  className?: string;
 }) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div className={cn("grid gap-4 md:grid-cols-2 xl:grid-cols-3", className)}>
       {offers.map((offer, index) => (
         <Reveal key={offer.id} delay={index * 70}>
           <OfferCard offer={offer} platform={platform} tone={tone} />
@@ -366,7 +389,7 @@ export function CoinsShowcase() {
                 <div className="text-lg font-black text-white">Стартовые комплекты и лимитированные предложения</div>
               </div>
             </div>
-            <OfferGrid offers={promoBundles} platform="promo" tone="promo" />
+            <OfferGrid offers={promoBundles} platform="promo" tone="promo" className="xl:grid-cols-2" />
           </div>
         </TabsContent>
       </Tabs>
