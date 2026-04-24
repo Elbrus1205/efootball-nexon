@@ -109,7 +109,6 @@ export function TelegramLogin({
         </div>
         <div className="space-y-1">
           <div className="text-lg font-semibold text-white">Вход через Telegram</div>
-          <div className="text-sm text-zinc-300">Быстрый вход без пароля через официальный Telegram Login Widget.</div>
         </div>
       </div>
 
