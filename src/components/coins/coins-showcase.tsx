@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ArrowRight, Coins, CreditCard, Gift, Smartphone, Sparkles, WalletCards } from "lucide-react";
+import { ArrowRight, Coins, Gift, Sparkles } from "lucide-react";
 import { Reveal } from "@/components/shared/reveal";
 import { StartCheckoutButton } from "@/components/coins/start-checkout-button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -252,81 +252,8 @@ function OfferGrid({
 }
 
 export function CoinsShowcase() {
-  const promoOffersCount = promoCoinPacks.length + promoBundles.length;
-
   return (
     <section className="space-y-6">
-      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(5,18,34,0.95),rgba(9,13,20,0.96))] p-6 shadow-[0_26px_90px_rgba(0,0,0,0.28)] sm:p-8">
-          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-400/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.26em] text-cyan-200">
-            <Coins className="h-4 w-4" />
-            Coins Store
-          </div>
-          <h2 className="mt-5 max-w-3xl font-display text-3xl font-thin leading-tight text-white sm:text-4xl">
-            Выбирай платформу, пакет монет или акцию и сразу переходи к оплате
-          </h2>
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4">
-              <div className="text-xs uppercase tracking-[0.22em] text-zinc-500">Android</div>
-              <div className="mt-2 text-2xl font-black text-white">{androidCoinPacks.length}</div>
-              <div className="mt-1 text-sm text-zinc-400">обычных пакетов</div>
-            </div>
-            <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4">
-              <div className="text-xs uppercase tracking-[0.22em] text-zinc-500">iOS</div>
-              <div className="mt-2 text-2xl font-black text-white">{iosCoinPacks.length}</div>
-              <div className="mt-1 text-sm text-zinc-400">пакетов с +10%</div>
-            </div>
-            <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4">
-              <div className="text-xs uppercase tracking-[0.22em] text-zinc-500">Акции</div>
-              <div className="mt-2 text-2xl font-black text-white">{promoOffersCount}</div>
-              <div className="mt-1 text-sm text-zinc-400">спецпредложений</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(18,12,8,0.98),rgba(13,11,18,0.94))] p-6 shadow-[0_26px_90px_rgba(0,0,0,0.28)] sm:p-8">
-          <div className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-200/80">Как это работает</div>
-          <div className="mt-5 space-y-3">
-            <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-300/10 text-amber-200">
-                  <Smartphone className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="font-semibold text-white">1. Выберите платформу</div>
-                  <p className="mt-1 text-sm leading-6 text-zinc-400">Открой Android, iOS или вкладку акций с единым прайсом.</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-300/10 text-amber-200">
-                  <WalletCards className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="font-semibold text-white">2. Выберите пакет</div>
-                  <p className="mt-1 text-sm leading-6 text-zinc-400">Каждая карточка показывает цену, состав и бонусы без лишней путаницы.</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-300/10 text-amber-200">
-                  <CreditCard className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="font-semibold text-white">3. Перейдите к оплате</div>
-                  <p className="mt-1 text-sm leading-6 text-zinc-400">Кнопка внутри карточки ведёт на checkout выбранного предложения.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
       <Tabs defaultValue="android" className="rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(11,14,23,0.96),rgba(7,10,16,0.96))] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.3)] sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
