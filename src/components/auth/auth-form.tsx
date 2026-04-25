@@ -13,7 +13,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { startVkIdAuth } from "@/lib/vkid-client";
 
-export function AuthForm({ type }: { type: "login" | "register" }) {
+export function AuthForm({
+  type,
+  telegramBotId,
+  telegramBotUsername,
+}: {
+  type: "login" | "register";
+  telegramBotId?: string;
+  telegramBotUsername?: string;
+}) {
   const [pending, startTransition] = useTransition();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -262,7 +270,8 @@ export function AuthForm({ type }: { type: "login" | "register" }) {
                 Продолжить через VK
               </Button>
               <TelegramLogin
-                botUsername={process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME}
+                botId={telegramBotId}
+                botUsername={telegramBotUsername}
                 legalAccepted={legalAccepted}
                 requireLegalAcceptance={requiresLegalAcceptance}
               />

@@ -6,6 +6,9 @@ export default function LoginPage({
 }: {
   searchParams?: { banned?: string };
 }) {
+  const telegramBotId = process.env.NEXT_PUBLIC_TELEGRAM_BOT_ID ?? process.env.TELEGRAM_BOT_TOKEN?.split(":")[0];
+  const telegramBotUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? process.env.TELEGRAM_BOT_USERNAME;
+
   return (
     <div className="page-shell space-y-4 py-12">
       {searchParams?.banned ? (
@@ -13,7 +16,7 @@ export default function LoginPage({
           Аккаунт заблокирован навсегда. Вход закрыт.
         </Card>
       ) : null}
-      <AuthForm type="login" />
+      <AuthForm type="login" telegramBotId={telegramBotId} telegramBotUsername={telegramBotUsername} />
     </div>
   );
 }

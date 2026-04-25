@@ -14,6 +14,8 @@ function sessionIcon(platform: string | null): "laptop" | "phone" {
 export default async function DashboardSecurityPage() {
   const session = await requireAuth();
   const currentContext = buildSecurityContext(headers());
+  const telegramBotId = process.env.NEXT_PUBLIC_TELEGRAM_BOT_ID ?? process.env.TELEGRAM_BOT_TOKEN?.split(":")[0];
+  const telegramBotUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? process.env.TELEGRAM_BOT_USERNAME;
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
@@ -93,6 +95,8 @@ export default async function DashboardSecurityPage() {
           telegramLinked={Boolean(user.telegramId)}
           telegramHandle={user.telegramUsername ?? null}
           telegram2faEnabled={Boolean(user.telegram2faEnabled)}
+          telegramBotId={telegramBotId}
+          telegramBotUsername={telegramBotUsername}
           vkLinked={Boolean(user.vkId)}
           sessions={sessions}
         />

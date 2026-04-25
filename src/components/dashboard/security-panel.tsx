@@ -280,6 +280,8 @@ export function SecurityPanel({
   telegramLinked,
   telegramHandle,
   telegram2faEnabled,
+  telegramBotId,
+  telegramBotUsername,
   vkLinked,
   sessions,
 }: {
@@ -289,6 +291,8 @@ export function SecurityPanel({
   telegramLinked: boolean;
   telegramHandle: string | null;
   telegram2faEnabled: boolean;
+  telegramBotId?: string;
+  telegramBotUsername?: string;
   vkLinked: boolean;
   sessions: SecuritySessionItem[];
 }) {
@@ -735,7 +739,8 @@ export function SecurityPanel({
             </div>
 
             <TelegramConnect
-              botUsername={process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME}
+              botId={telegramBotId}
+              botUsername={telegramBotUsername}
               linked={telegramLinked}
               telegramHandle={telegramHandle}
             />

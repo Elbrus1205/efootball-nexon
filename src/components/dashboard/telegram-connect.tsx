@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Link2, Send } from "lucide-react";
 import { toast } from "sonner";
@@ -8,7 +8,14 @@ import { Button } from "@/components/ui/button";
 
 declare global {
   interface Window {
-    onTelegramConnect?: (user: Record<string, string>) => void;
+    Telegram?: {
+      Login?: {
+        auth?: (
+          options: { bot_id: string; request_access?: "write"; lang?: string },
+          callback: (user: Record<string, string> | false) => void,
+        ) => void;
+      };
+    };
   }
 }
 
@@ -22,102 +29,115 @@ function normalizeTelegramBotUsername(value?: string) {
     .replace(/\/$/, "");
 }
 
-export function TelegramConnect({
-  botUsername,
-  linked,
-  telegramHandle,
-}: {
-  botUsername?: string;
-  linked: boolean;
-  telegramHandle?: string | null;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [widgetError, setWidgetError] = useState<string | null>(null);
-  const [widgetMounted, setWidgetMounted] = useState(false);
-  const [pending, startTransition] = useTransition();
-  const router = useRouter();
-  const normalizedBotUsername = useMemo(() => normalizeTelegramBotUsername(botUsername), [botUsername]);
-  const isValidUsername = /^[A-Za-z0-9_]{5,32}$/.test(normalizedBotUsername);
+function normalizeTelegramBotId(value?: string) {
+  return value?.trim().match(/^\d+$/)?.[0] ?? "";
+}
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container || !normalizedBotUsername || !isValidUsername || linked) return;
+function loadTelegramWidgetScript() {
+  return new Promise<void>((resolve, reject) => {
+    if (window.Telegram?.Login?.auth) {
+      resolve();
+      return;
+    }
 
-    setWidgetError(null);
-    setWidgetMounted(false);
-    container.replaceChildren();
-
-    window.onTelegramConnect = (user) => {
-      startTransition(async () => {
-        const response = await fetch("/api/security/connections/telegram", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(user),
-        });
-
-        const payload = await response.json().catch(() => null);
-        if (!response.ok) {
-          setWidgetError(payload?.error || "Не удалось привязать Telegram.");
-          toast.error(payload?.error || "Не удалось привязать Telegram.");
-          return;
-        }
-
-        toast.success(payload?.message || "Telegram успешно привязан.");
-        router.refresh();
-      });
-    };
+    const existingScript = document.querySelector<HTMLScriptElement>('script[src^="https://telegram.org/js/telegram-widget.js"]');
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve(), { once: true });
+      existingScript.addEventListener("error", () => reject(new Error("Telegram widget load failed")), { once: true });
+      return;
+    }
 
     const script = document.createElement("script");
     script.src = "https://telegram.org/js/telegram-widget.js?22";
     script.async = true;
-    script.setAttribute("data-telegram-login", normalizedBotUsername);
-    script.setAttribute("data-size", "large");
-    script.setAttribute("data-radius", "12");
-    script.setAttribute("data-request-access", "write");
-    script.setAttribute("data-onauth", "onTelegramConnect(user)");
-    script.onerror = () => {
-      setWidgetError("Не удалось загрузить Telegram Login Widget.");
-      setWidgetMounted(false);
-    };
+    script.addEventListener("load", () => resolve(), { once: true });
+    script.addEventListener("error", () => reject(new Error("Telegram widget load failed")), { once: true });
+    document.head.appendChild(script);
+  });
+}
 
-    container.appendChild(script);
+export function TelegramConnect({
+  botUsername,
+  botId,
+  linked,
+  telegramHandle,
+}: {
+  botUsername?: string;
+  botId?: string;
+  linked: boolean;
+  telegramHandle?: string | null;
+}) {
+  const [widgetError, setWidgetError] = useState<string | null>(null);
+  const [scriptReady, setScriptReady] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+  const normalizedBotUsername = useMemo(() => normalizeTelegramBotUsername(botUsername), [botUsername]);
+  const normalizedBotId = useMemo(() => normalizeTelegramBotId(botId), [botId]);
 
-    const observer = new MutationObserver(() => {
-      const iframe = container.querySelector("iframe");
-      if (!iframe) return;
+  useEffect(() => {
+    if (!normalizedBotId || linked) return;
 
-      setWidgetMounted(true);
-      iframe.setAttribute("title", "Telegram Login");
-      iframe.style.position = "absolute";
-      iframe.style.inset = "0";
-      iframe.style.width = "100%";
-      iframe.style.height = "100%";
-      iframe.style.opacity = "0";
-      iframe.style.zIndex = "10";
-    });
-    observer.observe(container, { childList: true, subtree: true });
+    let cancelled = false;
 
-    const timeout = window.setTimeout(() => {
-      const content = container.textContent?.toLowerCase() ?? "";
-
-      if (content.includes("username invalid")) {
-        setWidgetError("Указан неверный username Telegram-бота. Используйте имя без @.");
-        container.replaceChildren();
-      }
-
-      if (content.includes("bot domain invalid")) {
-        setWidgetError("Для бота не настроен домен. Укажите домен сайта через BotFather.");
-        container.replaceChildren();
-      }
-    }, 1500);
+    setWidgetError(null);
+    loadTelegramWidgetScript()
+      .then(() => {
+        if (!cancelled) setScriptReady(Boolean(window.Telegram?.Login?.auth));
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setScriptReady(false);
+          setWidgetError("Не удалось загрузить Telegram Login Widget.");
+        }
+      });
 
     return () => {
-      window.clearTimeout(timeout);
-      observer.disconnect();
-      container.replaceChildren();
-      setWidgetMounted(false);
+      cancelled = true;
     };
-  }, [isValidUsername, linked, normalizedBotUsername, router]);
+  }, [linked, normalizedBotId]);
+
+  const finishTelegramConnect = (user: Record<string, string> | false) => {
+    if (!user) return;
+
+    startTransition(async () => {
+      const response = await fetch("/api/security/connections/telegram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(user),
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        setWidgetError(payload?.error || "Не удалось привязать Telegram.");
+        toast.error(payload?.error || "Не удалось привязать Telegram.");
+        return;
+      }
+
+      toast.success(payload?.message || "Telegram успешно привязан.");
+      router.refresh();
+    });
+  };
+
+  const startTelegramConnect = () => {
+    if (!normalizedBotId) {
+      setWidgetError("Telegram bot_id не настроен.");
+      return;
+    }
+
+    if (!window.Telegram?.Login?.auth) {
+      setWidgetError("Telegram Login Widget ещё загружается. Нажмите ещё раз через секунду.");
+      void loadTelegramWidgetScript()
+        .then(() => {
+          setScriptReady(Boolean(window.Telegram?.Login?.auth));
+          setWidgetError(null);
+        })
+        .catch(() => setWidgetError("Не удалось загрузить Telegram Login Widget."));
+      return;
+    }
+
+    setWidgetError(null);
+    window.Telegram.Login.auth({ bot_id: normalizedBotId, request_access: "write" }, finishTelegramConnect);
+  };
 
   if (linked) {
     return (
@@ -130,20 +150,11 @@ export function TelegramConnect({
     );
   }
 
-  if (!botUsername) {
+  if (!normalizedBotId) {
     return (
       <div className="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm text-zinc-400">
-        Добавьте <code className="text-white">NEXT_PUBLIC_TELEGRAM_BOT_USERNAME</code>, чтобы включить привязку
-        Telegram.
-      </div>
-    );
-  }
-
-  if (!isValidUsername) {
-    return (
-      <div className="flex items-start gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-        <span>Имя Telegram-бота указано неверно. Нужен username без @ и без ссылки.</span>
+        Добавьте <code className="text-white">TELEGRAM_BOT_TOKEN</code> или{" "}
+        <code className="text-white">NEXT_PUBLIC_TELEGRAM_BOT_ID</code>, чтобы включить привязку Telegram.
       </div>
     );
   }
@@ -151,13 +162,26 @@ export function TelegramConnect({
   return (
     <div className="space-y-3">
       <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-        <div className="relative min-h-12 overflow-hidden rounded-xl">
-          <div className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#229ED9] px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(34,158,217,0.18)]">
-            <Send className="h-4 w-4" />
-            {widgetMounted ? "Подключить Telegram" : "Загрузка Telegram..."}
-          </div>
-          <div ref={containerRef} className="absolute inset-0 z-10" />
-        </div>
+        <button
+          type="button"
+          onClick={startTelegramConnect}
+          disabled={pending}
+          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#229ED9] px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(34,158,217,0.18)] transition hover:bg-[#1d8fc5] disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          <Send className="h-4 w-4" />
+          {pending ? "Привязываем Telegram..." : scriptReady ? "Подключить Telegram" : "Загрузка Telegram..."}
+        </button>
+
+        {normalizedBotUsername ? (
+          <a
+            href={`https://t.me/${normalizedBotUsername}`}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 block text-center text-xs font-medium text-sky-100 underline-offset-4 transition hover:text-white hover:underline"
+          >
+            Открыть бота Telegram
+          </a>
+        ) : null}
       </div>
 
       {pending ? (
