@@ -4,7 +4,7 @@ import { UserRole } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth/session";
-import { formatReferralLink } from "@/lib/affiliate";
+import { formatReferralLink, SITE_BASE_URL } from "@/lib/affiliate";
 import { db } from "@/lib/db";
 
 function formatMoney(value: number) {
@@ -18,8 +18,13 @@ function formatMoney(value: number) {
 
 function getBaseUrl() {
   const headerList = headers();
-  const host = headerList.get("x-forwarded-host") ?? headerList.get("host") ?? "localhost:3000";
-  const proto = headerList.get("x-forwarded-proto") ?? (host.includes("localhost") ? "http" : "https");
+  const host = headerList.get("x-forwarded-host") ?? headerList.get("host");
+
+  if (!host || host.includes("localhost")) {
+    return SITE_BASE_URL;
+  }
+
+  const proto = headerList.get("x-forwarded-proto") ?? "https";
   return `${proto}://${host}`;
 }
 
