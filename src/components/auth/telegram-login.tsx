@@ -35,7 +35,9 @@ export function TelegramLogin({
   const [widgetLoaded, setWidgetLoaded] = useState(false);
   const [botLoginToken, setBotLoginToken] = useState<string | null>(null);
   const [botLoginUrl, setBotLoginUrl] = useState<string | null>(null);
-  const [botLoginPending, startBotLoginTransition] = useTransition();
+  const [botLoginPreparing, setBotLoginPreparing] = useState(false);
+  const botLoginPreparingRef = useRef(false);
+  const [, startBotLoginTransition] = useTransition();
   const normalizedBotUsername = useMemo(() => normalizeTelegramBotUsername(botUsername), [botUsername]);
   const isValidUsername = /^[A-Za-z0-9_]{5,32}$/.test(normalizedBotUsername);
   const isBlockedByLegal = requireLegalAcceptance && !legalAccepted;
@@ -183,13 +185,58 @@ export function TelegramLogin({
     };
   }, [botLoginToken, legalAccepted, router]);
 
+  useEffect(() => {
+    if (!normalizedBotUsername || !isValidUsername || isBlockedByLegal || widgetLoaded || botLoginToken || botLoginPreparingRef.current) {
+      return;
+    }
+
+    let cancelled = false;
+    botLoginPreparingRef.current = true;
+    setBotLoginPreparing(true);
+    setWidgetError(null);
+
+    const prepareBotLogin = async () => {
+      try {
+        const response = await fetch("/api/auth/telegram-bot-login/begin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ legalAccepted }),
+        });
+        const payload = (await response.json().catch(() => null)) as { token?: string; botUrl?: string; error?: string } | null;
+
+        if (cancelled) return;
+
+        if (!response.ok || !payload?.token || !payload.botUrl) {
+          setWidgetError(payload?.error || "Не удалось подготовить вход через Telegram-бот.");
+          return;
+        }
+
+        setBotLoginToken(payload.token);
+        setBotLoginUrl(payload.botUrl);
+      } finally {
+        if (!cancelled) {
+          botLoginPreparingRef.current = false;
+          setBotLoginPreparing(false);
+        }
+      }
+    };
+
+    prepareBotLogin();
+
+    return () => {
+      cancelled = true;
+      botLoginPreparingRef.current = false;
+      setBotLoginPreparing(false);
+    };
+  }, [botLoginToken, isBlockedByLegal, isValidUsername, legalAccepted, normalizedBotUsername, widgetLoaded]);
+
   const startBotLogin = () => {
     if (requireLegalAcceptance && !legalAccepted) {
       setWidgetError("Сначала примите документы сайта.");
       return;
     }
 
-    const popup = window.open("about:blank", "_blank", "noopener,noreferrer");
+    const popup = null as Window | null;
     if (popup) {
       popup.document.write("<!doctype html><title>Telegram</title><body style=\"font-family:sans-serif;background:#101827;color:white;display:grid;place-items:center;height:100vh;margin:0\">Открываем Telegram...</body>");
     }
@@ -238,15 +285,22 @@ export function TelegramLogin({
       ) : normalizedBotUsername && isValidUsername ? (
         <div className="rounded-2xl bg-black/20 p-3">
           {!widgetLoaded ? (
-            <button
-              type="button"
-              onClick={startBotLogin}
-              disabled={botLoginPending || Boolean(botLoginToken)}
-              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#229ED9] px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(34,158,217,0.18)] transition hover:bg-[#1d8fc5]"
+            <a
+              href={botLoginUrl ?? undefined}
+              target="_blank"
+              rel="noreferrer"
+              aria-disabled={!botLoginUrl}
+              onClick={(event) => {
+                if (!botLoginUrl) {
+                  event.preventDefault();
+                  startBotLogin();
+                }
+              }}
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#229ED9] px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(34,158,217,0.18)] transition hover:bg-[#1d8fc5] aria-disabled:opacity-60"
             >
               <Send className="h-4 w-4" />
-              {botLoginPending || botLoginToken ? "Ожидаем Telegram..." : "Войти через Telegram"}
-            </button>
+              {botLoginPreparing ? "Готовим Telegram..." : "Войти через Telegram"}
+            </a>
           ) : null}
           <div ref={containerRef} className={widgetLoaded ? "mt-3 flex min-h-12 items-center justify-center" : "hidden"} />
           {botLoginToken ? (
