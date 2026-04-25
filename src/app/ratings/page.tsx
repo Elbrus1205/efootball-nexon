@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { getCurrentSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getPlayerRatings } from "@/lib/ratings";
+import { proxyTelegramAssetUrl } from "@/lib/telegram-assets";
 import { cn, formatDate } from "@/lib/utils";
 
 function rankStyle(rank: number) {
@@ -125,7 +126,7 @@ export default async function RatingsPage({
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/20">
                             {player.image ? (
                               // eslint-disable-next-line @next/next/no-img-element
-                              <img src={player.image} alt={player.playerName} className="h-full w-full object-cover" />
+                              <img src={proxyTelegramAssetUrl(player.image)} alt={player.playerName} className="h-full w-full object-cover" />
                             ) : (
                               <Shield className="h-4 w-4 text-zinc-500" />
                             )}

@@ -1,12 +1,13 @@
 import * as AvatarPrimitive from "@radix-ui/react-avatar";
+import { proxyTelegramAssetUrl } from "@/lib/telegram-assets";
 import { cn, getInitials } from "@/lib/utils";
 
 export function Avatar({ className, ...props }: React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root>) {
   return <AvatarPrimitive.Root className={cn("relative aspect-square flex h-11 w-11 shrink-0 overflow-hidden rounded-full", className)} {...props} />;
 }
 
-export function AvatarImage(props: React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>) {
-  return <AvatarPrimitive.Image className="aspect-square h-full w-full object-cover" {...props} />;
+export function AvatarImage({ src, ...props }: React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>) {
+  return <AvatarPrimitive.Image className="aspect-square h-full w-full object-cover" src={proxyTelegramAssetUrl(src)} {...props} />;
 }
 
 export function AvatarFallback({

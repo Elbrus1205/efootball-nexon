@@ -32,6 +32,7 @@ export function TelegramLogin({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [widgetError, setWidgetError] = useState<string | null>(null);
+  const [widgetLoaded, setWidgetLoaded] = useState(false);
   const normalizedBotUsername = useMemo(() => normalizeTelegramBotUsername(botUsername), [botUsername]);
   const isValidUsername = /^[A-Za-z0-9_]{5,32}$/.test(normalizedBotUsername);
   const isBlockedByLegal = requireLegalAcceptance && !legalAccepted;
@@ -41,11 +42,38 @@ export function TelegramLogin({
     const container = containerRef.current;
     if (!normalizedBotUsername || !container || !isValidUsername || isBlockedByLegal) {
       container?.replaceChildren();
+      setWidgetLoaded(false);
       return;
     }
 
     setWidgetError(null);
+    setWidgetLoaded(false);
     container.replaceChildren();
+
+    const syncWidgetState = () => {
+      const iframe = container.querySelector("iframe");
+      if (!iframe) {
+        setWidgetLoaded(false);
+        return;
+      }
+
+      if (iframe.dataset.telegramLoaded === "true") {
+        setWidgetLoaded(true);
+        return;
+      }
+
+      iframe.addEventListener(
+        "load",
+        () => {
+          iframe.dataset.telegramLoaded = "true";
+          setWidgetLoaded(true);
+        },
+        { once: true },
+      );
+      setWidgetLoaded(false);
+    };
+    const observer = new MutationObserver(syncWidgetState);
+    observer.observe(container, { childList: true, subtree: true });
 
     window.onTelegramAuth = async (user) => {
       if (requireLegalAcceptance && !legalAccepted) {
@@ -70,7 +98,7 @@ export function TelegramLogin({
     };
 
     const script = document.createElement("script");
-    script.src = "https://telegram.org/js/telegram-widget.js?22";
+    script.src = "/api/telegram/widget";
     script.async = true;
     script.setAttribute("data-telegram-login", normalizedBotUsername);
     script.setAttribute("data-size", "large");
@@ -79,11 +107,14 @@ export function TelegramLogin({
     script.setAttribute("data-onauth", "onTelegramAuth(user)");
     script.onerror = () => {
       setWidgetError("Не удалось загрузить Telegram Login Widget.");
+      setWidgetLoaded(false);
     };
 
     container.appendChild(script);
 
     const timeout = window.setTimeout(() => {
+      syncWidgetState();
+
       if (container.textContent?.toLowerCase().includes("username invalid")) {
         setWidgetError("Указан неверный username Telegram-бота. Используйте имя без @, например my_auth_bot.");
         container.replaceChildren();
@@ -97,9 +128,13 @@ export function TelegramLogin({
 
     return () => {
       window.clearTimeout(timeout);
+      observer.disconnect();
       container.replaceChildren();
+      setWidgetLoaded(false);
     };
   }, [isBlockedByLegal, isValidUsername, legalAccepted, normalizedBotUsername, requireLegalAcceptance, router]);
+
+  const telegramFallbackHref = normalizedBotUsername ? `https://t.me/${normalizedBotUsername}` : "https://t.me/";
 
   return (
     <div className="rounded-3xl border border-[#229ED9]/25 bg-[linear-gradient(180deg,rgba(34,158,217,0.16),rgba(34,158,217,0.06))] p-4 shadow-[0_12px_30px_rgba(34,158,217,0.08)]">
@@ -118,7 +153,18 @@ export function TelegramLogin({
         </div>
       ) : normalizedBotUsername && isValidUsername ? (
         <div className="rounded-2xl bg-black/20 p-3">
-          <div ref={containerRef} className="flex min-h-12 items-center justify-center" />
+          {!widgetLoaded ? (
+            <a
+              href={telegramFallbackHref}
+              target="_blank"
+              rel="noreferrer"
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#229ED9] px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(34,158,217,0.18)] transition hover:bg-[#1d8fc5]"
+            >
+              <Send className="h-4 w-4" />
+              Войти через Telegram
+            </a>
+          ) : null}
+          <div ref={containerRef} className={widgetLoaded ? "mt-3 flex min-h-12 items-center justify-center" : "hidden"} />
           {widgetError ? (
             <div className="mt-3 flex items-start gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-3 text-sm text-amber-200">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
