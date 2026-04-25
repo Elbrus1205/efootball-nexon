@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { UserRole } from "@prisma/client";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/session";
-import { normalizePromoCode, normalizeReferralSlug } from "@/lib/affiliate";
+import { getRequestBaseUrl, normalizePromoCode, normalizeReferralSlug } from "@/lib/affiliate";
 import { db } from "@/lib/db";
 
 const partnerSchema = z.object({
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   await requireRole([UserRole.ADMIN]);
 
   const formData = await request.formData();
-  const redirectUrl = new URL("/admin/coins", request.url);
+  const redirectUrl = new URL("/admin/coins", getRequestBaseUrl(request));
   const parsed = partnerSchema.safeParse({
     ownerId: formData.get("ownerId"),
     promoCode: formData.get("promoCode"),

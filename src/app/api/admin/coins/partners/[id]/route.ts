@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/auth/session";
+import { getRequestBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   await requireRole([UserRole.ADMIN]);
 
   const formData = await request.formData();
-  const redirectUrl = new URL("/admin/coins", request.url);
+  const redirectUrl = new URL("/admin/coins", getRequestBaseUrl(request));
 
   if (formData.get("_method") !== "delete" || formData.get("confirmDelete") !== "on") {
     redirectUrl.searchParams.set("error", "Подтвердите удаление партнёрской программы.");
