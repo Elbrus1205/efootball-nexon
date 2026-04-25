@@ -12,11 +12,32 @@ import {
   startTournament,
 } from "@/lib/services/tournaments";
 
+function getRedirectBaseUrl(request: Request) {
+  const origin = request.headers.get("origin");
+
+  if (origin) {
+    return origin;
+  }
+
+  const requestUrl = new URL(request.url);
+  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const host = forwardedHost || request.headers.get("host")?.split(",")[0]?.trim();
+
+  if (!host) {
+    return requestUrl.origin;
+  }
+
+  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const protocol = forwardedProto || requestUrl.protocol.replace(":", "") || "https";
+
+  return `${protocol}://${host}`;
+}
+
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   await requireRole([UserRole.ADMIN]);
   const formData = await request.formData();
   const method = formData.get("_method");
-  const redirectUrl = new URL("/admin/tournaments", request.url);
+  const redirectUrl = new URL("/admin/tournaments", getRedirectBaseUrl(request));
   try {
     if (method === "delete") {
       const preserveHomeStats = formData.get("preserveHomeStats") === "on";
