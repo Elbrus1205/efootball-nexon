@@ -159,6 +159,12 @@ textarea,
     transform: translateY(0) scale(0.985);
   }
 
+  .animate-mobile-menu-item {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+    animation: mobile-menu-item-in 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
 }
 
 @keyframes float-orb {
@@ -252,9 +258,24 @@ textarea,
   }
 }
 
+@keyframes mobile-menu-item-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .registration-cta,
-  .registration-cta::before {
+  .registration-cta::before,
+  .animate-mobile-menu-item {
     animation: none;
+    opacity: 1;
+    transform: none;
   }
 }
