@@ -15,10 +15,6 @@ import {
   type CoinsPlatform,
 } from "@/lib/coins-catalog";
 
-function formatCoins(value: number) {
-  return new Intl.NumberFormat("ru-RU").format(value);
-}
-
 const toneClasses = {
   android: {
     card: "border-sky-300/18 bg-[linear-gradient(180deg,rgba(8,15,27,0.96),rgba(5,9,16,0.98))]",
@@ -54,37 +50,32 @@ function OfferCard({ offer, platform }: { offer: CoinsOffer; platform: CoinsPlat
   const Icon = offer.kind === "bundle" ? Gift : Coins;
 
   return (
-    <article className={cn("group relative overflow-hidden rounded-2xl border p-4 transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_55px_rgba(0,0,0,0.32)]", tone.card)}>
-      <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-white/[0.08] blur-2xl" />
-      <div className="relative flex min-h-[190px] flex-col justify-between gap-4">
-        <div className="flex items-start justify-between gap-3">
-          <span className={cn("rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]", tone.pill)}>
+    <article className={cn("group relative overflow-hidden rounded-2xl border p-3 transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_42px_rgba(0,0,0,0.28)]", tone.card)}>
+      <div className="relative flex min-h-[150px] flex-col justify-between gap-3">
+        <div className="flex items-start justify-between gap-2">
+          <span className={cn("rounded-full border px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em]", tone.pill)}>
             {offer.badge ?? getPlatformLabel(platform)}
           </span>
-          <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border", tone.icon)}>
-            <Icon className="h-4 w-4" />
+          <div className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border", tone.icon)}>
+            <Icon className="h-3.5 w-3.5" />
           </div>
         </div>
 
         <div>
-          <h3 className="line-clamp-2 min-h-[2.25rem] text-base font-black leading-tight text-white">{offer.title}</h3>
-          {offer.bonus ? <div className="mt-2 line-clamp-1 text-xs text-zinc-400">{offer.bonus}</div> : null}
-          <div className="mt-3 flex items-end gap-2">
-            <div className={cn("text-3xl font-black leading-none", tone.accent)}>{formatCoins(offer.coins)}</div>
-            <div className="pb-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-zinc-500">Coins</div>
-          </div>
+          <h3 className="line-clamp-2 min-h-[2rem] text-sm font-black leading-tight text-white">{offer.title}</h3>
+          {offer.bonus ? <div className="mt-1.5 line-clamp-1 text-[10px] text-zinc-400">{offer.bonus}</div> : null}
         </div>
 
-        <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-          <div className="flex items-center justify-between gap-3">
+        <div className="rounded-xl border border-white/10 bg-black/20 p-2.5">
+          <div className="flex items-center justify-between gap-2">
             <div>
-              <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Цена</div>
-              <div className="mt-1 text-lg font-black text-white">{formatRubles(offer.priceKopecks)}</div>
+              <div className="text-[8px] uppercase tracking-[0.14em] text-zinc-500">Цена</div>
+              <div className="mt-0.5 text-sm font-black text-white">{formatRubles(offer.priceKopecks)}</div>
             </div>
-            <StartCheckoutButton offerId={offer.id} platform={platform} className={cn("h-9 min-h-0 rounded-xl px-3 text-sm font-bold", tone.button)}>
-              <span className="flex items-center gap-1.5">
+            <StartCheckoutButton offerId={offer.id} platform={platform} className={cn("h-8 min-h-0 rounded-lg px-2.5 text-xs font-bold", tone.button)}>
+              <span className="flex items-center gap-1">
                 Купить
-                <ArrowRight className="h-3.5 w-3.5" />
+                <ArrowRight className="h-3 w-3" />
               </span>
             </StartCheckoutButton>
           </div>
@@ -96,7 +87,7 @@ function OfferCard({ offer, platform }: { offer: CoinsOffer; platform: CoinsPlat
 
 function OfferGrid({ offers, platform, className }: { offers: CoinsOffer[]; platform: CoinsPlatform; className?: string }) {
   return (
-    <div className={cn("grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4", className)}>
+    <div className={cn("grid grid-cols-2 gap-2.5 lg:grid-cols-3 xl:grid-cols-4", className)}>
       {offers.map((offer, index) => (
         <Reveal key={offer.id} delay={index * 45}>
           <OfferCard offer={offer} platform={platform} />
