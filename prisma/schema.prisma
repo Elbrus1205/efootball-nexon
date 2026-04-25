@@ -129,6 +129,11 @@ enum VerificationCodePurpose {
   ACCOUNT_DELETION
 }
 
+enum AffiliatePurchaseSource {
+  PROMO_CODE
+  REFERRAL_LINK
+}
+
 model User {
   id                  String                   @id @default(cuid())
   name                String?
@@ -172,6 +177,9 @@ model User {
   securitySessions    SecuritySession[]
   loginHistory        LoginHistory[]
   twoFactorChallenges TwoFactorChallenge[]
+  ownedAffiliatePartners AffiliatePartner[]       @relation("affiliateOwner")
+  affiliateReferrals  AffiliateReferral[]
+  affiliatePurchases  AffiliatePurchase[]
 }
 
 model Account {
@@ -574,6 +582,81 @@ model SiteContent {
   key       String   @id
   body      String   @db.Text
   updatedAt DateTime @default(now()) @updatedAt
+}
+
+model AffiliatePartner {
+  id                String              @id @default(cuid())
+  ownerId           String
+  promoCode         String              @unique
+  discountPercent   Int                 @default(0)
+  activationLimit   Int                 @default(0)
+  partnerPercent    Int                 @default(0)
+  referralSlug      String              @unique
+  isActive          Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  owner             User                @relation("affiliateOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  clicks            AffiliateClick[]
+  referrals         AffiliateReferral[]
+  purchases         AffiliatePurchase[]
+
+  @@index([ownerId])
+  @@index([isActive])
+}
+
+model AffiliateClick {
+  id          String           @id @default(cuid())
+  partnerId   String
+  ipAddress   String?
+  userAgent   String?          @db.Text
+  createdAt   DateTime         @default(now())
+  partner     AffiliatePartner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@index([partnerId, createdAt])
+}
+
+model AffiliateReferral {
+  id              String              @id @default(cuid())
+  partnerId       String
+  userId          String?
+  referralKey     String
+  displayName     String?
+  contact         String?             @db.Text
+  createdAt       DateTime            @default(now())
+  partner         AffiliatePartner    @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  user            User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  purchases       AffiliatePurchase[]
+
+  @@unique([partnerId, referralKey])
+  @@index([userId])
+}
+
+model AffiliatePurchase {
+  id                   String                  @id @default(cuid())
+  partnerId            String
+  referralId           String?
+  buyerUserId          String?
+  buyerName            String
+  buyerContact         String                  @db.Text
+  source               AffiliatePurchaseSource
+  promoCode            String?
+  platform             String
+  offerId              String
+  offerTitle           String
+  salePriceKopecks     Int
+  discountKopecks      Int                     @default(0)
+  paidAmountKopecks    Int
+  costKopecks          Int
+  profitKopecks        Int
+  partnerEarningKopecks Int
+  createdAt            DateTime                @default(now())
+  partner              AffiliatePartner        @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  referral             AffiliateReferral?      @relation(fields: [referralId], references: [id], onDelete: SetNull)
+  buyer                User?                   @relation(fields: [buyerUserId], references: [id], onDelete: SetNull)
+
+  @@index([partnerId, createdAt])
+  @@index([referralId])
+  @@index([buyerUserId])
 }
 
 model SecuritySession {

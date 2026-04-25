@@ -106,7 +106,9 @@ export default async function CoinsCheckoutPage({ params }: CoinsCheckoutPagePro
         </div>
 
         <CoinsCheckoutForm
+          offerId={offer.id}
           offerTitle={offer.title}
+          platform={params.platform}
           priceLabel={priceLabel}
           platformLabel={platformLabel}
           initialTelegram={session?.user.telegramUsername ? `@${session.user.telegramUsername}` : ""}

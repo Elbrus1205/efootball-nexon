@@ -6,16 +6,21 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { CoinsPlatform } from "@/lib/coins-catalog";
 
 const TELEGRAM_CONTACT_REGEX = /^(?:@[\w_]{5,32}|(?:https?:\/\/)?(?:t\.me|telegram\.me)\/[A-Za-z0-9_]{5,32}\/?)$/i;
 
 export function CoinsCheckoutForm({
+  offerId,
   offerTitle,
+  platform,
   priceLabel,
   platformLabel,
   initialTelegram = "",
 }: {
+  offerId: string;
   offerTitle: string;
+  platform: CoinsPlatform;
   priceLabel: string;
   platformLabel: string;
   initialTelegram?: string;
@@ -23,12 +28,13 @@ export function CoinsCheckoutForm({
   const [pending, startTransition] = useTransition();
   const [playerName, setPlayerName] = useState("");
   const [contact, setContact] = useState(initialTelegram);
+  const [promoCode, setPromoCode] = useState("");
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (playerName.trim().length < 2) {
-      toast.error("Укажи ваше имя для оформления.");
+      toast.error("Укажи имя для оформления.");
       return;
     }
 
@@ -38,8 +44,28 @@ export function CoinsCheckoutForm({
     }
 
     startTransition(async () => {
-      toast.message("Checkout подготовлен под ЮKassa", {
-        description: `${offerTitle} • ${platformLabel} • ${priceLabel}. Когда подключишь ЮKassa, сюда можно будет добавить создание платежа.`,
+      const response = await fetch("/api/coins/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          offerId,
+          platform,
+          playerName,
+          contact,
+          promoCode,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        toast.error(payload?.error || "Не удалось оформить заказ.");
+        return;
+      }
+
+      toast.success("Заказ зафиксирован", {
+        description: payload?.affiliateApplied
+          ? `${offerTitle} • ${platformLabel}. Партнёрская скидка/привязка применена.`
+          : `${offerTitle} • ${platformLabel} • ${priceLabel}.`,
       });
     });
   };
@@ -79,9 +105,21 @@ export function CoinsCheckoutForm({
           />
           <p className="text-xs text-zinc-500">Если Telegram привязан к профилю, он подставится автоматически.</p>
         </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="promo-code">Промокод</Label>
+          <Input
+            id="promo-code"
+            value={promoCode}
+            onChange={(event) => setPromoCode(event.target.value)}
+            placeholder="Если есть промокод партнёра"
+            className="bg-white/[0.04] uppercase"
+          />
+        </div>
       </div>
+
       <Button type="submit" size="lg" className="mt-6 h-12 w-full rounded-full bg-emerald-400 text-black hover:bg-emerald-300">
-        {pending ? "Подготавливаем..." : "Оплатить через ЮKassa"}
+        {pending ? "Оформляем..." : "Оплатить через ЮKassa"}
       </Button>
     </form>
   );

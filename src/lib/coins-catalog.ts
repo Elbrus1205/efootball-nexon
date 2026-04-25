@@ -117,6 +117,10 @@ export function formatRubles(priceKopecks: number) {
   }).format(priceKopecks / 100);
 }
 
+export function getCoinsOfferCostKopecks(priceKopecks: number) {
+  return Math.round(priceKopecks * 0.7);
+}
+
 export function isCoinsPlatform(value: string): value is CoinsPlatform {
   return value === "android" || value === "ios" || value === "promo";
 }
