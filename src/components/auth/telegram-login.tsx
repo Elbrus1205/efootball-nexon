@@ -34,6 +34,7 @@ export function TelegramLogin({
   const [widgetError, setWidgetError] = useState<string | null>(null);
   const [widgetLoaded, setWidgetLoaded] = useState(false);
   const [botLoginToken, setBotLoginToken] = useState<string | null>(null);
+  const [botLoginUrl, setBotLoginUrl] = useState<string | null>(null);
   const [botLoginPending, startBotLoginTransition] = useTransition();
   const normalizedBotUsername = useMemo(() => normalizeTelegramBotUsername(botUsername), [botUsername]);
   const isValidUsername = /^[A-Za-z0-9_]{5,32}$/.test(normalizedBotUsername);
@@ -171,6 +172,7 @@ export function TelegramLogin({
         stopped = true;
         window.clearInterval(interval);
         setBotLoginToken(null);
+        setBotLoginUrl(null);
         setWidgetError("Ссылка для входа истекла. Нажмите кнопку Telegram ещё раз.");
       }
     }, 2000);
@@ -187,8 +189,14 @@ export function TelegramLogin({
       return;
     }
 
+    const popup = window.open("about:blank", "_blank", "noopener,noreferrer");
+    if (popup) {
+      popup.document.write("<!doctype html><title>Telegram</title><body style=\"font-family:sans-serif;background:#101827;color:white;display:grid;place-items:center;height:100vh;margin:0\">Открываем Telegram...</body>");
+    }
+
     startBotLoginTransition(async () => {
       setWidgetError(null);
+      setBotLoginUrl(null);
 
       const response = await fetch("/api/auth/telegram-bot-login/begin", {
         method: "POST",
@@ -198,12 +206,17 @@ export function TelegramLogin({
       const payload = (await response.json().catch(() => null)) as { token?: string; botUrl?: string; error?: string } | null;
 
       if (!response.ok || !payload?.token || !payload.botUrl) {
+        popup?.close();
         setWidgetError(payload?.error || "Не удалось открыть вход через Telegram-бот.");
         return;
       }
 
       setBotLoginToken(payload.token);
-      window.open(payload.botUrl, "_blank", "noopener,noreferrer");
+      setBotLoginUrl(payload.botUrl);
+
+      if (popup) {
+        popup.location.href = payload.botUrl;
+      }
     });
   };
 
@@ -236,6 +249,16 @@ export function TelegramLogin({
             </button>
           ) : null}
           <div ref={containerRef} className={widgetLoaded ? "mt-3 flex min-h-12 items-center justify-center" : "hidden"} />
+          {botLoginToken ? (
+            <div className="mt-3 rounded-2xl border border-[#229ED9]/25 bg-[#229ED9]/10 px-3 py-3 text-sm leading-6 text-sky-100">
+              Откройте бота, нажмите Start, затем вернитесь сюда. Вход завершится автоматически.
+              {botLoginUrl ? (
+                <a className="mt-2 block font-semibold text-white underline underline-offset-4" href={botLoginUrl} target="_blank" rel="noreferrer">
+                  Открыть Telegram
+                </a>
+              ) : null}
+            </div>
+          ) : null}
           {widgetError ? (
             <div className="mt-3 flex items-start gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-3 text-sm text-amber-200">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
