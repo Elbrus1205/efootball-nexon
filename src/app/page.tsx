@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/shared/reveal";
 import { getCurrentSession } from "@/lib/auth/session";
+import { getArchivedHomeStats, parsePrizePoolValue } from "@/lib/home-stats";
 
 const features = [
   {
@@ -52,11 +53,11 @@ export default async function HomePage() {
       select: { prizePool: true },
     }),
   ]);
+  const archivedHomeStats = await getArchivedHomeStats();
 
   const totalPrizePool = prizePoolTournaments.reduce((sum, tournament) => {
-    const value = tournament.prizePool?.replace(/[^\d]/g, "") ?? "";
-    return sum + (value ? Number(value) : 0);
-  }, 0);
+    return sum + parsePrizePoolValue(tournament.prizePool);
+  }, archivedHomeStats.prizePool);
 
   const highlights = [
     {
@@ -72,7 +73,7 @@ export default async function HomePage() {
       label: "разыграно призов",
     },
     {
-      value: totalTournaments,
+      value: totalTournaments + archivedHomeStats.tournaments,
       label: "проведено турниров",
     },
   ];

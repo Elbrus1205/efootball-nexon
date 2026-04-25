@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { UserRole } from "@prisma/client";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { addArchivedTournamentStats } from "@/lib/home-stats";
 import {
   assignRandomClubsToTournament,
   closeTournamentRegistration,
@@ -18,7 +19,24 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const redirectUrl = new URL("/admin/tournaments", request.url);
   try {
     if (method === "delete") {
-      await db.tournament.delete({ where: { id: params.id } });
+      const preserveHomeStats = formData.get("preserveHomeStats") === "on";
+
+      await db.$transaction(async (tx) => {
+        const tournament = await tx.tournament.findUnique({
+          where: { id: params.id },
+          select: { prizePool: true },
+        });
+
+        if (!tournament) {
+          throw new Error("Турнир не найден.");
+        }
+
+        if (preserveHomeStats) {
+          await addArchivedTournamentStats(tournament, tx);
+        }
+
+        await tx.tournament.delete({ where: { id: params.id } });
+      });
     }
 
     if (method === "close") {

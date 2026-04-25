@@ -158,8 +158,16 @@ export default async function AdminTournamentsPage({
                     <Link href={`/admin/tournaments/${tournament.id}/bracket`}>Сетка</Link>
                   </Button>
 
-                  <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
+                  <form action={`/api/admin/tournaments/${tournament.id}`} method="post" className="flex flex-col gap-2 rounded-2xl border border-red-400/10 bg-red-500/[0.03] p-2">
                     <input type="hidden" name="_method" value="delete" />
+                    <label className="flex max-w-[220px] items-start gap-2 px-1 text-xs leading-4 text-zinc-400">
+                      <input
+                        type="checkbox"
+                        name="preserveHomeStats"
+                        className="mt-0.5 h-4 w-4 rounded border-white/15 bg-black/40 text-primary accent-primary"
+                      />
+                      <span>Сохранить турнир и призовой фонд в статистике главной</span>
+                    </label>
                     <Button
                       variant="outline"
                       className="border-red-400/20 bg-red-500/10 text-red-200 hover:bg-red-500/20 hover:text-red-100"
