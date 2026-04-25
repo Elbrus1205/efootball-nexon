@@ -11,7 +11,6 @@ const partnerSchema = z.object({
   discountPercent: z.coerce.number().int().min(0).max(100),
   activationLimit: z.coerce.number().int().min(0).max(1_000_000),
   partnerPercent: z.coerce.number().int().min(0).max(100),
-  referralSlug: z.string().min(2).max(160),
 });
 
 export async function POST(request: Request) {
@@ -25,7 +24,6 @@ export async function POST(request: Request) {
     discountPercent: formData.get("discountPercent"),
     activationLimit: formData.get("activationLimit"),
     partnerPercent: formData.get("partnerPercent"),
-    referralSlug: formData.get("referralSlug"),
   });
 
   if (!parsed.success) {
@@ -34,12 +32,7 @@ export async function POST(request: Request) {
   }
 
   const promoCode = normalizePromoCode(parsed.data.promoCode);
-  const referralSlug = normalizeReferralSlug(parsed.data.referralSlug);
-
-  if (!referralSlug) {
-    redirectUrl.searchParams.set("error", "Укажите корректную реферальную ссылку или slug.");
-    return NextResponse.redirect(redirectUrl, 303);
-  }
+  const referralSlug = normalizeReferralSlug(promoCode);
 
   try {
     await db.affiliatePartner.create({
@@ -58,7 +51,7 @@ export async function POST(request: Request) {
     redirectUrl.searchParams.set(
       "error",
       error instanceof Error && error.message.includes("Unique")
-        ? "Промокод или реферальная ссылка уже используются."
+        ? "Промокод уже используется."
         : "Не удалось создать партнёрскую программу.",
     );
   }

@@ -1,6 +1,3 @@
-import { cookies } from "next/headers";
-
-export const AFFILIATE_REF_COOKIE = "efn_affiliate_ref";
 export const SITE_BASE_URL = "https://efootball-nexon.ru";
 
 export function normalizePromoCode(value: string) {
@@ -28,14 +25,6 @@ function normalizeSlug(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9_-]+/g, "-")
     .replace(/^-+|-+$/g, "");
-}
-
-export function getAffiliateRefCookie() {
-  return cookies().get(AFFILIATE_REF_COOKIE)?.value ?? null;
-}
-
-export function formatReferralLink(baseUrl: string, slug: string) {
-  return `${baseUrl.replace(/\/$/, "")}/ref/${encodeURIComponent(slug)}`;
 }
 
 export function getRequestBaseUrl(request: Request) {

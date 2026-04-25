@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { AffiliatePurchaseSource } from "@prisma/client";
 import { z } from "zod";
 import { getCurrentSession } from "@/lib/auth/session";
-import { getAffiliateRefCookie, normalizePromoCode } from "@/lib/affiliate";
+import { normalizePromoCode } from "@/lib/affiliate";
 import { getCoinsOffer, getCoinsOfferCostKopecks } from "@/lib/coins-catalog";
 import { db } from "@/lib/db";
 
@@ -13,10 +13,6 @@ const orderSchema = z.object({
   contact: z.string().min(3).max(200),
   promoCode: z.string().max(32).optional(),
 });
-
-function buildReferralKey(userId: string | undefined, contact: string) {
-  return userId ? `user:${userId}` : `contact:${contact.trim().toLowerCase()}`;
-}
 
 export async function POST(request: Request) {
   const parsed = orderSchema.safeParse(await request.json().catch(() => null));
@@ -33,9 +29,34 @@ export async function POST(request: Request) {
 
   const session = await getCurrentSession();
   const promoCode = parsed.data.promoCode ? normalizePromoCode(parsed.data.promoCode) : "";
-  const referralSlug = getAffiliateRefCookie();
 
-  const partner = promoCode
+  if (promoCode && !session?.user?.id) {
+    return NextResponse.json({ error: "Войдите в аккаунт, чтобы активировать партнёрский промокод." }, { status: 401 });
+  }
+
+  const existingReferral = session?.user?.id
+    ? await db.affiliateReferral.findFirst({
+        where: { userId: session.user.id },
+        include: {
+          partner: {
+            select: {
+              id: true,
+              promoCode: true,
+              discountPercent: true,
+              activationLimit: true,
+              partnerPercent: true,
+              isActive: true,
+            },
+          },
+        },
+      })
+    : null;
+
+  if (promoCode && existingReferral) {
+    return NextResponse.json({ error: "На этом аккаунте уже активирован партнёрский промокод." }, { status: 400 });
+  }
+
+  const activatedPartner = promoCode
     ? await db.affiliatePartner.findFirst({
         where: { promoCode, isActive: true },
         select: {
@@ -44,63 +65,41 @@ export async function POST(request: Request) {
           discountPercent: true,
           activationLimit: true,
           partnerPercent: true,
-          _count: { select: { purchases: { where: { source: AffiliatePurchaseSource.PROMO_CODE } } } },
+          isActive: true,
+          _count: { select: { referrals: true } },
         },
       })
-    : referralSlug
-      ? await db.affiliatePartner.findFirst({
-          where: { referralSlug, isActive: true },
-          select: {
-            id: true,
-            promoCode: true,
-            discountPercent: true,
-            activationLimit: true,
-            partnerPercent: true,
-            _count: { select: { purchases: { where: { source: AffiliatePurchaseSource.PROMO_CODE } } } },
-          },
-        })
-      : null;
+    : null;
 
-  if (promoCode && !partner) {
+  if (promoCode && !activatedPartner) {
     return NextResponse.json({ error: "Промокод не найден или отключён." }, { status: 404 });
   }
 
-  if (partner && promoCode && partner.activationLimit > 0 && partner._count.purchases >= partner.activationLimit) {
+  if (activatedPartner && activatedPartner.activationLimit > 0 && activatedPartner._count.referrals >= activatedPartner.activationLimit) {
     return NextResponse.json({ error: "Лимит активаций промокода закончился." }, { status: 400 });
   }
 
+  const partner = activatedPartner ?? (existingReferral?.partner?.isActive ? existingReferral.partner : null);
   const salePriceKopecks = offer.priceKopecks;
-  const discountKopecks = partner && promoCode ? Math.round((salePriceKopecks * partner.discountPercent) / 100) : 0;
+  const discountKopecks = activatedPartner ? Math.round((salePriceKopecks * activatedPartner.discountPercent) / 100) : 0;
   const paidAmountKopecks = Math.max(0, salePriceKopecks - discountKopecks);
   const costKopecks = getCoinsOfferCostKopecks(salePriceKopecks);
   const profitKopecks = Math.max(0, paidAmountKopecks - costKopecks);
   const partnerEarningKopecks = partner ? Math.round((profitKopecks * partner.partnerPercent) / 100) : 0;
 
   if (partner) {
-    const referralKey = buildReferralKey(session?.user?.id, parsed.data.contact);
-    const source = promoCode ? AffiliatePurchaseSource.PROMO_CODE : AffiliatePurchaseSource.REFERRAL_LINK;
-
     await db.$transaction(async (tx) => {
-      const referral = await tx.affiliateReferral.upsert({
-        where: {
-          partnerId_referralKey: {
+      const referral =
+        existingReferral ??
+        (await tx.affiliateReferral.create({
+          data: {
             partnerId: partner.id,
-            referralKey,
+            referralKey: `user:${session!.user.id}`,
+            userId: session!.user.id,
+            displayName: parsed.data.playerName.trim(),
+            contact: parsed.data.contact.trim(),
           },
-        },
-        update: {
-          displayName: parsed.data.playerName.trim(),
-          contact: parsed.data.contact.trim(),
-          userId: session?.user?.id ?? undefined,
-        },
-        create: {
-          partnerId: partner.id,
-          referralKey,
-          userId: session?.user?.id,
-          displayName: parsed.data.playerName.trim(),
-          contact: parsed.data.contact.trim(),
-        },
-      });
+        }));
 
       await tx.affiliatePurchase.create({
         data: {
@@ -109,8 +108,8 @@ export async function POST(request: Request) {
           buyerUserId: session?.user?.id,
           buyerName: parsed.data.playerName.trim(),
           buyerContact: parsed.data.contact.trim(),
-          source,
-          promoCode: promoCode || null,
+          source: AffiliatePurchaseSource.PROMO_CODE,
+          promoCode: activatedPartner?.promoCode ?? null,
           platform: parsed.data.platform,
           offerId: offer.id,
           offerTitle: offer.title,
