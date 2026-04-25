@@ -33,7 +33,6 @@ export function TelegramConnect({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [widgetError, setWidgetError] = useState<string | null>(null);
-  const [widgetLoaded, setWidgetLoaded] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const normalizedBotUsername = useMemo(() => normalizeTelegramBotUsername(botUsername), [botUsername]);
@@ -44,33 +43,7 @@ export function TelegramConnect({
     if (!container || !normalizedBotUsername || !isValidUsername || linked) return;
 
     setWidgetError(null);
-    setWidgetLoaded(false);
     container.replaceChildren();
-
-    const syncWidgetState = () => {
-      const iframe = container.querySelector("iframe");
-      if (!iframe) {
-        setWidgetLoaded(false);
-        return;
-      }
-
-      if (iframe.dataset.telegramLoaded === "true") {
-        setWidgetLoaded(true);
-        return;
-      }
-
-      iframe.addEventListener(
-        "load",
-        () => {
-          iframe.dataset.telegramLoaded = "true";
-          setWidgetLoaded(true);
-        },
-        { once: true },
-      );
-      setWidgetLoaded(false);
-    };
-    const observer = new MutationObserver(syncWidgetState);
-    observer.observe(container, { childList: true, subtree: true });
 
     window.onTelegramConnect = (user) => {
       startTransition(async () => {
@@ -93,7 +66,7 @@ export function TelegramConnect({
     };
 
     const script = document.createElement("script");
-    script.src = "/api/telegram/widget";
+    script.src = "https://telegram.org/js/telegram-widget.js?22";
     script.async = true;
     script.setAttribute("data-telegram-login", normalizedBotUsername);
     script.setAttribute("data-size", "large");
@@ -102,13 +75,11 @@ export function TelegramConnect({
     script.setAttribute("data-onauth", "onTelegramConnect(user)");
     script.onerror = () => {
       setWidgetError("Не удалось загрузить Telegram Login Widget.");
-      setWidgetLoaded(false);
     };
 
     container.appendChild(script);
 
     const timeout = window.setTimeout(() => {
-      syncWidgetState();
       const content = container.textContent?.toLowerCase() ?? "";
 
       if (content.includes("username invalid")) {
@@ -124,13 +95,9 @@ export function TelegramConnect({
 
     return () => {
       window.clearTimeout(timeout);
-      observer.disconnect();
       container.replaceChildren();
-      setWidgetLoaded(false);
     };
   }, [isValidUsername, linked, normalizedBotUsername, router]);
-
-  const telegramFallbackHref = normalizedBotUsername ? `https://t.me/${normalizedBotUsername}` : "https://t.me/";
 
   if (linked) {
     return (
@@ -164,18 +131,7 @@ export function TelegramConnect({
   return (
     <div className="space-y-3">
       <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-        {!widgetLoaded ? (
-          <a
-            href={telegramFallbackHref}
-            target="_blank"
-            rel="noreferrer"
-            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#229ED9] px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(34,158,217,0.18)] transition hover:bg-[#1d8fc5]"
-          >
-            <Send className="h-4 w-4" />
-            Подключить Telegram
-          </a>
-        ) : null}
-        <div ref={containerRef} className={widgetLoaded ? "mt-3 flex min-h-12 items-center justify-center" : "hidden"} />
+        <div ref={containerRef} className="flex min-h-12 items-center justify-center" />
       </div>
 
       {pending ? (

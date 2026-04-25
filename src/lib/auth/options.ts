@@ -10,7 +10,6 @@ import { fetchVkUserProfile } from "@/lib/auth/vk";
 import { db } from "@/lib/db";
 import { getLegalAcceptanceData, isLegalAccepted } from "@/lib/legal-acceptance";
 import { generateFallbackNickname } from "@/lib/player-name";
-import { parseTelegramBotLoginIdentifier } from "@/lib/telegram-bot-login";
 import { verifyTwoFactorChallenge } from "@/lib/two-factor";
 
 const TELEGRAM_ADMIN_ID = "6595067194";
@@ -347,110 +346,6 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           nickname: user.nickname,
           efootballUid: user.efootballUid,
-          isBanned: user.isBanned,
-          authSessionId,
-        };
-      },
-    }),
-    CredentialsProvider({
-      id: "telegram-bot",
-      name: "Telegram Bot",
-      credentials: {
-        token: { label: "Login Token", type: "text" },
-        legalAccepted: { label: "Legal Accepted", type: "text" },
-      },
-      async authorize(credentials, req) {
-        const loginToken = credentials?.token?.trim();
-        if (!loginToken) return null;
-
-        const record = await db.verificationToken.findUnique({ where: { token: loginToken } });
-        if (!record || record.expires < new Date()) {
-          if (record) {
-            await db.verificationToken.delete({ where: { token: loginToken } }).catch(() => null);
-          }
-          return null;
-        }
-
-        const parsed = parseTelegramBotLoginIdentifier(record.identifier);
-        if (!parsed || parsed.status !== "verified" || !parsed.profile) return null;
-
-        const context = buildSecurityContext(req?.headers);
-        const acceptedLegalDocuments = parsed.legalAccepted || isLegalAccepted(credentials?.legalAccepted);
-        const telegramUsername = parsed.profile.username?.trim() || generateFallbackNickname(parsed.profile.id);
-        const profileName =
-          [parsed.profile.firstName, parsed.profile.lastName].filter(Boolean).join(" ").trim() || telegramUsername;
-        const role = parsed.profile.id === TELEGRAM_ADMIN_ID ? UserRole.ADMIN : UserRole.PLAYER;
-        const image = parsed.profile.photoFileId ? `telegram-file:${parsed.profile.photoFileId}` : undefined;
-
-        let user = await db.user.findUnique({
-          where: { telegramId: parsed.profile.id },
-        });
-
-        if (user) {
-          user = await db.user.update({
-            where: { id: user.id },
-            data: {
-              telegramUsername: parsed.profile.username,
-              image: image ?? user.image ?? undefined,
-              role,
-              ...(!user.legalAcceptedAt && acceptedLegalDocuments ? getLegalAcceptanceData(req?.headers) : {}),
-            },
-          });
-        } else {
-          if (!acceptedLegalDocuments) return null;
-
-          user = await db.user.create({
-            data: {
-              telegramId: parsed.profile.id,
-              telegramUsername: parsed.profile.username,
-              image,
-              name: profileName,
-              role,
-              ...getLegalAcceptanceData(req?.headers),
-            },
-          });
-        }
-
-        if (!user.name?.trim()) {
-          user = await db.user.update({
-            where: { id: user.id },
-            data: { name: profileName },
-          });
-        }
-
-        await db.verificationToken.delete({ where: { token: loginToken } }).catch(() => null);
-
-        if (user.isBanned) {
-          await createLoginHistory({
-            userId: user.id,
-            email: user.email,
-            status: LoginAttemptStatus.FAILED,
-            context,
-          });
-          return null;
-        }
-
-        const authSessionId = await createSecuritySession({
-          userId: user.id,
-          context,
-        });
-
-        await createLoginHistory({
-          userId: user.id,
-          email: user.email,
-          status: LoginAttemptStatus.SUCCESS,
-          context,
-        });
-
-        return {
-          id: user.id,
-          email: user.email,
-          image: user.image,
-          name: user.name ?? "Telegram Player",
-          role: user.role,
-          nickname: user.nickname,
-          efootballUid: user.efootballUid,
-          telegramUsername: user.telegramUsername,
           isBanned: user.isBanned,
           authSessionId,
         };
