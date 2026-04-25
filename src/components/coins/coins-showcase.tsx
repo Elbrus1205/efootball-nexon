@@ -51,7 +51,7 @@ function OfferCard({ offer, platform }: { offer: CoinsOffer; platform: CoinsPlat
 
   return (
     <article className={cn("group relative overflow-hidden rounded-2xl border p-3 transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_42px_rgba(0,0,0,0.28)]", tone.card)}>
-      <div className="relative flex min-h-[150px] flex-col justify-between gap-3">
+      <div className="relative flex min-h-[168px] flex-col justify-between gap-3">
         <div className="flex items-start justify-between gap-2">
           <span className={cn("rounded-full border px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em]", tone.pill)}>
             {offer.badge ?? getPlatformLabel(platform)}
@@ -64,22 +64,18 @@ function OfferCard({ offer, platform }: { offer: CoinsOffer; platform: CoinsPlat
         <div>
           <h3 className="line-clamp-2 min-h-[2rem] text-sm font-black leading-tight text-white">{offer.title}</h3>
           {offer.bonus ? <div className="mt-1.5 line-clamp-1 text-[10px] text-zinc-400">{offer.bonus}</div> : null}
-        </div>
-
-        <div className="rounded-xl border border-white/10 bg-black/20 p-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <div className="text-[8px] uppercase tracking-[0.14em] text-zinc-500">Цена</div>
-              <div className="mt-0.5 text-sm font-black text-white">{formatRubles(offer.priceKopecks)}</div>
-            </div>
-            <StartCheckoutButton offerId={offer.id} platform={platform} className={cn("h-8 min-h-0 rounded-lg px-2.5 text-xs font-bold", tone.button)}>
-              <span className="flex items-center gap-1">
-                Купить
-                <ArrowRight className="h-3 w-3" />
-              </span>
-            </StartCheckoutButton>
+          <div className="mt-2">
+            <div className="text-[8px] uppercase tracking-[0.14em] text-zinc-500">Цена</div>
+            <div className="mt-0.5 text-base font-black text-white">{formatRubles(offer.priceKopecks)}</div>
           </div>
         </div>
+
+        <StartCheckoutButton offerId={offer.id} platform={platform} className={cn("h-9 min-h-0 w-full rounded-xl px-3 text-xs font-bold", tone.button)}>
+          <span className="flex items-center justify-center gap-1.5">
+            Купить
+            <ArrowRight className="h-3.5 w-3.5" />
+          </span>
+        </StartCheckoutButton>
       </div>
     </article>
   );
