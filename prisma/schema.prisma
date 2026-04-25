@@ -134,6 +134,12 @@ enum AffiliatePurchaseSource {
   REFERRAL_LINK
 }
 
+enum CoinProductPlatform {
+  android
+  ios
+  promo
+}
+
 model User {
   id                  String                   @id @default(cuid())
   name                String?
@@ -657,6 +663,21 @@ model AffiliatePurchase {
   @@index([partnerId, createdAt])
   @@index([referralId])
   @@index([buyerUserId])
+}
+
+model CoinProduct {
+  id             String              @id @default(cuid())
+  platform       CoinProductPlatform
+  title          String
+  coins          Int
+  priceKopecks   Int
+  costKopecks    Int
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([platform, isActive])
+  @@index([createdAt])
 }
 
 model SecuritySession {

@@ -3,7 +3,7 @@ import { AffiliatePurchaseSource } from "@prisma/client";
 import { z } from "zod";
 import { getCurrentSession } from "@/lib/auth/session";
 import { normalizePromoCode } from "@/lib/affiliate";
-import { getCoinsOffer, getCoinsOfferCostKopecks } from "@/lib/coins-catalog";
+import { getCoinsProductOffer } from "@/lib/coins-products";
 import { db } from "@/lib/db";
 
 const orderSchema = z.object({
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Проверьте данные заказа." }, { status: 400 });
   }
 
-  const offer = getCoinsOffer(parsed.data.platform, parsed.data.offerId);
+  const offer = await getCoinsProductOffer(parsed.data.platform, parsed.data.offerId);
 
   if (!offer) {
     return NextResponse.json({ error: "Пакет Coins не найден." }, { status: 404 });
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
   const salePriceKopecks = offer.priceKopecks;
   const discountKopecks = activatedPartner ? Math.round((salePriceKopecks * activatedPartner.discountPercent) / 100) : 0;
   const paidAmountKopecks = Math.max(0, salePriceKopecks - discountKopecks);
-  const costKopecks = getCoinsOfferCostKopecks(salePriceKopecks);
+  const costKopecks = offer.costKopecks ?? 0;
   const profitKopecks = Math.max(0, paidAmountKopecks - costKopecks);
   const partnerEarningKopecks = partner ? Math.round((profitKopecks * partner.partnerPercent) / 100) : 0;
 

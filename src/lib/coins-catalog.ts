@@ -7,6 +7,7 @@ export type CoinsOffer = {
   paidCoins: number;
   freeCoins: number;
   priceKopecks: number;
+  costKopecks?: number;
   kind: "coins" | "bundle";
   badge?: string;
   note?: string;

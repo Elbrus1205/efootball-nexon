@@ -5,7 +5,8 @@ import { notFound } from "next/navigation";
 import { CoinsCheckoutForm } from "@/components/coins/coins-checkout-form";
 import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/lib/auth/session";
-import { formatRubles, getCoinsOffer, getCoinsPlatformLabel, isCoinsPlatform } from "@/lib/coins-catalog";
+import { formatRubles, getCoinsPlatformLabel, isCoinsPlatform } from "@/lib/coins-catalog";
+import { getCoinsProductOffer } from "@/lib/coins-products";
 
 type CoinsCheckoutPageProps = {
   params: {
@@ -14,14 +15,14 @@ type CoinsCheckoutPageProps = {
   };
 };
 
-export function generateMetadata({ params }: CoinsCheckoutPageProps): Metadata {
+export async function generateMetadata({ params }: CoinsCheckoutPageProps): Promise<Metadata> {
   if (!isCoinsPlatform(params.platform)) {
     return {
       title: "Оформление оплаты | eFootball Nexon",
     };
   }
 
-  const offer = getCoinsOffer(params.platform, params.offerId);
+  const offer = await getCoinsProductOffer(params.platform, params.offerId);
 
   return {
     title: offer ? `${offer.title} | Оплата | eFootball Nexon` : "Оформление оплаты | eFootball Nexon",
@@ -34,7 +35,7 @@ export default async function CoinsCheckoutPage({ params }: CoinsCheckoutPagePro
     notFound();
   }
 
-  const offer = getCoinsOffer(params.platform, params.offerId);
+  const offer = await getCoinsProductOffer(params.platform, params.offerId);
 
   if (!offer) {
     notFound();

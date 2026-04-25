@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getCoinsCheckoutPath, getCoinsOffer } from "@/lib/coins-catalog";
+import { getCoinsCheckoutPath } from "@/lib/coins-catalog";
+import { getCoinsProductOffer } from "@/lib/coins-products";
 
 const checkoutRequestSchema = z.object({
   offerId: z.string().min(1),
@@ -15,7 +16,7 @@ export async function POST(request: Request) {
   }
 
   const { offerId, platform } = parsedBody.data;
-  const offer = getCoinsOffer(platform, offerId);
+  const offer = await getCoinsProductOffer(platform, offerId);
 
   if (!offer) {
     return NextResponse.json({ error: "Пакет не найден." }, { status: 404 });

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { Percent, Users } from "lucide-react";
 import { CoinsShowcase } from "@/components/coins/coins-showcase";
-import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import { PartnerDashboard } from "@/components/coins/partner-dashboard";
 import { getCurrentSession } from "@/lib/auth/session";
+import { getCoinsProductOffersByPlatform } from "@/lib/coins-products";
 import { db } from "@/lib/db";
 
 export const metadata: Metadata = {
@@ -42,75 +42,32 @@ export default async function CoinsPage() {
   const partnerTurnover = partner?.purchases.reduce((sum, purchase) => sum + purchase.paidAmountKopecks, 0) ?? 0;
   const partnerProfit = partner?.purchases.reduce((sum, purchase) => sum + purchase.profitKopecks, 0) ?? 0;
   const partnerEarning = partner?.purchases.reduce((sum, purchase) => sum + purchase.partnerEarningKopecks, 0) ?? 0;
+  const offersByPlatform = await getCoinsProductOffersByPlatform();
 
   return (
     <main className="page-shell space-y-6 py-0 pb-12 sm:pb-16">
       {partner ? (
-        <Card className="overflow-hidden rounded-2xl border-primary/20 bg-[linear-gradient(180deg,rgba(10,16,28,0.96),rgba(5,9,16,0.98))] p-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Percent className="h-4 w-4 text-primary" />
-                Партнёрская панель
-              </CardTitle>
-              <CardDescription className="mt-1">Промокод и статистика ваших рефералов.</CardDescription>
-            </div>
-            <div className="flex flex-wrap gap-1.5 text-[11px]">
-              <span className="rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 font-semibold text-blue-100">{partner.promoCode}</span>
-              <span className="rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-1 text-zinc-200">{partner.discountPercent}% скидка</span>
-              <span className="rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-1 text-zinc-200">{partner.partnerPercent}% от профита</span>
-            </div>
-          </div>
-
-          <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-5">
-            {[
-              ["Рефералы", partner._count.referrals],
-              ["Покупки", partner._count.purchases],
-              ["Оборот", formatMoney(partnerTurnover)],
-              ["Профит", formatMoney(partnerProfit)],
-              ["Заработок", formatMoney(partnerEarning)],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-xl border border-white/10 bg-black/20 p-3">
-                <div className="text-[9px] uppercase tracking-[0.14em] text-zinc-500">{label}</div>
-                <div className="mt-1 text-base font-bold text-white">{value}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-3 grid gap-2 lg:grid-cols-2">
-            <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-              <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-zinc-300">
-                <Users className="h-3.5 w-3.5 text-primary" />
-                Рефералы
-              </div>
-              <div className="grid gap-1.5 sm:grid-cols-2">
-                {partner.referrals.slice(0, 4).map((referral) => (
-                  <div key={referral.id} className="truncate rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs text-zinc-300">
-                    {referral.displayName || referral.contact || referral.referralKey}
-                  </div>
-                ))}
-                {!partner.referrals.length ? <div className="text-xs text-zinc-500">Рефералов пока нет.</div> : null}
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-zinc-300">Покупки</div>
-              <div className="grid gap-1.5 sm:grid-cols-2">
-                {partner.purchases.slice(0, 4).map((purchase) => (
-                  <div key={purchase.id} className="rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs">
-                    <div className="truncate font-medium text-white">{purchase.offerTitle}</div>
-                    <div className="mt-0.5 text-[11px] text-zinc-500">
-                      {formatMoney(purchase.paidAmountKopecks)} • вам {formatMoney(purchase.partnerEarningKopecks)}
-                    </div>
-                  </div>
-                ))}
-                {!partner.purchases.length ? <div className="text-xs text-zinc-500">Покупок пока нет.</div> : null}
-              </div>
-            </div>
-          </div>
-        </Card>
+        <PartnerDashboard
+          promoCode={partner.promoCode}
+          discountPercent={partner.discountPercent}
+          partnerPercent={partner.partnerPercent}
+          stats={{
+            referrals: partner._count.referrals,
+            purchases: partner._count.purchases,
+            turnover: formatMoney(partnerTurnover),
+            profit: formatMoney(partnerProfit),
+            earning: formatMoney(partnerEarning),
+          }}
+          referrals={partner.referrals.map((referral) => referral.displayName || referral.contact || referral.referralKey)}
+          purchases={partner.purchases.map((purchase) => ({
+            id: purchase.id,
+            title: purchase.offerTitle,
+            amount: formatMoney(purchase.paidAmountKopecks),
+            earning: formatMoney(purchase.partnerEarningKopecks),
+          }))}
+        />
       ) : null}
-      <CoinsShowcase />
+      <CoinsShowcase offersByPlatform={offersByPlatform} />
     </main>
   );
 }
