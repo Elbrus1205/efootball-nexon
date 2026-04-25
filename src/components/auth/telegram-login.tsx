@@ -32,6 +32,7 @@ export function TelegramLogin({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [widgetError, setWidgetError] = useState<string | null>(null);
+  const [widgetMounted, setWidgetMounted] = useState(false);
   const normalizedBotUsername = useMemo(() => normalizeTelegramBotUsername(botUsername), [botUsername]);
   const isValidUsername = /^[A-Za-z0-9_]{5,32}$/.test(normalizedBotUsername);
   const isBlockedByLegal = requireLegalAcceptance && !legalAccepted;
@@ -41,10 +42,12 @@ export function TelegramLogin({
     const container = containerRef.current;
     if (!normalizedBotUsername || !container || !isValidUsername || isBlockedByLegal) {
       container?.replaceChildren();
+      setWidgetMounted(false);
       return;
     }
 
     setWidgetError(null);
+    setWidgetMounted(false);
     container.replaceChildren();
 
     window.onTelegramAuth = async (user) => {
@@ -79,9 +82,25 @@ export function TelegramLogin({
     script.setAttribute("data-onauth", "onTelegramAuth(user)");
     script.onerror = () => {
       setWidgetError("Не удалось загрузить Telegram Login Widget.");
+      setWidgetMounted(false);
     };
 
     container.appendChild(script);
+
+    const observer = new MutationObserver(() => {
+      const iframe = container.querySelector("iframe");
+      if (!iframe) return;
+
+      setWidgetMounted(true);
+      iframe.setAttribute("title", "Telegram Login");
+      iframe.style.position = "absolute";
+      iframe.style.inset = "0";
+      iframe.style.width = "100%";
+      iframe.style.height = "100%";
+      iframe.style.opacity = "0";
+      iframe.style.zIndex = "10";
+    });
+    observer.observe(container, { childList: true, subtree: true });
 
     const timeout = window.setTimeout(() => {
       const content = container.textContent?.toLowerCase() ?? "";
@@ -99,7 +118,9 @@ export function TelegramLogin({
 
     return () => {
       window.clearTimeout(timeout);
+      observer.disconnect();
       container.replaceChildren();
+      setWidgetMounted(false);
     };
   }, [isBlockedByLegal, isValidUsername, legalAccepted, normalizedBotUsername, requireLegalAcceptance, router]);
 
@@ -120,7 +141,13 @@ export function TelegramLogin({
         </div>
       ) : normalizedBotUsername && isValidUsername ? (
         <div className="rounded-2xl bg-black/20 p-3">
-          <div ref={containerRef} className="flex min-h-12 items-center justify-center" />
+          <div className="relative min-h-12 overflow-hidden rounded-xl">
+            <div className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#229ED9] px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(34,158,217,0.18)]">
+              <Send className="h-4 w-4" />
+              {widgetMounted ? "Войти через Telegram" : "Загрузка Telegram..."}
+            </div>
+            <div ref={containerRef} className="absolute inset-0 z-10" />
+          </div>
           {widgetError ? (
             <div className="mt-3 flex items-start gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-3 text-sm text-amber-200">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />

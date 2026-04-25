@@ -33,6 +33,7 @@ export function TelegramConnect({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [widgetError, setWidgetError] = useState<string | null>(null);
+  const [widgetMounted, setWidgetMounted] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const normalizedBotUsername = useMemo(() => normalizeTelegramBotUsername(botUsername), [botUsername]);
@@ -43,6 +44,7 @@ export function TelegramConnect({
     if (!container || !normalizedBotUsername || !isValidUsername || linked) return;
 
     setWidgetError(null);
+    setWidgetMounted(false);
     container.replaceChildren();
 
     window.onTelegramConnect = (user) => {
@@ -75,9 +77,25 @@ export function TelegramConnect({
     script.setAttribute("data-onauth", "onTelegramConnect(user)");
     script.onerror = () => {
       setWidgetError("Не удалось загрузить Telegram Login Widget.");
+      setWidgetMounted(false);
     };
 
     container.appendChild(script);
+
+    const observer = new MutationObserver(() => {
+      const iframe = container.querySelector("iframe");
+      if (!iframe) return;
+
+      setWidgetMounted(true);
+      iframe.setAttribute("title", "Telegram Login");
+      iframe.style.position = "absolute";
+      iframe.style.inset = "0";
+      iframe.style.width = "100%";
+      iframe.style.height = "100%";
+      iframe.style.opacity = "0";
+      iframe.style.zIndex = "10";
+    });
+    observer.observe(container, { childList: true, subtree: true });
 
     const timeout = window.setTimeout(() => {
       const content = container.textContent?.toLowerCase() ?? "";
@@ -95,7 +113,9 @@ export function TelegramConnect({
 
     return () => {
       window.clearTimeout(timeout);
+      observer.disconnect();
       container.replaceChildren();
+      setWidgetMounted(false);
     };
   }, [isValidUsername, linked, normalizedBotUsername, router]);
 
@@ -131,7 +151,13 @@ export function TelegramConnect({
   return (
     <div className="space-y-3">
       <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-        <div ref={containerRef} className="flex min-h-12 items-center justify-center" />
+        <div className="relative min-h-12 overflow-hidden rounded-xl">
+          <div className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#229ED9] px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(34,158,217,0.18)]">
+            <Send className="h-4 w-4" />
+            {widgetMounted ? "Подключить Telegram" : "Загрузка Telegram..."}
+          </div>
+          <div ref={containerRef} className="absolute inset-0 z-10" />
+        </div>
       </div>
 
       {pending ? (
