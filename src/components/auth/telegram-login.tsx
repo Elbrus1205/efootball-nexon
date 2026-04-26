@@ -151,6 +151,80 @@ export function TelegramLogin({
     window.Telegram.Login.auth({ bot_id: normalizedBotId, request_access: "write" }, finishTelegramAuth);
   };
 
+  const startTelegramBotAuth = async () => {
+    if (isBlockedByLegal) {
+      setWidgetError("Сначала примите документы сайта.");
+      return;
+    }
+
+    if (!normalizedBotUsername) {
+      startTelegramAuth();
+      return;
+    }
+
+    setPending(true);
+    setWidgetError(null);
+
+    try {
+      const response = await fetch("/api/auth/telegram-bot-login/begin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ legalAccepted }),
+      });
+      const payload = (await response.json().catch(() => null)) as { token?: string; botUrl?: string; error?: string } | null;
+
+      if (!response.ok || !payload?.token || !payload.botUrl) {
+        setWidgetError(payload?.error ?? "Не удалось начать вход через Telegram-бота.");
+        setPending(false);
+        return;
+      }
+
+      window.open(payload.botUrl, "_blank", "noopener,noreferrer");
+
+      const startedAt = Date.now();
+      const timer = window.setInterval(async () => {
+        if (Date.now() - startedAt > 10 * 60 * 1000) {
+          window.clearInterval(timer);
+          setPending(false);
+          setWidgetError("Ссылка для входа через Telegram истекла. Попробуйте ещё раз.");
+          return;
+        }
+
+        const statusResponse = await fetch(`/api/auth/telegram-bot-login/status?token=${encodeURIComponent(payload.token!)}`, {
+          cache: "no-store",
+        }).catch(() => null);
+        const statusPayload = (await statusResponse?.json().catch(() => null)) as { status?: string } | null;
+
+        if (statusPayload?.status === "verified") {
+          window.clearInterval(timer);
+          const result = await signIn("telegram-bot", {
+            token: payload.token,
+            legalAccepted: legalAccepted ? "true" : "false",
+            callbackUrl: "/dashboard",
+            redirect: false,
+          });
+
+          setPending(false);
+
+          if (result?.error) {
+            setWidgetError("Не удалось завершить вход через Telegram-бота. Попробуйте ещё раз.");
+            return;
+          }
+
+          router.refresh();
+          router.push(result?.url ?? "/dashboard");
+        } else if (statusPayload?.status === "expired") {
+          window.clearInterval(timer);
+          setPending(false);
+          setWidgetError("Ссылка для входа через Telegram истекла. Попробуйте ещё раз.");
+        }
+      }, 2000);
+    } catch {
+      setPending(false);
+      setWidgetError("Не удалось начать вход через Telegram-бота.");
+    }
+  };
+
   return (
     <div className="rounded-3xl border border-[#229ED9]/25 bg-[linear-gradient(180deg,rgba(34,158,217,0.16),rgba(34,158,217,0.06))] p-4 shadow-[0_12px_30px_rgba(34,158,217,0.08)]">
       <div className="mb-4 flex items-start gap-3">
@@ -170,7 +244,7 @@ export function TelegramLogin({
         <div className="rounded-2xl bg-black/20 p-3">
           <button
             type="button"
-            onClick={startTelegramAuth}
+            onClick={startTelegramBotAuth}
             disabled={pending}
             className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#229ED9] px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(34,158,217,0.18)] transition hover:bg-[#1d8fc5] disabled:cursor-not-allowed disabled:opacity-70"
           >
