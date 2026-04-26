@@ -6,7 +6,7 @@ import { savePlayoffMapping } from "@/lib/services/tournaments";
 import { playoffMappingSchema } from "@/lib/validators";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const session = await requireRole([UserRole.ADMIN]);
+  const session = await requireRole([UserRole.FOUNDER]);
   const body = playoffMappingSchema.parse(await request.json());
 
   const slots = await savePlayoffMapping({

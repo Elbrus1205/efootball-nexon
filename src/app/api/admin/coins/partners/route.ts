@@ -14,7 +14,7 @@ const partnerSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  await requireRole([UserRole.ADMIN]);
+  await requireRole([UserRole.FOUNDER]);
 
   const formData = await request.formData();
   const redirectUrl = new URL("/admin/coins", getRequestBaseUrl(request));

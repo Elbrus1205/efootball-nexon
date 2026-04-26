@@ -6,7 +6,7 @@ import { generateTournamentMatches, generateTournamentSchedule, generateTourname
 import { stageGenerationSchema } from "@/lib/validators";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  await requireRole([UserRole.ADMIN]);
+  await requireRole([UserRole.FOUNDER]);
 
   const body = stageGenerationSchema.parse(await request.json().catch(() => ({})));
   const stages = await generateTournamentStages(params.id, { regenerate: body.regenerate });

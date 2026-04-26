@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { roundDeadlineSchema } from "@/lib/validators";
 
-const staffRoles = [UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE];
+const staffRoles = [UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.JUDGE];
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const session = await requireRole(staffRoles);

@@ -12,7 +12,7 @@ import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 
 export default async function AdminTournamentHistoryPage({ params }: { params: { id: string } }) {
-  await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
+  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.JUDGE]);
 
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },

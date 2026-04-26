@@ -35,7 +35,7 @@ async function createMatchOutcomeNotifications(match: {
 }
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const session = await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
+  const session = await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.JUDGE]);
 
   const formData = await request.formData();
   const returnTo = String(formData.get("returnTo") || `/admin/matches/${params.id}`);

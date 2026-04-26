@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/auth/session";
 import { generatePlayoffFromGroups } from "@/lib/services/tournaments";
 
 export async function POST(_: Request, { params }: { params: { id: string } }) {
-  await requireRole([UserRole.ADMIN]);
+  await requireRole([UserRole.FOUNDER]);
 
   const bracket = await generatePlayoffFromGroups(params.id);
 

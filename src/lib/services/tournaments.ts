@@ -1,4 +1,4 @@
-﻿import {
+import {
   ClubSelectionMode,
   MatchStatus,
   NotificationType,

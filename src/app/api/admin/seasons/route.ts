@@ -20,7 +20,7 @@ function isClearConfirmed(value: FormDataEntryValue | null) {
 }
 
 export async function POST(request: Request) {
-  await requireRole([UserRole.ADMIN]);
+  await requireRole([UserRole.FOUNDER]);
 
   const formData = await request.formData();
   const action = formData.get("_action");

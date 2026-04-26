@@ -12,7 +12,7 @@ function toInputDate(value?: Date | null) {
 }
 
 export default async function AdminTournamentEditPage({ params }: { params: { id: string } }) {
-  await requireRole([UserRole.ADMIN]);
+  await requireRole([UserRole.FOUNDER]);
 
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },

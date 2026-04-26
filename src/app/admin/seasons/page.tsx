@@ -21,7 +21,7 @@ export default async function AdminSeasonsPage({
 }: {
   searchParams?: { created?: string; deleted?: string; cleared?: string; error?: string };
 }) {
-  await requireRole([UserRole.ADMIN]);
+  await requireRole([UserRole.FOUNDER]);
 
   const [seasons, tournamentsWithoutSeason] = await db.$transaction([
     db.season.findMany({

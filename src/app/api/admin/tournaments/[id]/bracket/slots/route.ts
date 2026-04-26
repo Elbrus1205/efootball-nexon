@@ -6,7 +6,7 @@ import { setBracketSlot } from "@/lib/services/tournaments";
 import { bracketSlotSchema } from "@/lib/validators";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const session = await requireRole([UserRole.ADMIN]);
+  const session = await requireRole([UserRole.FOUNDER]);
   const body = bracketSlotSchema.parse(await request.json());
 
   const slot = await setBracketSlot(body);

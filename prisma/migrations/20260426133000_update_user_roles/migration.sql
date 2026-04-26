@@ -1,0 +1,20 @@
+ALTER TYPE "UserRole" RENAME TO "UserRole_old";
+
+CREATE TYPE "UserRole" AS ENUM ('FOUNDER', 'ORGANIZER', 'JUDGE', 'PLAYER');
+
+ALTER TABLE "User" ALTER COLUMN "role" DROP DEFAULT;
+
+ALTER TABLE "User"
+ALTER COLUMN "role" TYPE "UserRole"
+USING (
+  CASE
+    WHEN "role"::text = 'ADMIN' AND "telegramId" = '6595067194' THEN 'FOUNDER'
+    WHEN "role"::text IN ('ADMIN', 'MODERATOR', 'HEAD_JUDGE') THEN 'ORGANIZER'
+    WHEN "role"::text = 'JUDGE' THEN 'JUDGE'
+    ELSE 'PLAYER'
+  END
+)::"UserRole";
+
+ALTER TABLE "User" ALTER COLUMN "role" SET DEFAULT 'PLAYER';
+
+DROP TYPE "UserRole_old";

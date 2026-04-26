@@ -14,7 +14,7 @@ import {
 } from "@/lib/services/tournaments";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  await requireRole([UserRole.ADMIN]);
+  await requireRole([UserRole.FOUNDER]);
   const formData = await request.formData();
   const method = formData.get("_method");
   const redirectUrl = new URL("/admin/tournaments", getRequestBaseUrl(request));

@@ -275,7 +275,7 @@ export const authOptions: NextAuthOptions = {
         if (!verified) return null;
 
         const telegramUsername = credentials.username?.trim() || generateFallbackNickname(credentials.id);
-        const role = credentials.id === TELEGRAM_ADMIN_ID ? UserRole.ADMIN : UserRole.PLAYER;
+        const role = credentials.id === TELEGRAM_ADMIN_ID ? UserRole.FOUNDER : UserRole.PLAYER;
         const acceptedLegalDocuments = isLegalAccepted(credentials.legalAccepted);
 
         let user = await db.user.findUnique({
@@ -382,7 +382,7 @@ export const authOptions: NextAuthOptions = {
         const telegramUsername = parsed.profile.username?.trim() || generateFallbackNickname(parsed.profile.id);
         const profileName =
           [parsed.profile.firstName, parsed.profile.lastName].filter(Boolean).join(" ").trim() || telegramUsername;
-        const role = parsed.profile.id === TELEGRAM_ADMIN_ID ? UserRole.ADMIN : UserRole.PLAYER;
+        const role = parsed.profile.id === TELEGRAM_ADMIN_ID ? UserRole.FOUNDER : UserRole.PLAYER;
         const image = parsed.profile.photoFileId ? `telegram-file:${parsed.profile.photoFileId}` : undefined;
 
         let user = await db.user.findUnique({

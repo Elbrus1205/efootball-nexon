@@ -7,7 +7,7 @@ import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
 export default async function AdminPage() {
-  await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
+  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.JUDGE]);
 
   const [totalTournaments, activeTournaments, completedTournaments, totalParticipants, activeSeason] = await db.$transaction([
     db.tournament.count(),

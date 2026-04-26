@@ -17,7 +17,7 @@ async function main() {
       name: "Admin",
       nickname: "TournamentAdmin",
       efootballUid: "UID-ADMIN-001",
-      role: UserRole.ADMIN,
+      role: UserRole.FOUNDER,
     },
   });
 

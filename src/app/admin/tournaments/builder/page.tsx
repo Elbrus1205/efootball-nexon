@@ -38,7 +38,7 @@ export default async function AdminTournamentBuilderPage({
 }: {
   searchParams?: { error?: string };
 }) {
-  await requireRole([UserRole.ADMIN]);
+  await requireRole([UserRole.FOUNDER]);
 
   return (
     <div className="space-y-6">

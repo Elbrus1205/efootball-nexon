@@ -15,7 +15,7 @@ export default async function AdminUsersPage({
 }: {
   searchParams?: { q?: string; updated?: string; error?: string };
 }) {
-  const session = await requireRole([UserRole.ADMIN]);
+  const session = await requireRole([UserRole.FOUNDER]);
 
   const query = searchParams?.q?.trim() ?? "";
   const returnTo = query ? `/admin/users?q=${encodeURIComponent(query)}` : "/admin/users";
@@ -58,6 +58,7 @@ export default async function AdminUsersPage({
         {users.map((user) => {
           const activeBan = getActiveUserBan(user);
           const isCurrentUser = user.id === session.user.id;
+          const isFounder = user.role === UserRole.FOUNDER;
 
           return (
             <Card key={user.id} className="space-y-5 p-5">
@@ -80,18 +81,22 @@ export default async function AdminUsersPage({
                   ) : null}
                 </div>
 
-                <form action={`/api/admin/users/${user.id}/role`} method="post" className="flex flex-wrap gap-2">
-                  <select name="role" defaultValue={user.role} className="h-11 rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white">
-                    <option value="PLAYER">{userRoleLabel.PLAYER}</option>
-                    <option value="JUDGE">{userRoleLabel.JUDGE}</option>
-                    <option value="HEAD_JUDGE">{userRoleLabel.HEAD_JUDGE}</option>
-                    <option value="MODERATOR">{userRoleLabel.MODERATOR}</option>
-                    <option value="ADMIN">{userRoleLabel.ADMIN}</option>
-                  </select>
-                  <Button type="submit" variant="outline">
-                    Сохранить роль
-                  </Button>
-                </form>
+                {isFounder ? (
+                  <div className="rounded-xl border border-amber-300/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                    Роль основателя нельзя передать или изменить.
+                  </div>
+                ) : (
+                  <form action={`/api/admin/users/${user.id}/role`} method="post" className="flex flex-wrap gap-2">
+                    <select name="role" defaultValue={user.role} className="h-11 rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white">
+                      <option value="PLAYER">{userRoleLabel.PLAYER}</option>
+                      <option value="JUDGE">{userRoleLabel.JUDGE}</option>
+                      <option value="ORGANIZER">{userRoleLabel.ORGANIZER}</option>
+                    </select>
+                    <Button type="submit" variant="outline">
+                      Сохранить роль
+                    </Button>
+                  </form>
+                )}
               </div>
 
               <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-5">

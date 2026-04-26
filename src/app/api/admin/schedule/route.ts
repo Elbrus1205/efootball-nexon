@@ -7,7 +7,7 @@ import { createNotificationsForUsers } from "@/lib/services/notifications";
 import { scheduleUpdateSchema } from "@/lib/validators";
 
 export async function PATCH(request: Request) {
-  const session = await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
+  const session = await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.JUDGE]);
   const body = scheduleUpdateSchema.parse(await request.json());
 
   const existing = await db.matchSchedule.findFirst({

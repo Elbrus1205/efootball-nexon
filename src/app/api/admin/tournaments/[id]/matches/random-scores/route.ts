@@ -112,7 +112,7 @@ async function fallbackAdvancePlayoffWinner(matchId: string) {
 }
 
 export async function POST(_: Request, { params }: { params: { id: string } }) {
-  const session = await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
+  const session = await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.JUDGE]);
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
     include: {

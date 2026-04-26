@@ -47,7 +47,7 @@ function SubmissionPill({
 }
 
 export default async function AdminModerationPage() {
-  await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
+  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.JUDGE]);
 
   const disputedMatches = await db.match.findMany({
     where: { status: MatchStatus.DISPUTED },

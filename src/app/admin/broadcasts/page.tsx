@@ -10,7 +10,7 @@ export default async function AdminBroadcastsPage({
 }: {
   searchParams?: { sent?: string; failed?: string; error?: string };
 }) {
-  await requireRole([UserRole.ADMIN]);
+  await requireRole([UserRole.FOUNDER]);
 
   const [telegramRecipients, totalUsers, latestBroadcasts] = await db.$transaction([
     db.user.count({ where: { telegramId: { not: null } } }),

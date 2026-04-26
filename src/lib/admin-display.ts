@@ -14,9 +14,8 @@ import {
 } from "@prisma/client";
 
 export const userRoleLabel: Record<UserRole, string> = {
-  ADMIN: "Админ",
-  MODERATOR: "Модератор",
-  HEAD_JUDGE: "Главный судья",
+  FOUNDER: "Основатель",
+  ORGANIZER: "Организатор",
   JUDGE: "Судья",
   PLAYER: "Игрок",
 };

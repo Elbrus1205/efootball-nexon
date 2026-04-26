@@ -10,7 +10,7 @@ const regulationsSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
+  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.JUDGE]);
 
   const parsed = regulationsSchema.safeParse(await request.json());
   if (!parsed.success) {

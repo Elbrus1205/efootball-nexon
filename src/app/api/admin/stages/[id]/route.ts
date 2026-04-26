@@ -6,7 +6,7 @@ import { logAdminAction } from "@/lib/services/admin-actions";
 import { stageUpdateSchema } from "@/lib/validators";
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const session = await requireRole([UserRole.ADMIN]);
+  const session = await requireRole([UserRole.FOUNDER]);
 
   const payload = await request.json();
   const body = stageUpdateSchema.parse({

@@ -11,7 +11,7 @@ import { formatTournamentBanMessage } from "@/lib/user-ban";
 const replaceableMatchStatuses = [MatchStatus.PENDING, MatchStatus.READY, MatchStatus.SCHEDULED];
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
-  await requireRole([UserRole.ADMIN, UserRole.MODERATOR, UserRole.HEAD_JUDGE, UserRole.JUDGE]);
+  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.JUDGE]);
 
   const participants = await db.tournamentRegistration.findMany({
     where: { tournamentId: params.id },
@@ -23,7 +23,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 }
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const session = await requireRole([UserRole.ADMIN]);
+  const session = await requireRole([UserRole.FOUNDER]);
   const body = participantManageSchema.parse(await request.json());
 
   if (body.action === "add" && body.userId) {

@@ -27,7 +27,7 @@ export default async function AdminCoinsPage({
     error?: string;
   };
 }) {
-  await requireRole([UserRole.ADMIN]);
+  await requireRole([UserRole.FOUNDER]);
 
   const userQuery = searchParams?.userQuery?.trim() ?? "";
   const users = userQuery

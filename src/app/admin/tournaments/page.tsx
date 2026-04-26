@@ -18,7 +18,7 @@ export default async function AdminTournamentsPage({
 }: {
   searchParams?: { created?: string; warning?: string };
 }) {
-  await requireRole([UserRole.ADMIN]);
+  await requireRole([UserRole.FOUNDER]);
 
   const tournaments = await db.tournament.findMany({
     include: {

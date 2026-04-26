@@ -6,7 +6,7 @@ import { logAdminAction } from "@/lib/services/admin-actions";
 import { stageReorderSchema } from "@/lib/validators";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const session = await requireRole([UserRole.ADMIN]);
+  const session = await requireRole([UserRole.FOUNDER]);
   const body = stageReorderSchema.parse({
     ...(await request.json()),
     tournamentId: params.id,

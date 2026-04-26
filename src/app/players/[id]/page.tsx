@@ -38,7 +38,7 @@ export default async function PlayerProfilePage({
 
   if (!user) notFound();
 
-  const canSeePlayerId = session?.user.id === user.id || session?.user.role === UserRole.ADMIN;
+  const canSeePlayerId = session?.user.id === user.id || session?.user.role === UserRole.FOUNDER;
   const selectedSeason = searchParams?.season ? seasons.find((season) => season.id === searchParams.season || season.slug === searchParams.season) ?? null : null;
   const socialLinks = getUserSocialLinks(user);
   const careerStats = await getPlayerCareerStats(user.id, { seasonId: selectedSeason?.id ?? null });

@@ -9,7 +9,7 @@ export default withAuth(
       authorized: ({ token, req }) => {
         if (!token) return false;
         if (req.nextUrl.pathname.startsWith("/admin")) {
-          return token.role === "ADMIN" || token.role === "MODERATOR";
+          return token.role === "FOUNDER" || token.role === "ORGANIZER" || token.role === "JUDGE";
         }
         return true;
       },

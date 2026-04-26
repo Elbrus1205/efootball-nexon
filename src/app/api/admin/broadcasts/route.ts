@@ -144,7 +144,7 @@ async function sendBroadcastToChat(params: {
 }
 
 export async function POST(request: Request) {
-  const session = await requireRole([UserRole.ADMIN]);
+  const session = await requireRole([UserRole.FOUNDER]);
 
   if (!process.env.TELEGRAM_BOT_TOKEN) {
     return redirectToBroadcasts(request, { error: "TELEGRAM_BOT_TOKEN не настроен. Рассылка в Telegram недоступна." });

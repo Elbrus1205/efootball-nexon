@@ -15,7 +15,7 @@ function checkboxValue(value: FormDataEntryValue | null) {
 }
 
 export async function POST(request: Request) {
-  const session = await requireRole([UserRole.ADMIN]);
+  const session = await requireRole([UserRole.FOUNDER]);
   const origin = getRequestBaseUrl(request);
   let tournamentCreated = false;
 

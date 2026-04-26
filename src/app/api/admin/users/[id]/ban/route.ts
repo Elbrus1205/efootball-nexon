@@ -18,7 +18,7 @@ function redirectWithStatus(request: Request, returnTo: string, key: "updated" |
 }
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const session = await requireRole([UserRole.ADMIN]);
+  const session = await requireRole([UserRole.FOUNDER]);
   const formData = await request.formData();
   const returnTo = getSafeReturnTo(formData.get("returnTo"));
   const parsed = banSchema.safeParse({

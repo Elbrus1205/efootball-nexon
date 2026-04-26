@@ -1,4 +1,4 @@
-﻿import { ClubSelectionMode, ParticipantStatus, StageType, TournamentFormat, TournamentStatus } from "@prisma/client";
+import { ClubSelectionMode, ParticipantStatus, StageType, TournamentFormat, TournamentStatus } from "@prisma/client";
 import { Clock3, Send } from "lucide-react";
 import { unstable_noStore as noStore } from "next/cache";
 import { notFound } from "next/navigation";
