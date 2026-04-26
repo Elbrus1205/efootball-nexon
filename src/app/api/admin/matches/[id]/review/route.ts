@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { MatchStatus, NotificationType, UserRole } from "@prisma/client";
+import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/session";
 import { logAdminAction } from "@/lib/services/admin-actions";
@@ -139,5 +140,5 @@ export async function POST(request: Request, { params }: { params: { id: string 
     },
   });
 
-  return NextResponse.redirect(new URL(returnTo, process.env.NEXTAUTH_URL));
+  return NextResponse.redirect(new URL(returnTo, getConfiguredSiteBaseUrl()));
 }

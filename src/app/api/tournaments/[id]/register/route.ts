@@ -1,6 +1,7 @@
 import { ClubSelectionMode, NotificationType, TournamentStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
+import { getRequestBaseUrl } from "@/lib/affiliate";
 import { requireAuth } from "@/lib/auth/session";
 import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
@@ -109,7 +110,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   revalidatePath(`/tournaments/${params.id}`);
   revalidatePath("/tournaments");
 
-  const origin = new URL(request.url).origin;
+  const origin = getRequestBaseUrl(request);
   if (contentType.includes("application/json")) {
     return NextResponse.json({ ok: true });
   }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { NotificationType, Prisma, TournamentFormat, TournamentStatus, UserRole } from "@prisma/client";
+import { getRequestBaseUrl } from "@/lib/affiliate";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { parseFormatBlueprintJson } from "@/lib/format-blueprint";
@@ -104,6 +105,6 @@ export async function POST(request: Request, { params }: { params: { id: string 
     });
   }
 
-  const origin = new URL(request.url).origin;
+  const origin = getRequestBaseUrl(request);
   return NextResponse.redirect(new URL("/admin/tournaments?updated=1", origin), 303);
 }

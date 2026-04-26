@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { NextResponse } from "next/server";
+import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
 
 export async function POST(request: Request) {
@@ -19,6 +20,6 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    resetUrl: `${process.env.NEXTAUTH_URL}/reset-password?token=${token}`,
+    resetUrl: `${getConfiguredSiteBaseUrl()}/reset-password?token=${token}`,
   });
 }

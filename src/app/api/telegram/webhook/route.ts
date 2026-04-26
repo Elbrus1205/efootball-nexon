@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getRequestBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
 import { buildVerifiedTelegramBotLoginIdentifier, parseTelegramBotLoginStartParam } from "@/lib/telegram-bot-login";
 
@@ -57,6 +58,7 @@ async function getTelegramPhotoFileId(telegramId: string) {
 }
 
 export async function POST(request: NextRequest) {
+  const siteUrl = getRequestBaseUrl(request);
   const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
   if (!webhookSecret) {
     return NextResponse.json({ ok: false, error: "Webhook secret is not configured." }, { status: 500 });
@@ -79,7 +81,7 @@ export async function POST(request: NextRequest) {
 
   const record = await db.verificationToken.findUnique({ where: { token } });
   if (!record || record.expires < new Date()) {
-    await sendTelegramMessage(chatId, "Ссылка для входа истекла. Откройте сайт и нажмите вход через Telegram ещё раз.", request.nextUrl.origin);
+    await sendTelegramMessage(chatId, "Ссылка для входа истекла. Откройте сайт и нажмите вход через Telegram ещё раз.", siteUrl);
     return NextResponse.json({ ok: true });
   }
 
@@ -103,7 +105,7 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  await sendTelegramMessage(chatId, "Готово. Вернитесь на сайт, вход завершится автоматически.", `${request.nextUrl.origin}/login`);
+  await sendTelegramMessage(chatId, "Готово. Вернитесь на сайт, вход завершится автоматически.", `${siteUrl}/login`);
 
   return NextResponse.json({ ok: true });
 }

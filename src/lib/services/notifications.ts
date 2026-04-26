@@ -1,5 +1,6 @@
 import Pusher from "pusher";
 import { NotificationType } from "@prisma/client";
+import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
 import { sendTelegramMessage } from "@/lib/telegram-bot";
 import { repairMojibake } from "@/lib/text-encoding";
@@ -157,7 +158,7 @@ export async function createNotificationForAllUsers({
 }
 
 function buildTelegramNotificationText(title: string, body: string, link?: string | null) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXTAUTH_URL ?? "";
+  const appUrl = getConfiguredSiteBaseUrl();
   const absoluteLink = link && appUrl ? new URL(link, appUrl).toString() : "";
 
   return [
