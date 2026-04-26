@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   const response = await fetch("https://telegram.org/js/telegram-widget.js?22", {
-    next: { revalidate: 86400 },
     headers: {
       "User-Agent": "Mozilla/5.0 efootball-nexon widget proxy",
       Accept: "application/javascript,*/*;q=0.8",
