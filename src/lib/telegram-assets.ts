@@ -21,6 +21,10 @@ export function isTelegramAssetUrl(src?: string | null) {
 }
 
 export function proxyTelegramAssetUrl(src?: string | null) {
+  if (src?.startsWith("telegram-file:")) {
+    return `/api/telegram/image?fileId=${encodeURIComponent(src.slice("telegram-file:".length))}`;
+  }
+
   if (!src || !isTelegramAssetUrl(src)) return src ?? undefined;
 
   return `/api/telegram/image?url=${encodeURIComponent(src)}`;
