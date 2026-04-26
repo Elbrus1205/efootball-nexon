@@ -30,5 +30,9 @@ export function verifyTelegramAuth(payload: TelegramPayload, botToken: string) {
   const secret = crypto.createHash("sha256").update(botToken).digest();
   const signature = crypto.createHmac("sha256", secret).update(checkString).digest("hex");
 
-  return signature === payload.hash;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(signature, "hex"), Buffer.from(payload.hash, "hex"));
+  } catch {
+    return false;
+  }
 }

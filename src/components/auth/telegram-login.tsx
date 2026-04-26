@@ -12,6 +12,8 @@ declare global {
 }
 
 type TelegramWidgetUser = Record<string, string | number | undefined>;
+type TelegramAuthPayload = Record<"id" | "auth_date" | "hash", string> &
+  Partial<Record<"first_name" | "last_name" | "username" | "photo_url", string>>;
 
 function normalizeTelegramBotUsername(value?: string) {
   if (!value) return "";
@@ -21,6 +23,25 @@ function normalizeTelegramBotUsername(value?: string) {
     .replace(/^https?:\/\/t\.me\//i, "")
     .replace(/^@/, "")
     .replace(/\/$/, "");
+}
+
+function toTelegramAuthPayload(user: TelegramWidgetUser): TelegramAuthPayload | null {
+  if (!user.id || !user.auth_date || !user.hash) return null;
+
+  const payload: TelegramAuthPayload = {
+    id: String(user.id),
+    auth_date: String(user.auth_date),
+    hash: String(user.hash),
+  };
+
+  for (const key of ["first_name", "last_name", "username", "photo_url"] as const) {
+    const value = user[key];
+    if (value !== undefined && value !== null && String(value).length > 0) {
+      payload[key] = String(value);
+    }
+  }
+
+  return payload;
 }
 
 export function TelegramLogin({
@@ -51,9 +72,16 @@ export function TelegramLogin({
 
       setPending(true);
       setWidgetError(null);
+      const payload = toTelegramAuthPayload(user);
+
+      if (!payload) {
+        setPending(false);
+        setWidgetError("Telegram вернул неполные данные авторизации. Попробуйте ещё раз.");
+        return;
+      }
 
       const result = await signIn("telegram", {
-        ...user,
+        ...payload,
         legalAccepted: legalAccepted ? "true" : "false",
         callbackUrl: "/dashboard",
         redirect: false,
