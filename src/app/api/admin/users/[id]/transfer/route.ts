@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { AdminActionType, UserRole } from "@prisma/client";
+import { getRequestBaseUrl } from "@/lib/affiliate";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
@@ -10,7 +11,7 @@ function getSafeReturnTo(value: FormDataEntryValue | null) {
 }
 
 function redirectWithStatus(request: Request, returnTo: string, key: "updated" | "error", message: string) {
-  const url = new URL(returnTo, request.url);
+  const url = new URL(returnTo, getRequestBaseUrl(request));
   url.searchParams.set(key, message);
   return NextResponse.redirect(url, 303);
 }

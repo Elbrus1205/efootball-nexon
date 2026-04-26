@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { UserRole } from "@prisma/client";
+import { getRequestBaseUrl } from "@/lib/affiliate";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { roleSchema } from "@/lib/validators";
@@ -14,5 +15,5 @@ export async function POST(request: Request, { params }: { params: { id: string 
     data: { role: body.role },
   });
 
-  return NextResponse.redirect(new URL("/admin/users", request.url));
+  return NextResponse.redirect(new URL("/admin/users", getRequestBaseUrl(request)));
 }

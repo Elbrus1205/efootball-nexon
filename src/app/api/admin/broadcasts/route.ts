@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { UserRole } from "@prisma/client";
+import { getRequestBaseUrl } from "@/lib/affiliate";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
@@ -22,7 +23,7 @@ const textChunkLimit = 3900;
 const sendConcurrency = 4;
 
 function redirectToBroadcasts(request: Request, params: Record<string, string | number>) {
-  const url = new URL("/admin/broadcasts", request.url);
+  const url = new URL("/admin/broadcasts", getRequestBaseUrl(request));
 
   for (const [key, value] of Object.entries(params)) {
     url.searchParams.set(key, String(value));

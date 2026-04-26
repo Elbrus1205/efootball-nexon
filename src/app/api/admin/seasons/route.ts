@@ -1,11 +1,12 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { UserRole } from "@prisma/client";
+import { getRequestBaseUrl } from "@/lib/affiliate";
 import { requireRole } from "@/lib/auth/session";
 import { clearSeasons, createSeason } from "@/lib/services/seasons";
 
 function redirectToSeasons(request: Request, params: Record<string, string>) {
-  const url = new URL("/admin/seasons", request.url);
+  const url = new URL("/admin/seasons", getRequestBaseUrl(request));
 
   for (const [key, value] of Object.entries(params)) {
     url.searchParams.set(key, value);

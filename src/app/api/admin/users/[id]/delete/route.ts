@@ -1,5 +1,6 @@
 import { AdminActionType, UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { getRequestBaseUrl } from "@/lib/affiliate";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
@@ -9,7 +10,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const confirmed = formData.get("confirmDelete") === "true";
 
   if (!confirmed) {
-    return NextResponse.redirect(new URL("/admin/users", request.url));
+    return NextResponse.redirect(new URL("/admin/users", getRequestBaseUrl(request)));
   }
 
   if (params.id === session.user.id) {
@@ -33,7 +34,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   });
 
   if (!user) {
-    return NextResponse.redirect(new URL("/admin/users", request.url));
+    return NextResponse.redirect(new URL("/admin/users", getRequestBaseUrl(request)));
   }
 
   await db.$transaction(async (tx) => {
@@ -52,5 +53,5 @@ export async function POST(request: Request, { params }: { params: { id: string 
     });
   });
 
-  return NextResponse.redirect(new URL("/admin/users", request.url));
+  return NextResponse.redirect(new URL("/admin/users", getRequestBaseUrl(request)));
 }
