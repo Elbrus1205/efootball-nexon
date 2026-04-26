@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { DeleteUserAccountForm } from "@/components/admin/delete-user-account-form";
+import { TransferUserAccountForm } from "@/components/admin/transfer-user-account-form";
 
 export default async function AdminUsersPage({
   searchParams,
@@ -66,6 +67,7 @@ export default async function AdminUsersPage({
                     {user.email ?? user.telegramUsername ?? "social login"} • {userRoleLabel[user.role]}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-400">
+                    <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">ID: {user.id}</span>
                     {user.nickname ? <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">Ник: {user.nickname}</span> : null}
                     {user.telegramUsername ? <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">TG: @{user.telegramUsername}</span> : null}
                   </div>
@@ -91,7 +93,7 @@ export default async function AdminUsersPage({
                 </form>
               </div>
 
-              <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-5">
                 <form action={`/api/admin/users/${user.id}/ban`} method="post" className="min-w-0 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4">
                   <input type="hidden" name="action" value="permanent" />
                   <input type="hidden" name="returnTo" value={returnTo} />
@@ -147,6 +149,7 @@ export default async function AdminUsersPage({
                     Разбанить
                   </Button>
                 </form>
+                <TransferUserAccountForm userId={user.id} returnTo={returnTo} disabled={user.id === session.user.id} />
                 <DeleteUserAccountForm userId={user.id} disabled={user.id === session.user.id} />
               </div>
             </Card>
