@@ -17,7 +17,15 @@ function formatMoney(value: number) {
 export default async function AdminCoinsPage({
   searchParams,
 }: {
-  searchParams?: { userQuery?: string; created?: string; deleted?: string; productCreated?: string; error?: string };
+  searchParams?: {
+    userQuery?: string;
+    created?: string;
+    deleted?: string;
+    productCreated?: string;
+    productUpdated?: string;
+    productDeleted?: string;
+    error?: string;
+  };
 }) {
   await requireRole([UserRole.ADMIN]);
 
@@ -57,6 +65,7 @@ export default async function AdminCoinsPage({
     orderBy: { createdAt: "desc" },
     }),
     db.coinProduct.findMany({
+      where: { isActive: true },
       orderBy: [{ platform: "asc" }, { coins: "asc" }, { createdAt: "desc" }],
     }),
   ]);
@@ -65,6 +74,8 @@ export default async function AdminCoinsPage({
     <div className="space-y-6">
       {searchParams?.created ? <Card className="border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Партнёрская программа создана.</Card> : null}
       {searchParams?.productCreated ? <Card className="border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Товар Coins добавлен.</Card> : null}
+      {searchParams?.productUpdated ? <Card className="border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Товар Coins обновлен.</Card> : null}
+      {searchParams?.productDeleted ? <Card className="border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">Товар Coins удален.</Card> : null}
       {searchParams?.deleted ? <Card className="border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">Партнёрская программа удалена.</Card> : null}
       {searchParams?.error ? <Card className="border-rose-400/25 bg-rose-500/10 p-4 text-sm text-rose-100">{searchParams.error}</Card> : null}
 
@@ -112,17 +123,45 @@ export default async function AdminCoinsPage({
 
           <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
             {products.map((product) => (
-              <div key={product.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="font-semibold text-white">{product.title}</div>
-                    <div className="mt-1 text-xs uppercase tracking-[0.16em] text-zinc-500">{product.platform}</div>
+              <div key={product.id} className="space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4">
+                <form action={`/api/admin/coins/products/${product.id}`} method="post" className="grid gap-3">
+                  <input type="hidden" name="_method" value="update" />
+                  <label className="space-y-2">
+                    <span className="text-sm text-zinc-300">Платформа</span>
+                    <select name="platform" defaultValue={product.platform} required className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white">
+                      <option value="android">Android</option>
+                      <option value="ios">iOS</option>
+                      <option value="promo">Акции</option>
+                    </select>
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-sm text-zinc-300">Количество Coins</span>
+                    <input name="coins" type="number" min="1" required defaultValue={product.coins} className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
+                  </label>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="space-y-2">
+                      <span className="text-sm text-zinc-300">Цена, ₽</span>
+                      <input name="priceRubles" inputMode="decimal" required defaultValue={product.priceKopecks / 100} className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
+                    </label>
+                    <label className="space-y-2">
+                      <span className="text-sm text-zinc-300">Себестоимость, ₽</span>
+                      <input name="costRubles" inputMode="decimal" required defaultValue={product.costKopecks / 100} className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
+                    </label>
                   </div>
-                  <div className="text-right text-sm text-zinc-300">
-                    <div>{formatMoney(product.priceKopecks)}</div>
-                    <div className="text-xs text-zinc-500">себ. {formatMoney(product.costKopecks)}</div>
-                  </div>
-                </div>
+                  <Button variant="outline" className="w-full">Сохранить</Button>
+                </form>
+
+                <form action={`/api/admin/coins/products/${product.id}`} method="post" className="space-y-2 rounded-xl border border-rose-400/20 bg-rose-500/10 p-3">
+                  <input type="hidden" name="_method" value="delete" />
+                  <label className="flex items-start gap-2 text-xs leading-4 text-rose-100">
+                    <input name="confirmDelete" type="checkbox" className="mt-0.5 h-4 w-4 rounded border-white/20 bg-black/40" />
+                    <span>Подтверждаю удаление товара</span>
+                  </label>
+                  <Button variant="outline" className="w-full border-rose-400/25 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Удалить
+                  </Button>
+                </form>
               </div>
             ))}
             {!products.length ? <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-zinc-500">Товаров пока нет.</div> : null}
