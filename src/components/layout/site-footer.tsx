@@ -111,7 +111,6 @@ export function SiteFooter() {
 
           <div className="sm:flex sm:flex-row sm:items-center sm:justify-between sm:gap-3">
             <p>eFootball Nexon © 2026. Турниры по eFootball Mobile в мобильном формате.</p>
-            <p className="hidden sm:block">Next.js 14, Prisma, Auth.js, Pusher, Uploadthing.</p>
           </div>
         </div>
       </div>
