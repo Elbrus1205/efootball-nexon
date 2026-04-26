@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
+import { UserRole } from "@prisma/client";
 import { PlayerCareerStatsPanel } from "@/components/players/player-career-stats";
 import { PlayerSocialLinks } from "@/components/players/player-social-links";
 import { StatsPeriodSwitcher } from "@/components/players/stats-period-switcher";
 import { Card } from "@/components/ui/card";
+import { getCurrentSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { getPlayerCareerStats } from "@/lib/player-stats";
@@ -16,7 +18,8 @@ export default async function PlayerProfilePage({
   params: { id: string };
   searchParams?: { season?: string };
 }) {
-  const [user, seasons] = await Promise.all([
+  const [session, user, seasons] = await Promise.all([
+    getCurrentSession(),
     db.user.findUnique({
       where: { id: params.id },
       include: {
@@ -35,6 +38,7 @@ export default async function PlayerProfilePage({
 
   if (!user) notFound();
 
+  const canSeePlayerId = session?.user.id === user.id || session?.user.role === UserRole.ADMIN;
   const selectedSeason = searchParams?.season ? seasons.find((season) => season.id === searchParams.season || season.slug === searchParams.season) ?? null : null;
   const socialLinks = getUserSocialLinks(user);
   const careerStats = await getPlayerCareerStats(user.id, { seasonId: selectedSeason?.id ?? null });
@@ -46,6 +50,7 @@ export default async function PlayerProfilePage({
         <div className="space-y-3">
           <h1 className="font-display text-3xl font-thin text-white">{getPlayerDisplayName(user)}</h1>
           <div className="grid gap-3 text-sm text-zinc-400 sm:grid-cols-2 lg:grid-cols-3">
+            {canSeePlayerId ? <div>ID игрока: {user.publicId}</div> : null}
             <div>Имя: {user.name ?? "Не указано"}</div>
             <div>На платформе: {formatDate(user.createdAt, "d MMM yyyy")}</div>
             {socialLinks.length > 0 ? (

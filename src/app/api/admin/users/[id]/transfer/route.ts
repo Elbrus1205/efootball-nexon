@@ -20,18 +20,18 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const formData = await request.formData();
   const returnTo = getSafeReturnTo(formData.get("returnTo"));
   const sourceUserId = params.id;
-  const targetUserId = String(formData.get("targetUserId") ?? "").trim();
+  const targetUserLookup = String(formData.get("targetUserId") ?? "").trim();
   const confirmed = formData.get("confirmTransfer") === "true";
 
   if (!confirmed) {
     return redirectWithStatus(request, returnTo, "error", "Подтвердите перенос аккаунта.");
   }
 
-  if (!targetUserId) {
-    return redirectWithStatus(request, returnTo, "error", "Укажите ID целевого аккаунта.");
+  if (!targetUserLookup) {
+    return redirectWithStatus(request, returnTo, "error", "Укажите ID игрока целевого аккаунта.");
   }
 
-  if (sourceUserId === targetUserId) {
+  if (sourceUserId === targetUserLookup) {
     return redirectWithStatus(request, returnTo, "error", "Нельзя переносить аккаунт сам в себя.");
   }
 
@@ -42,11 +42,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const [sourceUser, targetUser] = await Promise.all([
     db.user.findUnique({
       where: { id: sourceUserId },
-      select: { id: true, email: true, nickname: true, name: true, telegramUsername: true },
+      select: { id: true, publicId: true, email: true, nickname: true, name: true, telegramUsername: true },
     }),
-    db.user.findUnique({
-      where: { id: targetUserId },
-      select: { id: true, email: true, nickname: true, name: true, telegramUsername: true },
+    db.user.findFirst({
+      where: {
+        OR: [{ id: targetUserLookup }, { publicId: targetUserLookup }],
+      },
+      select: { id: true, publicId: true, email: true, nickname: true, name: true, telegramUsername: true },
     }),
   ]);
 
@@ -56,6 +58,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   if (!targetUser) {
     return redirectWithStatus(request, returnTo, "error", "Целевой аккаунт не найден.");
+  }
+
+  const targetUserId = targetUser.id;
+
+  if (sourceUserId === targetUserId) {
+    return redirectWithStatus(request, returnTo, "error", "Нельзя переносить аккаунт сам в себя.");
   }
 
   const [duplicateTournamentRegistration, sourceReferralCount, targetReferralCount] = await Promise.all([

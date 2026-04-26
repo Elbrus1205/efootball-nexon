@@ -1,3 +1,4 @@
+import { randomInt } from "crypto";
 import { PrismaClient, TournamentFormat, TournamentStatus, UserRole } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { slugify } from "../src/lib/utils";
@@ -10,6 +11,7 @@ async function main() {
     where: { email: "admin@efoottourney.local" },
     update: {},
     create: {
+      publicId: String(randomInt(1_000_000_000, 10_000_000_000)),
       email: "admin@efoottourney.local",
       passwordHash: adminPassword,
       name: "Admin",

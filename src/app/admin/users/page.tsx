@@ -27,6 +27,7 @@ export default async function AdminUsersPage({
             { name: { contains: query, mode: "insensitive" } },
             { email: { contains: query, mode: "insensitive" } },
             { telegramUsername: { contains: query, mode: "insensitive" } },
+            { publicId: { contains: query } },
           ],
         }
       : undefined,
@@ -44,7 +45,7 @@ export default async function AdminUsersPage({
       </div>
 
       <form className="grid gap-3 rounded-3xl border border-white/10 bg-white/[0.04] p-4 sm:grid-cols-[1fr_auto]" action="/admin/users">
-        <Input name="q" defaultValue={query} placeholder="Поиск игрока по никнейму" />
+        <Input name="q" defaultValue={query} placeholder="Поиск по ID игрока, никнейму, email или Telegram" />
         <Button type="submit" variant="secondary">
           Найти
         </Button>
@@ -67,7 +68,7 @@ export default async function AdminUsersPage({
                     {user.email ?? user.telegramUsername ?? "social login"} • {userRoleLabel[user.role]}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-400">
-                    <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">ID: {user.id}</span>
+                    <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">ID игрока: {user.publicId}</span>
                     {user.nickname ? <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">Ник: {user.nickname}</span> : null}
                     {user.telegramUsername ? <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">TG: @{user.telegramUsername}</span> : null}
                   </div>

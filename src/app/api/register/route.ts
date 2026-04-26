@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth/session";
 import { getLegalAcceptanceData, LEGAL_ACCEPTANCE_REQUIRED_MESSAGE } from "@/lib/legal-acceptance";
+import { generateUniquePublicPlayerId } from "@/lib/public-player-id";
 import { profileSchema, registerSchema } from "@/lib/validators";
 
 export async function POST(request: Request) {
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
 
   const user = await db.user.create({
     data: {
+      publicId: await generateUniquePublicPlayerId(),
       email: normalizedEmail,
       passwordHash,
       name: body.name,

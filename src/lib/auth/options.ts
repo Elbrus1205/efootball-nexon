@@ -10,6 +10,7 @@ import { fetchVkUserProfile } from "@/lib/auth/vk";
 import { db } from "@/lib/db";
 import { getLegalAcceptanceData, isLegalAccepted } from "@/lib/legal-acceptance";
 import { generateFallbackNickname } from "@/lib/player-name";
+import { generateUniquePublicPlayerId } from "@/lib/public-player-id";
 import { verifyTwoFactorChallenge } from "@/lib/two-factor";
 
 const TELEGRAM_ADMIN_ID = "6595067194";
@@ -204,6 +205,7 @@ export const authOptions: NextAuthOptions = {
 
           user = await db.user.create({
             data: {
+              publicId: await generateUniquePublicPlayerId(),
               vkId: vkProfile.vkId,
               email: vkProfile.email,
               name: vkProfile.fullName ?? "VK Player",
@@ -295,6 +297,7 @@ export const authOptions: NextAuthOptions = {
 
           user = await db.user.create({
             data: {
+              publicId: await generateUniquePublicPlayerId(),
               telegramId: credentials.id,
               telegramUsername: credentials.username,
               image: credentials.photo_url,
