@@ -159,7 +159,7 @@ export function TelegramLogin({
   }, [finishTelegramAuth]);
 
   useEffect(() => {
-    if (isBlockedByLegal || !normalizedBotId || normalizedBotUsername) return;
+    if (isBlockedByLegal || !normalizedBotId) return;
 
     let cancelled = false;
 
@@ -178,7 +178,7 @@ export function TelegramLogin({
     return () => {
       cancelled = true;
     };
-  }, [isBlockedByLegal, normalizedBotId, normalizedBotUsername]);
+  }, [isBlockedByLegal, normalizedBotId]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -247,22 +247,6 @@ export function TelegramLogin({
         <div className="rounded-2xl border border-dashed border-[#229ED9]/25 bg-black/20 px-4 py-3 text-sm leading-6 text-sky-100">
           Примите документы выше, чтобы продолжить регистрацию через Telegram.
         </div>
-      ) : normalizedBotUsername ? (
-        <div className="rounded-2xl bg-black/20 p-3">
-          <div
-            ref={containerRef}
-            className={`flex min-h-12 items-center justify-center ${pending ? "pointer-events-none opacity-70" : ""}`}
-          />
-
-          {pending ? <div className="mt-3 text-center text-sm text-sky-100">Выполняем вход...</div> : null}
-
-          {widgetError ? (
-            <div className="mt-3 flex items-start gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-3 text-sm text-amber-200">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{widgetError}</span>
-            </div>
-          ) : null}
-        </div>
       ) : normalizedBotId ? (
         <div className="rounded-2xl bg-black/20 p-3">
           <button
@@ -274,6 +258,22 @@ export function TelegramLogin({
             <Send className="h-4 w-4" />
             {pending ? "Выполняем вход..." : scriptReady ? "Войти через Telegram" : "Загрузка Telegram..."}
           </button>
+
+          {widgetError ? (
+            <div className="mt-3 flex items-start gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-3 text-sm text-amber-200">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{widgetError}</span>
+            </div>
+          ) : null}
+        </div>
+      ) : normalizedBotUsername ? (
+        <div className="rounded-2xl bg-black/20 p-3">
+          <div
+            ref={containerRef}
+            className={`flex min-h-12 items-center justify-center ${pending ? "pointer-events-none opacity-70" : ""}`}
+          />
+
+          {pending ? <div className="mt-3 text-center text-sm text-sky-100">Выполняем вход...</div> : null}
 
           {widgetError ? (
             <div className="mt-3 flex items-start gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-3 text-sm text-amber-200">

@@ -13,14 +13,6 @@ export type VkAuthIntent = {
 
 function getCanonicalOrigin() {
   if (typeof window === "undefined") return "";
-
-  const host = window.location.hostname.toLowerCase();
-  const protocol = window.location.protocol;
-
-  if (host === "efootball-nexon.ru") {
-    return `${protocol}//www.efootball-nexon.ru`;
-  }
-
   return window.location.origin;
 }
 
@@ -47,7 +39,7 @@ export function initVkId(appIdOverride?: string | number | null) {
     app: appId,
     redirectUrl: getVkRedirectUrl(),
     mode: ConfigAuthMode.Redirect,
-    scope: "",
+    scope: "email",
   });
 
   return {
@@ -80,9 +72,14 @@ export function clearVkIntent() {
 }
 
 export async function startVkIdAuth(intent: VkAuthIntent, appIdOverride?: string | number | null) {
-  const { appId } = initVkId(appIdOverride ?? intent.appId);
-  saveVkIntent({ ...intent, appId });
-  await Auth.login();
+  try {
+    const { appId } = initVkId(appIdOverride ?? intent.appId);
+    saveVkIntent({ ...intent, appId });
+    await Auth.login();
+  } catch (error) {
+    clearVkIntent();
+    throw error;
+  }
 }
 
 export async function exchangeVkCode(code: string, deviceId: string, appIdOverride?: string | number | null) {
