@@ -9,11 +9,21 @@ export type VkAuthIntent = {
   callbackUrl: string;
   legalAccepted?: boolean;
   appId?: number;
+  state?: string;
+  codeVerifier?: string;
 };
 
 function getCanonicalOrigin() {
   if (typeof window === "undefined") return "";
   return window.location.origin;
+}
+
+function createVkRandomString(length = 64) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+  const bytes = new Uint8Array(length);
+  window.crypto.getRandomValues(bytes);
+
+  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("");
 }
 
 function getVkAppId(appIdOverride?: string | number | null) {
@@ -28,7 +38,7 @@ function getVkRedirectUrl() {
   return `${getCanonicalOrigin()}/vk/callback`;
 }
 
-export function initVkId(appIdOverride?: string | number | null) {
+export function initVkId(appIdOverride?: string | number | null, state?: string, codeVerifier?: string) {
   const appId = getVkAppId(appIdOverride);
 
   if (!appId) {
@@ -40,6 +50,8 @@ export function initVkId(appIdOverride?: string | number | null) {
     redirectUrl: getVkRedirectUrl(),
     mode: ConfigAuthMode.Redirect,
     scope: "email",
+    state,
+    codeVerifier,
   });
 
   return {
@@ -73,8 +85,10 @@ export function clearVkIntent() {
 
 export async function startVkIdAuth(intent: VkAuthIntent, appIdOverride?: string | number | null) {
   try {
-    const { appId } = initVkId(appIdOverride ?? intent.appId);
-    saveVkIntent({ ...intent, appId });
+    const state = intent.state ?? createVkRandomString(32);
+    const codeVerifier = intent.codeVerifier ?? createVkRandomString(64);
+    const { appId } = initVkId(appIdOverride ?? intent.appId, state, codeVerifier);
+    saveVkIntent({ ...intent, appId, state, codeVerifier });
     await Auth.login();
   } catch (error) {
     clearVkIntent();
@@ -82,7 +96,7 @@ export async function startVkIdAuth(intent: VkAuthIntent, appIdOverride?: string
   }
 }
 
-export async function exchangeVkCode(code: string, deviceId: string, appIdOverride?: string | number | null) {
-  initVkId(appIdOverride);
+export async function exchangeVkCode(code: string, deviceId: string, intent?: VkAuthIntent | null) {
+  initVkId(intent?.appId, intent?.state, intent?.codeVerifier);
   return Auth.exchangeCode(code, deviceId);
 }

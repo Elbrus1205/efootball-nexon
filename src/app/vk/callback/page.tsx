@@ -30,7 +30,7 @@ export default function VkCallbackPage() {
 
     const finish = async () => {
       try {
-        const token = await exchangeVkCode(code, deviceId, intent?.appId);
+        const token = await exchangeVkCode(code, deviceId, intent);
 
         if (intent?.mode === "bind") {
           const response = await fetch("/api/security/connections/vk", {
@@ -71,6 +71,7 @@ export default function VkCallbackPage() {
         router.replace(intent?.callbackUrl || "/dashboard");
         router.refresh();
       } catch (error) {
+        console.error("VK callback error", error);
         clearVkIntent();
         const message = error instanceof Error ? error.message : "VK вход завершился ошибкой.";
         toast.error(message);

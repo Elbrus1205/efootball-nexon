@@ -203,6 +203,15 @@ export function TelegramLogin({
   }, [isBlockedByLegal, normalizedBotUsername]);
 
   const startTelegramAuth = () => {
+    const openTelegramAuth = () => {
+      if (!window.Telegram?.Login?.auth) {
+        setWidgetError("Telegram Login Widget ещё загружается. Нажмите ещё раз через секунду.");
+        return;
+      }
+
+      window.Telegram.Login.auth({ bot_id: normalizedBotId, request_access: "write", lang: "ru" }, finishTelegramAuth);
+    };
+
     if (isBlockedByLegal) {
       setWidgetError("Сначала примите документы сайта.");
       return;
@@ -214,17 +223,22 @@ export function TelegramLogin({
     }
 
     if (!window.Telegram?.Login?.auth) {
-      setWidgetError("Telegram Login Widget ещё загружается. Нажмите ещё раз через секунду.");
+      setPending(true);
+      setWidgetError(null);
       void loadTelegramWidgetScript()
         .then(() => {
-          setWidgetError(null);
+          setPending(false);
+          openTelegramAuth();
         })
-        .catch(() => setWidgetError("Не удалось загрузить Telegram Login Widget."));
+        .catch(() => {
+          setPending(false);
+          setWidgetError("Не удалось загрузить Telegram Login Widget.");
+        });
       return;
     }
 
     setWidgetError(null);
-    window.Telegram.Login.auth({ bot_id: normalizedBotId, request_access: "write", lang: "ru" }, finishTelegramAuth);
+    openTelegramAuth();
   };
 
   return (
