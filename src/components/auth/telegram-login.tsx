@@ -1,29 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Send } from "lucide-react";
+import { AlertCircle, ExternalLink, Loader2, Send } from "lucide-react";
 import { signIn } from "next-auth/react";
 
-declare global {
-  interface Window {
-    __telegramAuthCallbacks?: Record<string, (user: TelegramWidgetUser) => void>;
-    Telegram?: {
-      Login?: {
-        auth?: (
-          options: { bot_id: string; request_access?: "write"; lang?: string },
-          callback: (user: TelegramWidgetUser | false) => void,
-        ) => void;
-      };
-    };
-  }
-}
-
-type TelegramWidgetUser = Record<string, string | number | undefined>;
-type TelegramAuthPayload = Record<"id" | "auth_date" | "hash", string> &
-  Partial<Record<"first_name" | "last_name" | "username" | "photo_url", string>>;
-
-const TELEGRAM_WIDGET_SCRIPT_URL = "/api/telegram/widget";
+type TelegramLoginPhase = "idle" | "starting" | "waiting" | "finishing";
+type TelegramLoginStatus = "verified" | "expired" | "missing";
 
 function normalizeTelegramBotUsername(value?: string) {
   if (!value) return "";
@@ -35,57 +18,7 @@ function normalizeTelegramBotUsername(value?: string) {
     .replace(/\/$/, "");
 }
 
-function normalizeTelegramBotId(value?: string) {
-  return value?.trim().match(/^\d+$/)?.[0] ?? "";
-}
-
-function loadTelegramWidgetScript() {
-  return new Promise<void>((resolve, reject) => {
-    if (window.Telegram?.Login?.auth) {
-      resolve();
-      return;
-    }
-
-    const existingScript = document.querySelector<HTMLScriptElement>(
-      `script[src="${TELEGRAM_WIDGET_SCRIPT_URL}"], script[src^="https://telegram.org/js/telegram-widget.js"]`,
-    );
-
-    if (existingScript) {
-      existingScript.addEventListener("load", () => resolve(), { once: true });
-      existingScript.addEventListener("error", () => reject(new Error("Telegram widget load failed")), { once: true });
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src = TELEGRAM_WIDGET_SCRIPT_URL;
-    script.async = true;
-    script.addEventListener("load", () => resolve(), { once: true });
-    script.addEventListener("error", () => reject(new Error("Telegram widget load failed")), { once: true });
-    document.head.appendChild(script);
-  });
-}
-
-function toTelegramAuthPayload(user: TelegramWidgetUser): TelegramAuthPayload | null {
-  if (!user.id || !user.auth_date || !user.hash) return null;
-
-  const payload: TelegramAuthPayload = {
-    id: String(user.id),
-    auth_date: String(user.auth_date),
-    hash: String(user.hash),
-  };
-
-  for (const key of ["first_name", "last_name", "username", "photo_url"] as const) {
-    const value = user[key];
-    if (value !== undefined && value !== null && String(value).length > 0) {
-      payload[key] = String(value);
-    }
-  }
-
-  return payload;
-}
-
 export function TelegramLogin({
-  botId,
   botUsername,
   legalAccepted = true,
   requireLegalAcceptance = false,
@@ -95,151 +28,136 @@ export function TelegramLogin({
   legalAccepted?: boolean;
   requireLegalAcceptance?: boolean;
 }) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const callbackNameRef = useRef(`telegramAuth_${Math.random().toString(36).slice(2)}`);
-  const [widgetError, setWidgetError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
-  const normalizedBotUsername = useMemo(() => normalizeTelegramBotUsername(botUsername), [botUsername]);
-  const normalizedBotId = useMemo(() => normalizeTelegramBotId(botId), [botId]);
-  const isBlockedByLegal = requireLegalAcceptance && !legalAccepted;
   const router = useRouter();
-
-  const finishTelegramAuth = useCallback(
-    async (user: TelegramWidgetUser | false) => {
-      if (isBlockedByLegal) {
-        setWidgetError("Сначала примите документы сайта.");
-        return;
-      }
-
-      if (!user) {
-        setWidgetError("Telegram не вернул данные авторизации.");
-        return;
-      }
-
-      setPending(true);
-      setWidgetError(null);
-      const payload = toTelegramAuthPayload(user);
-
-      if (!payload) {
-        setPending(false);
-        setWidgetError("Telegram вернул неполные данные авторизации. Попробуйте ещё раз.");
-        return;
-      }
-
-      const result = await signIn("telegram", {
-        ...payload,
-        legalAccepted: legalAccepted ? "true" : "false",
-        callbackUrl: "/dashboard",
-        redirect: false,
-      });
-
-      setPending(false);
-
-      if (result?.error) {
-        setWidgetError("Не удалось завершить вход через Telegram. Проверьте токен бота и домен.");
-        return;
-      }
-
-      router.refresh();
-      router.push(result?.url ?? "/dashboard");
-    },
-    [isBlockedByLegal, legalAccepted, router],
-  );
+  const pollTimerRef = useRef<number | null>(null);
+  const normalizedBotUsername = useMemo(() => normalizeTelegramBotUsername(botUsername), [botUsername]);
+  const isBlockedByLegal = requireLegalAcceptance && !legalAccepted;
+  const [phase, setPhase] = useState<TelegramLoginPhase>("idle");
+  const [loginToken, setLoginToken] = useState<string | null>(null);
+  const [botUrl, setBotUrl] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const callbackName = callbackNameRef.current;
-
-    window.__telegramAuthCallbacks = window.__telegramAuthCallbacks ?? {};
-    window.__telegramAuthCallbacks[callbackName] = finishTelegramAuth;
-
     return () => {
-      delete window.__telegramAuthCallbacks?.[callbackName];
+      if (pollTimerRef.current) {
+        window.clearInterval(pollTimerRef.current);
+      }
     };
-  }, [finishTelegramAuth]);
+  }, []);
 
   useEffect(() => {
-    if (isBlockedByLegal || !normalizedBotId) return;
+    if (!loginToken || phase !== "waiting") {
+      if (pollTimerRef.current) {
+        window.clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+      return;
+    }
 
-    let cancelled = false;
+    const poll = async () => {
+      const response = await fetch(`/api/auth/telegram-bot-login/status?token=${encodeURIComponent(loginToken)}`, {
+        cache: "no-store",
+      }).catch(() => null);
 
-    setWidgetError(null);
-    loadTelegramWidgetScript()
-      .then(() => undefined)
-      .catch(() => {
-        if (!cancelled) {
-          setWidgetError("Не удалось загрузить Telegram Login Widget.");
+      if (!response) {
+        return;
+      }
+
+      const payload = (await response.json().catch(() => null)) as { status?: TelegramLoginStatus | "pending" } | null;
+      const nextStatus = payload?.status ?? "missing";
+
+      if (nextStatus === "verified") {
+        if (pollTimerRef.current) {
+          window.clearInterval(pollTimerRef.current);
+          pollTimerRef.current = null;
         }
-      });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [isBlockedByLegal, normalizedBotId]);
+        setPhase("finishing");
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container || isBlockedByLegal || !normalizedBotUsername) return;
+        const result = await signIn("telegram-bot", {
+          token: loginToken,
+          legalAccepted: legalAccepted ? "true" : "false",
+          callbackUrl: "/dashboard",
+          redirect: false,
+        });
 
-    setWidgetError(null);
-    container.innerHTML = "";
+        if (result?.error) {
+          setPhase("idle");
+          setError("Telegram подтвердил вход, но сайт не смог завершить авторизацию. Повторите попытку.");
+          return;
+        }
 
-    const script = document.createElement("script");
-    script.src = TELEGRAM_WIDGET_SCRIPT_URL;
-    script.async = true;
-    script.setAttribute("data-telegram-login", normalizedBotUsername);
-    script.setAttribute("data-size", "large");
-    script.setAttribute("data-radius", "12");
-    script.setAttribute("data-userpic", "false");
-    script.setAttribute("data-onauth", `__telegramAuthCallbacks.${callbackNameRef.current}(user)`);
-    script.addEventListener("error", () => {
-      setWidgetError("Не удалось загрузить Telegram Login Widget.");
-    });
-
-    container.appendChild(script);
-
-    return () => {
-      container.innerHTML = "";
-    };
-  }, [isBlockedByLegal, normalizedBotUsername]);
-
-  const startTelegramAuth = () => {
-    const openTelegramAuth = () => {
-      if (!window.Telegram?.Login?.auth) {
-        setWidgetError("Telegram Login Widget ещё загружается. Нажмите ещё раз через секунду.");
+        router.refresh();
+        router.push(result?.url ?? "/dashboard");
         return;
       }
 
-      window.Telegram.Login.auth({ bot_id: normalizedBotId, request_access: "write", lang: "ru" }, finishTelegramAuth);
+      if (nextStatus === "expired" || nextStatus === "missing") {
+        if (pollTimerRef.current) {
+          window.clearInterval(pollTimerRef.current);
+          pollTimerRef.current = null;
+        }
+
+        setPhase("idle");
+        setLoginToken(null);
+        setError("Ссылка для входа через Telegram истекла. Запустите вход ещё раз.");
+      }
     };
 
+    void poll();
+    pollTimerRef.current = window.setInterval(() => {
+      void poll();
+    }, 2000);
+
+    return () => {
+      if (pollTimerRef.current) {
+        window.clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+    };
+  }, [legalAccepted, loginToken, phase, router]);
+
+  const startTelegramLogin = async () => {
     if (isBlockedByLegal) {
-      setWidgetError("Сначала примите документы сайта.");
+      setError("Сначала примите документы сайта.");
       return;
     }
 
-    if (!normalizedBotId) {
-      setWidgetError("Telegram bot_id не настроен.");
+    setPhase("starting");
+    setError(null);
+
+    const response = await fetch("/api/auth/telegram-bot-login/begin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        legalAccepted,
+      }),
+    }).catch(() => null);
+
+    const payload = (await response?.json().catch(() => null)) as
+      | { error?: string; token?: string; botUrl?: string; botUsername?: string }
+      | null;
+
+    if (!response?.ok || !payload?.token || !payload?.botUrl) {
+      setPhase("idle");
+      setError(payload?.error || "Не удалось начать вход через Telegram. Проверьте настройки бота и webhook.");
       return;
     }
 
-    if (!window.Telegram?.Login?.auth) {
-      setPending(true);
-      setWidgetError(null);
-      void loadTelegramWidgetScript()
-        .then(() => {
-          setPending(false);
-          openTelegramAuth();
-        })
-        .catch(() => {
-          setPending(false);
-          setWidgetError("Не удалось загрузить Telegram Login Widget.");
-        });
-      return;
-    }
+    setLoginToken(payload.token);
+    setBotUrl(payload.botUrl);
+    setPhase("waiting");
 
-    setWidgetError(null);
-    openTelegramAuth();
+    const popup = window.open(payload.botUrl, "_blank", "noopener,noreferrer");
+    if (!popup) {
+      setError("Браузер заблокировал открытие Telegram. Откройте бота по ссылке ниже и нажмите Start.");
+    }
   };
+
+  const busy = phase === "starting" || phase === "finishing";
+  const showHelp = phase === "waiting" && Boolean(loginToken);
 
   return (
     <div className="rounded-3xl border border-[#229ED9]/25 bg-[linear-gradient(180deg,rgba(34,158,217,0.16),rgba(34,158,217,0.06))] p-4 shadow-[0_12px_30px_rgba(34,158,217,0.08)]">
@@ -249,6 +167,7 @@ export function TelegramLogin({
         </div>
         <div className="space-y-1">
           <div className="text-lg font-semibold text-white">Вход через Telegram</div>
+          <p className="text-sm text-sky-100/90">Откроем бота, вы нажмёте Start, а сайт завершит вход автоматически.</p>
         </div>
       </div>
 
@@ -256,45 +175,50 @@ export function TelegramLogin({
         <div className="rounded-2xl border border-dashed border-[#229ED9]/25 bg-black/20 px-4 py-3 text-sm leading-6 text-sky-100">
           Примите документы выше, чтобы продолжить регистрацию через Telegram.
         </div>
-      ) : normalizedBotId ? (
+      ) : (
         <div className="rounded-2xl bg-black/20 p-3">
           <button
             type="button"
-            onClick={startTelegramAuth}
-            disabled={pending}
+            onClick={() => void startTelegramLogin()}
+            disabled={busy}
             className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#229ED9] px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(34,158,217,0.18)] transition hover:bg-[#1d8fc5] disabled:cursor-not-allowed disabled:opacity-70"
           >
-            <Send className="h-4 w-4" />
-            {pending ? "Выполняем вход..." : "Войти через Telegram"}
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {phase === "starting"
+              ? "Готовим вход..."
+              : phase === "finishing"
+                ? "Завершаем вход..."
+                : "Войти через Telegram"}
           </button>
 
-          {widgetError ? (
-            <div className="mt-3 flex items-start gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-3 text-sm text-amber-200">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{widgetError}</span>
+          {showHelp ? (
+            <div className="mt-3 rounded-2xl border border-sky-400/20 bg-sky-500/10 px-3 py-3 text-sm text-sky-100">
+              <p>В Telegram откройте бота и нажмите Start. Как только бот подтвердит ваш аккаунт, сайт войдёт сам.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <a
+                  href={botUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-xl border border-sky-300/20 bg-sky-400/10 px-3 py-2 font-medium text-white transition hover:bg-sky-400/20"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Открыть бота
+                </a>
+                {normalizedBotUsername ? (
+                  <span className="inline-flex items-center rounded-xl border border-white/10 px-3 py-2 text-xs text-sky-100/80">
+                    @{normalizedBotUsername}
+                  </span>
+                ) : null}
+              </div>
             </div>
           ) : null}
-        </div>
-      ) : normalizedBotUsername ? (
-        <div className="rounded-2xl bg-black/20 p-3">
-          <div
-            ref={containerRef}
-            className={`flex min-h-12 items-center justify-center ${pending ? "pointer-events-none opacity-70" : ""}`}
-          />
 
-          {pending ? <div className="mt-3 text-center text-sm text-sky-100">Выполняем вход...</div> : null}
-
-          {widgetError ? (
+          {error ? (
             <div className="mt-3 flex items-start gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-3 text-sm text-amber-200">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{widgetError}</span>
+              <span>{error}</span>
             </div>
           ) : null}
-        </div>
-      ) : (
-        <div className="flex items-start gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>Добавьте NEXT_PUBLIC_TELEGRAM_BOT_USERNAME или TELEGRAM_BOT_USERNAME, чтобы включить Telegram Login Widget.</span>
         </div>
       )}
     </div>

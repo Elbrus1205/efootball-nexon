@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getConfiguredSiteBaseUrl, getRequestBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
+import { logTelegramBotAuth } from "@/lib/telegram-bot-auth";
+import { ensureTelegramWebhook, getTelegramBotIdentity } from "@/lib/telegram-bot";
 import {
   buildPendingTelegramBotLoginIdentifier,
   createTelegramBotLoginToken,
@@ -7,25 +10,48 @@ import {
 } from "@/lib/telegram-bot-login";
 
 export async function POST(request: NextRequest) {
-  const botUsername = (process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || process.env.TELEGRAM_BOT_USERNAME)?.trim().replace(/^@/, "");
-  if (!botUsername || !/^[A-Za-z0-9_]{5,32}$/.test(botUsername)) {
-    return NextResponse.json({ error: "Telegram-бот не настроен." }, { status: 500 });
-  }
+  try {
+    const body = (await request.json().catch(() => ({}))) as { legalAccepted?: boolean };
+    const requestOrigin = new URL(request.url).origin;
+    const baseUrl = /\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?$/i.test(requestOrigin)
+      ? getConfiguredSiteBaseUrl()
+      : getRequestBaseUrl(request);
+    const bot = await getTelegramBotIdentity();
+    const webhook = await ensureTelegramWebhook(baseUrl);
+    const token = createTelegramBotLoginToken();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-  const body = (await request.json().catch(() => ({}))) as { legalAccepted?: boolean };
-  const token = createTelegramBotLoginToken();
-  const startParam = getTelegramBotLoginStartParam(token);
+    await db.verificationToken.create({
+      data: {
+        token,
+        identifier: buildPendingTelegramBotLoginIdentifier(Boolean(body.legalAccepted)),
+        expires: expiresAt,
+      },
+    });
 
-  await db.verificationToken.create({
-    data: {
+    logTelegramBotAuth("token-created", {
       token,
-      identifier: buildPendingTelegramBotLoginIdentifier(Boolean(body.legalAccepted)),
-      expires: new Date(Date.now() + 10 * 60 * 1000),
-    },
-  });
+      botUsername: bot.username,
+      expiresAt: expiresAt.toISOString(),
+      webhookAction: webhook.skipped ? webhook.reason : webhook.action,
+    });
 
-  return NextResponse.json({
-    token,
-    botUrl: `https://t.me/${botUsername}?start=${startParam}`,
-  });
+    return NextResponse.json({
+      token,
+      botId: bot.id,
+      botUsername: bot.username,
+      botUrl: `https://t.me/${bot.username}?start=${getTelegramBotLoginStartParam(token)}`,
+      expiresAt: expiresAt.toISOString(),
+    });
+  } catch (error) {
+    logTelegramBotAuth("login-failure", {
+      reason: "begin-route-failed",
+      error: error instanceof Error ? error.message : "unknown-error",
+    });
+
+    return NextResponse.json(
+      { error: "Не удалось подготовить вход через Telegram. Проверьте настройки бота и webhook." },
+      { status: 500 },
+    );
+  }
 }

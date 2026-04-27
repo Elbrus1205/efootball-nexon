@@ -11,7 +11,7 @@ import { db } from "@/lib/db";
 import { getLegalAcceptanceData, isLegalAccepted } from "@/lib/legal-acceptance";
 import { generateFallbackNickname } from "@/lib/player-name";
 import { generateUniquePublicPlayerId } from "@/lib/public-player-id";
-import { parseTelegramBotLoginIdentifier } from "@/lib/telegram-bot-login";
+import { finalizeTelegramBotLogin, logTelegramBotAuth } from "@/lib/telegram-bot-auth";
 import { verifyTwoFactorChallenge } from "@/lib/two-factor";
 
 const TELEGRAM_ADMIN_ID = "6595067194";
@@ -373,101 +373,32 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials, req) {
         const loginToken = credentials?.token?.trim();
         if (!loginToken) return null;
+        const context = buildSecurityContext(req?.headers);
+        const legalAcceptanceData = getLegalAcceptanceData(req?.headers);
 
-        const record = await db.verificationToken.findUnique({ where: { token: loginToken } });
-        if (!record || record.expires < new Date()) {
-          if (record) {
-            await db.verificationToken.delete({ where: { token: loginToken } }).catch(() => null);
-          }
+        try {
+          return await finalizeTelegramBotLogin(
+            {
+              db,
+              createLoginHistory,
+              createSecuritySession,
+              generateUniquePublicPlayerId,
+              getLegalAcceptanceData: () => legalAcceptanceData,
+            },
+            {
+              loginToken,
+              legalAcceptedFallback: isLegalAccepted(credentials?.legalAccepted),
+              context,
+            },
+          );
+        } catch (error) {
+          logTelegramBotAuth("login-failure", {
+            token: loginToken,
+            reason: "authorize-telegram-bot-exception",
+            error: error instanceof Error ? error.message : "unknown-error",
+          });
           return null;
         }
-
-        const parsed = parseTelegramBotLoginIdentifier(record.identifier);
-        if (!parsed || parsed.status !== "verified" || !parsed.profile) return null;
-
-        const context = buildSecurityContext(req?.headers);
-        const acceptedLegalDocuments = parsed.legalAccepted || isLegalAccepted(credentials?.legalAccepted);
-        const telegramUsername = parsed.profile.username?.trim() || generateFallbackNickname(parsed.profile.id);
-        const profileName =
-          [parsed.profile.firstName, parsed.profile.lastName].filter(Boolean).join(" ").trim() || telegramUsername;
-        const role = parsed.profile.id === TELEGRAM_ADMIN_ID ? UserRole.FOUNDER : UserRole.PLAYER;
-        const existingRoleUpdate = parsed.profile.id === TELEGRAM_ADMIN_ID ? UserRole.FOUNDER : undefined;
-        const image = parsed.profile.photoFileId ? `telegram-file:${parsed.profile.photoFileId}` : undefined;
-
-        let user = await db.user.findUnique({
-          where: { telegramId: parsed.profile.id },
-        });
-
-        if (user) {
-          if (user.isBanned) {
-            await db.verificationToken.delete({ where: { token: loginToken } }).catch(() => null);
-            await createLoginHistory({
-              userId: user.id,
-              email: user.email,
-              status: LoginAttemptStatus.FAILED,
-              context,
-            });
-            return null;
-          }
-
-          user = await db.user.update({
-            where: { id: user.id },
-            data: {
-              telegramUsername: parsed.profile.username,
-              image: image ?? user.image ?? undefined,
-              role: existingRoleUpdate,
-              ...(!user.legalAcceptedAt && acceptedLegalDocuments ? getLegalAcceptanceData(req?.headers) : {}),
-            },
-          });
-        } else {
-          if (!acceptedLegalDocuments) return null;
-
-          user = await db.user.create({
-            data: {
-              publicId: await generateUniquePublicPlayerId(),
-              telegramId: parsed.profile.id,
-              telegramUsername: parsed.profile.username,
-              image,
-              name: profileName,
-              role,
-              ...getLegalAcceptanceData(req?.headers),
-            },
-          });
-        }
-
-        if (!user.name?.trim()) {
-          user = await db.user.update({
-            where: { id: user.id },
-            data: { name: profileName },
-          });
-        }
-
-        await db.verificationToken.delete({ where: { token: loginToken } }).catch(() => null);
-
-        const authSessionId = await createSecuritySession({
-          userId: user.id,
-          context,
-        });
-
-        await createLoginHistory({
-          userId: user.id,
-          email: user.email,
-          status: LoginAttemptStatus.SUCCESS,
-          context,
-        });
-
-        return {
-          id: user.id,
-          email: user.email,
-          image: user.image,
-          name: user.name ?? "Telegram Player",
-          role: user.role,
-          nickname: user.nickname,
-          efootballUid: user.efootballUid,
-          telegramUsername: user.telegramUsername,
-          isBanned: user.isBanned,
-          authSessionId,
-        };
       },
     }),
   ],

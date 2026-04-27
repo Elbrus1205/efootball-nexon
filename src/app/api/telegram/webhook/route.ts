@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRequestBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
-import { buildVerifiedTelegramBotLoginIdentifier, parseTelegramBotLoginStartParam } from "@/lib/telegram-bot-login";
+import { handleTelegramBotStart, logTelegramBotAuth } from "@/lib/telegram-bot-auth";
+import { parseTelegramBotLoginStartParam } from "@/lib/telegram-bot-login";
 
 export const runtime = "nodejs";
 
@@ -61,10 +62,18 @@ export async function POST(request: NextRequest) {
   const siteUrl = getRequestBaseUrl(request);
   const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
   if (!webhookSecret) {
+    logTelegramBotAuth("login-failure", {
+      source: "webhook-route",
+      reason: "missing-webhook-secret",
+    });
     return NextResponse.json({ ok: false, error: "Webhook secret is not configured." }, { status: 500 });
   }
 
   if (request.headers.get("x-telegram-bot-api-secret-token") !== webhookSecret) {
+    logTelegramBotAuth("login-failure", {
+      source: "webhook-route",
+      reason: "invalid-webhook-secret",
+    });
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 
@@ -79,33 +88,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const record = await db.verificationToken.findUnique({ where: { token } });
-  if (!record || record.expires < new Date()) {
-    await sendTelegramMessage(chatId, "Ссылка для входа истекла. Откройте сайт и нажмите вход через Telegram ещё раз.", siteUrl);
-    return NextResponse.json({ ok: true });
-  }
-
-  const legalAccepted = record.identifier.split(":")[2] === "1";
-  const telegramId = from.id.toString();
-  const photoFileId = await getTelegramPhotoFileId(telegramId);
-
-  await db.verificationToken.update({
-    where: { token },
-    data: {
-      identifier: buildVerifiedTelegramBotLoginIdentifier(
-        {
-          id: telegramId,
-          firstName: from.first_name ?? null,
-          lastName: from.last_name ?? null,
-          username: from.username ?? null,
-          photoFileId,
-        },
-        legalAccepted,
-      ),
+  await handleTelegramBotStart(
+    {
+      db,
+      getTelegramPhotoFileId,
+      sendTelegramMessage,
     },
-  });
-
-  await sendTelegramMessage(chatId, "Готово. Вернитесь на сайт, вход завершится автоматически.", `${siteUrl}/login`);
+    {
+      loginToken: token,
+      telegramUser: {
+        id: String(from.id),
+        firstName: from.first_name ?? null,
+        lastName: from.last_name ?? null,
+        username: from.username ?? null,
+      },
+      chatId,
+      siteUrl: `${siteUrl}/login`,
+    },
+  );
 
   return NextResponse.json({ ok: true });
 }
