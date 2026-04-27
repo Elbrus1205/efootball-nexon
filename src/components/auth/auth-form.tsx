@@ -49,14 +49,9 @@ export function AuthForm({
       try {
         if (typeof window === "undefined") return;
 
-        const host = window.location.hostname.toLowerCase();
-        const protocol = window.location.protocol;
-        const canonicalOrigin =
-          host === "efootball-nexon.ru" ? `${protocol}//www.efootball-nexon.ru` : window.location.origin;
-
         await startVkIdAuth({
           mode: "auth",
-          callbackUrl: `${canonicalOrigin}${callbackPath}`,
+          callbackUrl: `${window.location.origin}${callbackPath}`,
           legalAccepted: requiresLegalAcceptance ? legalAccepted : undefined,
         }, vkAppId);
       } catch (error) {

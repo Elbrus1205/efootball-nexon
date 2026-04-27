@@ -2,11 +2,26 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { clearVkIntent, exchangeVkCode, readVkIntent } from "@/lib/vkid-client";
+
+async function waitForAuthenticatedSession(timeoutMs = 8000, intervalMs = 250) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const session = await getSession().catch(() => null);
+    if (session?.user?.id) {
+      return session;
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, intervalMs));
+  }
+
+  return null;
+}
 
 export default function VkCallbackPage() {
   const router = useRouter();
@@ -51,14 +66,14 @@ export default function VkCallbackPage() {
 
           clearVkIntent();
           toast.success(payload?.message || "VK успешно привязан.");
-          router.replace(intent.callbackUrl || "/dashboard/security");
-          router.refresh();
+          window.location.replace(intent.callbackUrl || "/dashboard/security");
           return;
         }
 
         const result = await signIn("vkid", {
           accessToken: token.access_token,
           legalAccepted: intent?.legalAccepted ? "true" : "false",
+          callbackUrl: intent?.callbackUrl || "/dashboard",
           redirect: false,
         });
 
@@ -66,10 +81,14 @@ export default function VkCallbackPage() {
           throw new Error("Не удалось войти через VK.");
         }
 
+        const session = await waitForAuthenticatedSession();
+        if (!session?.user?.id) {
+          throw new Error("Сессия VK создана, но сайт не успел её применить. Попробуйте ещё раз.");
+        }
+
         clearVkIntent();
         toast.success("Вход через VK выполнен.");
-        router.replace(intent?.callbackUrl || "/dashboard");
-        router.refresh();
+        window.location.replace(result.url || intent?.callbackUrl || "/dashboard");
       } catch (error) {
         console.error("VK callback error", error);
         clearVkIntent();
@@ -90,9 +109,7 @@ export default function VkCallbackPage() {
         </div>
         <div className="space-y-2">
           <h1 className="text-xl font-semibold text-white">Подключаем VK</h1>
-          <p className="text-sm leading-6 text-zinc-400">
-            Завершаем авторизацию и возвращаем вас в аккаунт.
-          </p>
+          <p className="text-sm leading-6 text-zinc-400">Завершаем авторизацию и возвращаем вас в аккаунт.</p>
         </div>
       </Card>
     </div>
