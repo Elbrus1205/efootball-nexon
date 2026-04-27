@@ -1,3 +1,5 @@
+import crypto from "crypto";
+
 export type TelegramInlineKeyboardMarkup = {
   inline_keyboard: Array<Array<{ text: string; url: string }>>;
 };
@@ -31,16 +33,33 @@ export function getTelegramBotIdFromToken() {
   return getTelegramBotToken().split(":")[0] ?? "";
 }
 
-export async function getTelegramBotIdentity() {
-  const configuredUsername = normalizeTelegramUsername(
+export function getConfiguredTelegramBotUsername() {
+  const username = normalizeTelegramUsername(
     process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? process.env.TELEGRAM_BOT_USERNAME,
   );
 
-  if (configuredUsername) {
-    return {
-      id: getTelegramBotIdFromToken(),
-      username: configuredUsername,
-    };
+  return username;
+}
+
+export function getConfiguredTelegramBotIdentity() {
+  const username = getConfiguredTelegramBotUsername();
+  const id = process.env.NEXT_PUBLIC_TELEGRAM_BOT_ID?.trim() || getTelegramBotIdFromToken();
+
+  if (!username) {
+    return null;
+  }
+
+  return {
+    id,
+    username,
+  };
+}
+
+export async function getTelegramBotIdentity() {
+  const configured = getConfiguredTelegramBotIdentity();
+
+  if (configured) {
+    return configured;
   }
 
   const me = await callTelegramApi<{ id: number; username?: string }>("getMe", {
@@ -59,10 +78,7 @@ export async function getTelegramBotIdentity() {
 }
 
 export async function ensureTelegramWebhook(baseUrl: string) {
-  const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
-  if (!webhookSecret) {
-    throw new Error("Telegram webhook secret is not configured");
-  }
+  const webhookSecret = getTelegramWebhookSecret();
 
   const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
   if (!/^https:\/\//i.test(normalizedBaseUrl)) {
@@ -114,6 +130,20 @@ export async function ensureTelegramWebhook(baseUrl: string) {
     webhookUrl,
     action: "updated",
   } as const;
+}
+
+export function getTelegramWebhookSecret() {
+  const explicitSecret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
+  if (explicitSecret) {
+    return explicitSecret;
+  }
+
+  const nextAuthSecret = process.env.NEXTAUTH_SECRET?.trim();
+  if (!nextAuthSecret) {
+    throw new Error("NEXTAUTH_SECRET is not configured");
+  }
+
+  return crypto.createHash("sha256").update(`${nextAuthSecret}:telegram-webhook`).digest("hex");
 }
 
 export async function sendTelegramMessage(params: {

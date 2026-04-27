@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getConfiguredSiteBaseUrl, getRequestBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
 import { logTelegramBotAuth } from "@/lib/telegram-bot-auth";
-import { ensureTelegramWebhook, getTelegramBotIdentity } from "@/lib/telegram-bot";
+import { getConfiguredTelegramBotIdentity } from "@/lib/telegram-bot";
 import {
   buildPendingTelegramBotLoginIdentifier,
   createTelegramBotLoginToken,
@@ -12,12 +11,11 @@ import {
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json().catch(() => ({}))) as { legalAccepted?: boolean };
-    const requestOrigin = new URL(request.url).origin;
-    const baseUrl = /\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?$/i.test(requestOrigin)
-      ? getConfiguredSiteBaseUrl()
-      : getRequestBaseUrl(request);
-    const bot = await getTelegramBotIdentity();
-    const webhook = await ensureTelegramWebhook(baseUrl);
+    const bot = getConfiguredTelegramBotIdentity();
+    if (!bot?.username) {
+      throw new Error("Telegram bot username is not configured");
+    }
+
     const token = createTelegramBotLoginToken();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
@@ -33,7 +31,6 @@ export async function POST(request: NextRequest) {
       token,
       botUsername: bot.username,
       expiresAt: expiresAt.toISOString(),
-      webhookAction: webhook.skipped ? webhook.reason : webhook.action,
     });
 
     return NextResponse.json({

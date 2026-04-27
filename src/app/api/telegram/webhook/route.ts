@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getRequestBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
 import { handleTelegramBotStart, logTelegramBotAuth } from "@/lib/telegram-bot-auth";
+import { getTelegramWebhookSecret } from "@/lib/telegram-bot";
 import { parseTelegramBotLoginStartParam } from "@/lib/telegram-bot-login";
 
 export const runtime = "nodejs";
@@ -60,11 +61,14 @@ async function getTelegramPhotoFileId(telegramId: string) {
 
 export async function POST(request: NextRequest) {
   const siteUrl = getRequestBaseUrl(request);
-  const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
-  if (!webhookSecret) {
+  let webhookSecret: string;
+  try {
+    webhookSecret = getTelegramWebhookSecret();
+  } catch (error) {
     logTelegramBotAuth("login-failure", {
       source: "webhook-route",
       reason: "missing-webhook-secret",
+      error: error instanceof Error ? error.message : "unknown-error",
     });
     return NextResponse.json({ ok: false, error: "Webhook secret is not configured." }, { status: 500 });
   }
