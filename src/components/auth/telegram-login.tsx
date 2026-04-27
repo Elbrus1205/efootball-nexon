@@ -101,7 +101,6 @@ export function TelegramLogin({
   const [pending, setPending] = useState(false);
   const normalizedBotUsername = useMemo(() => normalizeTelegramBotUsername(botUsername), [botUsername]);
   const normalizedBotId = useMemo(() => normalizeTelegramBotId(botId), [botId]);
-  const [scriptReady, setScriptReady] = useState(false);
   const isBlockedByLegal = requireLegalAcceptance && !legalAccepted;
   const router = useRouter();
 
@@ -165,12 +164,9 @@ export function TelegramLogin({
 
     setWidgetError(null);
     loadTelegramWidgetScript()
-      .then(() => {
-        if (!cancelled) setScriptReady(Boolean(window.Telegram?.Login?.auth));
-      })
+      .then(() => undefined)
       .catch(() => {
         if (!cancelled) {
-          setScriptReady(false);
           setWidgetError("Не удалось загрузить Telegram Login Widget.");
         }
       });
@@ -221,7 +217,6 @@ export function TelegramLogin({
       setWidgetError("Telegram Login Widget ещё загружается. Нажмите ещё раз через секунду.");
       void loadTelegramWidgetScript()
         .then(() => {
-          setScriptReady(Boolean(window.Telegram?.Login?.auth));
           setWidgetError(null);
         })
         .catch(() => setWidgetError("Не удалось загрузить Telegram Login Widget."));
@@ -256,7 +251,7 @@ export function TelegramLogin({
             className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#229ED9] px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(34,158,217,0.18)] transition hover:bg-[#1d8fc5] disabled:cursor-not-allowed disabled:opacity-70"
           >
             <Send className="h-4 w-4" />
-            {pending ? "Выполняем вход..." : scriptReady ? "Войти через Telegram" : "Загрузка Telegram..."}
+            {pending ? "Выполняем вход..." : "Войти через Telegram"}
           </button>
 
           {widgetError ? (
