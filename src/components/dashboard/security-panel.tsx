@@ -282,6 +282,7 @@ export function SecurityPanel({
   telegram2faEnabled,
   telegramBotId,
   telegramBotUsername,
+  vkAppId,
   vkLinked,
   sessions,
 }: {
@@ -293,6 +294,7 @@ export function SecurityPanel({
   telegram2faEnabled: boolean;
   telegramBotId?: string;
   telegramBotUsername?: string;
+  vkAppId?: string;
   vkLinked: boolean;
   sessions: SecuritySessionItem[];
 }) {
@@ -340,9 +342,9 @@ export function SecurityPanel({
         await startVkIdAuth({
           mode: "bind",
           callbackUrl: `${canonicalOrigin}${callbackPath}`,
-        });
-      } catch {
-        toast.error("Не удалось запустить привязку VK.");
+        }, vkAppId);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Не удалось запустить привязку VK.");
       }
     })();
   };
@@ -532,6 +534,14 @@ export function SecurityPanel({
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
         toast.error(payload?.error || "Не удалось завершить все сессии.");
+        return;
+      }
+
+      if (payload?.signOut) {
+        await signOut({
+          redirect: true,
+          callbackUrl: "/login",
+        });
         return;
       }
 

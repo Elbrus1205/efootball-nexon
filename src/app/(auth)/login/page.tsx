@@ -8,6 +8,7 @@ export default function LoginPage({
 }) {
   const telegramBotId = process.env.NEXT_PUBLIC_TELEGRAM_BOT_ID ?? process.env.TELEGRAM_BOT_TOKEN?.split(":")[0];
   const telegramBotUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? process.env.TELEGRAM_BOT_USERNAME;
+  const vkAppId = process.env.NEXT_PUBLIC_VK_APP_ID ?? process.env.VK_CLIENT_ID;
 
   return (
     <div className="page-shell space-y-4 py-12">
@@ -16,7 +17,7 @@ export default function LoginPage({
           Аккаунт заблокирован навсегда. Вход закрыт.
         </Card>
       ) : null}
-      <AuthForm type="login" telegramBotId={telegramBotId} telegramBotUsername={telegramBotUsername} />
+      <AuthForm type="login" telegramBotId={telegramBotId} telegramBotUsername={telegramBotUsername} vkAppId={vkAppId} />
     </div>
   );
 }

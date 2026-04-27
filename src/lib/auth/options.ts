@@ -15,6 +15,13 @@ import { parseTelegramBotLoginIdentifier } from "@/lib/telegram-bot-login";
 import { verifyTwoFactorChallenge } from "@/lib/two-factor";
 
 const TELEGRAM_ADMIN_ID = "6595067194";
+const FALLBACK_SECURITY_CONTEXT = {
+  device: "Текущее устройство",
+  platform: "Не определено",
+  location: "Не определено",
+  ipAddress: null,
+  userAgent: "Неизвестное устройство",
+};
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db) as never,
@@ -276,6 +283,7 @@ export const authOptions: NextAuthOptions = {
 
         const telegramUsername = credentials.username?.trim() || generateFallbackNickname(credentials.id);
         const role = credentials.id === TELEGRAM_ADMIN_ID ? UserRole.FOUNDER : UserRole.PLAYER;
+        const existingRoleUpdate = credentials.id === TELEGRAM_ADMIN_ID ? UserRole.FOUNDER : undefined;
         const acceptedLegalDocuments = isLegalAccepted(credentials.legalAccepted);
 
         let user = await db.user.findUnique({
@@ -283,13 +291,23 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (user) {
+          if (user.isBanned) {
+            await createLoginHistory({
+              userId: user.id,
+              email: user.email,
+              status: LoginAttemptStatus.FAILED,
+              context,
+            });
+            return null;
+          }
+
           user = await db.user.update({
             where: { id: user.id },
             data: {
               name: undefined,
               telegramUsername: credentials.username,
               image: credentials.photo_url,
-              role,
+              role: existingRoleUpdate,
               ...(!user.legalAcceptedAt && acceptedLegalDocuments ? getLegalAcceptanceData(req?.headers) : {}),
             },
           });
@@ -318,16 +336,6 @@ export const authOptions: NextAuthOptions = {
             },
           });
           user.name = telegramUsername;
-        }
-
-        if (user.isBanned) {
-          await createLoginHistory({
-            userId: user.id,
-            email: user.email,
-            status: LoginAttemptStatus.FAILED,
-            context,
-          });
-          return null;
         }
 
         const authSessionId = await createSecuritySession({
@@ -383,6 +391,7 @@ export const authOptions: NextAuthOptions = {
         const profileName =
           [parsed.profile.firstName, parsed.profile.lastName].filter(Boolean).join(" ").trim() || telegramUsername;
         const role = parsed.profile.id === TELEGRAM_ADMIN_ID ? UserRole.FOUNDER : UserRole.PLAYER;
+        const existingRoleUpdate = parsed.profile.id === TELEGRAM_ADMIN_ID ? UserRole.FOUNDER : undefined;
         const image = parsed.profile.photoFileId ? `telegram-file:${parsed.profile.photoFileId}` : undefined;
 
         let user = await db.user.findUnique({
@@ -390,12 +399,23 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (user) {
+          if (user.isBanned) {
+            await db.verificationToken.delete({ where: { token: loginToken } }).catch(() => null);
+            await createLoginHistory({
+              userId: user.id,
+              email: user.email,
+              status: LoginAttemptStatus.FAILED,
+              context,
+            });
+            return null;
+          }
+
           user = await db.user.update({
             where: { id: user.id },
             data: {
               telegramUsername: parsed.profile.username,
               image: image ?? user.image ?? undefined,
-              role,
+              role: existingRoleUpdate,
               ...(!user.legalAcceptedAt && acceptedLegalDocuments ? getLegalAcceptanceData(req?.headers) : {}),
             },
           });
@@ -423,16 +443,6 @@ export const authOptions: NextAuthOptions = {
         }
 
         await db.verificationToken.delete({ where: { token: loginToken } }).catch(() => null);
-
-        if (user.isBanned) {
-          await createLoginHistory({
-            userId: user.id,
-            email: user.email,
-            status: LoginAttemptStatus.FAILED,
-            context,
-          });
-          return null;
-        }
 
         const authSessionId = await createSecuritySession({
           userId: user.id,
@@ -478,17 +488,15 @@ export const authOptions: NextAuthOptions = {
       if (token.sub) {
         const dbUser = await db.user.findUnique({ where: { id: token.sub } });
 
+        if (!dbUser || dbUser.isBanned) {
+          return {} as typeof token;
+        }
+
         if (!token.authSessionId) {
           token.authSessionId = await createSecuritySession({
             userId: token.sub,
             authSessionId: randomUUID(),
-            context: {
-              device: "Текущее устройство",
-              platform: "Не определено",
-              location: "Не определено",
-              ipAddress: null,
-              userAgent: "Unknown",
-            },
+            context: FALLBACK_SECURITY_CONTEXT,
           });
         }
 
@@ -497,22 +505,8 @@ export const authOptions: NextAuthOptions = {
             where: { authSessionId: token.authSessionId },
           });
 
-          if (!activeSession || activeSession.revokedAt) {
-            if (dbUser?.isBanned) {
-              return {} as typeof token;
-            }
-
-            token.authSessionId = await createSecuritySession({
-              userId: token.sub,
-              authSessionId: randomUUID(),
-              context: {
-                device: "Текущее устройство",
-                platform: "Не определено",
-                location: "Не определено",
-                ipAddress: null,
-                userAgent: "Unknown",
-              },
-            });
+          if (!activeSession || activeSession.revokedAt || activeSession.userId !== token.sub) {
+            return {} as typeof token;
           } else {
             await touchSecuritySession(token.authSessionId);
           }

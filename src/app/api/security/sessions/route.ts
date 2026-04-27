@@ -10,11 +10,15 @@ export async function DELETE(request: Request) {
   if (body.revokeAll) {
     await revokeSecuritySessions(session.user.id);
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, signOut: true });
   }
 
   if (!body.authSessionId) {
     return NextResponse.json({ error: "Не выбрана сессия для завершения." }, { status: 400 });
+  }
+
+  if (body.authSessionId === session.user.authSessionId) {
+    return NextResponse.json({ error: "Текущую сессию нельзя завершить этой кнопкой." }, { status: 400 });
   }
 
   await revokeSecuritySessions(session.user.id, [body.authSessionId]);

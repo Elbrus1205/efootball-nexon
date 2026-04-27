@@ -8,6 +8,7 @@ export type VkAuthIntent = {
   mode: "auth" | "bind";
   callbackUrl: string;
   legalAccepted?: boolean;
+  appId?: number;
 };
 
 function getCanonicalOrigin() {
@@ -23,8 +24,8 @@ function getCanonicalOrigin() {
   return window.location.origin;
 }
 
-function getVkAppId() {
-  const raw = process.env.NEXT_PUBLIC_VK_APP_ID?.trim();
+function getVkAppId(appIdOverride?: string | number | null) {
+  const raw = String(appIdOverride ?? process.env.NEXT_PUBLIC_VK_APP_ID ?? "").trim();
   if (!raw) return null;
 
   const appId = Number(raw);
@@ -35,11 +36,11 @@ function getVkRedirectUrl() {
   return `${getCanonicalOrigin()}/vk/callback`;
 }
 
-export function initVkId() {
-  const appId = getVkAppId();
+export function initVkId(appIdOverride?: string | number | null) {
+  const appId = getVkAppId(appIdOverride);
 
   if (!appId) {
-    throw new Error("VK ID is not configured.");
+    throw new Error("VK ID не настроен.");
   }
 
   Config.init({
@@ -78,13 +79,13 @@ export function clearVkIntent() {
   window.sessionStorage.removeItem(VK_INTENT_KEY);
 }
 
-export async function startVkIdAuth(intent: VkAuthIntent) {
-  initVkId();
-  saveVkIntent(intent);
+export async function startVkIdAuth(intent: VkAuthIntent, appIdOverride?: string | number | null) {
+  const { appId } = initVkId(appIdOverride ?? intent.appId);
+  saveVkIntent({ ...intent, appId });
   await Auth.login();
 }
 
-export async function exchangeVkCode(code: string, deviceId: string) {
-  initVkId();
+export async function exchangeVkCode(code: string, deviceId: string, appIdOverride?: string | number | null) {
+  initVkId(appIdOverride);
   return Auth.exchangeCode(code, deviceId);
 }

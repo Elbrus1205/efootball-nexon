@@ -30,7 +30,7 @@ export default function VkCallbackPage() {
 
     const finish = async () => {
       try {
-        const token = await exchangeVkCode(code, deviceId);
+        const token = await exchangeVkCode(code, deviceId, intent?.appId);
 
         if (intent?.mode === "bind") {
           const response = await fetch("/api/security/connections/vk", {

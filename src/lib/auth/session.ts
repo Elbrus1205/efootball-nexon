@@ -9,7 +9,7 @@ export async function getCurrentSession() {
 
 export async function requireAuth() {
   const session = await getCurrentSession();
-  if (!session?.user) redirect("/login");
+  if (!session?.user?.id) redirect("/login");
   if (session.user.isBanned) redirect("/login?banned=1");
   return session;
 }

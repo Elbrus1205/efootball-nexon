@@ -6,13 +6,16 @@ import { AlertCircle, Link2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
+const TELEGRAM_WIDGET_SCRIPT_URL = "/api/telegram/widget";
+type TelegramWidgetUser = Record<string, string | number | undefined>;
+
 declare global {
   interface Window {
     Telegram?: {
       Login?: {
         auth?: (
           options: { bot_id: string; request_access?: "write"; lang?: string },
-          callback: (user: Record<string, string> | false) => void,
+          callback: (user: TelegramWidgetUser | false) => void,
         ) => void;
       };
     };
@@ -40,7 +43,9 @@ function loadTelegramWidgetScript() {
       return;
     }
 
-    const existingScript = document.querySelector<HTMLScriptElement>('script[src^="https://telegram.org/js/telegram-widget.js"]');
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      `script[src="${TELEGRAM_WIDGET_SCRIPT_URL}"], script[src^="https://telegram.org/js/telegram-widget.js"]`,
+    );
     if (existingScript) {
       existingScript.addEventListener("load", () => resolve(), { once: true });
       existingScript.addEventListener("error", () => reject(new Error("Telegram widget load failed")), { once: true });
@@ -48,7 +53,7 @@ function loadTelegramWidgetScript() {
     }
 
     const script = document.createElement("script");
-    script.src = "https://telegram.org/js/telegram-widget.js?22";
+    script.src = TELEGRAM_WIDGET_SCRIPT_URL;
     script.async = true;
     script.addEventListener("load", () => resolve(), { once: true });
     script.addEventListener("error", () => reject(new Error("Telegram widget load failed")), { once: true });
@@ -96,7 +101,7 @@ export function TelegramConnect({
     };
   }, [linked, normalizedBotId]);
 
-  const finishTelegramConnect = (user: Record<string, string> | false) => {
+  const finishTelegramConnect = (user: TelegramWidgetUser | false) => {
     if (!user) return;
 
     startTransition(async () => {

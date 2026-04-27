@@ -7,7 +7,7 @@ export default withAuth(
   {
     callbacks: {
       authorized: ({ token, req }) => {
-        if (!token) return false;
+        if (!token?.sub || token.isBanned) return false;
         if (req.nextUrl.pathname.startsWith("/admin")) {
           return token.role === "FOUNDER" || token.role === "ORGANIZER" || token.role === "JUDGE";
         }

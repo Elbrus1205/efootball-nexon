@@ -20,7 +20,7 @@ export type VkUserProfile = {
 };
 
 export async function fetchVkUserProfile(accessToken: string): Promise<VkUserProfile> {
-  const clientId = process.env.VK_CLIENT_ID?.trim();
+  const clientId = (process.env.VK_CLIENT_ID ?? process.env.NEXT_PUBLIC_VK_APP_ID)?.trim();
 
   if (!clientId) {
     throw new Error("VK client id is not configured.");

@@ -17,10 +17,12 @@ export function AuthForm({
   type,
   telegramBotId,
   telegramBotUsername,
+  vkAppId,
 }: {
   type: "login" | "register";
   telegramBotId?: string;
   telegramBotUsername?: string;
+  vkAppId?: string;
 }) {
   const [pending, startTransition] = useTransition();
   const [email, setEmail] = useState("");
@@ -56,9 +58,9 @@ export function AuthForm({
           mode: "auth",
           callbackUrl: `${canonicalOrigin}${callbackPath}`,
           legalAccepted: requiresLegalAcceptance ? legalAccepted : undefined,
-        });
-      } catch {
-        toast.error("Не удалось запустить вход через VK.");
+        }, vkAppId);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Не удалось запустить вход через VK.");
       }
     });
   };
