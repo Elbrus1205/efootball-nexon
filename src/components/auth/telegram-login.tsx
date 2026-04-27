@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { AlertCircle, ExternalLink, Loader2, Send } from "lucide-react";
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 
 type TelegramLoginPhase = "idle" | "starting" | "waiting" | "finishing";
 type TelegramLoginStatus = "verified" | "expired" | "missing";
@@ -18,6 +17,21 @@ function normalizeTelegramBotUsername(value?: string) {
     .replace(/\/$/, "");
 }
 
+async function waitForAuthenticatedSession(timeoutMs = 8000, intervalMs = 250) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const session = await getSession().catch(() => null);
+    if (session?.user?.id) {
+      return session;
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, intervalMs));
+  }
+
+  return null;
+}
+
 export function TelegramLogin({
   botUsername,
   legalAccepted = true,
@@ -28,7 +42,6 @@ export function TelegramLogin({
   legalAccepted?: boolean;
   requireLegalAcceptance?: boolean;
 }) {
-  const router = useRouter();
   const pollTimerRef = useRef<number | null>(null);
   const normalizedBotUsername = useMemo(() => normalizeTelegramBotUsername(botUsername), [botUsername]);
   const isBlockedByLegal = requireLegalAcceptance && !legalAccepted;
@@ -81,14 +94,20 @@ export function TelegramLogin({
           redirect: false,
         });
 
-        if (result?.error) {
+        if (!result || result.error) {
           setPhase("idle");
           setError("Telegram подтвердил вход, но сайт не смог завершить авторизацию. Повторите попытку.");
           return;
         }
 
-        router.refresh();
-        router.push(result?.url ?? "/dashboard");
+        const session = await waitForAuthenticatedSession();
+        if (!session?.user?.id) {
+          setPhase("idle");
+          setError("Telegram подтвердил вход, но сайт не успел применить сессию. Повторите попытку ещё раз.");
+          return;
+        }
+
+        window.location.replace(result.url || "/dashboard");
         return;
       }
 
@@ -115,7 +134,7 @@ export function TelegramLogin({
         pollTimerRef.current = null;
       }
     };
-  }, [legalAccepted, loginToken, phase, router]);
+  }, [legalAccepted, loginToken, phase]);
 
   const startTelegramLogin = async () => {
     if (isBlockedByLegal) {
