@@ -23,6 +23,25 @@ async function waitForAuthenticatedSession(timeoutMs = 8000, intervalMs = 250) {
   return null;
 }
 
+function normalizeVkRedirectUrl(url?: string | null) {
+  if (!url) return "/dashboard";
+
+  try {
+    const parsed = new URL(url, window.location.origin);
+    if (parsed.hostname.toLowerCase() === "www.efootball-nexon.ru") {
+      parsed.hostname = "efootball-nexon.ru";
+    }
+
+    if (parsed.origin === window.location.origin) {
+      return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    }
+
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
 export default function VkCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -88,7 +107,7 @@ export default function VkCallbackPage() {
 
         clearVkIntent();
         toast.success("Вход через VK выполнен.");
-        window.location.replace(result.url || intent?.callbackUrl || "/dashboard");
+        window.location.replace(normalizeVkRedirectUrl(intent?.callbackUrl || result.url || "/dashboard"));
       } catch (error) {
         console.error("VK callback error", error);
         clearVkIntent();
