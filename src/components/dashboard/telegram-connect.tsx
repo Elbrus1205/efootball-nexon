@@ -1,99 +1,94 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Link2, Send } from "lucide-react";
+import { AlertCircle, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import {
-  loadTelegramWidgetScript,
-  normalizeTelegramBotId,
+  hasTelegramAuthPayload,
+  mountTelegramLoginWidget,
   normalizeTelegramBotUsername,
   type TelegramWidgetUser,
 } from "@/lib/telegram-widget";
 
+function toTelegramPayload(user: TelegramWidgetUser) {
+  if (!hasTelegramAuthPayload(user)) {
+    return null;
+  }
+
+  return {
+    id: String(user.id),
+    first_name: user.first_name,
+    last_name: user.last_name,
+    username: user.username,
+    photo_url: user.photo_url,
+    auth_date: String(user.auth_date),
+    hash: user.hash,
+  };
+}
+
 export function TelegramConnect({
   botUsername,
-  botId,
   linked,
   telegramHandle,
 }: {
   botUsername?: string;
-  botId?: string;
   linked: boolean;
   telegramHandle?: string | null;
 }) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [widgetReady, setWidgetReady] = useState(false);
   const [widgetError, setWidgetError] = useState<string | null>(null);
-  const [scriptReady, setScriptReady] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const normalizedBotUsername = useMemo(() => normalizeTelegramBotUsername(botUsername), [botUsername]);
-  const normalizedBotId = useMemo(() => normalizeTelegramBotId(botId), [botId]);
 
   useEffect(() => {
-    if (!normalizedBotId || linked) return;
-
-    let cancelled = false;
+    const container = containerRef.current;
+    if (!container || linked || !normalizedBotUsername) {
+      setWidgetReady(false);
+      return;
+    }
 
     setWidgetError(null);
-    loadTelegramWidgetScript()
-      .then(() => {
-        if (!cancelled) setScriptReady(Boolean(window.Telegram?.Login?.auth));
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setScriptReady(false);
-          setWidgetError("Не удалось загрузить Telegram Login Widget.");
+    setWidgetReady(false);
+
+    return mountTelegramLoginWidget(container, {
+      botUsername: normalizedBotUsername,
+      requestAccess: "write",
+      lang: "ru",
+      onLoad: () => setWidgetReady(true),
+      onError: () => {
+        setWidgetReady(false);
+        setWidgetError("Не удалось загрузить Telegram Login Widget.");
+      },
+      onAuth: (user) => {
+        const payload = toTelegramPayload(user);
+        if (!payload) {
+          setWidgetError("Telegram не вернул данные авторизации. Попробуйте ещё раз.");
+          return;
         }
-      });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [linked, normalizedBotId]);
+        startTransition(async () => {
+          const response = await fetch("/api/security/connections/telegram", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
 
-  const finishTelegramConnect = (user: TelegramWidgetUser | false) => {
-    if (!user) return;
+          const body = await response.json().catch(() => null);
+          if (!response.ok) {
+            setWidgetError(body?.error || "Не удалось привязать Telegram.");
+            toast.error(body?.error || "Не удалось привязать Telegram.");
+            return;
+          }
 
-    startTransition(async () => {
-      const response = await fetch("/api/security/connections/telegram", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(user),
-      });
-
-      const payload = await response.json().catch(() => null);
-      if (!response.ok) {
-        setWidgetError(payload?.error || "Не удалось привязать Telegram.");
-        toast.error(payload?.error || "Не удалось привязать Telegram.");
-        return;
-      }
-
-      toast.success(payload?.message || "Telegram успешно привязан.");
-      router.refresh();
+          toast.success(body?.message || "Telegram успешно привязан.");
+          router.refresh();
+        });
+      },
     });
-  };
-
-  const startTelegramConnect = () => {
-    if (!normalizedBotId) {
-      setWidgetError("Telegram bot_id не настроен.");
-      return;
-    }
-
-    if (!window.Telegram?.Login?.auth) {
-      setWidgetError("Telegram Login Widget ещё загружается. Нажмите ещё раз через секунду.");
-      void loadTelegramWidgetScript()
-        .then(() => {
-          setScriptReady(Boolean(window.Telegram?.Login?.auth));
-          setWidgetError(null);
-        })
-        .catch(() => setWidgetError("Не удалось загрузить Telegram Login Widget."));
-      return;
-    }
-
-    setWidgetError(null);
-    window.Telegram.Login.auth({ bot_id: normalizedBotId, request_access: "write" }, finishTelegramConnect);
-  };
+  }, [linked, normalizedBotUsername, router]);
 
   if (linked) {
     return (
@@ -106,11 +101,11 @@ export function TelegramConnect({
     );
   }
 
-  if (!normalizedBotId) {
+  if (!normalizedBotUsername) {
     return (
       <div className="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm text-zinc-400">
-        Добавьте <code className="text-white">TELEGRAM_BOT_TOKEN</code> или{" "}
-        <code className="text-white">NEXT_PUBLIC_TELEGRAM_BOT_ID</code>, чтобы включить привязку Telegram.
+        Добавьте <code className="text-white">TELEGRAM_BOT_USERNAME</code> или{" "}
+        <code className="text-white">NEXT_PUBLIC_TELEGRAM_BOT_USERNAME</code>, чтобы включить привязку Telegram.
       </div>
     );
   }
@@ -118,34 +113,25 @@ export function TelegramConnect({
   return (
     <div className="space-y-3">
       <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-        <button
-          type="button"
-          onClick={startTelegramConnect}
-          disabled={pending}
-          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#229ED9] px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(34,158,217,0.18)] transition hover:bg-[#1d8fc5] disabled:cursor-not-allowed disabled:opacity-70"
-        >
-          <Send className="h-4 w-4" />
-          {pending ? "Привязываем Telegram..." : scriptReady ? "Подключить Telegram" : "Загрузка Telegram..."}
-        </button>
+        <div
+          ref={containerRef}
+          className={`flex min-h-12 items-center justify-center ${pending ? "pointer-events-none opacity-70" : ""}`}
+        />
 
-        {normalizedBotUsername ? (
-          <a
-            href={`https://t.me/${normalizedBotUsername}`}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-2 block text-center text-xs font-medium text-sky-100 underline-offset-4 transition hover:text-white hover:underline"
-          >
-            Открыть бота Telegram
-          </a>
+        {!widgetReady && !widgetError ? (
+          <div className="mt-3 flex items-center justify-center gap-2 text-sm text-sky-100">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Загружаем Telegram Login Widget...</span>
+          </div>
+        ) : null}
+
+        {pending ? (
+          <div className="mt-3 flex items-center justify-center gap-2 text-sm text-sky-100">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Привязываем Telegram...</span>
+          </div>
         ) : null}
       </div>
-
-      {pending ? (
-        <Button disabled className="w-full">
-          <Link2 className="mr-2 h-4 w-4" />
-          Привязываем Telegram...
-        </Button>
-      ) : null}
 
       {widgetError ? (
         <div className="flex items-start gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">

@@ -15,12 +15,10 @@ import { startVkIdAuth } from "@/lib/vkid-client";
 
 export function AuthForm({
   type,
-  telegramBotId,
   telegramBotUsername,
   vkAppId,
 }: {
   type: "login" | "register";
-  telegramBotId?: string;
   telegramBotUsername?: string;
   vkAppId?: string;
 }) {
@@ -266,12 +264,7 @@ export function AuthForm({
               >
                 Продолжить через VK
               </Button>
-              <TelegramLogin
-                botId={telegramBotId}
-                botUsername={telegramBotUsername}
-                legalAccepted={legalAccepted}
-                requireLegalAcceptance={requiresLegalAcceptance}
-              />
+              <TelegramLogin botUsername={telegramBotUsername} legalAccepted={legalAccepted} requireLegalAcceptance={requiresLegalAcceptance} />
             </div>
 
             <p className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs leading-5 text-zinc-400">

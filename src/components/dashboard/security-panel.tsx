@@ -280,7 +280,6 @@ export function SecurityPanel({
   telegramLinked,
   telegramHandle,
   telegram2faEnabled,
-  telegramBotId,
   telegramBotUsername,
   vkAppId,
   vkLinked,
@@ -292,7 +291,6 @@ export function SecurityPanel({
   telegramLinked: boolean;
   telegramHandle: string | null;
   telegram2faEnabled: boolean;
-  telegramBotId?: string;
   telegramBotUsername?: string;
   vkAppId?: string;
   vkLinked: boolean;
@@ -748,12 +746,7 @@ export function SecurityPanel({
               </Badge>
             </div>
 
-            <TelegramConnect
-              botId={telegramBotId}
-              botUsername={telegramBotUsername}
-              linked={telegramLinked}
-              telegramHandle={telegramHandle}
-            />
+            <TelegramConnect botUsername={telegramBotUsername} linked={telegramLinked} telegramHandle={telegramHandle} />
           </div>
 
           <div className="rounded-[26px] border border-white/10 bg-black/20 p-4 sm:p-5">

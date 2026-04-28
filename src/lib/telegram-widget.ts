@@ -8,22 +8,21 @@ export type TelegramWidgetUser = {
   hash?: string;
 };
 
-declare global {
-  interface Window {
-    Telegram?: {
-      Login?: {
-        auth?: (
-          options: { bot_id: string; request_access?: "write"; lang?: string },
-          callback: (user: TelegramWidgetUser | false) => void,
-        ) => void;
-      };
-    };
-  }
-}
+type TelegramWidgetMountOptions = {
+  botUsername: string;
+  onAuth(user: TelegramWidgetUser): void;
+  onLoad?(): void;
+  onError?(): void;
+  size?: "large" | "medium" | "small";
+  radius?: number;
+  requestAccess?: "write";
+  lang?: string;
+  showUserPic?: boolean;
+};
 
-const TELEGRAM_WIDGET_SCRIPT_URL = "/api/telegram/widget";
+const TELEGRAM_WIDGET_SCRIPT_URL = "https://telegram.org/js/telegram-widget.js?22";
 
-export function normalizeTelegramBotUsername(value?: string) {
+export function normalizeTelegramBotUsername(value?: string | null) {
   if (!value) return "";
 
   return value
@@ -33,32 +32,54 @@ export function normalizeTelegramBotUsername(value?: string) {
     .replace(/\/$/, "");
 }
 
-export function normalizeTelegramBotId(value?: string) {
-  return value?.trim().match(/^\d+$/)?.[0] ?? "";
+export function hasTelegramAuthPayload(
+  user: TelegramWidgetUser | false | null | undefined,
+): user is TelegramWidgetUser & Required<Pick<TelegramWidgetUser, "id" | "auth_date" | "hash">> {
+  return typeof user === "object" && user !== null && Boolean(user.id && user.auth_date && user.hash);
 }
 
-export function loadTelegramWidgetScript() {
-  return new Promise<void>((resolve, reject) => {
-    if (window.Telegram?.Login?.auth) {
-      resolve();
-      return;
-    }
+export function mountTelegramLoginWidget(container: HTMLDivElement, options: TelegramWidgetMountOptions) {
+  const botUsername = normalizeTelegramBotUsername(options.botUsername);
+  if (!botUsername) {
+    container.innerHTML = "";
+    return () => undefined;
+  }
 
-    const existingScript = document.querySelector<HTMLScriptElement>(
-      `script[src="${TELEGRAM_WIDGET_SCRIPT_URL}"], script[src^="https://telegram.org/js/telegram-widget.js"]`,
-    );
+  const callbackName = `telegramAuth_${Math.random().toString(36).slice(2)}`;
+  const callbackHost = window as unknown as Record<string, unknown>;
 
-    if (existingScript) {
-      existingScript.addEventListener("load", () => resolve(), { once: true });
-      existingScript.addEventListener("error", () => reject(new Error("Telegram widget load failed")), { once: true });
-      return;
-    }
+  callbackHost[callbackName] = (user: TelegramWidgetUser) => {
+    options.onAuth(user);
+  };
 
-    const script = document.createElement("script");
-    script.src = TELEGRAM_WIDGET_SCRIPT_URL;
-    script.async = true;
-    script.addEventListener("load", () => resolve(), { once: true });
-    script.addEventListener("error", () => reject(new Error("Telegram widget load failed")), { once: true });
-    document.head.appendChild(script);
-  });
+  container.innerHTML = "";
+
+  const script = document.createElement("script");
+  script.src = TELEGRAM_WIDGET_SCRIPT_URL;
+  script.async = true;
+  script.setAttribute("data-telegram-login", botUsername);
+  script.setAttribute("data-size", options.size ?? "large");
+  script.setAttribute("data-radius", String(options.radius ?? 12));
+  script.setAttribute("data-userpic", options.showUserPic ? "true" : "false");
+  script.setAttribute("data-lang", options.lang ?? "ru");
+  script.setAttribute("data-onauth", `${callbackName}(user)`);
+
+  if (options.requestAccess) {
+    script.setAttribute("data-request-access", options.requestAccess);
+  }
+
+  if (options.onLoad) {
+    script.addEventListener("load", options.onLoad, { once: true });
+  }
+
+  if (options.onError) {
+    script.addEventListener("error", options.onError, { once: true });
+  }
+
+  container.appendChild(script);
+
+  return () => {
+    delete callbackHost[callbackName];
+    container.innerHTML = "";
+  };
 }
