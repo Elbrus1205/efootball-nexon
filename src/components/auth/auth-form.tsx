@@ -36,6 +36,7 @@ export function AuthForm({
   const [legalAccepted, setLegalAccepted] = useState(false);
   const router = useRouter();
   const requiresLegalAcceptance = type === "register";
+  const externalAuthLegalAccepted = requiresLegalAcceptance ? legalAccepted : true;
 
   const ensureLegalAccepted = () => {
     if (!requiresLegalAcceptance || legalAccepted) return true;
@@ -54,7 +55,7 @@ export function AuthForm({
         await startVkIdAuth({
           mode: "auth",
           callbackUrl: `${window.location.origin}${callbackPath}`,
-          legalAccepted: requiresLegalAcceptance ? legalAccepted : undefined,
+          legalAccepted: externalAuthLegalAccepted,
         }, vkAppId);
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Не удалось запустить вход через VK.");
@@ -273,7 +274,7 @@ export function AuthForm({
                 enabled={telegramEnabled}
                 completionToken={telegramCompletionToken}
                 errorMessage={telegramError}
-                legalAccepted={legalAccepted}
+                legalAccepted={externalAuthLegalAccepted}
                 requireLegalAcceptance={requiresLegalAcceptance}
               />
             </div>

@@ -23,6 +23,7 @@ export function TelegramLogin({
   const [error, setError] = useState<string | null>(errorMessage ?? null);
   const [finalizedToken, setFinalizedToken] = useState("");
   const isBlockedByLegal = requireLegalAcceptance && !legalAccepted;
+  const effectiveLegalAccepted = requireLegalAcceptance ? legalAccepted : true;
 
   useEffect(() => {
     setError(errorMessage ?? null);
@@ -64,7 +65,7 @@ export function TelegramLogin({
     setError(null);
     const params = new URLSearchParams({
       mode,
-      legalAccepted: legalAccepted ? "1" : "0",
+      legalAccepted: effectiveLegalAccepted ? "1" : "0",
     });
 
     window.location.assign(`/api/auth/telegram-oidc/begin?${params.toString()}`);
