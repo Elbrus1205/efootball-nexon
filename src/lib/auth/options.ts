@@ -5,13 +5,13 @@ import { compare, hash } from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { buildSecurityContext, createLoginHistory, createSecuritySession, touchSecuritySession } from "@/lib/auth/security";
-import { verifyTelegramAuth } from "@/lib/auth/telegram";
 import { fetchVkUserProfile } from "@/lib/auth/vk";
 import { db } from "@/lib/db";
 import { getLegalAcceptanceData, isLegalAccepted } from "@/lib/legal-acceptance";
 import { generateFallbackNickname } from "@/lib/player-name";
 import { generateUniquePublicPlayerId } from "@/lib/public-player-id";
 import { finalizeTelegramBotLogin, logTelegramBotAuth } from "@/lib/telegram-bot-auth";
+import { parseTelegramOidcResultPayloadIdentifier } from "@/lib/telegram-oidc";
 import { verifyTwoFactorChallenge } from "@/lib/two-factor";
 
 const TELEGRAM_ADMIN_ID = "6595067194";
@@ -252,46 +252,44 @@ export const authOptions: NextAuthOptions = {
       id: "telegram",
       name: "Telegram",
       credentials: {
-        id: { label: "Telegram ID", type: "text" },
-        first_name: { label: "First name", type: "text" },
-        last_name: { label: "Last name", type: "text" },
-        username: { label: "Username", type: "text" },
-        photo_url: { label: "Photo", type: "text" },
-        auth_date: { label: "Auth date", type: "text" },
-        hash: { label: "Hash", type: "text" },
-        legalAccepted: { label: "Legal Accepted", type: "text" },
+        token: { label: "Telegram Login Token", type: "text" },
       },
       async authorize(credentials, req) {
-        const token = process.env.TELEGRAM_BOT_TOKEN;
-        if (!token || !credentials?.id || !credentials.hash || !credentials.auth_date) return null;
+        const token = credentials?.token?.trim();
+        if (!token) return null;
         const context = buildSecurityContext(req?.headers);
+        const record = await db.verificationToken.findUnique({ where: { token } });
+        if (!record || record.expires < new Date()) {
+          if (record) {
+            await db.verificationToken.delete({ where: { token } }).catch(() => null);
+          }
+          return null;
+        }
 
-        const verified = verifyTelegramAuth(
-          credentials as {
-            id: string;
-            first_name?: string;
-            last_name?: string;
-            username?: string;
-            photo_url?: string;
-            auth_date: string;
-            hash: string;
-          },
-          token,
-        );
+        const result = parseTelegramOidcResultPayloadIdentifier(record.identifier);
+        if (!result || (result.mode !== "login" && result.mode !== "register")) {
+          await db.verificationToken.delete({ where: { token } }).catch(() => null);
+          return null;
+        }
 
-        if (!verified) return null;
+        const telegramId = result.profile.telegramId.trim();
+        if (!telegramId) {
+          await db.verificationToken.delete({ where: { token } }).catch(() => null);
+          return null;
+        }
 
-        const telegramUsername = credentials.username?.trim() || generateFallbackNickname(credentials.id);
-        const role = credentials.id === TELEGRAM_ADMIN_ID ? UserRole.FOUNDER : UserRole.PLAYER;
-        const existingRoleUpdate = credentials.id === TELEGRAM_ADMIN_ID ? UserRole.FOUNDER : undefined;
-        const acceptedLegalDocuments = isLegalAccepted(credentials.legalAccepted);
+        const telegramUsername = result.profile.username?.trim() || generateFallbackNickname(telegramId);
+        const role = telegramId === TELEGRAM_ADMIN_ID ? UserRole.FOUNDER : UserRole.PLAYER;
+        const existingRoleUpdate = telegramId === TELEGRAM_ADMIN_ID ? UserRole.FOUNDER : undefined;
+        const acceptedLegalDocuments = result.legalAccepted;
 
         let user = await db.user.findUnique({
-          where: { telegramId: credentials.id },
+          where: { telegramId },
         });
 
         if (user) {
           if (user.isBanned) {
+            await db.verificationToken.delete({ where: { token } }).catch(() => null);
             await createLoginHistory({
               userId: user.id,
               email: user.email,
@@ -305,8 +303,8 @@ export const authOptions: NextAuthOptions = {
             where: { id: user.id },
             data: {
               name: undefined,
-              telegramUsername: credentials.username,
-              image: credentials.photo_url,
+              telegramUsername: result.profile.username ?? null,
+              image: result.profile.picture || undefined,
               role: existingRoleUpdate,
               ...(!user.legalAcceptedAt && acceptedLegalDocuments ? getLegalAcceptanceData(req?.headers) : {}),
             },
@@ -317,9 +315,9 @@ export const authOptions: NextAuthOptions = {
           user = await db.user.create({
             data: {
               publicId: await generateUniquePublicPlayerId(),
-              telegramId: credentials.id,
-              telegramUsername: credentials.username,
-              image: credentials.photo_url,
+              telegramId,
+              telegramUsername: result.profile.username ?? null,
+              image: result.profile.picture || undefined,
               name: telegramUsername,
               role,
               ...getLegalAcceptanceData(req?.headers),
@@ -337,6 +335,8 @@ export const authOptions: NextAuthOptions = {
           });
           user.name = telegramUsername;
         }
+
+        await db.verificationToken.delete({ where: { token } }).catch(() => null);
 
         const authSessionId = await createSecuritySession({
           userId: user.id,

@@ -1,94 +1,74 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { AlertCircle, Loader2, Send } from "lucide-react";
 import { signIn } from "next-auth/react";
-import {
-  hasTelegramAuthPayload,
-  mountTelegramLoginWidget,
-  normalizeTelegramBotUsername,
-  type TelegramWidgetUser,
-} from "@/lib/telegram-widget";
-
-function toTelegramPayload(user: TelegramWidgetUser) {
-  if (!hasTelegramAuthPayload(user)) {
-    return null;
-  }
-
-  return {
-    id: String(user.id),
-    first_name: user.first_name,
-    last_name: user.last_name,
-    username: user.username,
-    photo_url: user.photo_url,
-    auth_date: String(user.auth_date),
-    hash: user.hash,
-  };
-}
 
 export function TelegramLogin({
-  botUsername,
+  mode,
+  enabled,
+  completionToken,
+  errorMessage,
   legalAccepted = true,
   requireLegalAcceptance = false,
 }: {
-  botUsername?: string;
+  mode: "login" | "register";
+  enabled: boolean;
+  completionToken?: string;
+  errorMessage?: string;
   legalAccepted?: boolean;
   requireLegalAcceptance?: boolean;
 }) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [pending, setPending] = useState(false);
-  const [widgetReady, setWidgetReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const normalizedBotUsername = useMemo(() => normalizeTelegramBotUsername(botUsername), [botUsername]);
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(errorMessage ?? null);
+  const [finalizedToken, setFinalizedToken] = useState("");
   const isBlockedByLegal = requireLegalAcceptance && !legalAccepted;
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container || isBlockedByLegal || !normalizedBotUsername) {
-      setWidgetReady(false);
+    setError(errorMessage ?? null);
+  }, [errorMessage]);
+
+  useEffect(() => {
+    if (!completionToken || finalizedToken === completionToken) return;
+
+    setFinalizedToken(completionToken);
+    setError(null);
+
+    startTransition(async () => {
+      const result = await signIn("telegram", {
+        token: completionToken,
+        callbackUrl: "/dashboard",
+        redirect: false,
+      });
+
+      if (!result || result.error) {
+        setError("Не удалось завершить вход через Telegram. Попробуйте ещё раз.");
+        return;
+      }
+
+      window.location.replace(result.url || "/dashboard");
+    });
+  }, [completionToken, finalizedToken, startTransition]);
+
+  const startTelegramLogin = () => {
+    if (isBlockedByLegal) {
+      setError("Сначала примите документы сайта.");
+      return;
+    }
+
+    if (!enabled) {
+      setError("Telegram Login не настроен. Добавьте TELEGRAM_CLIENT_ID и TELEGRAM_CLIENT_SECRET.");
       return;
     }
 
     setError(null);
-    setWidgetReady(false);
-
-    return mountTelegramLoginWidget(container, {
-      botUsername: normalizedBotUsername,
-      requestAccess: "write",
-      lang: "ru",
-      onLoad: () => setWidgetReady(true),
-      onError: () => {
-        setWidgetReady(false);
-        setError("Не удалось загрузить Telegram Login Widget. Проверьте доступность telegram.org.");
-      },
-      onAuth: async (user) => {
-        const payload = toTelegramPayload(user);
-        if (!payload) {
-          setError("Telegram не вернул данные авторизации. Попробуйте ещё раз.");
-          return;
-        }
-
-        setPending(true);
-        setError(null);
-
-        const result = await signIn("telegram", {
-          ...payload,
-          legalAccepted: legalAccepted ? "true" : "false",
-          callbackUrl: "/dashboard",
-          redirect: false,
-        });
-
-        setPending(false);
-
-        if (!result || result.error) {
-          setError("Не удалось завершить вход через Telegram. Проверьте /setdomain в @BotFather для вашего домена.");
-          return;
-        }
-
-        window.location.replace(result.url || "/dashboard");
-      },
+    const params = new URLSearchParams({
+      mode,
+      legalAccepted: legalAccepted ? "1" : "0",
     });
-  }, [isBlockedByLegal, legalAccepted, normalizedBotUsername]);
+
+    window.location.assign(`/api/auth/telegram-oidc/begin?${params.toString()}`);
+  };
 
   return (
     <div className="rounded-3xl border border-[#229ED9]/25 bg-[linear-gradient(180deg,rgba(34,158,217,0.16),rgba(34,158,217,0.06))] p-4 shadow-[0_12px_30px_rgba(34,158,217,0.08)]">
@@ -98,7 +78,7 @@ export function TelegramLogin({
         </div>
         <div className="space-y-1">
           <div className="text-lg font-semibold text-white">Вход через Telegram</div>
-          <p className="text-sm text-sky-100/90">Официальный Telegram Login Widget по документации Telegram.</p>
+          <p className="text-sm text-sky-100/90">Новый Telegram Login на базе OpenID Connect и redirect flow.</p>
         </div>
       </div>
 
@@ -106,19 +86,17 @@ export function TelegramLogin({
         <div className="rounded-2xl border border-dashed border-[#229ED9]/25 bg-black/20 px-4 py-3 text-sm leading-6 text-sky-100">
           Примите документы выше, чтобы продолжить регистрацию через Telegram.
         </div>
-      ) : normalizedBotUsername ? (
+      ) : enabled ? (
         <div className="rounded-2xl bg-black/20 p-3">
-          <div
-            ref={containerRef}
-            className={`flex min-h-12 items-center justify-center ${pending ? "pointer-events-none opacity-70" : ""}`}
-          />
-
-          {!widgetReady && !error ? (
-            <div className="mt-3 flex items-center justify-center gap-2 text-sm text-sky-100">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Загружаем Telegram Login Widget...</span>
-            </div>
-          ) : null}
+          <button
+            type="button"
+            onClick={startTelegramLogin}
+            disabled={pending}
+            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#229ED9] px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(34,158,217,0.18)] transition hover:bg-[#1d8fc5] disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {pending ? "Завершаем вход..." : "Продолжить через Telegram"}
+          </button>
 
           {pending ? (
             <div className="mt-3 flex items-center justify-center gap-2 text-sm text-sky-100">
@@ -137,7 +115,7 @@ export function TelegramLogin({
       ) : (
         <div className="flex items-start gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>Добавьте `TELEGRAM_BOT_USERNAME` или `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`, чтобы включить Telegram Login Widget.</span>
+          <span>Добавьте `TELEGRAM_CLIENT_ID` и `TELEGRAM_CLIENT_SECRET`, чтобы включить новый Telegram Login.</span>
         </div>
       )}
     </div>

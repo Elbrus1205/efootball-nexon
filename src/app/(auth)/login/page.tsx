@@ -4,9 +4,9 @@ import { Card } from "@/components/ui/card";
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams?: { banned?: string };
+  searchParams?: { banned?: string; telegramToken?: string; telegramError?: string };
 }) {
-  const telegramBotUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? process.env.TELEGRAM_BOT_USERNAME;
+  const telegramEnabled = Boolean(process.env.TELEGRAM_CLIENT_ID && process.env.TELEGRAM_CLIENT_SECRET);
   const vkAppId = process.env.NEXT_PUBLIC_VK_APP_ID ?? process.env.VK_CLIENT_ID;
 
   return (
@@ -16,7 +16,13 @@ export default function LoginPage({
           Аккаунт заблокирован навсегда. Вход закрыт.
         </Card>
       ) : null}
-      <AuthForm type="login" telegramBotUsername={telegramBotUsername} vkAppId={vkAppId} />
+      <AuthForm
+        type="login"
+        telegramEnabled={telegramEnabled}
+        telegramCompletionToken={searchParams?.telegramToken}
+        telegramError={searchParams?.telegramError}
+        vkAppId={vkAppId}
+      />
     </div>
   );
 }
