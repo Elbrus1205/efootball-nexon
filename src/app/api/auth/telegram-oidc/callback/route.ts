@@ -39,6 +39,74 @@ function getRequestOrigin(request: NextRequest) {
   return `${protocol}://${host}`;
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function getSetCookieHeaders(headers: Headers) {
+  const extendedHeaders = headers as Headers & { getSetCookie?: () => string[] };
+  if (typeof extendedHeaders.getSetCookie === "function") {
+    return extendedHeaders.getSetCookie();
+  }
+
+  const headerValue = headers.get("set-cookie");
+  return headerValue ? [headerValue] : [];
+}
+
+async function buildNextAuthCompletionResponse(baseUrl: string, resultToken: string) {
+  const csrfResponse = await fetch(`${baseUrl}/api/auth/csrf`, {
+    cache: "no-store",
+  });
+
+  const csrfPayload = (await csrfResponse.json().catch(() => null)) as { csrfToken?: string } | null;
+  const csrfToken = csrfPayload?.csrfToken?.trim();
+  if (!csrfResponse.ok || !csrfToken) {
+    throw new Error("csrf-bootstrap-failed");
+  }
+
+  const response = new NextResponse(
+    `<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charSet="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Завершаем вход через Telegram</title>
+  </head>
+  <body>
+    <form id="telegram-auth-complete" method="POST" action="/api/auth/callback/telegram">
+      <input type="hidden" name="csrfToken" value="${escapeHtml(csrfToken)}" />
+      <input type="hidden" name="token" value="${escapeHtml(resultToken)}" />
+      <input type="hidden" name="callbackUrl" value="/dashboard" />
+    </form>
+    <script>
+      document.getElementById("telegram-auth-complete")?.submit();
+    </script>
+    <noscript>
+      <p>Нажмите кнопку, чтобы завершить вход через Telegram.</p>
+      <button type="submit" form="telegram-auth-complete">Продолжить</button>
+    </noscript>
+  </body>
+</html>`,
+    {
+      status: 200,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
+    },
+  );
+
+  for (const cookie of getSetCookieHeaders(csrfResponse.headers)) {
+    response.headers.append("set-cookie", cookie);
+  }
+
+  return response;
+}
+
 export async function GET(request: NextRequest) {
   const baseUrl = getRequestOrigin(request);
   const clientId = getTelegramOidcClientId();
@@ -148,16 +216,38 @@ export async function GET(request: NextRequest) {
 
     await db.verificationToken.delete({ where: { token: state } }).catch(() => null);
 
-    const finishUrl = new URL(finishPath, baseUrl);
+    console.info("[telegram-oidc] callback-success", {
+      mode: statePayload.mode,
+      telegramId,
+      username: claims.preferred_username?.trim() || claims.username?.trim() || null,
+    });
+
     if (statePayload.mode === "connect") {
+      const finishUrl = new URL(finishPath, baseUrl);
       finishUrl.searchParams.set("telegramConnectToken", resultToken);
-    } else {
-      finishUrl.searchParams.set("telegramToken", resultToken);
+      return NextResponse.redirect(finishUrl);
     }
 
-    return NextResponse.redirect(finishUrl);
+    try {
+      return await buildNextAuthCompletionResponse(baseUrl, resultToken);
+    } catch (error) {
+      console.error("[telegram-oidc] completion-bootstrap-failed", {
+        mode: statePayload.mode,
+        telegramId,
+        error: error instanceof Error ? error.message : "unknown-error",
+      });
+
+      const finishUrl = new URL(finishPath, baseUrl);
+      finishUrl.searchParams.set("telegramToken", resultToken);
+      finishUrl.searchParams.set("telegramError", "Автоматическое завершение входа не сработало. Попробуйте ещё раз.");
+      return NextResponse.redirect(finishUrl);
+    }
   } catch (error) {
     await db.verificationToken.delete({ where: { token: state } }).catch(() => null);
+    console.error("[telegram-oidc] callback-failed", {
+      mode: statePayload.mode,
+      error: error instanceof Error ? error.message : "unknown-error",
+    });
     return buildErrorRedirect(
       baseUrl,
       finishPath,

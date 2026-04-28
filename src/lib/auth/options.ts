@@ -260,6 +260,7 @@ export const authOptions: NextAuthOptions = {
         const context = buildSecurityContext(req?.headers);
         const record = await db.verificationToken.findUnique({ where: { token } });
         if (!record || record.expires < new Date()) {
+          console.warn("[telegram-auth] missing-or-expired-token");
           if (record) {
             await db.verificationToken.delete({ where: { token } }).catch(() => null);
           }
@@ -268,12 +269,14 @@ export const authOptions: NextAuthOptions = {
 
         const result = parseTelegramOidcResultPayloadIdentifier(record.identifier);
         if (!result || (result.mode !== "login" && result.mode !== "register")) {
+          console.warn("[telegram-auth] invalid-result-payload");
           await db.verificationToken.delete({ where: { token } }).catch(() => null);
           return null;
         }
 
         const telegramId = result.profile.telegramId.trim();
         if (!telegramId) {
+          console.warn("[telegram-auth] missing-telegram-id");
           await db.verificationToken.delete({ where: { token } }).catch(() => null);
           return null;
         }
@@ -289,6 +292,7 @@ export const authOptions: NextAuthOptions = {
 
         if (user) {
           if (user.isBanned) {
+            console.warn("[telegram-auth] banned-user", { telegramId, userId: user.id });
             await db.verificationToken.delete({ where: { token } }).catch(() => null);
             await createLoginHistory({
               userId: user.id,
@@ -309,8 +313,12 @@ export const authOptions: NextAuthOptions = {
               ...(!user.legalAcceptedAt && acceptedLegalDocuments ? getLegalAcceptanceData(req?.headers) : {}),
             },
           });
+          console.info("[telegram-auth] updated-existing-user", { telegramId, userId: user.id });
         } else {
-          if (!acceptedLegalDocuments) return null;
+          if (!acceptedLegalDocuments) {
+            console.warn("[telegram-auth] legal-acceptance-required", { telegramId, mode: result.mode });
+            return null;
+          }
 
           user = await db.user.create({
             data: {
@@ -323,6 +331,7 @@ export const authOptions: NextAuthOptions = {
               ...getLegalAcceptanceData(req?.headers),
             },
           });
+          console.info("[telegram-auth] created-user", { telegramId, userId: user.id });
         }
 
         const normalizedCurrentName = user.name?.trim() || "";
@@ -348,6 +357,12 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           status: LoginAttemptStatus.SUCCESS,
           context,
+        });
+
+        console.info("[telegram-auth] authorize-success", {
+          telegramId,
+          userId: user.id,
+          mode: result.mode,
         });
 
         return {
