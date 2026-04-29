@@ -1,4 +1,5 @@
-import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
+import { setDefaultResultOrder } from "dns";
+import { createLocalJWKSet, jwtVerify, type JSONWebKeySet, type JWTPayload } from "jose";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
@@ -11,7 +12,19 @@ import {
 } from "@/lib/telegram-oidc";
 
 const TELEGRAM_ISSUER = "https://oauth.telegram.org";
-const telegramJwks = createRemoteJWKSet(new URL("https://oauth.telegram.org/.well-known/jwks.json"));
+const TELEGRAM_JWKS_URL = "https://oauth.telegram.org/.well-known/jwks.json";
+const TELEGRAM_FETCH_TIMEOUT_MS = 15_000;
+const TELEGRAM_FETCH_RETRIES = 2;
+const TELEGRAM_JWKS_CACHE_TTL_MS = 10 * 60 * 1000;
+
+let telegramJwksCache: ReturnType<typeof createLocalJWKSet> | null = null;
+let telegramJwksCacheExpiresAt = 0;
+
+try {
+  setDefaultResultOrder("ipv4first");
+} catch {
+  // Ignore when the host runtime does not support overriding DNS result order.
+}
 
 type TelegramOidcClaims = JWTPayload & {
   id?: string | number;
@@ -22,6 +35,118 @@ type TelegramOidcClaims = JWTPayload & {
   username?: string;
   picture?: string;
 };
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function describeError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return {
+      message: "unknown-error",
+      cause: null as string | null,
+    };
+  }
+
+  let cause: string | null = null;
+  const rawCause = error.cause;
+
+  if (rawCause instanceof Error) {
+    cause = rawCause.message;
+  } else if (typeof rawCause === "string") {
+    cause = rawCause;
+  } else if (rawCause && typeof rawCause === "object") {
+    try {
+      cause = JSON.stringify(rawCause);
+    } catch {
+      cause = String(rawCause);
+    }
+  }
+
+  return {
+    message: error.message,
+    cause,
+  };
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fetchWithRetry(url: string, init: RequestInit, stage: string) {
+  let lastError: unknown = null;
+
+  for (let attempt = 1; attempt <= TELEGRAM_FETCH_RETRIES + 1; attempt += 1) {
+    try {
+      return await fetchWithTimeout(url, init, TELEGRAM_FETCH_TIMEOUT_MS);
+    } catch (error) {
+      lastError = error;
+      const described = describeError(error);
+
+      console.warn("[telegram-oidc] fetch-retry", {
+        stage,
+        attempt,
+        error: described.message,
+        cause: described.cause,
+      });
+
+      if (attempt <= TELEGRAM_FETCH_RETRIES) {
+        await sleep(400 * attempt);
+      }
+    }
+  }
+
+  const finalError = new Error(`${stage}-fetch-failed`);
+  (finalError as Error & { cause?: unknown }).cause = lastError;
+  throw finalError;
+}
+
+async function parseJsonResponse<T>(response: Response) {
+  const text = await response.text();
+  if (!text.trim()) return null as T | null;
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null as T | null;
+  }
+}
+
+async function getTelegramJwks() {
+  if (telegramJwksCache && telegramJwksCacheExpiresAt > Date.now()) {
+    return telegramJwksCache;
+  }
+
+  const response = await fetchWithRetry(
+    TELEGRAM_JWKS_URL,
+    {
+      headers: {
+        Accept: "application/json",
+      },
+      cache: "no-store",
+    },
+    "jwks",
+  );
+
+  const jwks = await parseJsonResponse<JSONWebKeySet>(response);
+  if (!response.ok || !jwks?.keys?.length) {
+    throw new Error("jwks-response-invalid");
+  }
+
+  telegramJwksCache = createLocalJWKSet(jwks);
+  telegramJwksCacheExpiresAt = Date.now() + TELEGRAM_JWKS_CACHE_TTL_MS;
+  return telegramJwksCache;
+}
 
 function buildErrorRedirect(baseUrl: string, fallbackPath: string, message: string) {
   const url = new URL(fallbackPath, baseUrl);
@@ -146,23 +271,30 @@ export async function GET(request: NextRequest) {
   const redirectUri = `${baseUrl}/api/auth/telegram-oidc/callback`;
 
   try {
-    const tokenResponse = await fetch("https://oauth.telegram.org/token", {
+    const tokenRequestBody = new URLSearchParams({
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: redirectUri,
+      client_id: clientId,
+      code_verifier: statePayload.codeVerifier,
+    }).toString();
+
+    const tokenResponse = await fetchWithRetry("https://oauth.telegram.org/token", {
       method: "POST",
       headers: {
         Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
         "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
       },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        code,
-        redirect_uri: redirectUri,
-        client_id: clientId,
-        code_verifier: statePayload.codeVerifier,
-      }),
+      body: tokenRequestBody,
       cache: "no-store",
-    });
+    }, "token");
 
-    const tokenPayload = (await tokenResponse.json().catch(() => null)) as
+    const tokenPayload = (await parseJsonResponse<{
+      id_token?: string;
+      error?: string;
+      error_description?: string;
+    }>(tokenResponse)) as
       | {
           id_token?: string;
           error?: string;
@@ -174,6 +306,7 @@ export async function GET(request: NextRequest) {
       throw new Error(tokenPayload?.error_description || tokenPayload?.error || "token-exchange-failed");
     }
 
+    const telegramJwks = await getTelegramJwks();
     const verification = await jwtVerify(tokenPayload.id_token, telegramJwks, {
       issuer: TELEGRAM_ISSUER,
       audience: clientId,
@@ -244,9 +377,11 @@ export async function GET(request: NextRequest) {
     }
   } catch (error) {
     await db.verificationToken.delete({ where: { token: state } }).catch(() => null);
+    const described = describeError(error);
     console.error("[telegram-oidc] callback-failed", {
       mode: statePayload.mode,
-      error: error instanceof Error ? error.message : "unknown-error",
+      error: described.message,
+      cause: described.cause,
     });
     return buildErrorRedirect(
       baseUrl,
