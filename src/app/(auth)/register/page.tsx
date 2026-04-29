@@ -1,11 +1,8 @@
 import { AuthForm } from "@/components/auth/auth-form";
 
-export default function RegisterPage({
-  searchParams,
-}: {
-  searchParams?: { telegramToken?: string; telegramError?: string };
-}) {
-  const telegramEnabled = Boolean(process.env.TELEGRAM_CLIENT_ID && process.env.TELEGRAM_CLIENT_SECRET);
+export default function RegisterPage() {
+  const telegramClientId = process.env.TELEGRAM_CLIENT_ID;
+  const telegramEnabled = Boolean(telegramClientId);
   const vkAppId = process.env.NEXT_PUBLIC_VK_APP_ID ?? process.env.VK_CLIENT_ID;
 
   return (
@@ -13,8 +10,7 @@ export default function RegisterPage({
       <AuthForm
         type="register"
         telegramEnabled={telegramEnabled}
-        telegramCompletionToken={searchParams?.telegramToken}
-        telegramError={searchParams?.telegramError}
+        telegramClientId={telegramClientId}
         vkAppId={vkAppId}
       />
     </div>

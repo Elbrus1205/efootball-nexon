@@ -281,8 +281,7 @@ export function SecurityPanel({
   telegramHandle,
   telegram2faEnabled,
   telegramEnabled,
-  telegramCompletionToken,
-  telegramError,
+  telegramClientId,
   vkAppId,
   vkLinked,
   sessions,
@@ -294,8 +293,7 @@ export function SecurityPanel({
   telegramHandle: string | null;
   telegram2faEnabled: boolean;
   telegramEnabled: boolean;
-  telegramCompletionToken?: string;
-  telegramError?: string;
+  telegramClientId?: string;
   vkAppId?: string;
   vkLinked: boolean;
   sessions: SecuritySessionItem[];
@@ -752,10 +750,9 @@ export function SecurityPanel({
 
             <TelegramConnect
               enabled={telegramEnabled}
+              clientId={telegramClientId}
               linked={telegramLinked}
               telegramHandle={telegramHandle}
-              completionToken={telegramCompletionToken}
-              errorMessage={telegramError}
             />
           </div>
 

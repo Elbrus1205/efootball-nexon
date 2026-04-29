@@ -4,9 +4,10 @@ import { Card } from "@/components/ui/card";
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams?: { banned?: string; telegramToken?: string; telegramError?: string };
+  searchParams?: { banned?: string };
 }) {
-  const telegramEnabled = Boolean(process.env.TELEGRAM_CLIENT_ID && process.env.TELEGRAM_CLIENT_SECRET);
+  const telegramClientId = process.env.TELEGRAM_CLIENT_ID;
+  const telegramEnabled = Boolean(telegramClientId);
   const vkAppId = process.env.NEXT_PUBLIC_VK_APP_ID ?? process.env.VK_CLIENT_ID;
 
   return (
@@ -19,8 +20,7 @@ export default function LoginPage({
       <AuthForm
         type="login"
         telegramEnabled={telegramEnabled}
-        telegramCompletionToken={searchParams?.telegramToken}
-        telegramError={searchParams?.telegramError}
+        telegramClientId={telegramClientId}
         vkAppId={vkAppId}
       />
     </div>

@@ -11,14 +11,11 @@ function sessionIcon(platform: string | null): "laptop" | "phone" {
   return normalized.includes("iphone") || normalized.includes("android") ? "phone" : "laptop";
 }
 
-export default async function DashboardSecurityPage({
-  searchParams,
-}: {
-  searchParams?: { telegramConnectToken?: string; telegramError?: string };
-}) {
+export default async function DashboardSecurityPage() {
   const session = await requireAuth();
   const currentContext = buildSecurityContext(headers());
-  const telegramEnabled = Boolean(process.env.TELEGRAM_CLIENT_ID && process.env.TELEGRAM_CLIENT_SECRET);
+  const telegramClientId = process.env.TELEGRAM_CLIENT_ID;
+  const telegramEnabled = Boolean(telegramClientId);
   const vkAppId = process.env.NEXT_PUBLIC_VK_APP_ID ?? process.env.VK_CLIENT_ID;
 
   const user = await db.user.findUnique({
@@ -100,8 +97,7 @@ export default async function DashboardSecurityPage({
           telegramHandle={user.telegramUsername ?? null}
           telegram2faEnabled={Boolean(user.telegram2faEnabled)}
           telegramEnabled={telegramEnabled}
-          telegramCompletionToken={searchParams?.telegramConnectToken}
-          telegramError={searchParams?.telegramError}
+          telegramClientId={telegramClientId}
           vkAppId={vkAppId}
           vkLinked={Boolean(user.vkId)}
           sessions={sessions}
