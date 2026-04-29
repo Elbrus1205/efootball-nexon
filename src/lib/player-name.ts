@@ -48,11 +48,12 @@ export function getPlayerDisplayName(user: {
   id?: string | null;
   nickname?: string | null;
   name?: string | null;
+  phone?: string | null;
   email?: string | null;
 }) {
   if (user.name?.trim()) return user.name.trim();
   if (user.nickname?.trim()) return user.nickname.trim();
 
-  const seed = user.id || user.email || user.name || "player";
+  const seed = user.id || user.phone || user.email || user.name || "player";
   return generateFallbackNickname(seed);
 }

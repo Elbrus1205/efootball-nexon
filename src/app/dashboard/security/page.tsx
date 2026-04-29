@@ -11,22 +11,23 @@ function sessionIcon(platform: string | null): "laptop" | "phone" {
   return normalized.includes("iphone") || normalized.includes("android") ? "phone" : "laptop";
 }
 
-export default async function DashboardSecurityPage() {
+export default async function DashboardSecurityPage({
+  searchParams,
+}: {
+  searchParams?: Record<string, string>;
+}) {
+  void searchParams;
   const session = await requireAuth();
   const currentContext = buildSecurityContext(headers());
-  const telegramClientId = process.env.TELEGRAM_CLIENT_ID;
-  const telegramEnabled = Boolean(telegramClientId);
   const vkAppId = process.env.NEXT_PUBLIC_VK_APP_ID ?? process.env.VK_CLIENT_ID;
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
     select: {
+      phone: true,
       email: true,
       emailVerified: true,
       passwordHash: true,
-      telegramId: true,
-      telegramUsername: true,
-      telegram2faEnabled: true,
       vkId: true,
       securitySessions: {
         where: {
@@ -90,14 +91,10 @@ export default async function DashboardSecurityPage() {
         </div>
 
         <SecurityPanel
+          currentPhone={user.phone ?? ""}
           currentEmail={user.email ?? ""}
           emailVerified={Boolean(user.emailVerified)}
           hasPassword={Boolean(user.passwordHash)}
-          telegramLinked={Boolean(user.telegramId)}
-          telegramHandle={user.telegramUsername ?? null}
-          telegram2faEnabled={Boolean(user.telegram2faEnabled)}
-          telegramEnabled={telegramEnabled}
-          telegramClientId={telegramClientId}
           vkAppId={vkAppId}
           vkLinked={Boolean(user.vkId)}
           sessions={sessions}

@@ -25,6 +25,7 @@ export default async function AdminUsersPage({
           OR: [
             { nickname: { contains: query, mode: "insensitive" } },
             { name: { contains: query, mode: "insensitive" } },
+            { phone: { contains: query } },
             { email: { contains: query, mode: "insensitive" } },
             { telegramUsername: { contains: query, mode: "insensitive" } },
             { publicId: { contains: query } },
