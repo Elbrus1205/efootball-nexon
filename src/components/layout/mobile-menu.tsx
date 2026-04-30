@@ -11,7 +11,6 @@ import {
   Home,
   Phone,
   Trophy,
-  X,
   type LucideIcon,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -129,18 +128,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
         >
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-300/65 to-transparent" />
 
-          <div className="relative flex items-center justify-end border-b border-white/10 px-4 pb-4 pt-4">
-            <button
-              type="button"
-              aria-label="Закрыть меню"
-              onClick={() => setOpen(false)}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-zinc-300 transition duration-200 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <nav className="relative flex-1 overflow-y-auto px-2 py-3">
+          <nav className="relative flex-1 overflow-y-auto px-2 py-4">
             <div className="flex flex-col gap-1.5">
               {links.map((link, index) => {
                 const active = link.href === "/" ? pathname === "/" : pathname?.startsWith(link.href);
