@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   BarChart3,
@@ -40,14 +40,6 @@ const fallbackMeta = {
 export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-
-  const activeLink = useMemo(
-    () =>
-      links.find((link) => (link.href === "/" ? pathname === "/" : pathname?.startsWith(link.href))) ??
-      links[0] ??
-      null,
-    [links, pathname],
-  );
 
   useEffect(() => {
     setOpen(false);
@@ -137,15 +129,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
         >
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-300/65 to-transparent" />
 
-          <div className="relative flex items-start justify-between gap-4 border-b border-white/10 px-4 pb-4 pt-4">
-            <div className="min-w-0">
-              <div className="text-[11px] uppercase tracking-[0.24em] text-sky-200/60">Навигация</div>
-              <div className="mt-2 text-lg font-semibold text-white">Меню</div>
-              <div className="mt-1 text-sm text-zinc-400">
-                {activeLink ? `Сейчас: ${activeLink.label}` : "Разделы сайта"}
-              </div>
-            </div>
-
+          <div className="relative flex items-center justify-end border-b border-white/10 px-4 pb-4 pt-4">
             <button
               type="button"
               aria-label="Закрыть меню"
@@ -209,15 +193,6 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
             </div>
           </nav>
 
-          <div className="relative border-t border-white/10 px-4 py-4">
-            <div className="flex items-center justify-between rounded-[1.4rem] border border-white/10 bg-white/[0.045] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-              <div className="min-w-0">
-                <div className="truncate text-sm font-medium text-white">eFootball Nexon</div>
-                <div className="mt-1 text-xs text-zinc-500">Турниры, рейтинг и профиль в одном месте</div>
-              </div>
-              <span className="ml-4 h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_18px_rgba(74,222,128,0.8)]" />
-            </div>
-          </div>
         </div>
       </div>
     </div>
