@@ -87,7 +87,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
         aria-label={open ? "Закрыть меню" : "Открыть меню"}
         onClick={() => setOpen((value) => !value)}
         className={cn(
-          "group relative z-50 flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.05] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_14px_28px_rgba(2,6,23,0.16)] backdrop-blur-xl transition-[background-color,border-color,box-shadow,transform] duration-300 ease-out hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70",
+          "group relative z-[80] flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.05] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_14px_28px_rgba(2,6,23,0.16)] backdrop-blur-xl transition-[background-color,border-color,box-shadow,transform] duration-300 ease-out hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70",
           open &&
             "border-primary/35 bg-primary/12 shadow-[0_0_0_1px_rgba(59,130,246,0.14),0_18px_44px_rgba(15,23,42,0.34),inset_0_1px_0_rgba(255,255,255,0.14)]",
         )}
@@ -116,14 +116,11 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
       </button>
 
       <div
-        className={cn("fixed inset-0 z-40 md:hidden", open ? "pointer-events-auto" : "pointer-events-none")}
+        className={cn("fixed inset-0 z-[70] md:hidden", open ? "pointer-events-auto" : "pointer-events-none")}
         aria-hidden={!open}
       >
         <div
-          className={cn(
-            "absolute inset-0 bg-[#020617]/0 transition-[background-color,backdrop-filter] duration-300 ease-out",
-            open && "bg-[#020617]/72 backdrop-blur-md",
-          )}
+          className="absolute inset-0 bg-transparent"
           onClick={() => setOpen(false)}
         />
 
@@ -133,15 +130,12 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
           aria-modal="true"
           aria-label="Мобильная навигация"
           className={cn(
-            "absolute inset-y-3 left-3 right-12 top-[5rem] flex max-w-[23rem] origin-top-left flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-[#060a14]/96 shadow-[0_24px_80px_rgba(2,6,23,0.58),0_0_0_1px_rgba(125,211,252,0.08)] backdrop-blur-2xl transition-[transform,opacity] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] sm:right-auto sm:w-[23rem]",
-            open ? "translate-x-0 translate-y-0 opacity-100" : "-translate-x-8 -translate-y-2 opacity-0",
+            "absolute left-3 right-3 top-[5.35rem] flex max-h-[calc(100dvh-6.1rem)] origin-top flex-col overflow-hidden rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(9,14,24,0.94))] shadow-[0_20px_48px_rgba(2,6,23,0.32),0_0_0_1px_rgba(148,163,184,0.06)] backdrop-blur-2xl transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] sm:left-4 sm:right-4",
+            open ? "translate-y-0 scale-100 opacity-100" : "-translate-y-3 scale-[0.985] opacity-0",
           )}
           onClick={(event) => event.stopPropagation()}
         >
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-300/65 to-transparent" />
-          <div className="absolute -left-12 top-8 h-32 w-32 rounded-full bg-sky-400/10 blur-3xl" />
-          <div className="absolute -right-14 top-0 h-40 w-40 rounded-full bg-amber-400/10 blur-3xl" />
-          <div className="absolute bottom-0 left-8 h-28 w-28 rounded-full bg-primary/10 blur-3xl" />
 
           <div className="relative flex items-start justify-between gap-4 border-b border-white/10 px-4 pb-4 pt-4">
             <div className="min-w-0">
@@ -175,10 +169,10 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
                     href={link.href}
                     className={cn(
                       "group flex min-h-[60px] items-center gap-3 overflow-hidden rounded-[1.4rem] px-3.5 py-3 text-zinc-200 transition-[background-color,transform,color,box-shadow,border-color] duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70",
-                      "hover:bg-white/[0.05] hover:text-white active:scale-[0.985]",
+                      "hover:bg-white/[0.055] hover:text-white active:scale-[0.985]",
                       open && "animate-mobile-menu-item",
                       active &&
-                        "bg-white/[0.08] text-white shadow-[inset_0_0_0_1px_rgba(96,165,250,0.24),0_14px_30px_rgba(2,6,23,0.18)]",
+                        "bg-sky-400/[0.08] text-white shadow-[inset_0_0_0_1px_rgba(96,165,250,0.24),0_10px_24px_rgba(2,6,23,0.16)]",
                     )}
                     style={{ animationDelay: `${100 + index * 46}ms` }}
                     onClick={() => setOpen(false)}
@@ -216,7 +210,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
           </nav>
 
           <div className="relative border-t border-white/10 px-4 py-4">
-            <div className="flex items-center justify-between rounded-[1.4rem] border border-white/10 bg-white/[0.03] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+            <div className="flex items-center justify-between rounded-[1.4rem] border border-white/10 bg-white/[0.045] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium text-white">eFootball Nexon</div>
                 <div className="mt-1 text-xs text-zinc-500">Турниры, рейтинг и профиль в одном месте</div>
