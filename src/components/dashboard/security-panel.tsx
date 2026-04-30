@@ -334,14 +334,9 @@ export function SecurityPanel({
       try {
         if (typeof window === "undefined") return;
 
-        const host = window.location.hostname.toLowerCase();
-        const protocol = window.location.protocol;
-        const canonicalOrigin =
-          host === "efootball-nexon.ru" ? `${protocol}//www.efootball-nexon.ru` : window.location.origin;
-
         await startVkIdAuth({
           mode: "bind",
-          callbackUrl: `${canonicalOrigin}${callbackPath}`,
+          callbackUrl: `${window.location.origin}${callbackPath}`,
         }, vkAppId);
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Не удалось запустить привязку VK.");

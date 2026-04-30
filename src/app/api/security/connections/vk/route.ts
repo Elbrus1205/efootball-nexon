@@ -1,11 +1,23 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth/session";
+import { getCurrentSession } from "@/lib/auth/session";
 import { fetchVkUserProfile } from "@/lib/auth/vk";
 
 export async function POST(request: Request) {
   try {
-    const session = await requireAuth();
+    const session = await getCurrentSession();
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Сессия истекла. Войдите снова и повторите привязку VK." },
+        { status: 401 },
+      );
+    }
+
+    if (session.user.isBanned) {
+      return NextResponse.json({ error: "Аккаунт заблокирован." }, { status: 403 });
+    }
+
     const payload = (await request.json().catch(() => null)) as { accessToken?: string } | null;
 
     if (!payload?.accessToken) {
