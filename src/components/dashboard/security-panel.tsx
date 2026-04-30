@@ -2,18 +2,18 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
   Clock3,
   KeyRound,
   Laptop2,
+  Mail,
   MapPin,
   Minus,
-  Phone,
   Plus,
   ShieldAlert,
+  ShieldCheck,
   Smartphone,
   Trash2,
 } from "lucide-react";
@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { formatPhoneNumber } from "@/lib/phone";
+import { TelegramConnect } from "@/components/dashboard/telegram-connect";
 import { cn } from "@/lib/utils";
 import { startVkIdAuth } from "@/lib/vkid-client";
 
@@ -55,11 +55,11 @@ function SecuritySection({
   sectionId: string;
   isOpen: boolean;
   onToggle: (sectionId: string) => void;
-  icon: ReactNode;
+  icon: React.ReactNode;
   title: string;
   description: string;
-  status?: ReactNode;
-  children: ReactNode;
+  status?: React.ReactNode;
+  children: React.ReactNode;
 }) {
   return (
     <Card className="rounded-[28px] border border-white/10 bg-[#11151d] p-0">
@@ -106,12 +106,15 @@ function DangerSection({
   onToggle,
   hasPassword,
   hasBoundEmail,
+  telegramLinked,
   confirmPassword,
   emailCode,
+  telegramCode,
   pending,
   codePending,
   onPasswordChange,
   onEmailCodeChange,
+  onTelegramCodeChange,
   onSendCodes,
   onDelete,
 }: {
@@ -119,12 +122,15 @@ function DangerSection({
   onToggle: () => void;
   hasPassword: boolean;
   hasBoundEmail: boolean;
+  telegramLinked: boolean;
   confirmPassword: string;
   emailCode: string;
+  telegramCode: string;
   pending: boolean;
   codePending: boolean;
   onPasswordChange: (value: string) => void;
   onEmailCodeChange: (value: string) => void;
+  onTelegramCodeChange: (value: string) => void;
   onSendCodes: () => void;
   onDelete: () => void;
 }) {
@@ -166,7 +172,7 @@ function DangerSection({
               <div className="mb-4 space-y-1">
                 <div className="text-sm font-semibold text-white">Подтвердите удаление аккаунта</div>
                 <div className="text-sm text-zinc-400">
-                  Пароль от аккаунта обязателен всегда. Если к аккаунту привязана почта, для удаления дополнительно нужен код из письма.
+                  Пароль от аккаунта обязателен всегда. Коды с почты и из Telegram нужны только если эти привязки есть у аккаунта. После подтверждения профиль будет удалён навсегда.
                 </div>
               </div>
 
@@ -183,7 +189,7 @@ function DangerSection({
                 </div>
 
                 {hasBoundEmail ? (
-                  <div className="space-y-2 md:col-span-2">
+                  <div className="space-y-2">
                     <Label htmlFor="dangerEmailCode">Код из письма</Label>
                     <Input
                       id="dangerEmailCode"
@@ -194,9 +200,21 @@ function DangerSection({
                     />
                   </div>
                 ) : null}
+                {telegramLinked ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="dangerTelegramCode">Код из Telegram</Label>
+                    <Input
+                      id="dangerTelegramCode"
+                      inputMode="numeric"
+                      placeholder="6-значный код из Telegram"
+                      value={telegramCode}
+                      onChange={(event) => onTelegramCodeChange(event.target.value)}
+                    />
+                  </div>
+                ) : null}
               </div>
 
-              {hasBoundEmail ? (
+              {hasBoundEmail || telegramLinked ? (
                 <div className="mt-4 flex justify-end">
                   <Button
                     type="button"
@@ -205,14 +223,16 @@ function DangerSection({
                     disabled={codePending || !hasPassword}
                     onClick={onSendCodes}
                   >
-                    {codePending ? "Отправляем код..." : "Получить код"}
+                    {codePending ? "Отправляем коды..." : "Получить коды"}
                   </Button>
                 </div>
-              ) : (
+              ) : null}
+
+              {!hasBoundEmail && !telegramLinked ? (
                 <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-300">
-                  У аккаунта нет привязанной почты, поэтому для удаления нужен только пароль.
+                  У аккаунта нет привязанной почты и Telegram, поэтому для удаления нужен только пароль.
                 </div>
-              )}
+              ) : null}
 
               {!hasPassword ? (
                 <div className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
@@ -221,7 +241,7 @@ function DangerSection({
               ) : null}
 
               <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/8 px-4 py-3 text-sm text-red-100/85">
-                Если это были не вы, просто закройте этот раздел. Никому не передавайте пароль и коды подтверждения.
+                Если это были не вы, просто закройте этот раздел. Никому не передавайте коды подтверждения.
               </div>
             </div>
 
@@ -229,12 +249,22 @@ function DangerSection({
               <Button
                 type="button"
                 className="bg-red-500 text-white hover:bg-red-400"
-                disabled={pending || !hasPassword || confirmPassword.trim().length === 0 || (hasBoundEmail && emailCode.trim().length < 6)}
+                disabled={
+                  pending ||
+                  !hasPassword ||
+                  confirmPassword.trim().length === 0 ||
+                  (hasBoundEmail && emailCode.trim().length < 6) ||
+                  (telegramLinked && telegramCode.trim().length < 6)
+                }
                 onClick={onDelete}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 {pending ? "Удаляем аккаунт..." : "Удалить аккаунт"}
               </Button>
+            </div>
+
+            <div className="rounded-2xl border border-red-500/20 bg-red-500/8 px-4 py-3 text-sm text-red-100/85">
+              После подтверждения аккаунт будет удалён без возможности восстановления.
             </div>
           </div>
         </div>
@@ -244,50 +274,60 @@ function DangerSection({
 }
 
 export function SecurityPanel({
-  currentPhone,
   currentEmail,
   emailVerified,
   hasPassword,
+  telegramLinked,
+  telegramHandle,
+  telegram2faEnabled,
+  telegramEnabled,
+  telegramClientId,
   vkAppId,
   vkLinked,
   sessions,
 }: {
-  currentPhone: string;
   currentEmail: string;
   emailVerified: boolean;
   hasPassword: boolean;
+  telegramLinked: boolean;
+  telegramHandle: string | null;
+  telegram2faEnabled: boolean;
+  telegramEnabled: boolean;
+  telegramClientId?: string;
   vkAppId?: string;
   vkLinked: boolean;
   sessions: SecuritySessionItem[];
 }) {
   const router = useRouter();
-  const [phonePending, startPhoneTransition] = useTransition();
   const [passwordPending, startPasswordTransition] = useTransition();
   const [emailPending, startEmailTransition] = useTransition();
   const [sessionsPending, startSessionsTransition] = useTransition();
   const [verificationPending, startVerificationTransition] = useTransition();
   const [passwordCodePending, startPasswordCodeTransition] = useTransition();
+  const [twoFactorPending, startTwoFactorTransition] = useTransition();
   const [accountDeletePending, startAccountDeleteTransition] = useTransition();
   const [accountDeleteCodePending, startAccountDeleteCodeTransition] = useTransition();
 
-  const [phone, setPhone] = useState(formatPhoneNumber(currentPhone));
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
   const [passwordCode, setPasswordCode] = useState("");
+
   const [email, setEmail] = useState(currentEmail);
   const [verificationCode, setVerificationCode] = useState("");
   const [emailVerifiedState, setEmailVerifiedState] = useState(emailVerified);
+
+  const [telegram2faEnabledState, setTelegram2faEnabledState] = useState(telegram2faEnabled);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [twoFactorChallengeToken, setTwoFactorChallengeToken] = useState("");
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteEmailCode, setDeleteEmailCode] = useState("");
-  const [openSection, setOpenSection] = useState<string | null>("contacts");
+  const [deleteTelegramCode, setDeleteTelegramCode] = useState("");
+  const [deleteTelegramChallengeToken, setDeleteTelegramChallengeToken] = useState("");
 
-  const hasBoundPhone = phone.trim().length > 0;
+  const [openSection, setOpenSection] = useState<string | null>("password");
+
   const hasBoundEmail = email.trim().length > 0;
-
-  const toggleSection = (sectionId: string) => {
-    setOpenSection((current) => (current === sectionId ? null : sectionId));
-  };
 
   const startVkAuth = (callbackPath: string) => {
     void (async () => {
@@ -299,37 +339,14 @@ export function SecurityPanel({
         const canonicalOrigin =
           host === "efootball-nexon.ru" ? `${protocol}//www.efootball-nexon.ru` : window.location.origin;
 
-        await startVkIdAuth(
-          {
-            mode: "bind",
-            callbackUrl: `${canonicalOrigin}${callbackPath}`,
-          },
-          vkAppId,
-        );
+        await startVkIdAuth({
+          mode: "bind",
+          callbackUrl: `${canonicalOrigin}${callbackPath}`,
+        }, vkAppId);
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Не удалось запустить привязку VK.");
       }
     })();
-  };
-
-  const changePhone = () => {
-    startPhoneTransition(async () => {
-      const res = await fetch("/api/security/phone", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
-      });
-
-      const payload = await res.json().catch(() => null);
-      if (!res.ok) {
-        toast.error(payload?.error || "Не удалось обновить номер телефона.");
-        return;
-      }
-
-      setPhone(formatPhoneNumber(payload?.phone ?? phone));
-      toast.success("Номер телефона обновлён.");
-      router.refresh();
-    });
   };
 
   const changePassword = () => {
@@ -442,6 +459,51 @@ export function SecurityPanel({
     });
   };
 
+  const sendTwoFactorCode = () => {
+    startTwoFactorTransition(async () => {
+      const res = await fetch("/api/security/2fa/telegram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "send" }),
+      });
+
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast.error(payload?.error || "Не удалось отправить код в Telegram.");
+        return;
+      }
+
+      setTwoFactorChallengeToken(payload?.challengeToken ?? "");
+      toast.success("Код отправлен в Telegram-бот.");
+    });
+  };
+
+  const verifyTwoFactorCode = () => {
+    startTwoFactorTransition(async () => {
+      const res = await fetch("/api/security/2fa/telegram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "verify",
+          challengeToken: twoFactorChallengeToken,
+          code: twoFactorCode,
+        }),
+      });
+
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast.error(payload?.error || "Не удалось подтвердить код 2FA.");
+        return;
+      }
+
+      setTelegram2faEnabledState(Boolean(payload?.enabled));
+      setTwoFactorCode("");
+      setTwoFactorChallengeToken("");
+      toast.success(payload?.enabled ? "2FA через Telegram включена." : "2FA через Telegram отключена.");
+      router.refresh();
+    });
+  };
+
   const revokeSession = (authSessionId: string) => {
     startSessionsTransition(async () => {
       const res = await fetch("/api/security/sessions", {
@@ -496,22 +558,38 @@ export function SecurityPanel({
 
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        toast.error(payload?.error || "Не удалось отправить код подтверждения.");
+        toast.error(payload?.error || "Не удалось отправить коды подтверждения.");
         return;
       }
 
-      toast.success(payload?.emailSent ? "Код отправлен на почту." : "Подтверждение готово.");
+      setDeleteTelegramChallengeToken(payload?.telegramChallengeToken ?? "");
+      if (payload?.emailSent && payload?.telegramSent) {
+        toast.success("Коды отправлены на почту и в Telegram.");
+      } else if (payload?.emailSent) {
+        toast.success("Код отправлен на почту.");
+      } else if (payload?.telegramSent) {
+        toast.success("Код отправлен в Telegram.");
+      } else {
+        toast.success("Коды подтверждения не требуются.");
+      }
     });
   };
 
   const deleteAccount = () => {
     startAccountDeleteTransition(async () => {
+      if (telegramLinked && !deleteTelegramChallengeToken) {
+        toast.error("Сначала нажмите «Получить коды».");
+        return;
+      }
+
       const res = await fetch("/api/security/account", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           password: deletePassword,
           emailCode: deleteEmailCode,
+          telegramCode: deleteTelegramCode,
+          telegramChallengeToken: deleteTelegramChallengeToken,
         }),
       });
 
@@ -521,7 +599,6 @@ export function SecurityPanel({
         return;
       }
 
-      toast.success("Аккаунт удалён.");
       await signOut({
         redirect: true,
         callbackUrl: "/",
@@ -529,152 +606,43 @@ export function SecurityPanel({
     });
   };
 
+  const toggleSection = (sectionId: string) => {
+    setOpenSection((current) => (current === sectionId ? null : sectionId));
+  };
+
   return (
     <>
-      <SecuritySection
-        sectionId="contacts"
-        isOpen={openSection === "contacts"}
-        onToggle={toggleSection}
-        icon={<Phone className="h-5 w-5" />}
-        title="Контакты и вход"
-        description="Телефон теперь используется для обычного входа, email нужен для восстановления и подтверждений, VK можно держать как быстрый вход."
-        status={<Badge variant={hasBoundPhone || hasBoundEmail || vkLinked ? "success" : "neutral"}>{[hasBoundPhone, hasBoundEmail, vkLinked].filter(Boolean).length}/3 подключено</Badge>}
-      >
-        <div className="grid gap-4 lg:grid-cols-3">
-          <div className="rounded-[26px] border border-white/10 bg-black/20 p-4 sm:p-5">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <div className="text-sm font-semibold text-white">Телефон</div>
-                <div className="text-sm text-zinc-400">Основной логин для входа на сайт.</div>
-              </div>
-              <Badge variant={hasBoundPhone ? "success" : "neutral"}>{hasBoundPhone ? "Подключён" : "Не указан"}</Badge>
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="phone">Номер телефона</Label>
-                <Input id="phone" type="tel" inputMode="tel" placeholder="+7 999 123-45-67" value={phone} onChange={(e) => setPhone(e.target.value)} />
-              </div>
-              <Button disabled={phonePending || phone.trim().length === 0} onClick={changePhone}>
-                {phonePending ? "Сохраняем..." : "Сохранить телефон"}
-              </Button>
-            </div>
-          </div>
-
-          <div className="rounded-[26px] border border-white/10 bg-black/20 p-4 sm:p-5">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <div className="text-sm font-semibold text-white">Email</div>
-                <div className="text-sm text-zinc-400">Почта нужна для восстановления доступа, смены пароля и подтверждений.</div>
-              </div>
-              <Badge variant={hasBoundEmail ? (emailVerifiedState ? "success" : "accent") : "neutral"}>
-                {hasBoundEmail ? (emailVerifiedState ? "Подтверждён" : "Не подтверждён") : "Не привязан"}
-              </Badge>
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">{hasBoundEmail ? "Текущий email" : "Email для привязки"}</Label>
-                <Input id="email" type="email" value={email} placeholder="Введите email" onChange={(e) => setEmail(e.target.value)} />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <Button disabled={emailPending || email.trim().length === 0} onClick={changeEmail}>
-                  {emailPending ? "Сохраняем..." : hasBoundEmail ? "Изменить email" : "Привязать почту"}
-                </Button>
-                {!emailVerifiedState && hasBoundEmail ? (
-                  <Button variant="outline" disabled={verificationPending || email.trim().length === 0} onClick={sendVerificationCode}>
-                    {verificationPending ? "Отправляем..." : "Отправить код"}
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-[26px] border border-white/10 bg-black/20 p-4 sm:p-5">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <div className="text-sm font-semibold text-white">VK</div>
-                <div className="text-sm text-zinc-400">Быстрый вход и регистрация через VK ID.</div>
-              </div>
-              <Badge variant={vkLinked ? "success" : "neutral"}>{vkLinked ? "Подключён" : "Не подключён"}</Badge>
-            </div>
-
-            {vkLinked ? (
-              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-                VK уже подключён к вашему аккаунту.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-300">
-                  Войдите через VK, чтобы подключить его к текущему аккаунту.
-                </div>
-                <Button className="w-full" onClick={() => startVkAuth("/dashboard/security")}>
-                  Подключить VK
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {!emailVerifiedState && hasBoundEmail ? (
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-              <div className="space-y-2">
-                <Label htmlFor="verificationCode">Код подтверждения</Label>
-                <Input
-                  id="verificationCode"
-                  inputMode="numeric"
-                  placeholder="Введите код из письма"
-                  value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value)}
-                />
-              </div>
-              <Button disabled={verificationPending || verificationCode.trim().length < 6} onClick={verifyEmailCode}>
-                {verificationPending ? "Проверяем..." : "Подтвердить email"}
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </SecuritySection>
-
       <SecuritySection
         sectionId="password"
         isOpen={openSection === "password"}
         onToggle={toggleSection}
         icon={<KeyRound className="h-5 w-5" />}
-        title="Пароль"
-        description="Используйте пароль для обычного входа по телефону. Смена пароля подтверждается кодом, отправленным на почту."
-        status={<Badge variant={hasPassword ? "success" : "neutral"}>{hasPassword ? "Создан" : "Не создан"}</Badge>}
+        title={hasPassword ? "Смена пароля" : "Создать пароль"}
+        description={
+          hasPassword
+            ? "Обновите пароль, чтобы защитить аккаунт и закрыть доступ со старых данных."
+            : "Задайте пароль для входа по почте, если аккаунт был создан через Telegram или VK."
+        }
+        status={<Badge variant="success">Защита включена</Badge>}
       >
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-300">
-          {hasPassword
-            ? "Пароль уже создан. Перед сменой отправьте код на привязанную почту."
-            : "Если аккаунт был создан через VK, сначала привяжите почту и задайте пароль, чтобы входить по телефону."}
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="currentPassword">Текущий пароль</Label>
-            <Input
-              id="currentPassword"
-              type="password"
-              placeholder={hasPassword ? "Введите текущий пароль" : "Пароль пока не создан"}
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-            />
-          </div>
+        <div className={cn("grid gap-4", hasPassword ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
+          {hasPassword ? (
+            <div className="space-y-2">
+              <Label htmlFor="currentPassword">Текущий пароль</Label>
+              <Input
+                id="currentPassword"
+                type="password"
+                placeholder="Введите текущий пароль"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+              />
+            </div>
+          ) : null}
           <div className="space-y-2">
             <Label htmlFor="newPassword">Новый пароль</Label>
-            <Input
-              id="newPassword"
-              type="password"
-              placeholder="Минимум 8 символов"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-            />
+            <Input id="newPassword" type="password" placeholder="Новый пароль" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
           </div>
-          <div className="space-y-2 sm:col-span-2">
+          <div className="space-y-2">
             <Label htmlFor="repeatPassword">Повторите пароль</Label>
             <Input
               id="repeatPassword"
@@ -696,7 +664,9 @@ export function SecurityPanel({
               value={passwordCode}
               onChange={(e) => setPasswordCode(e.target.value)}
             />
-            <div className="text-sm text-zinc-400">Перед сохранением отправьте код на привязанную почту и подтвердите им создание или смену пароля.</div>
+            <div className="text-sm text-zinc-400">
+              Перед сохранением отправьте код на привязанную почту и подтвердите им создание или смену пароля.
+            </div>
           </div>
           <Button variant="outline" disabled={passwordCodePending || !hasBoundEmail} onClick={sendPasswordCode}>
             {passwordCodePending ? "Отправляем..." : "Отправить код"}
@@ -714,11 +684,191 @@ export function SecurityPanel({
                 <Link href="/forgot-password">Забыли пароль?</Link>
               </Button>
             ) : null}
-            <Button disabled={passwordPending || !hasBoundEmail} onClick={changePassword}>
+            <Button disabled={passwordPending} onClick={changePassword}>
               {passwordPending ? "Сохраняем..." : hasPassword ? "Сохранить новый пароль" : "Создать пароль"}
             </Button>
           </div>
         </div>
+      </SecuritySection>
+
+      <SecuritySection
+        sectionId="email"
+        isOpen={openSection === "email"}
+        onToggle={toggleSection}
+        icon={<Mail className="h-5 w-5" />}
+        title="Привязки аккаунта"
+        description="Управляйте почтой, Telegram и VK в одном месте. Telegram и VK после привязки может изменить только администратор."
+        status={
+          <Badge variant={hasBoundEmail || telegramLinked || vkLinked ? "success" : "neutral"}>
+            {[hasBoundEmail, telegramLinked, vkLinked].filter(Boolean).length}/3 подключено
+          </Badge>
+        }
+      >
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="rounded-[26px] border border-white/10 bg-black/20 p-4 sm:p-5">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="text-sm font-semibold text-white">Email</div>
+                <div className="text-sm text-zinc-400">
+                  Почта нужна для входа, подтверждений, смены пароля и восстановления доступа.
+                </div>
+              </div>
+              <Badge variant={hasBoundEmail ? (emailVerifiedState ? "success" : "accent") : "neutral"}>
+                {hasBoundEmail ? (emailVerifiedState ? "Подтверждён" : "Не подтверждён") : "Не привязан"}
+              </Badge>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">{hasBoundEmail ? "Текущий email" : "Email для привязки"}</Label>
+                <Input id="email" type="email" value={email} placeholder="Введите email" onChange={(e) => setEmail(e.target.value)} />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Button disabled={emailPending || email.trim().length === 0} onClick={changeEmail}>
+                  {emailPending ? "Сохраняем..." : hasBoundEmail ? "Изменить email" : "Привязать почту"}
+                </Button>
+                {!emailVerifiedState ? (
+                  <Button variant="outline" disabled={verificationPending || email.trim().length === 0} onClick={sendVerificationCode}>
+                    {verificationPending ? "Отправляем..." : "Отправить код"}
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[26px] border border-white/10 bg-black/20 p-4 sm:p-5">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="text-sm font-semibold text-white">Telegram</div>
+                <div className="text-sm text-zinc-400">Вход через Telegram и коды 2FA в нашем боте.</div>
+              </div>
+              <Badge variant={telegramLinked ? "success" : "neutral"}>
+                {telegramLinked ? "Подключён" : "Не подключён"}
+              </Badge>
+            </div>
+
+            <TelegramConnect
+              enabled={telegramEnabled}
+              clientId={telegramClientId}
+              linked={telegramLinked}
+              telegramHandle={telegramHandle}
+            />
+          </div>
+
+          <div className="rounded-[26px] border border-white/10 bg-black/20 p-4 sm:p-5">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="text-sm font-semibold text-white">VK</div>
+                <div className="text-sm text-zinc-400">Быстрый вход и регистрация через VK ID.</div>
+              </div>
+              <Badge variant={vkLinked ? "success" : "neutral"}>
+                {vkLinked ? "Подключён" : "Не подключён"}
+              </Badge>
+            </div>
+
+            {vkLinked ? (
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+                VK уже подключён к вашему аккаунту.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-300">
+                  Войдите через VK, чтобы подключить его к текущему аккаунту.
+                </div>
+                <Button className="w-full" onClick={() => startVkAuth("/dashboard/security")}>
+                  Подключить VK
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {!emailVerifiedState ? (
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+              <div className="space-y-2">
+                <Label htmlFor="verificationCode">Код подтверждения</Label>
+                <Input
+                  id="verificationCode"
+                  inputMode="numeric"
+                  placeholder="Введите код из письма"
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
+                />
+              </div>
+              <Button disabled={verificationPending || verificationCode.trim().length < 6} onClick={verifyEmailCode}>
+                {verificationPending ? "Проверяем..." : "Подтвердить email"}
+              </Button>
+            </div>
+            <div className="mt-3 text-sm text-zinc-400">
+              После привязки или смены почты на этот адрес придёт письмо с 6-значным кодом.
+            </div>
+          </div>
+        ) : null}
+
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-400">
+          Telegram и VK можно подключить один раз. Для смены привязки обратитесь к администратору.
+        </div>
+      </SecuritySection>
+
+      <SecuritySection
+        sectionId="2fa"
+        isOpen={openSection === "2fa"}
+        onToggle={toggleSection}
+        icon={<ShieldCheck className="h-5 w-5" />}
+        title="Двухфакторная аутентификация (2FA)"
+        description="После ввода логина и пароля сайт попросит код, который мы отправим в вашего Telegram-бота."
+        status={<Badge variant={telegram2faEnabledState ? "success" : "neutral"}>{telegram2faEnabledState ? "Включена" : "Выключена"}</Badge>}
+      >
+        {!telegramLinked ? (
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-zinc-300">
+            Сначала привяжите Telegram к аккаунту через вход Telegram. После этого здесь можно будет включить 2FA через нашего бота.
+          </div>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="space-y-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div className="space-y-1">
+                <div className="text-sm font-medium text-white">Код через Telegram-бота</div>
+                <div className="text-sm text-zinc-400">
+                  Код будет отправляться в Telegram {telegramHandle ? `(@${telegramHandle})` : ""}. После входа на сайте появится второй шаг с вводом этого кода.
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-zinc-300">
+                {telegram2faEnabledState
+                  ? "2FA уже включена. Для отключения тоже потребуется код из Telegram."
+                  : "Включите 2FA, и после нажатия кнопки «Войти» сайт будет просить код из Telegram-бота."}
+              </div>
+              <Button className="sm:w-auto" disabled={twoFactorPending} onClick={sendTwoFactorCode}>
+                {twoFactorPending ? "Отправляем..." : telegram2faEnabledState ? "Отправить код на отключение" : "Отправить код на включение"}
+              </Button>
+            </div>
+
+            <div className="space-y-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div className="space-y-1">
+                <div className="text-sm font-medium text-white">Подтверждение</div>
+                <div className="text-sm text-zinc-400">Введите код, который бот прислал вам в Telegram.</div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="twoFactorCode">Код 2FA</Label>
+                <Input
+                  id="twoFactorCode"
+                  inputMode="numeric"
+                  placeholder="Введите 6-значный код"
+                  value={twoFactorCode}
+                  onChange={(e) => setTwoFactorCode(e.target.value)}
+                />
+              </div>
+              <Button
+                className="w-full"
+                disabled={twoFactorPending || twoFactorCode.trim().length < 6 || !twoFactorChallengeToken}
+                onClick={verifyTwoFactorCode}
+              >
+                {twoFactorPending ? "Проверяем..." : telegram2faEnabledState ? "Отключить 2FA" : "Включить 2FA"}
+              </Button>
+            </div>
+          </div>
+        )}
       </SecuritySection>
 
       <SecuritySection
@@ -757,16 +907,12 @@ export function SecurityPanel({
                     </span>
                   </div>
                   <div className="text-xs text-zinc-500">
-                    <span className="font-medium text-zinc-400">IP:</span> {item.ipAddress}
+                    <span className="font-medium text-zinc-400">IP:</span>{" "}
+                    {item.ipAddress}
                   </div>
                 </div>
               </div>
-              <Button
-                variant={item.current ? "outline" : "secondary"}
-                className="sm:w-auto"
-                disabled={sessionsPending || item.current}
-                onClick={() => revokeSession(item.id)}
-              >
+              <Button variant={item.current ? "outline" : "secondary"} className="sm:w-auto" disabled={sessionsPending || item.current} onClick={() => revokeSession(item.id)}>
                 {item.current ? "Это устройство" : "Завершить"}
               </Button>
             </div>
@@ -778,21 +924,25 @@ export function SecurityPanel({
           </Button>
         </div>
       </SecuritySection>
-
       <DangerSection
         isOpen={openSection === "danger"}
         onToggle={() => toggleSection("danger")}
         hasPassword={hasPassword}
         hasBoundEmail={hasBoundEmail}
+        telegramLinked={telegramLinked}
         confirmPassword={deletePassword}
         emailCode={deleteEmailCode}
+        telegramCode={deleteTelegramCode}
         pending={accountDeletePending}
         codePending={accountDeleteCodePending}
         onPasswordChange={setDeletePassword}
         onEmailCodeChange={setDeleteEmailCode}
+        onTelegramCodeChange={setDeleteTelegramCode}
         onSendCodes={sendAccountDeletionCodes}
         onDelete={deleteAccount}
       />
     </>
   );
 }
+
+

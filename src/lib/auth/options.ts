@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { LoginAttemptStatus } from "@prisma/client";
+import { LoginAttemptStatus, UserRole } from "@prisma/client";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { compare, hash } from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
@@ -8,9 +8,13 @@ import { buildSecurityContext, createLoginHistory, createSecuritySession, touchS
 import { fetchVkUserProfile } from "@/lib/auth/vk";
 import { db } from "@/lib/db";
 import { getLegalAcceptanceData, isLegalAccepted } from "@/lib/legal-acceptance";
-import { formatPhoneNumber, normalizeAuthIdentifier } from "@/lib/phone";
+import { generateFallbackNickname } from "@/lib/player-name";
 import { generateUniquePublicPlayerId } from "@/lib/public-player-id";
+import { finalizeTelegramBotLogin, logTelegramBotAuth } from "@/lib/telegram-bot-auth";
+import { describeTelegramOidcError, verifyAndConsumeTelegramIdToken } from "@/lib/telegram-oidc-server";
+import { verifyTwoFactorChallenge } from "@/lib/two-factor";
 
+const TELEGRAM_ADMIN_ID = "6595067194";
 const FALLBACK_SECURITY_CONTEXT = {
   device: "Текущее устройство",
   platform: "Не определено",
@@ -30,38 +34,34 @@ export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       id: "credentials",
-      name: "Phone",
+      name: "Email",
       credentials: {
-        phone: { label: "Phone", type: "text" },
+        email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        twoFactorCode: { label: "2FA Code", type: "text" },
+        challengeToken: { label: "2FA Challenge", type: "text" },
       },
       async authorize(credentials, req) {
-        if (!credentials?.phone || !credentials.password) return null;
+        if (!credentials?.email || !credentials.password) return null;
 
-        const parsedIdentifier = normalizeAuthIdentifier(credentials.phone);
-        if (parsedIdentifier.type === "unknown") return null;
+        const normalizedEmail = credentials.email.trim().toLowerCase();
         const rawPassword = credentials.password;
         const trimmedPassword = rawPassword.trim();
         const context = buildSecurityContext(req?.headers);
 
         const user = await db.user.findFirst({
-          where:
-            parsedIdentifier.type === "email"
-              ? {
-                  email: {
-                    equals: parsedIdentifier.value,
-                    mode: "insensitive",
-                  },
-                }
-              : {
-                  phone: parsedIdentifier.value,
-                },
+          where: {
+            email: {
+              equals: normalizedEmail,
+              mode: "insensitive",
+            },
+          },
         });
 
         if (!user?.passwordHash || user.isBanned) {
           await createLoginHistory({
             userId: user?.id,
-            identifier: parsedIdentifier.value,
+            email: normalizedEmail,
             status: LoginAttemptStatus.FAILED,
             context,
           });
@@ -99,11 +99,28 @@ export const authOptions: NextAuthOptions = {
         if (!isValid) {
           await createLoginHistory({
             userId: user.id,
-            identifier: parsedIdentifier.value,
+            email: normalizedEmail,
             status: LoginAttemptStatus.FAILED,
             context,
           });
           return null;
+        }
+
+        if (user.telegram2faEnabled) {
+          if (!credentials.twoFactorCode || !credentials.challengeToken) {
+            return null;
+          }
+
+          const verifiedChallenge = await verifyTwoFactorChallenge({
+            userId: user.id,
+            token: credentials.challengeToken,
+            code: credentials.twoFactorCode,
+            purpose: "LOGIN",
+          });
+
+          if (!verifiedChallenge) {
+            return null;
+          }
         }
 
         if (matchedPassword !== rawPassword) {
@@ -122,7 +139,7 @@ export const authOptions: NextAuthOptions = {
 
         await createLoginHistory({
           userId: user.id,
-          identifier: parsedIdentifier.value,
+          email: normalizedEmail,
           status: LoginAttemptStatus.SUCCESS,
           context,
         });
@@ -131,7 +148,7 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           image: user.image,
-          name: (user.name ?? user.nickname ?? formatPhoneNumber(user.phone)) || user.email || "Player",
+          name: user.name ?? user.nickname ?? user.email ?? "Player",
           role: user.role,
           nickname: user.nickname,
           efootballUid: user.efootballUid,
@@ -229,6 +246,165 @@ export const authOptions: NextAuthOptions = {
           isBanned: user.isBanned,
           authSessionId,
         };
+      },
+    }),
+    CredentialsProvider({
+      id: "telegram",
+      name: "Telegram",
+      credentials: {
+        idToken: { label: "Telegram ID Token", type: "text" },
+        legalAccepted: { label: "Legal Accepted", type: "text" },
+      },
+      async authorize(credentials, req) {
+        const context = buildSecurityContext(req?.headers);
+        const idToken = credentials?.idToken?.trim();
+        if (!idToken) {
+          console.warn("[telegram-auth] missing-id-token");
+          return null;
+        }
+
+        let profile;
+        try {
+          profile = await verifyAndConsumeTelegramIdToken(idToken);
+        } catch (error) {
+          const described = describeTelegramOidcError(error);
+          console.warn("[telegram-auth] id-token-verification-failed", {
+            error: described.message,
+            cause: described.cause,
+          });
+          return null;
+        }
+
+        const telegramId = profile.telegramId.trim();
+        const telegramUsername = profile.username?.trim() || generateFallbackNickname(telegramId);
+        const role = telegramId === TELEGRAM_ADMIN_ID ? UserRole.FOUNDER : UserRole.PLAYER;
+        const existingRoleUpdate = telegramId === TELEGRAM_ADMIN_ID ? UserRole.FOUNDER : undefined;
+        const acceptedLegalDocuments = isLegalAccepted(credentials?.legalAccepted);
+
+        let user = await db.user.findUnique({
+          where: { telegramId },
+        });
+
+        if (user) {
+          if (user.isBanned) {
+            console.warn("[telegram-auth] banned-user", { telegramId, userId: user.id });
+            await createLoginHistory({
+              userId: user.id,
+              email: user.email,
+              status: LoginAttemptStatus.FAILED,
+              context,
+            });
+            return null;
+          }
+
+          user = await db.user.update({
+            where: { id: user.id },
+            data: {
+              name: undefined,
+              telegramUsername: profile.username ?? null,
+              image: profile.picture || undefined,
+              role: existingRoleUpdate,
+              ...(!user.legalAcceptedAt && acceptedLegalDocuments ? getLegalAcceptanceData(req?.headers) : {}),
+            },
+          });
+          console.info("[telegram-auth] updated-existing-user", { telegramId, userId: user.id });
+        } else {
+          if (!acceptedLegalDocuments) {
+            console.warn("[telegram-auth] legal-acceptance-required", { telegramId });
+            return null;
+          }
+
+          user = await db.user.create({
+            data: {
+              publicId: await generateUniquePublicPlayerId(),
+              telegramId,
+              telegramUsername: profile.username ?? null,
+              image: profile.picture || undefined,
+              name: telegramUsername,
+              role,
+              ...getLegalAcceptanceData(req?.headers),
+            },
+          });
+          console.info("[telegram-auth] created-user", { telegramId, userId: user.id });
+        }
+
+        const normalizedCurrentName = user.name?.trim() || "";
+        if (!normalizedCurrentName) {
+          await db.user.update({
+            where: { id: user.id },
+            data: {
+              name: telegramUsername,
+            },
+          });
+          user.name = telegramUsername;
+        }
+
+        const authSessionId = await createSecuritySession({
+          userId: user.id,
+          context,
+        });
+
+        await createLoginHistory({
+          userId: user.id,
+          email: user.email,
+          status: LoginAttemptStatus.SUCCESS,
+          context,
+        });
+
+        console.info("[telegram-auth] authorize-success", {
+          telegramId,
+          userId: user.id,
+        });
+
+        return {
+          id: user.id,
+          email: user.email,
+          image: user.image,
+          name: user.name ?? "Telegram Player",
+          role: user.role,
+          nickname: user.nickname,
+          efootballUid: user.efootballUid,
+          isBanned: user.isBanned,
+          authSessionId,
+        };
+      },
+    }),
+    CredentialsProvider({
+      id: "telegram-bot",
+      name: "Telegram Bot",
+      credentials: {
+        token: { label: "Login Token", type: "text" },
+        legalAccepted: { label: "Legal Accepted", type: "text" },
+      },
+      async authorize(credentials, req) {
+        const loginToken = credentials?.token?.trim();
+        if (!loginToken) return null;
+        const context = buildSecurityContext(req?.headers);
+        const legalAcceptanceData = getLegalAcceptanceData(req?.headers);
+
+        try {
+          return await finalizeTelegramBotLogin(
+            {
+              db,
+              createLoginHistory,
+              createSecuritySession,
+              generateUniquePublicPlayerId,
+              getLegalAcceptanceData: () => legalAcceptanceData,
+            },
+            {
+              loginToken,
+              legalAcceptedFallback: isLegalAccepted(credentials?.legalAccepted),
+              context,
+            },
+          );
+        } catch (error) {
+          logTelegramBotAuth("login-failure", {
+            token: loginToken,
+            reason: "authorize-telegram-bot-exception",
+            error: error instanceof Error ? error.message : "unknown-error",
+          });
+          return null;
+        }
       },
     }),
   ],

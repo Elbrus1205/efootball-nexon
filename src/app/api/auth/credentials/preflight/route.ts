@@ -3,56 +3,51 @@ import { LoginAttemptStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { buildSecurityContext, createLoginHistory } from "@/lib/auth/security";
 import { db } from "@/lib/db";
-import { normalizeAuthIdentifier } from "@/lib/phone";
+import { createTelegramTwoFactorChallenge } from "@/lib/two-factor";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
-  const identifier = String(body?.phone ?? body?.email ?? "").trim();
-  const parsedIdentifier = normalizeAuthIdentifier(identifier);
+  const email = String(body?.email ?? "").trim().toLowerCase();
   const rawPassword = String(body?.password ?? "");
   const trimmedPassword = rawPassword.trim();
 
-  if (parsedIdentifier.type === "unknown" || !rawPassword) {
-    return NextResponse.json({ error: "Введите номер телефона и пароль." }, { status: 400 });
+  if (!email || !rawPassword) {
+    return NextResponse.json({ error: "Введите email и пароль." }, { status: 400 });
   }
 
   const context = buildSecurityContext(request.headers);
-  const where =
-    parsedIdentifier.type === "email"
-      ? {
-          email: {
-            equals: parsedIdentifier.value,
-            mode: "insensitive" as const,
-          },
-        }
-      : { phone: parsedIdentifier.value };
-
   const user = await db.user.findFirst({
-    where,
+    where: {
+      email: {
+        equals: email,
+        mode: "insensitive",
+      },
+    },
     select: {
       id: true,
       email: true,
-      phone: true,
       passwordHash: true,
       isBanned: true,
+      telegram2faEnabled: true,
+      telegramId: true,
     },
   });
 
   if (!user?.passwordHash) {
     await createLoginHistory({
       userId: user?.id,
-      identifier: parsedIdentifier.value,
+      email,
       status: LoginAttemptStatus.FAILED,
       context,
     });
 
-    return NextResponse.json({ error: "Неверный номер телефона/email или пароль." }, { status: 401 });
+    return NextResponse.json({ error: "Неверный email или пароль." }, { status: 401 });
   }
 
   if (user.isBanned) {
     await createLoginHistory({
       userId: user.id,
-      identifier: parsedIdentifier.value,
+      email,
       status: LoginAttemptStatus.FAILED,
       context,
     });
@@ -88,12 +83,31 @@ export async function POST(request: Request) {
   if (!isValid) {
     await createLoginHistory({
       userId: user.id,
-      identifier: parsedIdentifier.value,
+      email,
       status: LoginAttemptStatus.FAILED,
       context,
     });
 
-    return NextResponse.json({ error: "Неверный номер телефона/email или пароль." }, { status: 401 });
+    return NextResponse.json({ error: "Неверный email или пароль." }, { status: 401 });
+  }
+
+  if (user.telegram2faEnabled) {
+    if (!user.telegramId) {
+      return NextResponse.json({ error: "Для 2FA не привязан Telegram аккаунт." }, { status: 400 });
+    }
+
+    const challengeToken = await createTelegramTwoFactorChallenge({
+      userId: user.id,
+      telegramId: user.telegramId,
+      purpose: "LOGIN",
+      context,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      requiresTwoFactor: true,
+      challengeToken,
+    });
   }
 
   return NextResponse.json({

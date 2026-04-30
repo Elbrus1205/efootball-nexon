@@ -6,6 +6,8 @@ export default function LoginPage({
 }: {
   searchParams?: { banned?: string };
 }) {
+  const telegramClientId = process.env.TELEGRAM_CLIENT_ID;
+  const telegramEnabled = Boolean(telegramClientId);
   const vkAppId = process.env.NEXT_PUBLIC_VK_APP_ID ?? process.env.VK_CLIENT_ID;
 
   return (
@@ -15,7 +17,12 @@ export default function LoginPage({
           Аккаунт заблокирован навсегда. Вход закрыт.
         </Card>
       ) : null}
-      <AuthForm type="login" vkAppId={vkAppId} />
+      <AuthForm
+        type="login"
+        telegramEnabled={telegramEnabled}
+        telegramClientId={telegramClientId}
+        vkAppId={vkAppId}
+      />
     </div>
   );
 }

@@ -1,88 +1,119 @@
 import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth/session";
 import { getLegalAcceptanceData, LEGAL_ACCEPTANCE_REQUIRED_MESSAGE } from "@/lib/legal-acceptance";
-import { normalizePhoneNumber } from "@/lib/phone";
 import { generateUniquePublicPlayerId } from "@/lib/public-player-id";
+import { profileSchema, registerSchema } from "@/lib/validators";
 
 export async function POST(request: Request) {
-  const body = (await request.json().catch(() => null)) as
-    | {
-        phone?: string;
-        email?: string;
-        password?: string;
-        name?: string;
-        legalAccepted?: boolean;
-      }
-    | null;
+  const parsedBody = registerSchema.safeParse(await request.json());
 
-  const phoneInput = String(body?.phone ?? "");
-  const normalizedPhone = normalizePhoneNumber(phoneInput);
-  const normalizedEmail = String(body?.email ?? "").trim().toLowerCase() || null;
-  const password = String(body?.password ?? "");
-  const name = String(body?.name ?? "").trim();
-  const legalAccepted = Boolean(body?.legalAccepted);
+  if (!parsedBody.success) {
+    const fieldErrors = parsedBody.error.flatten().fieldErrors;
+    const error =
+      fieldErrors.legalAccepted?.[0] ??
+      fieldErrors.email?.[0] ??
+      fieldErrors.password?.[0] ??
+      fieldErrors.name?.[0] ??
+      LEGAL_ACCEPTANCE_REQUIRED_MESSAGE;
 
-  if (!legalAccepted) {
-    return NextResponse.json({ error: LEGAL_ACCEPTANCE_REQUIRED_MESSAGE }, { status: 400 });
+    return NextResponse.json({ error }, { status: 400 });
   }
 
-  if (!normalizedPhone) {
-    return NextResponse.json({ error: "Введите корректный номер телефона." }, { status: 400 });
-  }
-
-  if (normalizedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-    return NextResponse.json({ error: "Введите корректный email." }, { status: 400 });
-  }
-
-  if (password.trim().length < 8) {
-    return NextResponse.json({ error: "Пароль должен быть не короче 8 символов." }, { status: 400 });
-  }
-
-  if (name.length < 2) {
-    return NextResponse.json({ error: "Имя должно быть не короче 2 символов." }, { status: 400 });
-  }
-
-  const existingPhone = await db.user.findUnique({
-    where: { phone: normalizedPhone },
-    select: { id: true },
+  const body = parsedBody.data;
+  const normalizedEmail = body.email.trim().toLowerCase();
+  const existing = await db.user.findFirst({
+    where: {
+      email: {
+        equals: normalizedEmail,
+        mode: "insensitive",
+      },
+    },
   });
 
-  if (existingPhone) {
-    return NextResponse.json({ error: "Этот номер телефона уже используется." }, { status: 409 });
+  if (existing) {
+    return NextResponse.json({ error: "Email already exists" }, { status: 409 });
   }
 
-  if (normalizedEmail) {
-    const existingEmail = await db.user.findFirst({
-      where: {
-        email: {
-          equals: normalizedEmail,
-          mode: "insensitive",
-        },
-      },
-      select: { id: true },
-    });
-
-    if (existingEmail) {
-      return NextResponse.json({ error: "Этот email уже используется." }, { status: 409 });
-    }
-  }
-
-  const passwordHash = await hash(password, 10);
+  const passwordHash = await hash(body.password, 10);
 
   const user = await db.user.create({
     data: {
       publicId: await generateUniquePublicPlayerId(),
-      phone: normalizedPhone,
       email: normalizedEmail,
       passwordHash,
-      name,
+      name: body.name,
       ...getLegalAcceptanceData(request.headers),
     },
   });
 
-  return NextResponse.json({
-    ok: true,
-    userId: user.id,
+  return NextResponse.json({ userId: user.id });
+}
+
+export async function PATCH(request: Request) {
+  const session = await requireAuth();
+  const parsedBody = profileSchema.safeParse(await request.json());
+
+  if (!parsedBody.success) {
+    const fieldErrors = parsedBody.error.flatten().fieldErrors;
+    const error =
+      fieldErrors.name?.[0] ??
+      fieldErrors.favoriteTeam?.[0] ??
+      fieldErrors.bio?.[0] ??
+      fieldErrors.bannerImage?.[0] ??
+      fieldErrors.image?.[0] ??
+      "Не удалось проверить данные профиля.";
+
+    return NextResponse.json({ error }, { status: 400 });
+  }
+
+  const body = parsedBody.data;
+  const existingUser = await db.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      id: true,
+      name: true,
+      nameUpdatedAt: true,
+    },
   });
+
+  if (!existingUser) {
+    return NextResponse.json({ error: "Пользователь не найден." }, { status: 404 });
+  }
+
+  const normalizedName = body.name.trim();
+  const nameChanged = normalizedName !== (existingUser.name ?? "");
+
+  if (nameChanged && existingUser.nameUpdatedAt) {
+    const nextAvailableAt = new Date(existingUser.nameUpdatedAt);
+    nextAvailableAt.setMonth(nextAvailableAt.getMonth() + 6);
+
+    if (nextAvailableAt > new Date()) {
+      return NextResponse.json(
+        {
+          error: `Имя можно менять только раз в 6 месяцев. Следующая смена будет доступна после ${new Intl.DateTimeFormat("ru-RU", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }).format(nextAvailableAt)}.`,
+        },
+        { status: 400 },
+      );
+    }
+  }
+
+  const user = await db.user.update({
+    where: { id: session.user.id },
+    data: {
+      name: normalizedName,
+      ...(nameChanged ? { nameUpdatedAt: new Date() } : {}),
+      favoriteTeam: body.favoriteTeam || null,
+      bio: body.bio || null,
+      bannerImage: body.bannerImage || null,
+      image: body.image || null,
+    },
+  });
+
+  return NextResponse.json({ user });
 }

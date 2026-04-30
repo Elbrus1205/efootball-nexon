@@ -144,7 +144,6 @@ model User {
   publicId            String                   @unique
   name                String?
   nameUpdatedAt       DateTime?
-  phone               String?                  @unique
   email               String?                  @unique
   emailVerified       DateTime?
   image               String?

@@ -107,14 +107,13 @@ export function buildSecurityContext(headers: HeaderLike): SecurityContext {
 export async function createLoginHistory(params: {
   userId?: string | null;
   email?: string | null;
-  identifier?: string | null;
   status: LoginAttemptStatus;
   context: SecurityContext;
 }) {
   await db.loginHistory.create({
     data: {
       userId: params.userId ?? null,
-      email: params.email ?? params.identifier ?? null,
+      email: params.email ?? null,
       status: params.status,
       device: params.context.device,
       platform: params.context.platform,

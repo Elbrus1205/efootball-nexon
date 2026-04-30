@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { hashVerificationCode } from "@/lib/email";
 import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { verifyTwoFactorChallenge } from "@/lib/two-factor";
 import { securityAccountDeletionSchema } from "@/lib/validators";
 
 export async function DELETE(request: Request) {
@@ -16,6 +17,7 @@ export async function DELETE(request: Request) {
       id: true,
       email: true,
       passwordHash: true,
+      telegramId: true,
     },
   });
 
@@ -57,6 +59,27 @@ export async function DELETE(request: Request) {
 
     if (!emailRecord) {
       return NextResponse.json({ error: "Код из письма неверный или уже истёк." }, { status: 400 });
+    }
+  }
+
+  if (user.telegramId) {
+    if (!body.telegramCode || body.telegramCode.trim().length !== 6) {
+      return NextResponse.json({ error: "Введите код из Telegram." }, { status: 400 });
+    }
+
+    if (!body.telegramChallengeToken) {
+      return NextResponse.json({ error: "Сначала отправьте код в Telegram." }, { status: 400 });
+    }
+
+    const telegramRecord = await verifyTwoFactorChallenge({
+      userId: user.id,
+      token: body.telegramChallengeToken,
+      code: body.telegramCode,
+      purpose: "ACCOUNT_DELETION",
+    });
+
+    if (!telegramRecord) {
+      return NextResponse.json({ error: "Код из Telegram неверный или уже истёк." }, { status: 400 });
     }
   }
 
