@@ -1,9 +1,17 @@
 import Link from "next/link";
-import { FileText, MessageCircle, ShieldCheck } from "lucide-react";
+import { FileText, ShieldCheck } from "lucide-react";
 import { SiteLogoMark } from "@/components/brand/site-logo-mark";
 
 const telegramHref = process.env.NEXT_PUBLIC_SUPPORT_TELEGRAM_URL ?? "https://t.me/efootball_nexon";
 const vkHref = process.env.NEXT_PUBLIC_SUPPORT_VK_URL ?? "https://vk.com/efootball_nexon";
+
+function TelegramIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
+      <path d="M21.6 4.2c.2-1-.7-1.7-1.6-1.3L2.8 9.5c-1.1.4-1 2 .1 2.3l4.4 1.4 1.7 5.2c.4 1.1 1.8 1.4 2.5.5l2.5-3 4.4 3.3c.8.6 1.9.1 2.1-.9l3.1-14.1Zm-5.9 3.4-6.5 5.8-.3 3 1.1-2.2 6.9-6.1c.4-.4-.1-.8-.6-.5Z" />
+    </svg>
+  );
+}
 
 function VkIcon({ className = "" }: { className?: string }) {
   return (
@@ -17,7 +25,7 @@ const socialLinks = [
   {
     href: telegramHref,
     label: "Telegram",
-    icon: <MessageCircle className="h-4 w-4" />,
+    icon: <TelegramIcon className="h-4 w-4" />,
     iconTone: "bg-sky-400/15 text-sky-100",
     borderTone: "hover:border-sky-300/30 hover:bg-sky-400/[0.08]",
   },
