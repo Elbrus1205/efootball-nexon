@@ -1,10 +1,35 @@
 import Link from "next/link";
-import { FileText, MessageCircle, ShieldCheck, Users } from "lucide-react";
+import { FileText, MessageCircle, ShieldCheck } from "lucide-react";
 import { SiteLogoMark } from "@/components/brand/site-logo-mark";
 
+const telegramHref = process.env.NEXT_PUBLIC_SUPPORT_TELEGRAM_URL ?? "https://t.me/efootball_nexon";
+const vkHref = process.env.NEXT_PUBLIC_SUPPORT_VK_URL ?? "https://vk.com/efootball_nexon";
+
+function VkIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
+      <path d="M12.785 17.58c-5.09 0-7.994-3.49-8.115-9.295H7.22c.084 4.26 1.963 6.064 3.452 6.435V8.285h2.4v3.673c1.47-.158 3.012-1.832 3.533-3.673h2.4c-.4 2.27-2.074 3.944-3.266 4.632 1.192.558 3.1 2.018 3.827 4.663h-2.64c-.567-1.767-1.98-3.135-3.854-3.321v3.321h-.287Z" />
+    </svg>
+  );
+}
+
 const socialLinks = [
-  { href: "https://t.me/", label: "Telegram" },
-  { href: "https://vk.com/", label: "VK" },
+  {
+    href: telegramHref,
+    label: "Telegram",
+    handle: "@efootball_nexon",
+    icon: <MessageCircle className="h-4 w-4" />,
+    iconTone: "bg-sky-400/15 text-sky-100",
+    borderTone: "hover:border-sky-300/30 hover:bg-sky-400/[0.08]",
+  },
+  {
+    href: vkHref,
+    label: "ВКонтакте",
+    handle: "vk.com/efootball_nexon",
+    icon: <VkIcon className="h-4 w-4" />,
+    iconTone: "bg-blue-400/15 text-blue-100",
+    borderTone: "hover:border-blue-300/30 hover:bg-blue-400/[0.08]",
+  },
 ];
 
 const navigationLinks = [
@@ -48,21 +73,23 @@ export function SiteFooter() {
               Турнирная платформа для сезонов, сеток, результатов матчей и мобильного участия в событиях eFootball.
             </p>
 
-            <div className="flex flex-wrap gap-2 sm:gap-3">
+            <div className="grid gap-2.5 sm:max-w-md">
               {socialLinks.map((link) => (
                 <Link
                   key={link.label}
                   href={link.href}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-zinc-300 transition hover:border-primary/30 hover:bg-white/[0.07] hover:text-white sm:rounded-full sm:px-4 sm:py-2 sm:text-sm"
+                  className={`group flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-3 text-zinc-200 transition duration-200 ${link.borderTone}`}
                 >
-                  {link.label === "Telegram" ? (
-                    <MessageCircle className="h-3.5 w-3.5 text-primary sm:h-4 sm:w-4" />
-                  ) : (
-                    <Users className="h-3.5 w-3.5 text-primary sm:h-4 sm:w-4" />
-                  )}
-                  {link.label}
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${link.iconTone}`}>{link.icon}</span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-white">{link.label}</span>
+                      <span className="block truncate text-xs text-zinc-500 group-hover:text-zinc-300">{link.handle}</span>
+                    </span>
+                  </span>
+                  <span className="text-xs font-medium text-zinc-500 transition group-hover:text-white">Открыть</span>
                 </Link>
               ))}
             </div>
