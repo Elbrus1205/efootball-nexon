@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { TournamentStatus, UserRole } from "@prisma/client";
-import { Activity, CalendarRange, FileText, Gauge, Megaphone, ShieldCheck, Trophy, Users } from "lucide-react";
+import { Activity, CalendarRange, FileText, Megaphone, ShieldCheck, Trophy, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth/session";
@@ -27,7 +27,6 @@ export default async function AdminPage() {
   const shortcuts = [
     { href: "/admin/tournaments", label: "Редактор турниров", variant: "default" as const, icon: Trophy },
     { href: "/admin/seasons", label: "Сезоны", variant: "secondary" as const, icon: CalendarRange },
-    { href: "/admin", label: "Панель", variant: "secondary" as const, icon: Gauge },
     { href: "/admin/regulations", label: "Регламент", variant: "outline" as const, icon: FileText },
     { href: "/admin/broadcasts", label: "Рассылки", variant: "outline" as const, icon: Megaphone },
   ];
