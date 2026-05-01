@@ -54,13 +54,6 @@ const legalLinks = [
   { href: "/cookies", label: "Политика cookie" },
 ];
 
-const footerQuickLinks = [
-  { href: "/privacy", label: "Политика конфиденциальности" },
-  { href: "/terms", label: "Пользовательское соглашение" },
-  { href: "/offer", label: "Публичная оферта" },
-  { href: "/contacts", label: "Контакты" },
-];
-
 export function SiteFooter() {
   return (
     <footer className="border-t border-white/10 bg-gradient-to-b from-transparent to-white/[0.02]">
@@ -128,14 +121,6 @@ export function SiteFooter() {
         </div>
 
         <div className="mt-3 space-y-3 text-xs text-zinc-500 sm:mt-6 sm:text-sm">
-          <div className="flex flex-wrap gap-x-4 gap-y-2">
-            {footerQuickLinks.map((link) => (
-              <Link key={link.href} href={link.href} className="transition hover:text-white">
-                {link.label}
-              </Link>
-            ))}
-          </div>
-
           <div className="sm:flex sm:flex-row sm:items-center sm:justify-between sm:gap-3">
             <p>eFootball Nexon © 2026. Турниры по eFootball Mobile в мобильном формате.</p>
           </div>
