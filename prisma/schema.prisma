@@ -148,6 +148,13 @@ enum CoinServiceOrderStatus {
   REJECTED
 }
 
+enum CoinPaymentBank {
+  OZON
+  TBANK
+  SBER
+  VTB
+}
+
 model User {
   id                  String                   @id @default(cuid())
   publicId            String                   @unique
@@ -705,6 +712,20 @@ model CoinStoreSettings {
   updatedAt              DateTime @updatedAt
 }
 
+model CoinPaymentCard {
+  id         String          @id @default(cuid())
+  bank       CoinPaymentBank
+  cardNumber String          @db.Text
+  recipient  String          @db.Text
+  isActive   Boolean         @default(true)
+  sortOrder  Int             @default(0)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@index([createdAt])
+}
+
 model CoinServiceProduct {
   id              String             @id @default(cuid())
   title           String
@@ -739,6 +760,7 @@ model CoinServiceOrder {
   konamiLogin           String
   konamiPassword        String                 @db.Text
   buyerComment          String?                @db.Text
+  paymentBank           CoinPaymentBank?
   paymentCard           String?                @db.Text
   paymentRecipient      String?                @db.Text
   paymentComment        String?                @db.Text

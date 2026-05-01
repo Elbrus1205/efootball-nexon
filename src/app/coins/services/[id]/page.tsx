@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowLeft, Gamepad2, Percent, WalletCards } from "lucide-react";
+import { ArrowLeft, Gamepad2 } from "lucide-react";
 import { notFound } from "next/navigation";
 import { ServiceOrderForm } from "@/components/coins/service-order-form";
 import { Button } from "@/components/ui/button";
@@ -26,17 +26,23 @@ export async function generateMetadata({ params }: ServicePageProps): Promise<Me
 }
 
 export default async function CoinServicePage({ params, searchParams }: ServicePageProps) {
-  const [settings, product, session] = await Promise.all([
+  const [settings, product, session, paymentCards] = await Promise.all([
     getCoinStoreSettings(),
     db.coinServiceProduct.findFirst({
       where: { id: params.id, isActive: true },
     }),
     getCurrentSession(),
+    db.coinPaymentCard.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    }),
   ]);
 
   if (!product || !settings.servicesStoreEnabled) {
     notFound();
   }
+
+  const selectedPaymentCard = paymentCards.length ? paymentCards[Math.floor(Math.random() * paymentCards.length)] : null;
 
   return (
     <main className="page-shell space-y-8 py-0 pb-12 sm:pb-16">
@@ -65,40 +71,16 @@ export default async function CoinServicePage({ params, searchParams }: ServiceP
             <div className="text-xs uppercase tracking-[0.24em] text-zinc-500">Стоимость</div>
             <div className="mt-3 text-4xl font-black text-emerald-300">{formatKopecks(product.priceKopecks)}</div>
           </div>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/[0.06] text-zinc-200">
-                  <Percent className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Исполнителю</div>
-                  <div className="mt-1 text-lg font-bold text-white">{product.executorPercent}%</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/[0.06] text-zinc-200">
-                  <WalletCards className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Владельцу сайта</div>
-                  <div className="mt-1 text-lg font-bold text-white">{product.ownerPercent}%</div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         <ServiceOrderForm
           productId={product.id}
           productTitle={product.title}
           priceKopecks={product.priceKopecks}
-          paymentCard={settings.paymentCard}
-          paymentRecipient={settings.paymentRecipient}
+          paymentCardId={selectedPaymentCard?.id}
+          paymentBank={selectedPaymentCard?.bank}
+          paymentCard={selectedPaymentCard?.cardNumber ?? ""}
+          paymentRecipient={selectedPaymentCard?.recipient ?? ""}
           paymentComment={settings.paymentComment}
           initialTelegram={session?.user.telegramUsername ? `@${session.user.telegramUsername}` : ""}
           error={searchParams?.error}
@@ -107,4 +89,3 @@ export default async function CoinServicePage({ params, searchParams }: ServiceP
     </main>
   );
 }
-

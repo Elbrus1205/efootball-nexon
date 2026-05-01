@@ -11,6 +11,7 @@ const telegramContactRegex = /^(?:@[\w_]{5,32}|(?:https?:\/\/)?(?:t\.me|telegram
 
 const serviceOrderSchema = z.object({
   productId: z.string().min(1),
+  paymentCardId: z.string().optional(),
   buyerTelegram: z.string().trim().min(3).max(200),
   konamiLogin: z.string().trim().min(3).max(200),
   konamiPassword: z.string().min(4).max(300),
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
   const fallbackUrl = new URL(productId ? `/coins/services/${productId}` : "/coins", getRequestBaseUrl(request));
   const parsed = serviceOrderSchema.safeParse({
     productId,
+    paymentCardId: formData.get("paymentCardId") ? String(formData.get("paymentCardId")) : "",
     buyerTelegram: formData.get("buyerTelegram"),
     konamiLogin: formData.get("konamiLogin"),
     konamiPassword: formData.get("konamiPassword"),
@@ -59,6 +61,22 @@ export async function POST(request: Request) {
     return NextResponse.redirect(fallbackUrl, 303);
   }
 
+  const paymentCards = await db.coinPaymentCard.findMany({
+    where: {
+      isActive: true,
+    },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  });
+
+  if (!paymentCards.length) {
+    fallbackUrl.searchParams.set("error", "Оплата временно недоступна: администратор ещё не добавил карту.");
+    return NextResponse.redirect(fallbackUrl, 303);
+  }
+
+  const selectedCard =
+    paymentCards.find((card) => card.id === parsed.data.paymentCardId) ??
+    paymentCards[Math.floor(Math.random() * paymentCards.length)];
+
   const executorEarningKopecks = calculatePercentAmount(product.priceKopecks, product.executorPercent);
   const ownerEarningKopecks = calculatePercentAmount(product.priceKopecks, product.ownerPercent);
   const order = await db.coinServiceOrder.create({
@@ -76,8 +94,9 @@ export async function POST(request: Request) {
       konamiLogin: parsed.data.konamiLogin,
       konamiPassword: parsed.data.konamiPassword,
       buyerComment: parsed.data.buyerComment?.trim() || null,
-      paymentCard: settings.paymentCard || null,
-      paymentRecipient: settings.paymentRecipient || null,
+      paymentBank: selectedCard.bank,
+      paymentCard: selectedCard.cardNumber,
+      paymentRecipient: selectedCard.recipient,
       paymentComment: settings.paymentComment || null,
     },
   });
@@ -112,4 +131,3 @@ export async function POST(request: Request) {
   redirectUrl.searchParams.set("created", "1");
   return NextResponse.redirect(redirectUrl, 303);
 }
-

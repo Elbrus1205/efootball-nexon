@@ -8,10 +8,7 @@ import { formatKopecks } from "@/lib/coin-services";
 type ServiceProduct = {
   id: string;
   title: string;
-  description: string;
   priceKopecks: number;
-  executorPercent: number;
-  ownerPercent: number;
 };
 
 export function CoinsServicesShowcase({ products }: { products: ServiceProduct[] }) {
@@ -48,8 +45,7 @@ export function CoinsServicesShowcase({ products }: { products: ServiceProduct[]
                       {formatKopecks(product.priceKopecks)}
                     </span>
                   </div>
-                  <h3 className="mt-4 text-lg font-black leading-tight text-white">{product.title}</h3>
-                  <p className="mt-2 line-clamp-4 text-sm leading-6 text-zinc-400">{product.description}</p>
+                  <h3 className="mt-4 min-h-[3.5rem] text-lg font-black leading-tight text-white">{product.title}</h3>
                 </div>
 
                 <Button asChild className="w-full rounded-xl bg-emerald-400 text-black hover:bg-emerald-300">
@@ -68,4 +64,3 @@ export function CoinsServicesShowcase({ products }: { products: ServiceProduct[]
     </section>
   );
 }
-

@@ -1,4 +1,6 @@
+import type { CoinPaymentBank } from "@prisma/client";
 import { CreditCard, KeyRound, MessageSquareText, Send } from "lucide-react";
+import { BankLogo } from "@/components/coins/bank-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +11,8 @@ type ServiceOrderFormProps = {
   productId: string;
   productTitle: string;
   priceKopecks: number;
+  paymentCardId?: string;
+  paymentBank?: CoinPaymentBank | null;
   paymentCard: string;
   paymentRecipient: string;
   paymentComment: string;
@@ -20,6 +24,8 @@ export function ServiceOrderForm({
   productId,
   productTitle,
   priceKopecks,
+  paymentCardId,
+  paymentBank,
   paymentCard,
   paymentRecipient,
   paymentComment,
@@ -29,6 +35,7 @@ export function ServiceOrderForm({
   return (
     <form action="/api/coins/service-orders" method="post" className="rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(10,14,22,0.96),rgba(6,10,16,0.98))] p-6 shadow-[0_26px_90px_rgba(0,0,0,0.28)] sm:p-8">
       <input type="hidden" name="productId" value={productId} />
+      {paymentCardId ? <input type="hidden" name="paymentCardId" value={paymentCardId} /> : null}
 
       <div className="flex items-center gap-3">
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-300/15 bg-emerald-400/10 text-emerald-200">
@@ -48,6 +55,10 @@ export function ServiceOrderForm({
           <span className="text-lg font-black text-emerald-100">{formatKopecks(priceKopecks)}</span>
         </div>
         <div className="grid gap-2 text-zinc-300">
+          <div>
+            <span className="text-zinc-500">Банк: </span>
+            {paymentBank ? <BankLogo bank={paymentBank} className="ml-1" /> : <span className="font-semibold text-white">не выбран</span>}
+          </div>
           <div>
             <span className="text-zinc-500">Карта: </span>
             <span className="font-semibold text-white">{paymentCard || "не указана"}</span>
@@ -101,9 +112,9 @@ export function ServiceOrderForm({
         </div>
       </div>
 
-      <Button type="submit" size="lg" className="mt-6 h-12 w-full rounded-full bg-emerald-400 text-black hover:bg-emerald-300">
+      <Button type="submit" size="lg" disabled={!paymentCardId} className="mt-6 h-12 w-full rounded-full bg-emerald-400 text-black hover:bg-emerald-300">
         <Send className="mr-2 h-4 w-4" />
-        Отправить заказ и оплатить
+        {paymentCardId ? "Отправить заказ и оплатить" : "Оплата временно недоступна"}
       </Button>
 
       <div className="mt-4 flex items-center gap-2 text-xs text-zinc-500">
@@ -113,4 +124,3 @@ export function ServiceOrderForm({
     </form>
   );
 }
-

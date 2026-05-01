@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { ClipboardCheck, Coins, Handshake, MessageSquareText, PackagePlus, Percent, Search, Settings, Trash2, UserCheck, Users } from "lucide-react";
+import { ClipboardCheck, Coins, CreditCard, Handshake, MessageSquareText, PackagePlus, Percent, Search, Settings, Trash2, UserCheck, Users } from "lucide-react";
 import { CoinServiceOrderStatus, UserRole } from "@prisma/client";
+import { BankLogo } from "@/components/coins/bank-logo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { requireRole } from "@/lib/auth/session";
-import { formatKopecks, getCoinStoreSettings, serviceOrderStatusLabel, serviceOrderStatusTone } from "@/lib/coin-services";
+import { coinPaymentBankOptions, formatKopecks, getCoinStoreSettings, serviceOrderStatusLabel, serviceOrderStatusTone } from "@/lib/coin-services";
 import { db } from "@/lib/db";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +33,9 @@ export default async function AdminCoinsPage({
     serviceProductCreated?: string;
     serviceProductUpdated?: string;
     serviceProductDeleted?: string;
+    paymentCardCreated?: string;
+    paymentCardUpdated?: string;
+    paymentCardDeleted?: string;
     orderUpdated?: string;
     error?: string;
   };
@@ -57,7 +61,7 @@ export default async function AdminCoinsPage({
       });
 
   const settings = await getCoinStoreSettings();
-  const [partners, products, serviceProducts, serviceOrders, executors] = await Promise.all([
+  const [partners, products, serviceProducts, serviceOrders, executors, paymentCards] = await Promise.all([
     db.affiliatePartner.findMany({
     include: {
       owner: true,
@@ -97,6 +101,10 @@ export default async function AdminCoinsPage({
       select: { id: true, nickname: true, name: true, email: true, role: true },
       take: 100,
     }),
+    db.coinPaymentCard.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    }),
   ]);
 
   return (
@@ -109,6 +117,9 @@ export default async function AdminCoinsPage({
       {searchParams?.serviceProductCreated ? <Card className="border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Услуга добавлена.</Card> : null}
       {searchParams?.serviceProductUpdated ? <Card className="border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Услуга обновлена.</Card> : null}
       {searchParams?.serviceProductDeleted ? <Card className="border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">Услуга удалена.</Card> : null}
+      {searchParams?.paymentCardCreated ? <Card className="border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Карта оплаты добавлена.</Card> : null}
+      {searchParams?.paymentCardUpdated ? <Card className="border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Карта оплаты обновлена.</Card> : null}
+      {searchParams?.paymentCardDeleted ? <Card className="border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">Карта оплаты удалена.</Card> : null}
       {searchParams?.orderUpdated ? <Card className="border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Заказ обновлён.</Card> : null}
       {searchParams?.deleted ? <Card className="border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">Партнёрская программа удалена.</Card> : null}
       {searchParams?.error ? <Card className="border-rose-400/25 bg-rose-500/10 p-4 text-sm text-rose-100">{searchParams.error}</Card> : null}
@@ -129,7 +140,7 @@ export default async function AdminCoinsPage({
             <Settings className="h-5 w-5 text-primary" />
             Настройки магазина
           </CardTitle>
-          <CardDescription>Включайте каталоги, задавайте реквизиты оплаты и проценты по услугам.</CardDescription>
+          <CardDescription>Включайте каталоги и задавайте общий комментарий к переводу.</CardDescription>
         </CardHeader>
         <CardContent>
           <form action="/api/admin/coins/settings" method="post" className="grid gap-4">
@@ -150,35 +161,101 @@ export default async function AdminCoinsPage({
               </label>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-3">
-              <label className="space-y-2">
-                <span className="text-sm text-zinc-300">Карта для оплаты</span>
-                <input name="paymentCard" defaultValue={settings.paymentCard} placeholder="0000 0000 0000 0000" className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
-              </label>
-              <label className="space-y-2">
-                <span className="text-sm text-zinc-300">ФИО получателя</span>
-                <input name="paymentRecipient" defaultValue={settings.paymentRecipient} placeholder="Иванов Иван Иванович" className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
-              </label>
+            <div className="grid gap-3 md:grid-cols-[1fr_auto]">
               <label className="space-y-2">
                 <span className="text-sm text-zinc-300">Комментарий к переводу</span>
                 <input name="paymentComment" defaultValue={settings.paymentComment} placeholder="Например: NEXON" className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
-              </label>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-              <label className="space-y-2">
-                <span className="text-sm text-zinc-300">Процент исполнителя по умолчанию</span>
-                <input name="defaultExecutorPercent" type="number" min="0" max="100" defaultValue={settings.defaultExecutorPercent} className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
-              </label>
-              <label className="space-y-2">
-                <span className="text-sm text-zinc-300">Процент владельца сайта по умолчанию</span>
-                <input name="defaultOwnerPercent" type="number" min="0" max="100" defaultValue={settings.defaultOwnerPercent} className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
               </label>
               <div className="flex items-end">
                 <Button>Сохранить настройки</Button>
               </div>
             </div>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-emerald-300" />
+            Карты для оплаты
+          </CardTitle>
+          <CardDescription>Добавьте до 10 карт. При оформлении услуги игроку случайно показывается одна активная карта.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action="/api/admin/coins/payment-cards" method="post" className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 md:grid-cols-2 xl:grid-cols-5">
+            <label className="space-y-2">
+              <span className="text-sm text-zinc-300">Банк</span>
+              <select name="bank" required className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white">
+                {coinPaymentBankOptions.map((bank) => (
+                  <option key={bank.value} value={bank.value}>{bank.label}</option>
+                ))}
+              </select>
+            </label>
+            <label className="space-y-2">
+              <span className="text-sm text-zinc-300">Номер карты</span>
+              <input name="cardNumber" required placeholder="0000 0000 0000 0000" className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
+            </label>
+            <label className="space-y-2">
+              <span className="text-sm text-zinc-300">ФИО получателя</span>
+              <input name="recipient" required placeholder="Иванов Иван Иванович" className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
+            </label>
+            <label className="space-y-2">
+              <span className="text-sm text-zinc-300">Сортировка</span>
+              <input name="sortOrder" type="number" min="0" defaultValue="0" className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
+            </label>
+            <div className="flex items-end">
+              <Button disabled={paymentCards.length >= 10}>Добавить карту</Button>
+            </div>
+          </form>
+
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+            {paymentCards.map((card) => (
+              <div key={card.id} className="space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4">
+                <form action={`/api/admin/coins/payment-cards/${card.id}`} method="post" className="grid gap-3">
+                  <input type="hidden" name="_method" value="update" />
+                  <div className="flex items-center justify-between gap-3">
+                    <BankLogo bank={card.bank} />
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-zinc-400">#{card.sortOrder}</span>
+                  </div>
+                  <label className="space-y-2">
+                    <span className="text-sm text-zinc-300">Банк</span>
+                    <select name="bank" defaultValue={card.bank} required className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white">
+                      {coinPaymentBankOptions.map((bank) => (
+                        <option key={bank.value} value={bank.value}>{bank.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-sm text-zinc-300">Номер карты</span>
+                    <input name="cardNumber" required defaultValue={card.cardNumber} className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-sm text-zinc-300">ФИО получателя</span>
+                    <input name="recipient" required defaultValue={card.recipient} className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-sm text-zinc-300">Сортировка</span>
+                    <input name="sortOrder" type="number" min="0" required defaultValue={card.sortOrder} className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
+                  </label>
+                  <Button variant="outline" className="w-full">Сохранить</Button>
+                </form>
+
+                <form action={`/api/admin/coins/payment-cards/${card.id}`} method="post" className="space-y-2 rounded-xl border border-rose-400/20 bg-rose-500/10 p-3">
+                  <input type="hidden" name="_method" value="delete" />
+                  <label className="flex items-start gap-2 text-xs leading-4 text-rose-100">
+                    <input name="confirmDelete" type="checkbox" className="mt-0.5 h-4 w-4 rounded border-white/20 bg-black/40" />
+                    <span>Подтверждаю удаление карты</span>
+                  </label>
+                  <Button variant="outline" className="w-full border-rose-400/25 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Удалить
+                  </Button>
+                </form>
+              </div>
+            ))}
+            {!paymentCards.length ? <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-zinc-500">Карт пока нет.</div> : null}
+          </div>
         </CardContent>
       </Card>
 
@@ -300,11 +377,11 @@ export default async function AdminCoinsPage({
             </label>
             <label className="space-y-2">
               <span className="text-sm text-zinc-300">Исполнителю, %</span>
-              <input name="executorPercent" type="number" min="0" max="100" defaultValue={settings.defaultExecutorPercent} className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
+              <input name="executorPercent" type="number" min="0" max="100" defaultValue="70" className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
             </label>
             <label className="space-y-2">
               <span className="text-sm text-zinc-300">Владельцу, %</span>
-              <input name="ownerPercent" type="number" min="0" max="100" defaultValue={settings.defaultOwnerPercent} className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
+              <input name="ownerPercent" type="number" min="0" max="100" defaultValue="30" className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
             </label>
             <div className="flex items-end xl:col-span-2">
               <Button>Добавить услугу</Button>

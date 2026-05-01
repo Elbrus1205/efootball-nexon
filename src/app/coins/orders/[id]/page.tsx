@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CoinServiceOrderStatus, UserRole } from "@prisma/client";
 import { ArrowLeft, CheckCircle2, Clock, CreditCard, KeyRound, MessageSquareText, UserRoundCheck } from "lucide-react";
 import { notFound } from "next/navigation";
+import { BankLogo } from "@/components/coins/bank-logo";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -101,6 +102,10 @@ export default async function CoinServiceOrderPage({ params, searchParams }: Ord
               <CardDescription>Переведите сумму и укажите комментарий, если он задан администратором.</CardDescription>
             </CardHeader>
             <div className="grid gap-3 text-sm">
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <span className="text-zinc-500">Банк: </span>
+                {order.paymentBank ? <BankLogo bank={order.paymentBank} className="ml-1" /> : <span className="font-semibold text-white">не указан</span>}
+              </div>
               <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                 <span className="text-zinc-500">Карта: </span>
                 <span className="font-semibold text-white">{order.paymentCard || "не указана"}</span>

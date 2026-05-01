@@ -1,4 +1,4 @@
-import type { CoinServiceOrderStatus } from "@prisma/client";
+import type { CoinPaymentBank, CoinServiceOrderStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 
 export const DEFAULT_COIN_STORE_SETTINGS_ID = "default";
@@ -10,8 +10,6 @@ export const defaultCoinStoreSettings = {
   paymentCard: "",
   paymentRecipient: "",
   paymentComment: "",
-  defaultExecutorPercent: 70,
-  defaultOwnerPercent: 30,
 };
 
 export async function getCoinStoreSettings() {
@@ -26,6 +24,32 @@ export async function getCoinStoreSettings() {
     paymentRecipient: settings?.paymentRecipient ?? "",
     paymentComment: settings?.paymentComment ?? "",
   };
+}
+
+export const coinPaymentBankOptions = [
+  { value: "OZON", label: "Озон Банк" },
+  { value: "TBANK", label: "ТБанк" },
+  { value: "SBER", label: "Сбербанк" },
+  { value: "VTB", label: "ВТБ" },
+] satisfies Array<{ value: CoinPaymentBank; label: string }>;
+
+export function coinPaymentBankLabel(bank?: CoinPaymentBank | null) {
+  return coinPaymentBankOptions.find((item) => item.value === bank)?.label ?? "Банк";
+}
+
+export function coinPaymentBankTone(bank?: CoinPaymentBank | null) {
+  switch (bank) {
+    case "OZON":
+      return "border-blue-300/25 bg-[#005bff] text-white";
+    case "TBANK":
+      return "border-yellow-300/35 bg-[#ffdd2d] text-black";
+    case "SBER":
+      return "border-emerald-300/25 bg-[#21a038] text-white";
+    case "VTB":
+      return "border-sky-300/25 bg-[#0a5cff] text-white";
+    default:
+      return "border-white/10 bg-white/[0.06] text-white";
+  }
 }
 
 export function formatKopecks(value: number) {
@@ -74,4 +98,3 @@ export function serviceOrderStatusTone(status: CoinServiceOrderStatus) {
       return "border-white/10 bg-white/[0.04] text-zinc-300";
   }
 }
-
