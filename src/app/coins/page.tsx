@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { CoinsPartnerBanner } from "@/components/coins/coins-partner-banner";
 import { CoinsShowcase } from "@/components/coins/coins-showcase";
 import { PartnerDashboard } from "@/components/coins/partner-dashboard";
 import { getCurrentSession } from "@/lib/auth/session";
@@ -7,7 +8,7 @@ import { db } from "@/lib/db";
 
 export const metadata: Metadata = {
   title: "Coins | eFootball Nexon",
-  description: "Покупка Coins для eFootball Mobile: Android, iOS и акционные наборы в одном каталоге.",
+  description: "Покупка Coins для eFootball Mobile через White Store: Android, iOS и акционные наборы с переходом в Telegram-магазин.",
 };
 
 function formatMoney(value: number) {
@@ -46,6 +47,7 @@ export default async function CoinsPage() {
 
   return (
     <main className="page-shell space-y-6 py-0 pb-12 sm:pb-16">
+      <CoinsPartnerBanner />
       {partner ? (
         <PartnerDashboard
           promoCode={partner.promoCode}

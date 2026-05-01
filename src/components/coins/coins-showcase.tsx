@@ -57,7 +57,7 @@ function OfferCard({ offer, platform }: { offer: CoinsOffer; platform: CoinsPlat
           </div>
         </div>
 
-        <StartCheckoutButton offerId={offer.id} platform={platform} className={cn("h-9 min-h-0 w-full rounded-xl px-3 text-xs font-bold", tone.button)}>
+        <StartCheckoutButton className={cn("h-9 min-h-0 w-full rounded-xl px-3 text-xs font-bold", tone.button)}>
           <span className="flex items-center justify-center gap-1.5">
             Купить
             <ArrowRight className="h-3.5 w-3.5" />

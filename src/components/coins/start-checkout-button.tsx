@@ -1,47 +1,19 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { type ReactNode, useTransition } from "react";
-import { toast } from "sonner";
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import type { CoinsPlatform } from "@/lib/coins-catalog";
+import { WHITE_STORE_TELEGRAM_REFERRAL_URL } from "@/lib/white-store";
 
 export function StartCheckoutButton({
-  offerId,
-  platform,
   className,
   children,
 }: {
-  offerId: string;
-  platform: CoinsPlatform;
   className?: string;
   children: ReactNode;
 }) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-
-  const handleClick = () => {
-    startTransition(async () => {
-      const response = await fetch("/api/coins/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ offerId, platform }),
-      });
-
-      const payload = await response.json().catch(() => null);
-
-      if (!response.ok || !payload?.checkoutUrl) {
-        toast.error(payload?.error || "Не удалось открыть оформление оплаты.");
-        return;
-      }
-
-      router.push(payload.checkoutUrl);
-    });
-  };
-
   return (
-    <Button onClick={handleClick} disabled={pending} size="lg" className={className}>
-      {pending ? "Открываем..." : children}
+    <Button asChild size="lg" className={className}>
+      <a href={WHITE_STORE_TELEGRAM_REFERRAL_URL}>{children}</a>
     </Button>
   );
 }
