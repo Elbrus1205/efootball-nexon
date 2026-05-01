@@ -17,7 +17,6 @@ const socialLinks = [
   {
     href: telegramHref,
     label: "Telegram",
-    handle: "@efootball_nexon",
     icon: <MessageCircle className="h-4 w-4" />,
     iconTone: "bg-sky-400/15 text-sky-100",
     borderTone: "hover:border-sky-300/30 hover:bg-sky-400/[0.08]",
@@ -25,7 +24,6 @@ const socialLinks = [
   {
     href: vkHref,
     label: "ВКонтакте",
-    handle: "vk.com/efootball_nexon",
     icon: <VkIcon className="h-4 w-4" />,
     iconTone: "bg-blue-400/15 text-blue-100",
     borderTone: "hover:border-blue-300/30 hover:bg-blue-400/[0.08]",
@@ -73,23 +71,17 @@ export function SiteFooter() {
               Турнирная платформа для сезонов, сеток, результатов матчей и мобильного участия в событиях eFootball.
             </p>
 
-            <div className="grid gap-2.5 sm:max-w-md">
+            <div className="flex flex-wrap gap-2 sm:max-w-md">
               {socialLinks.map((link) => (
                 <Link
                   key={link.label}
                   href={link.href}
                   target="_blank"
                   rel="noreferrer"
-                  className={`group flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-3 text-zinc-200 transition duration-200 ${link.borderTone}`}
+                  className={`group inline-flex w-fit items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-semibold text-zinc-200 transition duration-200 ${link.borderTone}`}
                 >
-                  <span className="flex min-w-0 items-center gap-3">
-                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${link.iconTone}`}>{link.icon}</span>
-                    <span className="min-w-0">
-                      <span className="block text-sm font-semibold text-white">{link.label}</span>
-                      <span className="block truncate text-xs text-zinc-500 group-hover:text-zinc-300">{link.handle}</span>
-                    </span>
-                  </span>
-                  <span className="text-xs font-medium text-zinc-500 transition group-hover:text-white">Открыть</span>
+                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${link.iconTone}`}>{link.icon}</span>
+                  <span className="text-white">{link.label}</span>
                 </Link>
               ))}
             </div>
