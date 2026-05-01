@@ -26,14 +26,14 @@ const socialLinks = [
     href: telegramHref,
     label: "Telegram",
     icon: <TelegramIcon className="h-4 w-4" />,
-    iconTone: "bg-sky-400/15 text-sky-100",
+    iconTone: "bg-[#229ED9] text-white",
     borderTone: "hover:border-sky-300/30 hover:bg-sky-400/[0.08]",
   },
   {
     href: vkHref,
     label: "ВКонтакте",
     icon: <VkIcon className="h-4 w-4" />,
-    iconTone: "bg-blue-400/15 text-blue-100",
+    iconTone: "bg-[#0077FF] text-white",
     borderTone: "hover:border-blue-300/30 hover:bg-blue-400/[0.08]",
   },
 ];
