@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { CoinServiceOrderStatus, NotificationType, UserRole } from "@prisma/client";
 import { getRequestBaseUrl } from "@/lib/affiliate";
+import { pickFairCoinServiceExecutor } from "@/lib/coin-services";
 import { createNotification, createNotificationsForUsers } from "@/lib/services/notifications";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
@@ -52,23 +53,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.redirect(redirectUrl, 303);
   }
 
-  const executorId = String(formData.get("executorId") ?? "");
-
-  if (!executorId) {
-    redirectUrl.searchParams.set("error", "Выберите исполнителя заказа.");
+  if (order.status !== CoinServiceOrderStatus.PENDING_REVIEW) {
+    redirectUrl.searchParams.set("error", "Проверить оплату можно только у заказа на проверке.");
     return NextResponse.redirect(redirectUrl, 303);
   }
 
-  const executor = await db.user.findFirst({
-    where: {
-      id: executorId,
-      isBanned: false,
-    },
-    select: { id: true, nickname: true, name: true, email: true },
-  });
+  const executor = await pickFairCoinServiceExecutor();
 
   if (!executor) {
-    redirectUrl.searchParams.set("error", "Исполнитель не найден.");
+    redirectUrl.searchParams.set("error", "Добавьте активного исполнителя перед принятием заказа.");
     return NextResponse.redirect(redirectUrl, 303);
   }
 
@@ -87,7 +80,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   await Promise.all([
     createNotification({
       userId: order.buyerId,
-      title: "Заказ принят",
+      title: "Оплата проверена",
       body: `Заказ "${order.productTitle}" принят. Исполнитель: ${executorName}.`,
       type: NotificationType.SYSTEM,
       link: `/coins/orders/${order.id}`,
@@ -111,4 +104,3 @@ export async function POST(request: Request, { params }: { params: { id: string 
   redirectUrl.searchParams.set("orderUpdated", "1");
   return NextResponse.redirect(redirectUrl, 303);
 }
-

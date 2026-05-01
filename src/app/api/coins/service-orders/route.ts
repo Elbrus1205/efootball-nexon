@@ -15,6 +15,7 @@ const serviceOrderSchema = z.object({
   buyerTelegram: z.string().trim().min(3).max(200),
   konamiLogin: z.string().trim().min(3).max(200),
   konamiPassword: z.string().min(4).max(300),
+  paymentReceiptUrl: z.string().trim().url().max(1000),
   buyerComment: z.string().max(2000).optional(),
 });
 
@@ -29,6 +30,7 @@ export async function POST(request: Request) {
     buyerTelegram: formData.get("buyerTelegram"),
     konamiLogin: formData.get("konamiLogin"),
     konamiPassword: formData.get("konamiPassword"),
+    paymentReceiptUrl: formData.get("paymentReceiptUrl"),
     buyerComment: formData.get("buyerComment") ?? "",
   });
 
@@ -98,6 +100,8 @@ export async function POST(request: Request) {
       paymentCard: selectedCard.cardNumber,
       paymentRecipient: selectedCard.recipient,
       paymentComment: settings.paymentComment || null,
+      paymentReceiptUrl: parsed.data.paymentReceiptUrl,
+      paidAt: new Date(),
     },
   });
 
@@ -113,15 +117,15 @@ export async function POST(request: Request) {
   await Promise.all([
     createNotificationsForUsers({
       userIds: founders.map((user) => user.id),
-      title: "Новый заказ услуги",
-      body: `${buyerName} заказал: ${product.title}. Сумма: ${formatKopecks(product.priceKopecks)}.`,
+      title: "Новый оплаченный заказ",
+      body: `${buyerName} оплатил и отправил чек: ${product.title}. Сумма: ${formatKopecks(product.priceKopecks)}.`,
       type: NotificationType.SYSTEM,
       link: "/admin/coins",
     }),
     createNotification({
       userId: session.user.id,
-      title: "Заказ создан",
-      body: `Заказ "${product.title}" отправлен администратору. Оплатите ${formatKopecks(product.priceKopecks)} по указанным реквизитам.`,
+      title: "Заказ отправлен на проверку",
+      body: `Заказ "${product.title}" отправлен администратору вместе с чеком оплаты.`,
       type: NotificationType.SYSTEM,
       link: `/coins/orders/${order.id}`,
     }),

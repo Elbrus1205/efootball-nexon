@@ -1,4 +1,4 @@
-import type { CoinPaymentBank, CoinServiceOrderStatus } from "@prisma/client";
+import { CoinServiceOrderStatus, type CoinPaymentBank } from "@prisma/client";
 import { db } from "@/lib/db";
 
 export const DEFAULT_COIN_STORE_SETTINGS_ID = "default";
@@ -68,7 +68,7 @@ export function calculatePercentAmount(totalKopecks: number, percent: number) {
 export function serviceOrderStatusLabel(status: CoinServiceOrderStatus) {
   switch (status) {
     case "PENDING_REVIEW":
-      return "Ждёт принятия";
+      return "Ждёт проверки оплаты";
     case "ACCEPTED":
       return "В работе";
     case "EXECUTOR_DONE":
@@ -97,4 +97,45 @@ export function serviceOrderStatusTone(status: CoinServiceOrderStatus) {
     default:
       return "border-white/10 bg-white/[0.04] text-zinc-300";
   }
+}
+
+export async function pickFairCoinServiceExecutor() {
+  const executorProfiles = await db.coinServiceExecutor.findMany({
+    where: {
+      isActive: true,
+      user: {
+        isBanned: false,
+      },
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          nickname: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  if (!executorProfiles.length) {
+    return null;
+  }
+
+  const executorIds = executorProfiles.map((profile) => profile.userId);
+  const orderCounts = await db.coinServiceOrder.groupBy({
+    by: ["executorId"],
+    where: {
+      executorId: { in: executorIds },
+      status: { not: CoinServiceOrderStatus.REJECTED },
+    },
+    _count: { _all: true },
+  });
+  const countByExecutorId = new Map(orderCounts.map((item) => [item.executorId, item._count._all]));
+  const leastAssignedCount = Math.min(...executorIds.map((id) => countByExecutorId.get(id) ?? 0));
+  const candidates = executorProfiles.filter((profile) => (countByExecutorId.get(profile.userId) ?? 0) === leastAssignedCount);
+
+  return candidates[Math.floor(Math.random() * candidates.length)]?.user ?? null;
 }

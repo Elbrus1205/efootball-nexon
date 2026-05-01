@@ -64,7 +64,7 @@ export function CoinsProfile({ buyerOrders, executorOrders }: { buyerOrders: Pro
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UserCheck className="h-5 w-5 text-emerald-300" />
-            Профиль партнёра
+            Профиль исполнителя
           </CardTitle>
           <CardDescription>Заказы, где вы назначены исполнителем.</CardDescription>
         </CardHeader>
@@ -73,4 +73,3 @@ export function CoinsProfile({ buyerOrders, executorOrders }: { buyerOrders: Pro
     </section>
   );
 }
-

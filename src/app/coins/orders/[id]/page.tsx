@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CoinServiceOrderStatus, UserRole } from "@prisma/client";
-import { ArrowLeft, CheckCircle2, Clock, CreditCard, KeyRound, MessageSquareText, UserRoundCheck } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, CreditCard, KeyRound, MessageSquareText, Paperclip, UserRoundCheck } from "lucide-react";
 import { notFound } from "next/navigation";
 import { BankLogo } from "@/components/coins/bank-logo";
 import { Button } from "@/components/ui/button";
@@ -69,7 +69,7 @@ export default async function CoinServiceOrderPage({ params, searchParams }: Ord
         </span>
       </div>
 
-      {searchParams?.created ? <Card className="border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Заказ создан. Оплатите по реквизитам ниже и ожидайте принятия администратором.</Card> : null}
+      {searchParams?.created ? <Card className="border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Заказ отправлен на проверку вместе с чеком оплаты. После подтверждения админом назначится исполнитель.</Card> : null}
       {searchParams?.error ? <Card className="border-rose-400/25 bg-rose-500/10 p-4 text-sm text-rose-100">{searchParams.error}</Card> : null}
       {searchParams?.orderUpdated ? <Card className="border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Статус заказа обновлён.</Card> : null}
       {searchParams?.messageSent ? <Card className="border-sky-400/20 bg-sky-500/10 p-4 text-sm text-sky-100">Сообщение отправлено.</Card> : null}
@@ -117,6 +117,17 @@ export default async function CoinServiceOrderPage({ params, searchParams }: Ord
               <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                 <span className="text-zinc-500">Комментарий: </span>
                 <span className="font-semibold text-white">{order.paymentComment || "не указан"}</span>
+              </div>
+              <div className="rounded-2xl border border-emerald-300/15 bg-emerald-400/10 p-4">
+                <span className="text-emerald-100/70">Чек оплаты: </span>
+                {order.paymentReceiptUrl ? (
+                  <a href={order.paymentReceiptUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 font-semibold text-emerald-100 underline-offset-4 hover:underline">
+                    <Paperclip className="h-4 w-4" />
+                    открыть чек
+                  </a>
+                ) : (
+                  <span className="font-semibold text-amber-100">не прикреплён</span>
+                )}
               </div>
             </div>
           </Card>
@@ -170,37 +181,62 @@ export default async function CoinServiceOrderPage({ params, searchParams }: Ord
           </div>
         </div>
 
-        <Card className="flex min-h-[520px] flex-col">
-          <CardHeader>
+        <Card className="flex min-h-[620px] flex-col overflow-hidden rounded-[2rem] border-primary/15 bg-[linear-gradient(180deg,rgba(9,15,27,0.98),rgba(5,8,14,0.98))]">
+          <CardHeader className="border-b border-white/10">
             <CardTitle className="flex items-center gap-2">
               <MessageSquareText className="h-5 w-5 text-primary" />
               Чат заказа
             </CardTitle>
             <CardDescription>Покупатель, исполнитель и администратор видят переписку по заказу.</CardDescription>
+            <div className="flex flex-wrap gap-2 pt-2 text-xs">
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-zinc-300">Покупатель: {displayUser(order.buyer)}</span>
+              <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-emerald-100">
+                Исполнитель: {order.executor ? displayUser(order.executor) : "ожидает назначения"}
+              </span>
+            </div>
           </CardHeader>
 
-          <div className="flex-1 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+          <div className="flex-1 space-y-4 overflow-y-auto bg-black/20 p-4">
             {order.messages.map((message) => {
               const own = message.senderId === session.user.id;
+              const senderName = displayUser(message.sender);
+              const senderRole = message.senderId === order.buyerId ? "Покупатель" : message.senderId === order.executorId ? "Исполнитель" : "Админ";
+              const avatar = senderName.slice(0, 1).toUpperCase();
+
               return (
-                <div key={message.id} className={cn("max-w-[88%] rounded-2xl border px-4 py-3", own ? "ml-auto border-primary/25 bg-primary/10" : "border-white/10 bg-white/[0.04]")}>
-                  <div className="flex items-center gap-2 text-xs text-zinc-500">
-                    <span className="font-semibold text-zinc-300">{displayUser(message.sender)}</span>
-                    <Clock className="h-3.5 w-3.5" />
-                    {new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(message.createdAt)}
+                <div key={message.id} className={cn("flex gap-3", own ? "justify-end" : "justify-start")}>
+                  {!own ? (
+                    <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-sm font-bold text-zinc-200">
+                      {avatar}
+                    </div>
+                  ) : null}
+                  <div className={cn("max-w-[86%] rounded-2xl border px-4 py-3 shadow-[0_18px_40px_rgba(0,0,0,0.18)]", own ? "border-primary/25 bg-primary/15" : "border-white/10 bg-white/[0.05]")}>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                      <span className="font-semibold text-zinc-200">{senderName}</span>
+                      <span className={cn("rounded-full border px-2 py-0.5", own ? "border-primary/20 text-blue-100" : "border-white/10 text-zinc-400")}>{senderRole}</span>
+                      <Clock className="h-3.5 w-3.5" />
+                      {new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(message.createdAt)}
+                    </div>
+                    <div className="mt-2 whitespace-pre-wrap text-sm leading-6 text-white">{message.body}</div>
                   </div>
-                  <div className="mt-2 whitespace-pre-wrap text-sm leading-6 text-white">{message.body}</div>
+                  {own ? (
+                    <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/25 bg-primary/15 text-sm font-bold text-blue-100">
+                      {avatar}
+                    </div>
+                  ) : null}
                 </div>
               );
             })}
-            {!order.messages.length ? <div className="rounded-2xl border border-dashed border-white/10 p-4 text-sm text-zinc-500">Сообщений пока нет.</div> : null}
+            {!order.messages.length ? (
+              <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-5 text-center text-sm text-zinc-500">Сообщений пока нет.</div>
+            ) : null}
           </div>
 
-          <form action={`/api/coins/service-orders/${order.id}/messages`} method="post" className="mt-4 space-y-3">
-            <Textarea name="body" required placeholder="Напишите сообщение по заказу" className="min-h-[110px]" />
+          <form action={`/api/coins/service-orders/${order.id}/messages`} method="post" className="space-y-3 border-t border-white/10 bg-black/25 p-4">
+            <Textarea name="body" required placeholder="Напишите сообщение по заказу" className="min-h-[104px] resize-none bg-black/30" />
             <Button className="w-full rounded-xl">
               <MessageSquareText className="mr-2 h-4 w-4" />
-              Отправить
+              Отправить сообщение
             </Button>
           </form>
         </Card>

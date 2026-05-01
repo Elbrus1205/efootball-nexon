@@ -1,5 +1,5 @@
 import type { CoinPaymentBank } from "@prisma/client";
-import { CreditCard, KeyRound, MessageSquareText, Send } from "lucide-react";
+import { CreditCard, KeyRound, MessageSquareText, Paperclip, Send } from "lucide-react";
 import { BankLogo } from "@/components/coins/bank-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,6 +103,22 @@ export function ServiceOrderForm({
           <Label htmlFor="buyerComment">Комментарий к заказу</Label>
           <Textarea id="buyerComment" name="buyerComment" placeholder="Например: нужен дивизион 1, удобное время, дополнительные пожелания" />
         </div>
+
+        <div className="space-y-2 rounded-2xl border border-emerald-300/15 bg-emerald-400/10 p-4">
+          <Label htmlFor="paymentReceiptUrl" className="flex items-center gap-2">
+            <Paperclip className="h-4 w-4 text-emerald-200" />
+            Прикрепить чек оплаты
+          </Label>
+          <Input
+            id="paymentReceiptUrl"
+            name="paymentReceiptUrl"
+            required
+            type="url"
+            placeholder="https://..."
+            className="bg-black/30"
+          />
+          <p className="text-xs text-emerald-100/80">Ссылка на чек или скрин перевода нужна администратору для проверки оплаты.</p>
+        </div>
       </div>
 
       <div className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
@@ -114,7 +130,7 @@ export function ServiceOrderForm({
 
       <Button type="submit" size="lg" disabled={!paymentCardId} className="mt-6 h-12 w-full rounded-full bg-emerald-400 text-black hover:bg-emerald-300">
         <Send className="mr-2 h-4 w-4" />
-        {paymentCardId ? "Отправить заказ и оплатить" : "Оплата временно недоступна"}
+        {paymentCardId ? "Я оплатил заказ" : "Оплата временно недоступна"}
       </Button>
 
       <div className="mt-4 flex items-center gap-2 text-xs text-zinc-500">

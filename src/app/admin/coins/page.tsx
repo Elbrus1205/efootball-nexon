@@ -37,6 +37,8 @@ export default async function AdminCoinsPage({
     paymentCardUpdated?: string;
     paymentCardDeleted?: string;
     orderUpdated?: string;
+    executorCreated?: string;
+    executorDeleted?: string;
     error?: string;
   };
 }) {
@@ -61,7 +63,7 @@ export default async function AdminCoinsPage({
       });
 
   const settings = await getCoinStoreSettings();
-  const [partners, products, serviceProducts, serviceOrders, executors, paymentCards] = await Promise.all([
+  const [partners, products, serviceProducts, serviceOrders, executorProfiles, paymentCards] = await Promise.all([
     db.affiliatePartner.findMany({
     include: {
       owner: true,
@@ -95,17 +97,33 @@ export default async function AdminCoinsPage({
       orderBy: { createdAt: "desc" },
       take: 30,
     }),
-    db.user.findMany({
-      where: { isBanned: false },
-      orderBy: [{ nickname: "asc" }, { name: "asc" }, { createdAt: "desc" }],
-      select: { id: true, nickname: true, name: true, email: true, role: true },
-      take: 100,
+    db.coinServiceExecutor.findMany({
+      where: { isActive: true },
+      include: {
+        user: {
+          select: { id: true, nickname: true, name: true, email: true, role: true },
+        },
+      },
+      orderBy: { createdAt: "asc" },
     }),
     db.coinPaymentCard.findMany({
       where: { isActive: true },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     }),
   ]);
+  const executorIds = executorProfiles.map((profile) => profile.userId);
+  const executorOrderCounts = executorIds.length
+    ? await db.coinServiceOrder.groupBy({
+        by: ["executorId"],
+        where: {
+          executorId: { in: executorIds },
+          status: { not: CoinServiceOrderStatus.REJECTED },
+        },
+        _count: { _all: true },
+      })
+    : [];
+  const executorOrderCountById = new Map(executorOrderCounts.map((item) => [item.executorId, item._count._all]));
+  const activeExecutorIds = new Set(executorIds);
 
   return (
     <div className="space-y-6">
@@ -121,6 +139,8 @@ export default async function AdminCoinsPage({
       {searchParams?.paymentCardUpdated ? <Card className="border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Карта оплаты обновлена.</Card> : null}
       {searchParams?.paymentCardDeleted ? <Card className="border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">Карта оплаты удалена.</Card> : null}
       {searchParams?.orderUpdated ? <Card className="border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Заказ обновлён.</Card> : null}
+      {searchParams?.executorCreated ? <Card className="border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Исполнитель добавлен.</Card> : null}
+      {searchParams?.executorDeleted ? <Card className="border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">Исполнитель убран из активных.</Card> : null}
       {searchParams?.deleted ? <Card className="border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">Партнёрская программа удалена.</Card> : null}
       {searchParams?.error ? <Card className="border-rose-400/25 bg-rose-500/10 p-4 text-sm text-rose-100">{searchParams.error}</Card> : null}
 
@@ -132,6 +152,81 @@ export default async function AdminCoinsPage({
           </CardTitle>
           <CardDescription>Партнёрская программа работает только через промокоды. Один аккаунт может активировать партнёрский промокод один раз.</CardDescription>
         </CardHeader>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserCheck className="h-5 w-5 text-emerald-300" />
+            Исполнители услуг
+          </CardTitle>
+          <CardDescription>Активные исполнители получают проверенные заказы автоматически и равномерно.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action="/admin/coins" className="grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 md:grid-cols-[1fr_auto]">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-zinc-500" />
+              <input
+                name="userQuery"
+                defaultValue={userQuery}
+                placeholder="Поиск исполнителя по нику, имени или email"
+                className="h-11 w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-4 text-sm text-white outline-none focus:border-primary/40"
+              />
+            </div>
+            <Button variant="outline">Найти</Button>
+          </form>
+
+          <form action="/api/admin/coins/executors" method="post" className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 md:grid-cols-[1fr_auto]">
+            <label className="space-y-2">
+              <span className="text-sm text-zinc-300">Пользователь</span>
+              <select name="userId" required className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white">
+                <option value="">Выберите исполнителя</option>
+                {users
+                  .filter((user) => !activeExecutorIds.has(user.id))
+                  .map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.nickname || user.name || user.email || user.id}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <div className="flex items-end">
+              <Button>Добавить исполнителя</Button>
+            </div>
+          </form>
+
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+            {executorProfiles.map((profile) => {
+              const userName = profile.user.nickname || profile.user.name || profile.user.email || profile.user.id;
+
+              return (
+                <div key={profile.id} className="space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-semibold text-white">{userName}</div>
+                      <div className="mt-1 text-xs text-zinc-500">{profile.user.role}</div>
+                    </div>
+                    <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-100">
+                      {executorOrderCountById.get(profile.userId) ?? 0} заказов
+                    </span>
+                  </div>
+                  <form action={`/api/admin/coins/executors/${profile.id}`} method="post" className="space-y-2 rounded-xl border border-rose-400/20 bg-rose-500/10 p-3">
+                    <input type="hidden" name="_method" value="delete" />
+                    <label className="flex items-start gap-2 text-xs leading-4 text-rose-100">
+                      <input name="confirmDelete" type="checkbox" className="mt-0.5 h-4 w-4 rounded border-white/20 bg-black/40" />
+                      <span>Подтверждаю удаление исполнителя</span>
+                    </label>
+                    <Button variant="outline" className="w-full border-rose-400/25 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Убрать
+                    </Button>
+                  </form>
+                </div>
+              );
+            })}
+            {!executorProfiles.length ? <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-zinc-500">Исполнителей пока нет.</div> : null}
+          </div>
+        </CardContent>
       </Card>
 
       <Card>
@@ -448,7 +543,7 @@ export default async function AdminCoinsPage({
             <ClipboardCheck className="h-5 w-5 text-primary" />
             Заказы услуг
           </CardTitle>
-          <CardDescription>Принимайте заказ после оплаты, назначайте исполнителя и открывайте чат заказа.</CardDescription>
+          <CardDescription>Проверяйте чек оплаты. После подтверждения исполнитель назначается автоматически из активного пула.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-3">
@@ -473,6 +568,20 @@ export default async function AdminCoinsPage({
                         <span>Владельцу: {formatKopecks(order.ownerEarningKopecks)} ({order.ownerPercent}%)</span>
                         <span>Сообщений: {order._count.messages}</span>
                       </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                        {order.paymentReceiptUrl ? (
+                          <a href={order.paymentReceiptUrl} target="_blank" rel="noreferrer" className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 font-semibold text-emerald-100 transition hover:bg-emerald-400/20">
+                            Чек оплаты
+                          </a>
+                        ) : (
+                          <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-amber-100">Чек не прикреплён</span>
+                        )}
+                        {order.paidAt ? (
+                          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-zinc-400">
+                            Оплата: {new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(order.paidAt)}
+                          </span>
+                        ) : null}
+                      </div>
                       {executorName ? <div className="mt-2 text-sm text-emerald-100">Исполнитель: {executorName}</div> : null}
                     </div>
                     <Button asChild variant="outline" className="shrink-0">
@@ -483,21 +592,10 @@ export default async function AdminCoinsPage({
                     </Button>
                   </div>
 
-                  {order.status === CoinServiceOrderStatus.PENDING_REVIEW || order.status === CoinServiceOrderStatus.ACCEPTED ? (
+                  {order.status === CoinServiceOrderStatus.PENDING_REVIEW ? (
                     <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]">
-                      <form action={`/api/admin/coins/service-orders/${order.id}`} method="post" className="grid gap-3 rounded-2xl border border-emerald-400/15 bg-emerald-500/10 p-3 md:grid-cols-[1fr_1fr_auto]">
+                      <form action={`/api/admin/coins/service-orders/${order.id}`} method="post" className="grid gap-3 rounded-2xl border border-emerald-400/15 bg-emerald-500/10 p-3 md:grid-cols-[1fr_auto]">
                         <input type="hidden" name="_action" value="accept" />
-                        <label className="space-y-2">
-                          <span className="text-sm text-zinc-300">Исполнитель</span>
-                          <select name="executorId" required defaultValue={order.executor?.id ?? ""} className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white">
-                            <option value="">Выберите исполнителя</option>
-                            {executors.map((user) => (
-                              <option key={user.id} value={user.id}>
-                                {user.nickname || user.name || user.email || user.id} • {user.role}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
                         <label className="space-y-2">
                           <span className="text-sm text-zinc-300">Комментарий админа</span>
                           <input name="adminComment" defaultValue={order.adminComment ?? ""} placeholder="Опционально" className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
@@ -505,18 +603,16 @@ export default async function AdminCoinsPage({
                         <div className="flex items-end">
                           <Button className="w-full bg-emerald-400 text-black hover:bg-emerald-300">
                             <UserCheck className="mr-2 h-4 w-4" />
-                            {order.status === CoinServiceOrderStatus.PENDING_REVIEW ? "Принять" : "Назначить"}
+                            Проверить оплату и назначить
                           </Button>
                         </div>
                       </form>
 
-                      {order.status === CoinServiceOrderStatus.PENDING_REVIEW ? (
-                        <form action={`/api/admin/coins/service-orders/${order.id}`} method="post" className="grid gap-3 rounded-2xl border border-rose-400/20 bg-rose-500/10 p-3">
-                          <input type="hidden" name="_action" value="reject" />
-                          <input name="adminComment" placeholder="Причина отклонения" className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
-                          <Button variant="outline" className="border-rose-400/25 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20">Отклонить</Button>
-                        </form>
-                      ) : null}
+                      <form action={`/api/admin/coins/service-orders/${order.id}`} method="post" className="grid gap-3 rounded-2xl border border-rose-400/20 bg-rose-500/10 p-3">
+                        <input type="hidden" name="_action" value="reject" />
+                        <input name="adminComment" placeholder="Причина отклонения" className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
+                        <Button variant="outline" className="border-rose-400/25 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20">Отклонить</Button>
+                      </form>
                     </div>
                   ) : null}
                 </div>
