@@ -71,13 +71,19 @@ export function CoinsPartnerBanner() {
           </h1>
 
           <p className="mt-2.5 max-w-2xl text-[12.5px] leading-5 text-zinc-300 sm:text-[15px] sm:leading-6">
-            Покупка Coins проходит через {WHITE_STORE_NAME}. По кнопке покупки мы переводим вас прямо в Telegram-магазин по партнерской ссылке eFootball Nexon.
+            {WHITE_STORE_NAME} — партнёрский магазин eFootball Nexon для покупки Coins. Нажмите «Открыть White Store», чтобы перейти в Telegram и оформить заказ.
           </p>
 
           <div className="mt-3.5 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
-            <div className="inline-flex w-full items-center gap-2 rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-[11.5px] font-semibold leading-5 text-amber-100 sm:w-auto sm:rounded-full sm:text-sm">
-              <TicketPercent className="h-4 w-4 shrink-0" />
-              <span>Промокод {WHITE_STORE_PROMO_CODE}: -{WHITE_STORE_PROMO_DISCOUNT_PERCENT}% на первую покупку</span>
+            <div className="inline-flex w-full flex-wrap items-center gap-2 rounded-xl border border-amber-300/25 bg-[linear-gradient(135deg,rgba(251,191,36,0.16),rgba(180,83,9,0.12))] px-3 py-2 text-amber-100 shadow-[0_10px_26px_rgba(245,158,11,0.12),inset_0_1px_0_rgba(255,255,255,0.1)] sm:w-auto sm:rounded-full sm:flex-nowrap">
+              <TicketPercent className="h-4 w-4 shrink-0 text-amber-200" />
+              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-200/80">Промокод</span>
+              <span className="rounded-lg bg-amber-200 px-2 py-1 text-xs font-black leading-none text-[#1f1604] shadow-[0_0_18px_rgba(251,191,36,0.2)]">
+                {WHITE_STORE_PROMO_CODE}
+              </span>
+              <span className="text-[12px] font-black leading-5 text-amber-50 sm:text-sm">
+                -{WHITE_STORE_PROMO_DISCOUNT_PERCENT}% на первую покупку
+              </span>
             </div>
 
             <Button asChild className="coins-partner-cta h-10 w-full rounded-xl bg-sky-400 px-4 text-sm font-bold text-slate-950 hover:bg-sky-300 sm:h-11 sm:w-auto sm:rounded-2xl sm:px-5">
