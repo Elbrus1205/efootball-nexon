@@ -1,6 +1,8 @@
 import Image from "next/image";
+import { Fragment } from "react";
 import { Handshake, Send, TicketPercent } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   WHITE_STORE_NAME,
   WHITE_STORE_PROMO_CODE,
@@ -19,33 +21,66 @@ const partnerLogos = [
   },
 ];
 
-export function CoinsPartnerBanner() {
+function PartnerLogoPair({
+  className,
+  logoClassName,
+  sizes,
+}: {
+  className?: string;
+  logoClassName?: string;
+  sizes: string;
+}) {
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(11,16,26,0.98),rgba(8,11,18,0.98)_48%,rgba(18,23,32,0.98))] p-4 shadow-[0_18px_54px_rgba(2,6,23,0.24)] sm:p-5 lg:p-6">
-      <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(250,204,21,0.65),rgba(56,189,248,0.5),transparent)]" />
-
-      <div className="relative grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(250px,320px)] lg:items-center">
-        <div className="min-w-0">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold text-zinc-300 sm:text-xs">
-            <Handshake className="h-3.5 w-3.5 text-sky-300 sm:h-4 sm:w-4" />
-            Сотрудничество
+    <div className={cn("flex items-center", className)}>
+      {partnerLogos.map((logo, index) => (
+        <Fragment key={logo.name}>
+          <div
+            className={cn("coins-partner-logo flex shrink-0 items-center justify-center rounded-full p-[2px]", logoClassName)}
+            style={{ animationDelay: `${index * 0.45}s` }}
+          >
+            <div className="relative z-10 h-full w-full overflow-hidden rounded-full bg-black">
+              <Image src={logo.src} alt={logo.name} fill sizes={sizes} className="object-cover" />
+            </div>
           </div>
 
-          <h1 className="mt-3 max-w-3xl text-[1.45rem] font-black leading-tight text-white sm:text-3xl lg:text-[2.15rem]">
+          {index === 0 ? <div className="coins-partner-link-line mx-1.5 h-px w-5 shrink-0 rounded-full sm:mx-2 sm:w-7" /> : null}
+        </Fragment>
+      ))}
+    </div>
+  );
+}
+
+export function CoinsPartnerBanner() {
+  return (
+    <section className="coins-partner-banner relative overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(11,16,26,0.98),rgba(8,11,18,0.98)_50%,rgba(18,23,32,0.98))] p-3.5 shadow-[0_16px_46px_rgba(2,6,23,0.22)] sm:p-5 lg:p-6">
+      <div className="absolute inset-x-0 top-0 z-20 h-px bg-[linear-gradient(90deg,transparent,rgba(250,204,21,0.62),rgba(56,189,248,0.48),transparent)]" />
+
+      <div className="relative z-10 grid gap-4 lg:grid-cols-[minmax(0,1fr)_190px] lg:items-center">
+        <div className="min-w-0">
+          <div className="flex items-start justify-between gap-3">
+            <div className="coins-partner-chip inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.045] px-3 py-1.5 text-[10px] font-semibold text-zinc-300 sm:text-xs">
+              <Handshake className="h-3.5 w-3.5 text-sky-300 sm:h-4 sm:w-4" />
+              Сотрудничество
+            </div>
+
+            <PartnerLogoPair className="lg:hidden" logoClassName="h-11 w-11 sm:h-12 sm:w-12" sizes="48px" />
+          </div>
+
+          <h1 className="mt-3 max-w-3xl text-[1.28rem] font-black leading-tight text-white sm:text-3xl lg:text-[2rem]">
             eFootball Nexon x {WHITE_STORE_NAME}
           </h1>
 
-          <p className="mt-3 max-w-2xl text-[13px] leading-5 text-zinc-300 sm:text-[15px] sm:leading-6">
+          <p className="mt-2.5 max-w-2xl text-[12.5px] leading-5 text-zinc-300 sm:text-[15px] sm:leading-6">
             Покупка Coins проходит через {WHITE_STORE_NAME}. По кнопке покупки мы переводим вас прямо в Telegram-магазин по партнерской ссылке eFootball Nexon.
           </p>
 
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <div className="inline-flex w-full items-center gap-2 rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-[12px] font-semibold leading-5 text-amber-100 sm:w-auto sm:rounded-full sm:text-sm">
+          <div className="mt-3.5 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="inline-flex w-full items-center gap-2 rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-[11.5px] font-semibold leading-5 text-amber-100 sm:w-auto sm:rounded-full sm:text-sm">
               <TicketPercent className="h-4 w-4 shrink-0" />
               <span>Промокод {WHITE_STORE_PROMO_CODE}: -{WHITE_STORE_PROMO_DISCOUNT_PERCENT}% на первую покупку</span>
             </div>
 
-            <Button asChild className="h-11 w-full rounded-xl bg-sky-400 px-4 text-sm font-bold text-slate-950 hover:bg-sky-300 sm:w-auto sm:rounded-2xl sm:px-5">
+            <Button asChild className="coins-partner-cta h-10 w-full rounded-xl bg-sky-400 px-4 text-sm font-bold text-slate-950 hover:bg-sky-300 sm:h-11 sm:w-auto sm:rounded-2xl sm:px-5">
               <a href={WHITE_STORE_TELEGRAM_REFERRAL_URL}>
                 <Send className="mr-2 h-4 w-4" />
                 Открыть White Store
@@ -54,17 +89,8 @@ export function CoinsPartnerBanner() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:max-w-md lg:max-w-none">
-          {partnerLogos.map((logo) => (
-            <div
-              key={logo.name}
-              className="flex aspect-square items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-black/35 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:p-3"
-            >
-              <div className="relative h-full w-full overflow-hidden rounded-full">
-                <Image src={logo.src} alt={logo.name} fill sizes="(max-width: 640px) 42vw, 148px" className="object-cover" />
-              </div>
-            </div>
-          ))}
+        <div className="hidden justify-self-end rounded-2xl border border-white/10 bg-black/25 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] lg:block">
+          <PartnerLogoPair className="justify-center" logoClassName="h-[74px] w-[74px] xl:h-20 xl:w-20" sizes="80px" />
         </div>
       </div>
     </section>
