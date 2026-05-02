@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import { UserCircle } from "lucide-react";
 import { CoinsBottomMenu } from "@/components/coins/coins-bottom-menu";
 import { CoinsProfileSidebar } from "@/components/coins/coins-profile-sidebar";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAuth } from "@/lib/auth/session";
 import { getCoinStoreSettings } from "@/lib/coin-services";
 import { getCoinsNavigationData } from "@/lib/coins-account";
@@ -21,16 +19,6 @@ export default async function CoinsProfilePage() {
 
   return (
     <main className="page-shell space-y-6 py-0 pb-[calc(8.5rem+env(safe-area-inset-bottom))] sm:pb-[calc(9rem+env(safe-area-inset-bottom))]">
-      <Card className="rounded-[2rem] border-primary/15 bg-[linear-gradient(180deg,rgba(9,15,27,0.98),rgba(5,8,14,0.98))]">
-        <CardHeader className="mb-0">
-          <CardTitle className="flex items-center gap-2 text-2xl font-black">
-            <UserCircle className="h-6 w-6 text-primary" />
-            Профиль Coins
-          </CardTitle>
-          <CardDescription>{session.user.nickname || session.user.name || session.user.email || "Игрок"}</CardDescription>
-        </CardHeader>
-      </Card>
-
       <div className="max-w-xl">
         <CoinsProfileSidebar
           isSignedIn
@@ -42,6 +30,8 @@ export default async function CoinsProfilePage() {
           executorOrdersCount={navigationData.executorOrdersCount}
           executorActiveOrdersCount={navigationData.executorActiveOrdersCount}
           partnerStats={navigationData.partnerStats}
+          hideHeader
+          hideNavigation
         />
       </div>
 
