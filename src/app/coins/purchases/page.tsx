@@ -3,7 +3,6 @@ import { CoinsBottomMenu } from "@/components/coins/coins-bottom-menu";
 import { CoinsPartnerBanner } from "@/components/coins/coins-partner-banner";
 import { CoinsPurchasesHistory } from "@/components/coins/coins-purchases-history";
 import { CoinsShowcase } from "@/components/coins/coins-showcase";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getCoinStoreSettings } from "@/lib/coin-services";
 import { getCoinsNavigationData } from "@/lib/coins-account";
@@ -45,16 +44,7 @@ export default async function CoinsPurchasesPage() {
       <CoinsPartnerBanner />
       <CoinsPurchasesHistory purchases={purchaseHistory} isSignedIn={Boolean(session?.user)} />
 
-      {settings.coinsStoreEnabled ? (
-        <CoinsShowcase offersByPlatform={offersByPlatform} />
-      ) : (
-        <Card>
-          <CardHeader className="mb-0">
-            <CardTitle>Магазин монет выключен</CardTitle>
-            <CardDescription>Администратор временно отключил каталог Coins.</CardDescription>
-          </CardHeader>
-        </Card>
-      )}
+      {settings.coinsStoreEnabled ? <CoinsShowcase offersByPlatform={offersByPlatform} /> : null}
 
       <CoinsBottomMenu
         isSignedIn={Boolean(session?.user)}

@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, BadgePercent, CheckCircle2, CreditCard, Gamepad2, ReceiptText, ShieldCheck } from "lucide-react";
+import { ArrowRight, BadgePercent, CheckCircle2, ReceiptText, ShieldCheck } from "lucide-react";
 import { Reveal } from "@/components/shared/reveal";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatKopecks } from "@/lib/coin-services";
 
 type ServiceProduct = {
@@ -14,35 +13,7 @@ type ServiceProduct = {
 
 export function CoinsServicesShowcase({ products }: { products: ServiceProduct[] }) {
   return (
-    <section className="space-y-4">
-      <Card className="rounded-2xl border-emerald-300/15 bg-[linear-gradient(180deg,rgba(8,20,17,0.96),rgba(5,10,13,0.98))] p-4 sm:p-5">
-        <CardHeader className="mb-0">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/15 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-semibold text-emerald-100">
-                <Gamepad2 className="h-4 w-4" />
-                Меню услуг
-              </div>
-              <CardTitle className="mt-3 text-2xl font-black leading-tight sm:text-3xl">Услуги eFootball</CardTitle>
-              <CardDescription className="mt-2 max-w-2xl text-sm leading-6">
-                Выберите услугу, посмотрите описание и стоимость. После оплаты заказ попадет в меню заказов, где будет виден статус выполнения.
-              </CardDescription>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 sm:flex">
-              <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2">
-                <div className="text-[10px] font-semibold text-zinc-500">Доступно</div>
-                <div className="mt-1 text-lg font-black text-white">{products.length}</div>
-              </div>
-              <div className="rounded-xl border border-emerald-300/15 bg-emerald-400/10 px-3 py-2">
-                <div className="text-[10px] font-semibold text-emerald-100/60">Оплата</div>
-                <div className="mt-1 text-sm font-black text-emerald-100">по карте</div>
-              </div>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
-
+    <section>
       {products.length ? (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {products.map((product, index) => (
@@ -63,20 +34,13 @@ export function CoinsServicesShowcase({ products }: { products: ServiceProduct[]
                   <p className="mt-2 line-clamp-3 min-h-[3.75rem] text-sm leading-5 text-zinc-400">{product.description}</p>
                 </div>
 
-                <div className="grid gap-2 rounded-xl border border-white/10 bg-black/20 p-3 text-sm">
+                <div className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm">
                   <div className="flex items-center justify-between gap-3">
                     <span className="inline-flex items-center gap-2 text-zinc-400">
                       <ReceiptText className="h-4 w-4 text-zinc-500" />
                       Цена услуги
                     </span>
                     <span className="font-black text-white">{formatKopecks(product.priceKopecks)}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-300/15 bg-emerald-400/10 px-3 py-2">
-                    <span className="inline-flex items-center gap-2 text-emerald-100/80">
-                      <CreditCard className="h-4 w-4" />
-                      К оплате
-                    </span>
-                    <span className="font-black text-emerald-100">{formatKopecks(product.priceKopecks)}</span>
                   </div>
                 </div>
 

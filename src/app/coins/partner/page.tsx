@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Handshake } from "lucide-react";
 import { CoinsBottomMenu } from "@/components/coins/coins-bottom-menu";
 import { PartnerDashboard } from "@/components/coins/partner-dashboard";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,16 +40,6 @@ export default async function CoinsPartnerPage() {
 
   return (
     <main className="page-shell space-y-6 py-0 pb-[calc(8.5rem+env(safe-area-inset-bottom))] sm:pb-[calc(9rem+env(safe-area-inset-bottom))]">
-      <Card className="rounded-[2rem] border-amber-300/20 bg-[linear-gradient(180deg,rgba(27,17,6,0.96),rgba(11,8,6,0.98))]">
-        <CardHeader className="mb-0">
-          <CardTitle className="flex items-center gap-2 text-2xl font-black">
-            <Handshake className="h-6 w-6 text-amber-200" />
-            Партнёрка Coins
-          </CardTitle>
-          <CardDescription>Промокод, рефералы, покупки и заработок.</CardDescription>
-        </CardHeader>
-      </Card>
-
       {partner ? (
         <PartnerDashboard
           defaultOpen

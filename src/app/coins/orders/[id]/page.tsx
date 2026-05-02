@@ -54,6 +54,8 @@ export default async function CoinServiceOrderPage({ params, searchParams }: Ord
   const canExecutorComplete = order.status === CoinServiceOrderStatus.ACCEPTED && (admin || order.executorId === session.user.id);
   const canBuyerComplete =
     (order.status === CoinServiceOrderStatus.ACCEPTED || order.status === CoinServiceOrderStatus.EXECUTOR_DONE) && (admin || order.buyerId === session.user.id);
+  const showPaymentDetails = !order.paidAt;
+  const chatOpen = order.status !== CoinServiceOrderStatus.COMPLETED;
 
   return (
     <main className="page-shell space-y-6 py-0 pb-12 sm:pb-16">
@@ -74,7 +76,7 @@ export default async function CoinServiceOrderPage({ params, searchParams }: Ord
       {searchParams?.orderUpdated ? <Card className="border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Статус заказа обновлён.</Card> : null}
       {searchParams?.messageSent ? <Card className="border-sky-400/20 bg-sky-500/10 p-4 text-sm text-sky-100">Сообщение отправлено.</Card> : null}
 
-      <section className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+      <section className={cn("grid gap-4", chatOpen && "xl:grid-cols-[0.95fr_1.05fr]")}>
         <div className="space-y-4">
           <Card>
             <CardHeader>
@@ -93,7 +95,8 @@ export default async function CoinServiceOrderPage({ params, searchParams }: Ord
             </div>
           </Card>
 
-          <Card>
+          {showPaymentDetails ? (
+            <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CreditCard className="h-5 w-5 text-emerald-300" />
@@ -130,7 +133,8 @@ export default async function CoinServiceOrderPage({ params, searchParams }: Ord
                 )}
               </div>
             </div>
-          </Card>
+            </Card>
+          ) : null}
 
           <Card>
             <CardHeader>
@@ -181,7 +185,8 @@ export default async function CoinServiceOrderPage({ params, searchParams }: Ord
           </div>
         </div>
 
-        <Card className="flex min-h-[620px] flex-col overflow-hidden rounded-[2rem] border-primary/15 bg-[linear-gradient(180deg,rgba(9,15,27,0.98),rgba(5,8,14,0.98))]">
+        {chatOpen ? (
+          <Card className="flex min-h-[620px] flex-col overflow-hidden rounded-[2rem] border-primary/15 bg-[linear-gradient(180deg,rgba(9,15,27,0.98),rgba(5,8,14,0.98))]">
           <CardHeader className="border-b border-white/10">
             <CardTitle className="flex items-center gap-2">
               <MessageSquareText className="h-5 w-5 text-primary" />
@@ -239,7 +244,8 @@ export default async function CoinServiceOrderPage({ params, searchParams }: Ord
               Отправить сообщение
             </Button>
           </form>
-        </Card>
+          </Card>
+        ) : null}
       </section>
     </main>
   );
