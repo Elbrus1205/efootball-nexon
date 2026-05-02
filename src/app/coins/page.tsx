@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { CoinsBottomMenu } from "@/components/coins/coins-bottom-menu";
 import { CoinsProfile } from "@/components/coins/coins-profile";
 import { CoinsPartnerBanner } from "@/components/coins/coins-partner-banner";
 import { CoinsProfileSidebar } from "@/components/coins/coins-profile-sidebar";
@@ -88,12 +89,12 @@ export default async function CoinsPage() {
   const partnerEarning = partner?.purchases.reduce((sum, purchase) => sum + purchase.partnerEarningKopecks, 0) ?? 0;
 
   return (
-    <main className="page-shell py-0 pb-12 sm:pb-16">
+    <main className="page-shell py-0 pb-[calc(8.5rem+env(safe-area-inset-bottom))] sm:pb-[calc(9rem+env(safe-area-inset-bottom))]">
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
         <div className="space-y-6">
           <CoinsPartnerBanner />
           {session?.user ? (
-            <div id="coins-profile">
+            <div id="coins-profile" className="scroll-mt-28">
               <CoinsProfile
                 buyerOrders={buyerOrders.map((order) => ({
                   id: order.id,
@@ -115,7 +116,7 @@ export default async function CoinsPage() {
             </div>
           ) : null}
           {partner ? (
-            <div id="partner-panel">
+            <div id="partner-panel" className="scroll-mt-28">
               <PartnerDashboard
                 promoCode={partner.promoCode}
                 discountPercent={partner.discountPercent}
@@ -138,11 +139,11 @@ export default async function CoinsPage() {
             </div>
           ) : null}
           {settings.servicesStoreEnabled ? (
-            <div id="services">
+            <div id="services" className="scroll-mt-28">
               <CoinsServicesShowcase products={serviceProducts} />
             </div>
           ) : null}
-          <div id="coins-catalog">
+          <div id="coins-catalog" className="scroll-mt-28">
             {settings.coinsStoreEnabled ? (
               <CoinsShowcase offersByPlatform={offersByPlatform} />
             ) : (
@@ -178,6 +179,16 @@ export default async function CoinsPage() {
           />
         </aside>
       </div>
+
+      <CoinsBottomMenu
+        isSignedIn={Boolean(session?.user)}
+        isPartner={Boolean(partner)}
+        isExecutor={Boolean(executorProfile?.isActive)}
+        servicesEnabled={settings.servicesStoreEnabled}
+        buyerOrdersCount={buyerOrdersCount}
+        buyerActiveOrdersCount={buyerActiveOrdersCount}
+        executorActiveOrdersCount={executorActiveOrdersCount}
+      />
     </main>
   );
 }

@@ -49,7 +49,7 @@ function OrderList({ orders, emptyText }: { orders: ProfileOrder[]; emptyText: s
 export function CoinsProfile({ buyerOrders, executorOrders }: { buyerOrders: ProfileOrder[]; executorOrders: ProfileOrder[] }) {
   return (
     <section className="grid gap-4 xl:grid-cols-2">
-      <Card className="rounded-3xl">
+      <Card id="buyer-orders" className="scroll-mt-28 rounded-3xl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ClipboardList className="h-5 w-5 text-primary" />
@@ -60,7 +60,7 @@ export function CoinsProfile({ buyerOrders, executorOrders }: { buyerOrders: Pro
         <OrderList orders={buyerOrders} emptyText="Покупок услуг пока нет." />
       </Card>
 
-      <Card className="rounded-3xl">
+      <Card id="executor-orders" className="scroll-mt-28 rounded-3xl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UserCheck className="h-5 w-5 text-emerald-300" />
