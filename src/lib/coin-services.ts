@@ -68,15 +68,15 @@ export function calculatePercentAmount(totalKopecks: number, percent: number) {
 export function serviceOrderStatusLabel(status: CoinServiceOrderStatus) {
   switch (status) {
     case "PENDING_REVIEW":
-      return "Ждёт проверки оплаты";
+      return "Ожидает проверки оплаты";
     case "ACCEPTED":
       return "В работе";
     case "EXECUTOR_DONE":
-      return "Исполнитель завершил";
+      return "Ожидает подтверждения";
     case "COMPLETED":
-      return "Завершён";
+      return "Выполнено";
     case "REJECTED":
-      return "Отклонён";
+      return "Отменено";
     default:
       return status;
   }
