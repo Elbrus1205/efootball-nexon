@@ -59,9 +59,9 @@ export default async function CoinServiceOrderPage({ params, searchParams }: Ord
     <main className="page-shell space-y-6 py-0 pb-12 sm:pb-16">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button asChild variant="outline" className="h-11 rounded-full border-white/15 bg-white/[0.04] hover:bg-white/[0.08]">
-          <Link href="/coins">
+          <Link href="/coins/orders">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Назад к Coins
+            Назад к заказам
           </Link>
         </Button>
         <span className={cn("rounded-full border px-4 py-2 text-sm font-semibold", serviceOrderStatusTone(order.status))}>

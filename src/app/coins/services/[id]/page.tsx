@@ -49,9 +49,9 @@ export default async function CoinServicePage({ params, searchParams }: ServiceP
       <section className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
         <div className="rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(9,12,18,0.98),rgba(11,16,24,0.94))] p-6 shadow-[0_26px_90px_rgba(0,0,0,0.28)] sm:p-8">
           <Button asChild variant="outline" className="h-11 rounded-full border-white/15 bg-white/[0.04] hover:bg-white/[0.08]">
-            <Link href="/coins">
+            <Link href="/coins/services">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Назад к магазину
+              Назад к услугам
             </Link>
           </Button>
 

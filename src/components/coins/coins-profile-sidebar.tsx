@@ -87,7 +87,7 @@ export function CoinsProfileSidebar({
       <div className="mt-4 grid gap-2">
         {isSignedIn ? (
           <Button asChild variant="outline" className="justify-start rounded-xl">
-            <Link href="#buyer-orders">
+            <Link href="/coins/orders">
               <ClipboardList className="mr-2 h-4 w-4" />
               Заказы покупателя
             </Link>
@@ -102,20 +102,20 @@ export function CoinsProfileSidebar({
         )}
 
         <Button asChild variant="outline" className="justify-start rounded-xl">
-          <Link href="#services">
+          <Link href="/coins/services">
             <ShoppingBag className="mr-2 h-4 w-4" />
             Услуги
           </Link>
         </Button>
         <Button asChild variant="outline" className="justify-start rounded-xl">
-          <Link href="#coins-catalog">
+          <Link href="/coins/purchases">
             <Coins className="mr-2 h-4 w-4" />
             Coins
           </Link>
         </Button>
         {isPartner ? (
           <Button asChild variant="outline" className="justify-start rounded-xl">
-            <Link href="#partner-panel">
+            <Link href="/coins/partner">
               <Handshake className="mr-2 h-4 w-4" />
               Партнёрка
             </Link>
@@ -123,7 +123,7 @@ export function CoinsProfileSidebar({
         ) : null}
         {isExecutor ? (
           <Button asChild variant="outline" className="justify-start rounded-xl">
-            <Link href="#executor-orders">
+            <Link href="/coins/work">
               <UserCheck className="mr-2 h-4 w-4" />
               Исполнитель
             </Link>

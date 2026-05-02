@@ -1,0 +1,51 @@
+import type { Metadata } from "next";
+import { CoinsBottomMenu } from "@/components/coins/coins-bottom-menu";
+import { CoinsPartnerBanner } from "@/components/coins/coins-partner-banner";
+import { CoinsShowcase } from "@/components/coins/coins-showcase";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getCurrentSession } from "@/lib/auth/session";
+import { getCoinStoreSettings } from "@/lib/coin-services";
+import { getCoinsNavigationData } from "@/lib/coins-account";
+import { getCoinsProductOffersByPlatform } from "@/lib/coins-products";
+
+export const metadata: Metadata = {
+  title: "Покупки Coins | eFootball Nexon",
+  description: "Каталог Coins для eFootball Mobile.",
+};
+
+export default async function CoinsPurchasesPage() {
+  const session = await getCurrentSession();
+  const settings = await getCoinStoreSettings();
+  const [navigationData, offersByPlatform] = await Promise.all([
+    getCoinsNavigationData(session?.user.id),
+    settings.coinsStoreEnabled ? getCoinsProductOffersByPlatform() : Promise.resolve({ android: [], ios: [], promo: [] }),
+  ]);
+
+  return (
+    <main className="page-shell space-y-6 py-0 pb-[calc(8.5rem+env(safe-area-inset-bottom))] sm:pb-[calc(9rem+env(safe-area-inset-bottom))]">
+      <CoinsPartnerBanner />
+
+      {settings.coinsStoreEnabled ? (
+        <CoinsShowcase offersByPlatform={offersByPlatform} />
+      ) : (
+        <Card>
+          <CardHeader className="mb-0">
+            <CardTitle>Магазин монет выключен</CardTitle>
+            <CardDescription>Администратор временно отключил каталог Coins.</CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
+      <CoinsBottomMenu
+        isSignedIn={Boolean(session?.user)}
+        isPartner={navigationData.isPartner}
+        isExecutor={navigationData.isExecutor}
+        servicesEnabled={settings.servicesStoreEnabled}
+        buyerOrdersCount={navigationData.buyerOrdersCount}
+        buyerActiveOrdersCount={navigationData.buyerActiveOrdersCount}
+        executorActiveOrdersCount={navigationData.executorActiveOrdersCount}
+        activeItem="purchases"
+      />
+    </main>
+  );
+}

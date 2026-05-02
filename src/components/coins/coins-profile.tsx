@@ -5,7 +5,7 @@ import { formatKopecks, serviceOrderStatusLabel, serviceOrderStatusTone } from "
 import { cn } from "@/lib/utils";
 import type { CoinServiceOrderStatus } from "@prisma/client";
 
-type ProfileOrder = {
+export type CoinsProfileOrder = {
   id: string;
   productTitle: string;
   priceKopecks: number;
@@ -15,7 +15,7 @@ type ProfileOrder = {
   executorName?: string;
 };
 
-function OrderList({ orders, emptyText }: { orders: ProfileOrder[]; emptyText: string }) {
+export function CoinsOrderList({ orders, emptyText }: { orders: CoinsProfileOrder[]; emptyText: string }) {
   if (!orders.length) {
     return <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-zinc-500">{emptyText}</div>;
   }
@@ -46,7 +46,7 @@ function OrderList({ orders, emptyText }: { orders: ProfileOrder[]; emptyText: s
   );
 }
 
-export function CoinsProfile({ buyerOrders, executorOrders }: { buyerOrders: ProfileOrder[]; executorOrders: ProfileOrder[] }) {
+export function CoinsProfile({ buyerOrders, executorOrders }: { buyerOrders: CoinsProfileOrder[]; executorOrders: CoinsProfileOrder[] }) {
   return (
     <section className="grid gap-4 xl:grid-cols-2">
       <Card id="buyer-orders" className="scroll-mt-28 rounded-3xl">
@@ -57,7 +57,7 @@ export function CoinsProfile({ buyerOrders, executorOrders }: { buyerOrders: Pro
           </CardTitle>
           <CardDescription>Ваши заказы услуг и чат с исполнителем.</CardDescription>
         </CardHeader>
-        <OrderList orders={buyerOrders} emptyText="Покупок услуг пока нет." />
+        <CoinsOrderList orders={buyerOrders} emptyText="Покупок услуг пока нет." />
       </Card>
 
       <Card id="executor-orders" className="scroll-mt-28 rounded-3xl">
@@ -68,7 +68,7 @@ export function CoinsProfile({ buyerOrders, executorOrders }: { buyerOrders: Pro
           </CardTitle>
           <CardDescription>Заказы, где вы назначены исполнителем.</CardDescription>
         </CardHeader>
-        <OrderList orders={executorOrders} emptyText="Назначенных заказов пока нет." />
+        <CoinsOrderList orders={executorOrders} emptyText="Назначенных заказов пока нет." />
       </Card>
     </section>
   );

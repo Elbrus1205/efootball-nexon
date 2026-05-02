@@ -24,10 +24,11 @@ type PartnerDashboardProps = {
     amount: string;
     earning: string;
   }>;
+  defaultOpen?: boolean;
 };
 
-export function PartnerDashboard({ promoCode, discountPercent, partnerPercent, stats, referrals, purchases }: PartnerDashboardProps) {
-  const [open, setOpen] = useState(false);
+export function PartnerDashboard({ promoCode, discountPercent, partnerPercent, stats, referrals, purchases, defaultOpen = false }: PartnerDashboardProps) {
+  const [open, setOpen] = useState(defaultOpen);
   const [activeList, setActiveList] = useState<"referrals" | "purchases" | null>(null);
 
   return (
