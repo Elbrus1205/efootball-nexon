@@ -65,6 +65,7 @@ export default async function CoinsOrdersPage() {
           createdAt: order.createdAt,
           buyerName: order.buyer?.nickname || order.buyer?.name || order.buyer?.email || undefined,
         }))}
+        showExecutorProfile={navigationData.isExecutor || executorOrders.length > 0}
       />
 
       <CoinsBottomMenu

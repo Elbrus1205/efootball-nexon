@@ -46,9 +46,17 @@ export function CoinsOrderList({ orders, emptyText }: { orders: CoinsProfileOrde
   );
 }
 
-export function CoinsProfile({ buyerOrders, executorOrders }: { buyerOrders: CoinsProfileOrder[]; executorOrders: CoinsProfileOrder[] }) {
+export function CoinsProfile({
+  buyerOrders,
+  executorOrders,
+  showExecutorProfile = true,
+}: {
+  buyerOrders: CoinsProfileOrder[];
+  executorOrders: CoinsProfileOrder[];
+  showExecutorProfile?: boolean;
+}) {
   return (
-    <section className="grid gap-4 xl:grid-cols-2">
+    <section className={cn("grid gap-4", showExecutorProfile ? "xl:grid-cols-2" : "max-w-3xl")}>
       <Card id="buyer-orders" className="scroll-mt-28 rounded-3xl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -60,16 +68,18 @@ export function CoinsProfile({ buyerOrders, executorOrders }: { buyerOrders: Coi
         <CoinsOrderList orders={buyerOrders} emptyText="Покупок услуг пока нет." />
       </Card>
 
-      <Card id="executor-orders" className="scroll-mt-28 rounded-3xl">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserCheck className="h-5 w-5 text-emerald-300" />
-            Профиль исполнителя
-          </CardTitle>
-          <CardDescription>Заказы, где вы назначены исполнителем.</CardDescription>
-        </CardHeader>
-        <CoinsOrderList orders={executorOrders} emptyText="Назначенных заказов пока нет." />
-      </Card>
+      {showExecutorProfile ? (
+        <Card id="executor-orders" className="scroll-mt-28 rounded-3xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserCheck className="h-5 w-5 text-emerald-300" />
+              Профиль исполнителя
+            </CardTitle>
+            <CardDescription>Заказы, где вы назначены исполнителем.</CardDescription>
+          </CardHeader>
+          <CoinsOrderList orders={executorOrders} emptyText="Назначенных заказов пока нет." />
+        </Card>
+      ) : null}
     </section>
   );
 }
