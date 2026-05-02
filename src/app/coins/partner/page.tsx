@@ -74,7 +74,7 @@ export default async function CoinsPartnerPage() {
         isSignedIn
         isPartner={navigationData.isPartner}
         isExecutor={navigationData.isExecutor}
-        servicesEnabled={settings.servicesStoreEnabled}
+        servicesEnabled={settings.servicesStoreEnabled || settings.coinsStoreEnabled}
         buyerOrdersCount={navigationData.buyerOrdersCount}
         buyerActiveOrdersCount={navigationData.buyerActiveOrdersCount}
         executorActiveOrdersCount={navigationData.executorActiveOrdersCount}

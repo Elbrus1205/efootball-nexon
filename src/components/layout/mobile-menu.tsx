@@ -26,6 +26,7 @@ const linkMeta: Record<string, { icon: LucideIcon; caption: string }> = {
   "/regulations": { icon: FileText, caption: "Правила и формат" },
   "/tournaments": { icon: Trophy, caption: "Ближайшие турниры" },
   "/coins": { icon: Coins, caption: "Магазин Coins" },
+  "/coins/services": { icon: Coins, caption: "Услуги и донат Coins" },
   "/ratings": { icon: BarChart3, caption: "Таблица игроков" },
   "/faq": { icon: CircleHelp, caption: "Ответы и помощь" },
   "/contacts": { icon: Phone, caption: "Связь с нами" },

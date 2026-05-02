@@ -1,14 +1,12 @@
-import Link from "next/link";
-import { ClipboardCheck, Coins, CreditCard, Handshake, MessageSquareText, PackagePlus, Percent, Search, Settings, Trash2, UserCheck, Users } from "lucide-react";
+import { Coins, CreditCard, Handshake, PackagePlus, Percent, Search, Settings, Trash2, UserCheck, Users } from "lucide-react";
 import { CoinServiceOrderStatus, UserRole } from "@prisma/client";
 import { BankLogo } from "@/components/coins/bank-logo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { requireRole } from "@/lib/auth/session";
-import { coinPaymentBankOptions, formatKopecks, getCoinStoreSettings, serviceOrderStatusLabel, serviceOrderStatusTone } from "@/lib/coin-services";
+import { coinPaymentBankOptions, getCoinStoreSettings } from "@/lib/coin-services";
 import { db } from "@/lib/db";
-import { cn } from "@/lib/utils";
 
 function formatMoney(value: number) {
   return new Intl.NumberFormat("ru-RU", {
@@ -36,7 +34,6 @@ export default async function AdminCoinsPage({
     paymentCardCreated?: string;
     paymentCardUpdated?: string;
     paymentCardDeleted?: string;
-    orderUpdated?: string;
     executorCreated?: string;
     executorDeleted?: string;
     error?: string;
@@ -63,7 +60,7 @@ export default async function AdminCoinsPage({
       });
 
   const settings = await getCoinStoreSettings();
-  const [partners, products, serviceProducts, serviceOrders, executorProfiles, paymentCards] = await Promise.all([
+  const [partners, products, serviceProducts, executorProfiles, paymentCards] = await Promise.all([
     db.affiliatePartner.findMany({
     include: {
       owner: true,
@@ -87,15 +84,6 @@ export default async function AdminCoinsPage({
     db.coinServiceProduct.findMany({
       where: { isActive: true },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
-    }),
-    db.coinServiceOrder.findMany({
-      include: {
-        buyer: { select: { nickname: true, name: true, email: true } },
-        executor: { select: { id: true, nickname: true, name: true, email: true } },
-        _count: { select: { messages: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 30,
     }),
     db.coinServiceExecutor.findMany({
       where: { isActive: true },
@@ -138,7 +126,6 @@ export default async function AdminCoinsPage({
       {searchParams?.paymentCardCreated ? <Card className="border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Карта оплаты добавлена.</Card> : null}
       {searchParams?.paymentCardUpdated ? <Card className="border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Карта оплаты обновлена.</Card> : null}
       {searchParams?.paymentCardDeleted ? <Card className="border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">Карта оплаты удалена.</Card> : null}
-      {searchParams?.orderUpdated ? <Card className="border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Заказ обновлён.</Card> : null}
       {searchParams?.executorCreated ? <Card className="border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Исполнитель добавлен.</Card> : null}
       {searchParams?.executorDeleted ? <Card className="border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">Исполнитель убран из активных.</Card> : null}
       {searchParams?.deleted ? <Card className="border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">Партнёрская программа удалена.</Card> : null}
@@ -533,92 +520,6 @@ export default async function AdminCoinsPage({
               </div>
             ))}
             {!serviceProducts.length ? <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-zinc-500">Услуг пока нет.</div> : null}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardCheck className="h-5 w-5 text-primary" />
-            Заказы услуг
-          </CardTitle>
-          <CardDescription>Проверяйте чек оплаты. После подтверждения исполнитель назначается автоматически из активного пула.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3">
-            {serviceOrders.map((order) => {
-              const buyerName = order.buyer.nickname || order.buyer.name || order.buyer.email || "Покупатель";
-              const executorName = order.executor?.nickname || order.executor?.name || order.executor?.email || "";
-
-              return (
-                <div key={order.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <div className="font-semibold text-white">{order.productTitle}</div>
-                        <span className={cn("rounded-full border px-3 py-1 text-xs font-semibold", serviceOrderStatusTone(order.status))}>
-                          {serviceOrderStatusLabel(order.status)}
-                        </span>
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-zinc-500">
-                        <span>Покупатель: {buyerName}</span>
-                        <span>Сумма: {formatKopecks(order.priceKopecks)}</span>
-                        <span>Исполнителю: {formatKopecks(order.executorEarningKopecks)} ({order.executorPercent}%)</span>
-                        <span>Владельцу: {formatKopecks(order.ownerEarningKopecks)} ({order.ownerPercent}%)</span>
-                        <span>Сообщений: {order._count.messages}</span>
-                      </div>
-                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                        {order.paymentReceiptUrl ? (
-                          <a href={order.paymentReceiptUrl} target="_blank" rel="noreferrer" className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 font-semibold text-emerald-100 transition hover:bg-emerald-400/20">
-                            Чек оплаты
-                          </a>
-                        ) : (
-                          <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-amber-100">Чек не прикреплён</span>
-                        )}
-                        {order.paidAt ? (
-                          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-zinc-400">
-                            Оплата: {new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(order.paidAt)}
-                          </span>
-                        ) : null}
-                      </div>
-                      {executorName ? <div className="mt-2 text-sm text-emerald-100">Исполнитель: {executorName}</div> : null}
-                    </div>
-                    <Button asChild variant="outline" className="shrink-0">
-                      <Link href={`/coins/orders/${order.id}`}>
-                        <MessageSquareText className="mr-2 h-4 w-4" />
-                        Открыть чат
-                      </Link>
-                    </Button>
-                  </div>
-
-                  {order.status === CoinServiceOrderStatus.PENDING_REVIEW ? (
-                    <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]">
-                      <form action={`/api/admin/coins/service-orders/${order.id}`} method="post" className="grid gap-3 rounded-2xl border border-emerald-400/15 bg-emerald-500/10 p-3 md:grid-cols-[1fr_auto]">
-                        <input type="hidden" name="_action" value="accept" />
-                        <label className="space-y-2">
-                          <span className="text-sm text-zinc-300">Комментарий админа</span>
-                          <input name="adminComment" defaultValue={order.adminComment ?? ""} placeholder="Опционально" className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
-                        </label>
-                        <div className="flex items-end">
-                          <Button className="w-full bg-emerald-400 text-black hover:bg-emerald-300">
-                            <UserCheck className="mr-2 h-4 w-4" />
-                            Проверить оплату и назначить
-                          </Button>
-                        </div>
-                      </form>
-
-                      <form action={`/api/admin/coins/service-orders/${order.id}`} method="post" className="grid gap-3 rounded-2xl border border-rose-400/20 bg-rose-500/10 p-3">
-                        <input type="hidden" name="_action" value="reject" />
-                        <input name="adminComment" placeholder="Причина отклонения" className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white" />
-                        <Button variant="outline" className="border-rose-400/25 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20">Отклонить</Button>
-                      </form>
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
-            {!serviceOrders.length ? <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-zinc-500">Заказов услуг пока нет.</div> : null}
           </div>
         </CardContent>
       </Card>
