@@ -161,7 +161,14 @@ export async function POST(request: Request) {
     createNotificationsForUsers({
       userIds: founders.map((user) => user.id),
       title: "Новый оплаченный заказ",
-      body: `${buyerName} оплатил и отправил чек: ${product.title}. Сумма: ${formatKopecks(product.priceKopecks)}.`,
+      body: [
+        `Покупатель: ${buyerName}`,
+        `Услуга: ${product.title}`,
+        `Сумма: ${formatKopecks(product.priceKopecks)}`,
+        `Telegram: ${parsed.data.buyerTelegram}`,
+        "Чек: прикреплён",
+        "Статус: ожидает проверки оплаты",
+      ].join("\n"),
       type: NotificationType.SYSTEM,
       link: "/admin/coins",
     }),

@@ -186,7 +186,7 @@ export default async function CoinServiceOrderPage({ params, searchParams }: Ord
             ) : null}
 
             {canExecutorComplete ? (
-              <form action={`/api/coins/service-orders/${order.id}/actions`} method="post">
+              <form action={`/api/coins/service-orders/${order.id}/actions`} method="post" className="sm:col-span-2">
                 <input type="hidden" name="_action" value="executor_done" />
                 <Button className="w-full rounded-xl bg-sky-400 text-slate-950 hover:bg-sky-300">
                   <UserRoundCheck className="mr-2 h-4 w-4" />

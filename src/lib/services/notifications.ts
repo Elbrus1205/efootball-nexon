@@ -3,6 +3,7 @@ import { NotificationType } from "@prisma/client";
 import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
 import { sendTelegramMessage } from "@/lib/telegram-bot";
+import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
 import { repairMojibake } from "@/lib/text-encoding";
 
 const pusher =
@@ -82,10 +83,20 @@ export async function createNotification({
   }
 
   if (notification.user.telegramId && process.env.TELEGRAM_BOT_TOKEN) {
+    const absoluteLink = buildAbsoluteNotificationLink(link);
     await sendTelegramMessage({
       chatId: notification.user.telegramId,
-      text: buildTelegramNotificationText(safeTitle, safeBody, link),
+      text: buildTelegramNotificationText(safeTitle, safeBody),
       disableWebPagePreview: true,
+      replyMarkup: absoluteLink
+        ? buildTelegramInlineKeyboard([
+            {
+              text: "Открыть на сайте",
+              url: absoluteLink,
+              row: 1,
+            },
+          ])
+        : undefined,
     }).catch((error) => {
       console.error("Failed to send Telegram notification", error);
     });
@@ -157,17 +168,20 @@ export async function createNotificationForAllUsers({
   });
 }
 
-function buildTelegramNotificationText(title: string, body: string, link?: string | null) {
-  const appUrl = getConfiguredSiteBaseUrl();
-  const absoluteLink = link && appUrl ? new URL(link, appUrl).toString() : "";
+function buildTelegramNotificationText(title: string, body: string) {
+  const safeTitle = escapeTelegramHtml(title);
+  const safeBody = escapeTelegramHtml(body);
 
-  return [
-    `<b>${escapeTelegramHtml(title)}</b>`,
-    escapeTelegramHtml(body),
-    absoluteLink ? `<a href="${escapeTelegramHtml(absoluteLink)}">Открыть на сайте</a>` : "",
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+  if (!safeBody) {
+    return `<b>${safeTitle}</b>`;
+  }
+
+  return [`<b>${safeTitle}</b>`, `<blockquote>${safeBody}</blockquote>`].join("\n\n");
+}
+
+function buildAbsoluteNotificationLink(link?: string | null) {
+  const appUrl = getConfiguredSiteBaseUrl();
+  return link && appUrl ? new URL(link, appUrl).toString() : "";
 }
 
 function escapeTelegramHtml(value: string) {
