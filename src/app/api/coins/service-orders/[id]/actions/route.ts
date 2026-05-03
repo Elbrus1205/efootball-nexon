@@ -153,7 +153,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 
   if (action === "executor_done") {
-    if (!admin && order.executorId !== session.user.id) {
+    if (order.executorId !== session.user.id) {
       redirectUrl.searchParams.set("error", "Отметить выполнение может только исполнитель.");
       return NextResponse.redirect(redirectUrl, 303);
     }
@@ -184,7 +184,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 
   if (action === "buyer_complete") {
-    if (!admin && order.buyerId !== session.user.id) {
+    if (order.buyerId !== session.user.id) {
       redirectUrl.searchParams.set("error", "Подтвердить заказ может только покупатель.");
       return NextResponse.redirect(redirectUrl, 303);
     }

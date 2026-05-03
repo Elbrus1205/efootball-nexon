@@ -52,9 +52,9 @@ export default async function CoinServiceOrderPage({ params, searchParams }: Ord
   }
 
   const canExecutorRespond = order.status === CoinServiceOrderStatus.ASSIGNED && (admin || order.executorId === session.user.id);
-  const canExecutorComplete = order.status === CoinServiceOrderStatus.ACCEPTED && (admin || order.executorId === session.user.id);
+  const canExecutorComplete = order.status === CoinServiceOrderStatus.ACCEPTED && order.executorId === session.user.id;
   const canBuyerComplete =
-    (order.status === CoinServiceOrderStatus.ACCEPTED || order.status === CoinServiceOrderStatus.EXECUTOR_DONE) && (admin || order.buyerId === session.user.id);
+    (order.status === CoinServiceOrderStatus.ACCEPTED || order.status === CoinServiceOrderStatus.EXECUTOR_DONE) && order.buyerId === session.user.id;
   const showPaymentDetails = !order.paidAt;
   const chatOpen = order.status !== CoinServiceOrderStatus.COMPLETED;
 
