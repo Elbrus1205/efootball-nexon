@@ -10,6 +10,7 @@ import {
 } from "@prisma/client";
 import { z } from "zod";
 import { PROFILE_BIO_MAX_LENGTH } from "@/lib/profile";
+import { MAX_SELECTED_PROFILE_STATUSES } from "@/lib/profile-status-style";
 
 const optionalIntField = (minimum: number, maximum: number, message?: string) =>
   z.preprocess(
@@ -64,6 +65,7 @@ export const profileSchema = z.object({
     })
     .optional()
     .or(z.literal("")),
+  selectedStatusIds: z.array(z.string()).max(MAX_SELECTED_PROFILE_STATUSES, `Можно выбрать не больше ${MAX_SELECTED_PROFILE_STATUSES} статусов.`).optional().default([]),
 });
 
 export const tournamentSchema = z.object({

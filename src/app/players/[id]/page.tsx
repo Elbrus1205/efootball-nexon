@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { UserRole } from "@prisma/client";
+import { ProfileStatusApprovalStatus, UserRole } from "@prisma/client";
 import { PlayerCareerStatsPanel } from "@/components/players/player-career-stats";
 import { PlayerSocialLinks } from "@/components/players/player-social-links";
 import { StatsPeriodSwitcher } from "@/components/players/stats-period-switcher";
@@ -8,6 +8,7 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { getPlayerCareerStats } from "@/lib/player-stats";
+import { profileStatusClassName } from "@/lib/profile-status-style";
 import { getUserSocialLinks } from "@/lib/social-links";
 import { formatDate } from "@/lib/utils";
 
@@ -29,6 +30,10 @@ export default async function PlayerProfilePage({
             providerAccountId: true,
           },
         },
+        profileStatuses: {
+          where: { approvalStatus: ProfileStatusApprovalStatus.APPROVED },
+          orderBy: [{ selectedOrder: "asc" }, { createdAt: "desc" }],
+        },
       },
     }),
     db.season.findMany({
@@ -43,12 +48,22 @@ export default async function PlayerProfilePage({
   const socialLinks = getUserSocialLinks(user);
   const careerStats = await getPlayerCareerStats(user.id, { seasonId: selectedSeason?.id ?? null });
   const periodLabel = selectedSeason ? `Сезон: ${selectedSeason.name}` : "За всё время";
+  const selectedStatuses = user.profileStatuses.filter((status) => status.selectedOrder !== null).slice(0, 3);
 
   return (
     <div className="page-shell space-y-8">
       <Card className="p-6">
         <div className="space-y-3">
           <h1 className="font-display text-3xl font-thin text-white">{getPlayerDisplayName(user)}</h1>
+          {selectedStatuses.length ? (
+            <div className="flex flex-wrap gap-2">
+              {selectedStatuses.map((status) => (
+                <span key={status.id} className={profileStatusClassName(status.tone)}>
+                  {status.title}
+                </span>
+              ))}
+            </div>
+          ) : null}
           <div className="grid gap-3 text-sm text-zinc-400 sm:grid-cols-2 lg:grid-cols-3">
             {canSeePlayerId ? <div>ID игрока: {user.publicId}</div> : null}
             <div>Имя: {user.name ?? "Не указано"}</div>
@@ -59,6 +74,19 @@ export default async function PlayerProfilePage({
               </div>
             ) : null}
           </div>
+        </div>
+      </Card>
+
+      <Card className="rounded-lg p-5">
+        <div className="font-semibold text-white">Статусы профиля</div>
+        <div className="mt-1 text-sm text-zinc-500">Все подтверждённые статусы игрока.</div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {user.profileStatuses.map((status) => (
+            <span key={status.id} className={profileStatusClassName(status.tone)}>
+              {status.title}
+            </span>
+          ))}
+          {!user.profileStatuses.length ? <div className="text-sm text-zinc-500">Подтверждённых статусов пока нет.</div> : null}
         </div>
       </Card>
 

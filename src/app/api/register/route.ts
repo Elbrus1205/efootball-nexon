@@ -1,5 +1,6 @@
 import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
+import { ProfileStatusApprovalStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth/session";
 import { getLegalAcceptanceData, LEGAL_ACCEPTANCE_REQUIRED_MESSAGE } from "@/lib/legal-acceptance";
@@ -61,6 +62,7 @@ export async function PATCH(request: Request) {
       fieldErrors.name?.[0] ??
       fieldErrors.favoriteTeam?.[0] ??
       fieldErrors.bio?.[0] ??
+      fieldErrors.selectedStatusIds?.[0] ??
       fieldErrors.bannerImage?.[0] ??
       fieldErrors.image?.[0] ??
       "Не удалось проверить данные профиля.";
@@ -69,6 +71,7 @@ export async function PATCH(request: Request) {
   }
 
   const body = parsedBody.data;
+  const selectedStatusIds = Array.from(new Set(body.selectedStatusIds ?? []));
   const existingUser = await db.user.findUnique({
     where: { id: session.user.id },
     select: {
@@ -103,16 +106,49 @@ export async function PATCH(request: Request) {
     }
   }
 
-  const user = await db.user.update({
-    where: { id: session.user.id },
-    data: {
-      name: normalizedName,
-      ...(nameChanged ? { nameUpdatedAt: new Date() } : {}),
-      favoriteTeam: body.favoriteTeam || null,
-      bio: body.bio || null,
-      bannerImage: body.bannerImage || null,
-      image: body.image || null,
-    },
+  const ownedStatuses = selectedStatusIds.length
+    ? await db.userProfileStatus.findMany({
+        where: {
+          id: { in: selectedStatusIds },
+          userId: session.user.id,
+          approvalStatus: ProfileStatusApprovalStatus.APPROVED,
+        },
+        select: { id: true },
+      })
+    : [];
+
+  if (ownedStatuses.length !== selectedStatusIds.length) {
+    return NextResponse.json({ error: "Можно выбрать только свои подтверждённые статусы." }, { status: 400 });
+  }
+
+  const user = await db.$transaction(async (tx) => {
+    const updatedUser = await tx.user.update({
+      where: { id: session.user.id },
+      data: {
+        name: normalizedName,
+        ...(nameChanged ? { nameUpdatedAt: new Date() } : {}),
+        favoriteTeam: body.favoriteTeam || null,
+        bio: body.bio || null,
+        bannerImage: body.bannerImage || null,
+        image: body.image || null,
+      },
+    });
+
+    await tx.userProfileStatus.updateMany({
+      where: { userId: session.user.id },
+      data: { selectedOrder: null },
+    });
+
+    await Promise.all(
+      selectedStatusIds.map((statusId, index) =>
+        tx.userProfileStatus.update({
+          where: { id: statusId },
+          data: { selectedOrder: index + 1 },
+        }),
+      ),
+    );
+
+    return updatedUser;
   });
 
   return NextResponse.json({ user });

@@ -56,26 +56,7 @@ npm run prisma:seed
 npm run dev
 ```
 
-## Demo Admin
-
-- Email: `admin@efoottourney.local`
-- Password: `Admin12345!`
-
-## Deploy to Vercel + Neon
-
-### 1. Create Neon database
-
-- Go to `https://neon.tech`
-- Create a project
-- Copy the connection string
-
-It looks like:
-
-```env
-postgresql://USER:PASSWORD@HOST/DBNAME?sslmode=require
-```
-
-### 2. Add Environment Variables in Vercel
+### 2. Add Environment Variables
 
 Required:
 
@@ -101,37 +82,4 @@ Optional for extra features:
 - `NEXT_PUBLIC_PUSHER_KEY`
 - `NEXT_PUBLIC_PUSHER_CLUSTER`
 
-### 3. Vercel values example
 
-```env
-DATABASE_URL=postgresql://USER:PASSWORD@HOST/DBNAME?sslmode=require
-NEXTAUTH_URL=https://your-project.vercel.app
-NEXTAUTH_SECRET=your-long-random-secret
-```
-
-### 4. Deploy
-
-Import the GitHub repository into Vercel and redeploy after setting env vars.
-
-### 5. Apply schema in production
-
-If needed after deploy:
-
-```powershell
-npx prisma db push
-```
-
-## Custom Domain
-
-After deploy:
-
-- Open Vercel project
-- Go to `Settings -> Domains`
-- Add your domain
-- Apply DNS records shown by Vercel at your domain registrar
-
-After domain is connected, update:
-
-```env
-NEXTAUTH_URL=https://your-domain.com
-```

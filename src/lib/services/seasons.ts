@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { createSeasonStatusNominations } from "@/lib/profile-statuses";
 import { slugify } from "@/lib/utils";
 
 function normalizeSeasonName(name: FormDataEntryValue | null) {
@@ -25,8 +26,9 @@ export async function createSeason(rawName: FormDataEntryValue | null) {
   }
 
   const now = new Date();
+  const previousActiveSeason = await getActiveSeason();
 
-  return db.$transaction(async (tx) => {
+  const season = await db.$transaction(async (tx) => {
     await tx.season.updateMany({
       where: { isActive: true },
       data: { isActive: false, endsAt: now },
@@ -41,6 +43,12 @@ export async function createSeason(rawName: FormDataEntryValue | null) {
       },
     });
   });
+
+  if (previousActiveSeason) {
+    await createSeasonStatusNominations(previousActiveSeason.id);
+  }
+
+  return season;
 }
 
 export async function deleteSeason(seasonId: string) {

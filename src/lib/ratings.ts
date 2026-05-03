@@ -1,4 +1,4 @@
-import { MatchStatus, Prisma, TournamentStatus, User, UserRole } from "@prisma/client";
+import { MatchStatus, Prisma, ProfileStatusApprovalStatus, TournamentStatus, User, UserRole, type ProfileStatusTone } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
 
@@ -14,7 +14,9 @@ function roundToTenths(value: number) {
   return Math.round(value * 10) / 10;
 }
 
-type RatingPlayer = Pick<User, "id" | "name" | "nickname" | "image">;
+type RatingPlayer = Pick<User, "id" | "name" | "nickname" | "image"> & {
+  profileStatuses?: Array<{ id: string; title: string; tone: ProfileStatusTone; selectedOrder: number | null }>;
+};
 
 type PlayerRatingOptions = {
   seasonId?: string | null;
@@ -37,6 +39,7 @@ export type PlayerRatingRow = {
   lastRatingChange: number;
   lastRatingChangeAt: Date | null;
   lastMatchAt: Date | null;
+  selectedStatuses: Array<{ id: string; title: string; tone: ProfileStatusTone }>;
 };
 
 function expectedScore(playerRating: number, opponentRating: number) {
@@ -61,6 +64,11 @@ function emptyRatingRow(player: RatingPlayer): PlayerRatingRow {
     lastRatingChange: 0,
     lastRatingChangeAt: null,
     lastMatchAt: null,
+    selectedStatuses: (player.profileStatuses ?? [])
+      .filter((status) => status.selectedOrder !== null)
+      .sort((a, b) => (a.selectedOrder ?? 99) - (b.selectedOrder ?? 99))
+      .slice(0, 3)
+      .map((status) => ({ id: status.id, title: status.title, tone: status.tone })),
   };
 }
 
@@ -100,7 +108,18 @@ export async function getPlayerRatings(options: PlayerRatingOptions = {}) {
   const [players, matches, completedTournaments, ratingOverrides] = await db.$transaction([
     db.user.findMany({
       where: { role: UserRole.PLAYER, isBanned: false },
-      select: { id: true, name: true, nickname: true, image: true },
+      select: {
+        id: true,
+        name: true,
+        nickname: true,
+        image: true,
+        profileStatuses: {
+          where: { approvalStatus: ProfileStatusApprovalStatus.APPROVED, selectedOrder: { not: null } },
+          select: { id: true, title: true, tone: true, selectedOrder: true },
+          orderBy: [{ selectedOrder: "asc" }],
+          take: 3,
+        },
+      },
       orderBy: { createdAt: "asc" },
     }),
     db.match.findMany({

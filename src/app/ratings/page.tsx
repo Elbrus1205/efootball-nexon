@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { getCurrentSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { profileStatusClassName } from "@/lib/profile-status-style";
 import { getPlayerRatings } from "@/lib/ratings";
 import { proxyTelegramAssetUrl } from "@/lib/telegram-assets";
 import { cn, formatDate } from "@/lib/utils";
@@ -135,6 +136,15 @@ export default async function RatingsPage({
                             <Link href={`/players/${player.playerId}`} className="block truncate font-semibold text-white transition hover:text-primary">
                               {player.playerName}
                             </Link>
+                            {player.selectedStatuses.length ? (
+                              <div className="mt-1 flex flex-wrap gap-1.5">
+                                {player.selectedStatuses.map((status) => (
+                                  <span key={status.id} className={profileStatusClassName(status.tone, "min-h-6 px-2 text-[10px]")}>
+                                    {status.title}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
                           </div>
                         </div>
                       </div>

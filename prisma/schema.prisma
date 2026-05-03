@@ -163,6 +163,26 @@ enum CoinPaymentBank {
   VTB
 }
 
+enum ProfileStatusType {
+  SEASON_CHAMPION
+  SEASON_VICE_CHAMPION
+  SEASON_BRONZE
+}
+
+enum ProfileStatusTone {
+  GOLD
+  PURPLE
+  BLUE
+  GREEN
+  GRAY
+}
+
+enum ProfileStatusApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id                  String                   @id @default(cuid())
   publicId            String                   @unique
@@ -215,6 +235,8 @@ model User {
   coinServiceExecutorAttempts CoinServiceExecutorAttempt[]
   coinServiceOrderMessages CoinServiceOrderMessage[]
   coinServiceExecutorProfile CoinServiceExecutor?
+  profileStatuses      UserProfileStatus[]         @relation("profileStatusOwner")
+  reviewedProfileStatuses UserProfileStatus[]      @relation("profileStatusReviewer")
 }
 
 model Account {
@@ -288,8 +310,35 @@ model Season {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   tournaments Tournament[]
+  profileStatuses UserProfileStatus[]
 
   @@index([isActive])
+}
+
+model UserProfileStatus {
+  id             String                      @id @default(cuid())
+  userId         String
+  seasonId       String?
+  type           ProfileStatusType
+  title          String
+  description    String                      @db.Text
+  tone           ProfileStatusTone           @default(GRAY)
+  sourceRank     Int?
+  approvalStatus ProfileStatusApprovalStatus @default(PENDING)
+  selectedOrder  Int?
+  createdAt      DateTime                    @default(now())
+  updatedAt      DateTime                    @updatedAt
+  approvedAt     DateTime?
+  reviewedAt     DateTime?
+  reviewedById   String?
+  user           User                        @relation("profileStatusOwner", fields: [userId], references: [id], onDelete: Cascade)
+  season         Season?                     @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  reviewedBy     User?                       @relation("profileStatusReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@unique([userId, seasonId, type])
+  @@index([userId, approvalStatus, selectedOrder])
+  @@index([approvalStatus, createdAt])
+  @@index([seasonId, sourceRank])
 }
 
 model Tournament {

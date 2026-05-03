@@ -1,4 +1,4 @@
-import { Archive, CalendarRange, CheckCircle2, Play, Trash2 } from "lucide-react";
+import { Archive, CalendarRange, CheckCircle2, Play, Trash2, UserCheck, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { profileStatusClassName } from "@/lib/profile-status-style";
 import { formatDate } from "@/lib/utils";
-import { UserRole } from "@prisma/client";
+import { ProfileStatusApprovalStatus, UserRole } from "@prisma/client";
 
 function dateRange(startsAt: Date | null, endsAt: Date | null) {
   if (!startsAt && !endsAt) return "Даты не указаны";
@@ -19,16 +20,24 @@ function dateRange(startsAt: Date | null, endsAt: Date | null) {
 export default async function AdminSeasonsPage({
   searchParams,
 }: {
-  searchParams?: { created?: string; deleted?: string; cleared?: string; error?: string };
+  searchParams?: { created?: string; deleted?: string; cleared?: string; statusApproved?: string; statusRejected?: string; error?: string };
 }) {
   await requireRole([UserRole.FOUNDER]);
 
-  const [seasons, tournamentsWithoutSeason] = await db.$transaction([
+  const [seasons, tournamentsWithoutSeason, pendingStatuses] = await db.$transaction([
     db.season.findMany({
       include: { _count: { select: { tournaments: true } } },
       orderBy: [{ isActive: "desc" }, { startsAt: "desc" }, { createdAt: "desc" }],
     }),
     db.tournament.count({ where: { seasonId: null } }),
+    db.userProfileStatus.findMany({
+      where: { approvalStatus: ProfileStatusApprovalStatus.PENDING },
+      include: {
+        user: { select: { nickname: true, name: true, email: true } },
+        season: { select: { name: true } },
+      },
+      orderBy: [{ createdAt: "asc" }],
+    }),
   ]);
 
   const activeSeason = seasons.find((season) => season.isActive) ?? null;
@@ -49,6 +58,14 @@ export default async function AdminSeasonsPage({
 
       {searchParams?.cleared ? (
         <Card className="rounded-lg border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">Все сезоны очищены.</Card>
+      ) : null}
+
+      {searchParams?.statusApproved ? (
+        <Card className="rounded-lg border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Статус подтверждён и выдан игроку.</Card>
+      ) : null}
+
+      {searchParams?.statusRejected ? (
+        <Card className="rounded-lg border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">Статус отклонён.</Card>
       ) : null}
 
       {searchParams?.error ? (
@@ -150,6 +167,52 @@ export default async function AdminSeasonsPage({
           </div>
         </Card>
 
+        <div className="space-y-4">
+        <Card className="rounded-lg p-5">
+          <CardHeader>
+            <CardTitle>Статусы на подтверждение</CardTitle>
+            <CardDescription>Сезонные статусы создаются автоматически после закрытия сезона, но выдаются только после подтверждения.</CardDescription>
+          </CardHeader>
+
+          <div className="space-y-3">
+            {pendingStatuses.map((status) => {
+              const userName = status.user.nickname || status.user.name || status.user.email || "Игрок";
+
+              return (
+                <div key={status.id} className="rounded-lg border border-white/10 bg-black/20 p-3">
+                  <div className="space-y-2">
+                    <div className="font-semibold text-white">{userName}</div>
+                    <div className={profileStatusClassName(status.tone)}>{status.title}</div>
+                    <div className="text-xs text-zinc-500">
+                      {status.season?.name ?? "Сезон"} • место: {status.sourceRank ?? "-"}
+                    </div>
+                  </div>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <form action={`/api/admin/profile-statuses/${status.id}`} method="post">
+                      <input type="hidden" name="_action" value="approve" />
+                      <Button type="submit" className="w-full rounded-lg bg-emerald-400 text-black hover:bg-emerald-300">
+                        <UserCheck className="mr-2 h-4 w-4" />
+                        Выдать
+                      </Button>
+                    </form>
+                    <form action={`/api/admin/profile-statuses/${status.id}`} method="post">
+                      <input type="hidden" name="_action" value="reject" />
+                      <Button type="submit" variant="outline" className="w-full rounded-lg border-rose-400/25 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20">
+                        <XCircle className="mr-2 h-4 w-4" />
+                        Отклонить
+                      </Button>
+                    </form>
+                  </div>
+                </div>
+              );
+            })}
+
+            {!pendingStatuses.length ? (
+              <div className="rounded-lg border border-dashed border-white/10 bg-black/20 p-4 text-sm text-zinc-500">Статусов на подтверждение нет.</div>
+            ) : null}
+          </div>
+        </Card>
+
         <Card className="rounded-lg border-rose-400/20 bg-rose-500/5 p-5">
           <CardHeader>
             <CardTitle>Очистка сезонов</CardTitle>
@@ -176,6 +239,7 @@ export default async function AdminSeasonsPage({
             </div>
           ) : null}
         </Card>
+        </div>
       </div>
     </div>
   );

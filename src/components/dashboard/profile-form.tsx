@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { ChangeEvent, useState, useTransition } from "react";
-import { ArrowLeft, Camera, ImagePlus, Save } from "lucide-react";
+import { ArrowLeft, Camera, ImagePlus, Save, ShieldCheck } from "lucide-react";
+import type { ProfileStatusTone } from "@prisma/client";
 import { toast } from "sonner";
 import type { ClubOption } from "@/lib/clubs";
 import { PROFILE_BIO_MAX_LENGTH } from "@/lib/profile";
+import { MAX_SELECTED_PROFILE_STATUSES, profileStatusClassName } from "@/lib/profile-status-style";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 export function ProfileForm({
   initialValues,
   clubs,
+  statuses,
 }: {
   initialValues: {
     name: string;
@@ -24,8 +27,16 @@ export function ProfileForm({
     image: string;
     bannerImage: string;
     registeredAt: string;
+    selectedStatusIds: string[];
   };
   clubs: ClubOption[];
+  statuses: Array<{
+    id: string;
+    title: string;
+    description: string;
+    tone: ProfileStatusTone;
+    selectedOrder: number | null;
+  }>;
 }) {
   const [draft, setDraft] = useState(() => ({
     ...initialValues,
@@ -35,8 +46,29 @@ export function ProfileForm({
   const [bannerPreview, setBannerPreview] = useState(initialValues.bannerImage);
   const [pending, startTransition] = useTransition();
   const bioCharactersLeft = PROFILE_BIO_MAX_LENGTH - draft.bio.length;
+  const selectedStatusIds = draft.selectedStatusIds ?? [];
+  const selectedStatuses = selectedStatusIds
+    .map((statusId) => statuses.find((status) => status.id === statusId))
+    .filter((status): status is (typeof statuses)[number] => Boolean(status));
 
   const displayName = draft.name || "Игрок eFootball Nexon";
+
+  const toggleStatus = (statusId: string) => {
+    setDraft((current) => {
+      const currentIds = current.selectedStatusIds ?? [];
+
+      if (currentIds.includes(statusId)) {
+        return { ...current, selectedStatusIds: currentIds.filter((id) => id !== statusId) };
+      }
+
+      if (currentIds.length >= MAX_SELECTED_PROFILE_STATUSES) {
+        toast.error(`Можно выбрать не больше ${MAX_SELECTED_PROFILE_STATUSES} статусов.`);
+        return current;
+      }
+
+      return { ...current, selectedStatusIds: [...currentIds, statusId] };
+    });
+  };
 
   const optimizeImage = (file: File, type: "avatar" | "banner") =>
     new Promise<string>((resolve, reject) => {
@@ -113,6 +145,7 @@ export function ProfileForm({
           bio: draft.bio.slice(0, PROFILE_BIO_MAX_LENGTH),
           image: draft.image,
           bannerImage: draft.bannerImage,
+          selectedStatusIds: draft.selectedStatusIds,
         }),
       });
 
@@ -171,6 +204,15 @@ export function ProfileForm({
                   <h2 className="truncate text-[18px] font-semibold leading-none text-white sm:text-3xl">
                     {displayName}
                   </h2>
+                  {selectedStatuses.length ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {selectedStatuses.map((status) => (
+                        <span key={status.id} className={profileStatusClassName(status.tone)}>
+                          {status.title}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -238,8 +280,50 @@ export function ProfileForm({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm text-zinc-400">
-            Статус профиля: скоро будет. Этот блок подготовлен под следующий этап.
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <Label className="block text-[11px] uppercase tracking-[0.24em] text-zinc-500">Статусы профиля</Label>
+                <div className="mt-1 text-sm text-zinc-400">Выберите до {MAX_SELECTED_PROFILE_STATUSES} подтверждённых статусов для показа под никнеймом.</div>
+              </div>
+              <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-semibold text-zinc-300">
+                {selectedStatusIds.length}/{MAX_SELECTED_PROFILE_STATUSES}
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-2">
+              {statuses.map((status) => {
+                const selected = selectedStatusIds.includes(status.id);
+
+                return (
+                  <button
+                    key={status.id}
+                    type="button"
+                    onClick={() => toggleStatus(status.id)}
+                    className={`rounded-2xl border p-3 text-left transition ${
+                      selected ? "border-primary/35 bg-primary/10" : "border-white/10 bg-white/[0.03] hover:border-white/20"
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={profileStatusClassName(status.tone)}>{status.title}</span>
+                      {selected ? (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-1 text-xs font-semibold text-emerald-100">
+                          <ShieldCheck className="h-3.5 w-3.5" />
+                          Выбран
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="mt-2 text-sm text-zinc-400">{status.description}</div>
+                  </button>
+                );
+              })}
+
+              {!statuses.length ? (
+                <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-4 text-sm text-zinc-500">
+                  Подтверждённых статусов пока нет. Они появятся здесь после завершения сезона и подтверждения администратором.
+                </div>
+              ) : null}
+            </div>
           </div>
 
           <div className="flex flex-col gap-3 border-t border-white/10 pt-2">

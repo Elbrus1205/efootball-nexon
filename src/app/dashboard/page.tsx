@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { PencilLine } from "lucide-react";
+import { ProfileStatusApprovalStatus } from "@prisma/client";
 import { requireAuth } from "@/lib/auth/session";
 import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
 import { getPlayerCareerStats } from "@/lib/player-stats";
 import { getUserSocialLinks } from "@/lib/social-links";
+import { profileStatusClassName } from "@/lib/profile-status-style";
 import { PlayerCareerStatsPanel } from "@/components/players/player-career-stats";
 import { PlayerSocialLinks } from "@/components/players/player-social-links";
 import { StatsPeriodSwitcher } from "@/components/players/stats-period-switcher";
@@ -30,6 +32,10 @@ export default async function DashboardPage({
             providerAccountId: true,
           },
         },
+        profileStatuses: {
+          where: { approvalStatus: ProfileStatusApprovalStatus.APPROVED },
+          orderBy: [{ selectedOrder: "asc" }, { createdAt: "desc" }],
+        },
       },
     }),
     getAvailableClubs(),
@@ -45,6 +51,7 @@ export default async function DashboardPage({
   const displayName = user.name || user.nickname || "Игрок eFootball Nexon";
   const favoriteClub = clubs.find((club) => club.slug === user.favoriteTeam || club.name === user.favoriteTeam) ?? null;
   const socialLinks = getUserSocialLinks(user);
+  const selectedStatuses = user.profileStatuses.filter((status) => status.selectedOrder !== null).slice(0, 3);
   const periodLabel = selectedSeason ? `Сезон: ${selectedSeason.name}` : "За всё время";
   const registeredAt = new Intl.DateTimeFormat("ru-RU", {
     day: "numeric",
@@ -96,6 +103,15 @@ export default async function DashboardPage({
 
                 <div className="min-w-0 pb-[12px] sm:pb-1">
                   <h1 className="truncate text-[18px] font-semibold leading-none text-white sm:text-3xl">{displayName}</h1>
+                  {selectedStatuses.length ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {selectedStatuses.map((status) => (
+                        <span key={status.id} className={profileStatusClassName(status.tone)}>
+                          {status.title}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                   {user.bio ? <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">{user.bio}</p> : null}
                 </div>
               </div>
@@ -145,6 +161,19 @@ export default async function DashboardPage({
               <PlayerSocialLinks links={socialLinks} />
             </div>
           ) : null}
+        </div>
+      </Card>
+
+      <Card className="rounded-lg p-5">
+        <div className="font-semibold text-white">Статусы профиля</div>
+        <div className="mt-1 text-sm text-zinc-500">Все подтверждённые статусы этого профиля.</div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {user.profileStatuses.map((status) => (
+            <span key={status.id} className={profileStatusClassName(status.tone)}>
+              {status.title}
+            </span>
+          ))}
+          {!user.profileStatuses.length ? <div className="text-sm text-zinc-500">Подтверждённых статусов пока нет.</div> : null}
         </div>
       </Card>
 
