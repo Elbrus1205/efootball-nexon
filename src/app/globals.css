@@ -181,10 +181,6 @@ textarea,
     pointer-events: none;
   }
 
-  .coins-partner-chip {
-    animation: coins-partner-chip-pulse 4.2s ease-in-out infinite;
-  }
-
   .coins-partner-logo {
     position: relative;
     isolation: isolate;
@@ -203,12 +199,6 @@ textarea,
     background: conic-gradient(from 90deg, rgba(56, 189, 248, 0.1), rgba(250, 204, 21, 0.88), rgba(255, 255, 255, 0.2), rgba(56, 189, 248, 0.75), rgba(56, 189, 248, 0.1));
     opacity: 0.75;
     animation: coins-partner-logo-ring 7.5s linear infinite;
-  }
-
-  .coins-partner-link-line {
-    background: linear-gradient(90deg, rgba(250, 204, 21, 0.1), rgba(125, 211, 252, 0.85), rgba(250, 204, 21, 0.1));
-    box-shadow: 0 0 16px rgba(56, 189, 248, 0.24);
-    animation: coins-partner-line-glow 2.8s ease-in-out infinite;
   }
 
   .coins-partner-cta {
@@ -359,17 +349,6 @@ textarea,
   }
 }
 
-@keyframes coins-partner-chip-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(56, 189, 248, 0);
-  }
-
-  50% {
-    box-shadow: 0 0 24px rgba(56, 189, 248, 0.12);
-  }
-}
-
 @keyframes coins-partner-logo-float {
   0%,
   100% {
@@ -384,19 +363,6 @@ textarea,
 @keyframes coins-partner-logo-ring {
   to {
     transform: rotate(360deg);
-  }
-}
-
-@keyframes coins-partner-line-glow {
-  0%,
-  100% {
-    opacity: 0.45;
-    transform: scaleX(0.82);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scaleX(1);
   }
 }
 
@@ -423,10 +389,8 @@ textarea,
   .registration-cta::before,
   .animate-mobile-menu-item,
   .coins-partner-banner::before,
-  .coins-partner-chip,
   .coins-partner-logo,
   .coins-partner-logo::before,
-  .coins-partner-link-line,
   .coins-partner-cta::before {
     animation: none;
     filter: none;

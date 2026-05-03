@@ -43,7 +43,11 @@ function PartnerLogoPair({
             </div>
           </div>
 
-          {index === 0 ? <div className="coins-partner-link-line mx-1.5 h-px w-5 shrink-0 rounded-full sm:mx-2 sm:w-7" /> : null}
+          {index === 0 ? (
+            <div className="mx-1.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-sky-300/30 bg-sky-300/10 shadow-[0_0_18px_rgba(56,189,248,0.16)] sm:mx-2 sm:h-9 sm:w-9">
+              <Handshake className="h-4 w-4 text-sky-200 sm:h-[18px] sm:w-[18px]" aria-hidden="true" />
+            </div>
+          ) : null}
         </Fragment>
       ))}
     </div>
@@ -57,12 +61,7 @@ export function CoinsPartnerBanner() {
 
       <div className="relative z-10 grid gap-4 lg:grid-cols-[minmax(0,1fr)_190px] lg:items-center">
         <div className="min-w-0">
-          <div className="flex items-start justify-between gap-3">
-            <div className="coins-partner-chip inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.045] px-3 py-1.5 text-[10px] font-semibold text-zinc-300 sm:text-xs">
-              <Handshake className="h-3.5 w-3.5 text-sky-300 sm:h-4 sm:w-4" />
-              Сотрудничество
-            </div>
-
+          <div className="flex items-start justify-end lg:hidden">
             <PartnerLogoPair className="lg:hidden" logoClassName="h-11 w-11 sm:h-12 sm:w-12" sizes="48px" />
           </div>
 

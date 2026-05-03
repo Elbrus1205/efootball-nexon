@@ -1,9 +1,0 @@
-.git
-.gitignore
-.next
-node_modules
-npm-debug.log
-dev-server*.log
-*.tsbuildinfo
-.env
-.env.*
