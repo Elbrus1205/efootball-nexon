@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { NotificationType, UserRole } from "@prisma/client";
+import { randomUUID } from "crypto";
+import { mkdir, writeFile } from "fs/promises";
+import path from "path";
 import { z } from "zod";
 import { getRequestBaseUrl } from "@/lib/affiliate";
 import { calculatePercentAmount, formatKopecks, getCoinStoreSettings } from "@/lib/coin-services";
@@ -15,22 +18,49 @@ const serviceOrderSchema = z.object({
   buyerTelegram: z.string().trim().min(3).max(200),
   konamiLogin: z.string().trim().min(3).max(200),
   konamiPassword: z.string().min(4).max(300),
-  paymentReceiptUrl: z.string().trim().url().max(1000),
   buyerComment: z.string().max(2000).optional(),
 });
+
+const receiptFileTypes = new Set(["image/png", "image/jpeg", "image/webp", "application/pdf"]);
+const receiptFileMaxSize = 8 * 1024 * 1024;
+
+async function saveReceiptFile(file: File) {
+  if (!receiptFileTypes.has(file.type)) {
+    throw new Error("bad-type");
+  }
+
+  if (file.size <= 0 || file.size > receiptFileMaxSize) {
+    throw new Error("bad-size");
+  }
+
+  const extensionByType: Record<string, string> = {
+    "image/png": "png",
+    "image/jpeg": "jpg",
+    "image/webp": "webp",
+    "application/pdf": "pdf",
+  };
+  const extension = extensionByType[file.type] ?? "bin";
+  const uploadDir = path.join(process.cwd(), "public", "uploads", "receipts");
+  const fileName = `${new Date().toISOString().slice(0, 10)}-${randomUUID()}.${extension}`;
+
+  await mkdir(uploadDir, { recursive: true });
+  await writeFile(path.join(uploadDir, fileName), Buffer.from(await file.arrayBuffer()));
+
+  return `/uploads/receipts/${fileName}`;
+}
 
 export async function POST(request: Request) {
   const session = await requireAuth();
   const formData = await request.formData();
   const productId = String(formData.get("productId") ?? "");
   const fallbackUrl = new URL(productId ? `/coins/services/${productId}` : "/coins", getRequestBaseUrl(request));
+  const paymentReceiptFile = formData.get("paymentReceiptFile");
   const parsed = serviceOrderSchema.safeParse({
     productId,
     paymentCardId: formData.get("paymentCardId") ? String(formData.get("paymentCardId")) : "",
     buyerTelegram: formData.get("buyerTelegram"),
     konamiLogin: formData.get("konamiLogin"),
     konamiPassword: formData.get("konamiPassword"),
-    paymentReceiptUrl: formData.get("paymentReceiptUrl"),
     buyerComment: formData.get("buyerComment") ?? "",
   });
 
@@ -79,6 +109,20 @@ export async function POST(request: Request) {
     paymentCards.find((card) => card.id === parsed.data.paymentCardId) ??
     paymentCards[Math.floor(Math.random() * paymentCards.length)];
 
+  if (!(paymentReceiptFile instanceof File)) {
+    fallbackUrl.searchParams.set("error", "Прикрепите чек оплаты файлом.");
+    return NextResponse.redirect(fallbackUrl, 303);
+  }
+
+  let paymentReceiptUrl: string;
+
+  try {
+    paymentReceiptUrl = await saveReceiptFile(paymentReceiptFile);
+  } catch {
+    fallbackUrl.searchParams.set("error", "Чек должен быть файлом PNG, JPG, WEBP или PDF до 8 МБ.");
+    return NextResponse.redirect(fallbackUrl, 303);
+  }
+
   const executorEarningKopecks = calculatePercentAmount(product.priceKopecks, product.executorPercent);
   const ownerEarningKopecks = calculatePercentAmount(product.priceKopecks, product.ownerPercent);
   const order = await db.coinServiceOrder.create({
@@ -100,7 +144,7 @@ export async function POST(request: Request) {
       paymentCard: selectedCard.cardNumber,
       paymentRecipient: selectedCard.recipient,
       paymentComment: settings.paymentComment || null,
-      paymentReceiptUrl: parsed.data.paymentReceiptUrl,
+      paymentReceiptUrl,
       paidAt: new Date(),
     },
   });

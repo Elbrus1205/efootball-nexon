@@ -1,19 +1,21 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { WHITE_STORE_TELEGRAM_REFERRAL_URL } from "@/lib/white-store";
 
 export function StartCheckoutButton({
+  href,
   className,
   children,
 }: {
+  href: string;
   className?: string;
   children: ReactNode;
 }) {
   return (
     <Button asChild size="lg" className={className}>
-      <a href={WHITE_STORE_TELEGRAM_REFERRAL_URL}>{children}</a>
+      <Link href={href}>{children}</Link>
     </Button>
   );
 }

@@ -21,10 +21,8 @@ export async function getCoinsNavigationData(userId?: string) {
     userId
       ? db.affiliatePartner.findFirst({
           where: { ownerId: userId },
-          include: {
-            purchases: {
-              select: { partnerEarningKopecks: true },
-            },
+          select: {
+            id: true,
             _count: {
               select: {
                 referrals: true,
@@ -41,7 +39,12 @@ export async function getCoinsNavigationData(userId?: string) {
     userId ? db.coinServiceExecutor.findUnique({ where: { userId }, select: { isActive: true } }) : null,
   ]);
 
-  const partnerEarning = partner?.purchases.reduce((sum, purchase) => sum + purchase.partnerEarningKopecks, 0) ?? 0;
+  const partnerEarning = partner
+    ? await db.affiliatePurchase.aggregate({
+        where: { partnerId: partner.id },
+        _sum: { partnerEarningKopecks: true },
+      })
+    : null;
 
   return {
     isPartner: Boolean(partner),
@@ -54,7 +57,7 @@ export async function getCoinsNavigationData(userId?: string) {
       ? {
           referrals: partner._count.referrals,
           purchases: partner._count.purchases,
-          earning: formatCoinsMoney(partnerEarning),
+          earning: formatCoinsMoney(partnerEarning?._sum.partnerEarningKopecks ?? 0),
         }
       : undefined,
   };

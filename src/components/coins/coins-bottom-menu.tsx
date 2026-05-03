@@ -113,6 +113,7 @@ export function CoinsBottomMenu({
             <Link
               key={`${item.href}-${item.label}`}
               href={item.href}
+              prefetch={false}
               className={cn(
                 "group relative flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-[1.15rem] px-1.5 py-2 text-center text-[10px] font-bold leading-none text-zinc-300 transition duration-300 hover:-translate-y-0.5 hover:bg-white/[0.07] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 sm:min-h-[64px] sm:rounded-[1.35rem] sm:text-xs",
                 selected && "bg-white/[0.06] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]",

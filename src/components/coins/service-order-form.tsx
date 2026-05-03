@@ -30,7 +30,7 @@ export function ServiceOrderForm({
   error,
 }: ServiceOrderFormProps) {
   return (
-    <form action="/api/coins/service-orders" method="post" className="rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(10,14,22,0.96),rgba(6,10,16,0.98))] p-4 shadow-[0_22px_70px_rgba(0,0,0,0.26)] sm:rounded-[2rem] sm:p-8">
+    <form action="/api/coins/service-orders" method="post" encType="multipart/form-data" className="rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(10,14,22,0.96),rgba(6,10,16,0.98))] p-4 shadow-[0_22px_70px_rgba(0,0,0,0.26)] sm:rounded-[2rem] sm:p-8">
       <input type="hidden" name="productId" value={productId} />
       {paymentCardId ? <input type="hidden" name="paymentCardId" value={paymentCardId} /> : null}
 
@@ -99,19 +99,19 @@ export function ServiceOrderForm({
         </div>
 
         <div className="space-y-2 rounded-2xl border border-emerald-300/15 bg-emerald-400/10 p-3 sm:p-4">
-          <Label htmlFor="paymentReceiptUrl" className="flex items-center gap-2">
+          <Label htmlFor="paymentReceiptFile" className="flex items-center gap-2">
             <Paperclip className="h-4 w-4 text-emerald-200" />
             Прикрепить чек оплаты
           </Label>
           <Input
-            id="paymentReceiptUrl"
-            name="paymentReceiptUrl"
+            id="paymentReceiptFile"
+            name="paymentReceiptFile"
             required
-            type="url"
-            placeholder="https://..."
-            className="bg-black/30"
+            type="file"
+            accept="image/png,image/jpeg,image/webp,application/pdf"
+            className="bg-black/30 file:mr-4 file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-sm file:text-white"
           />
-          <p className="text-[11px] leading-5 text-emerald-100/80 sm:text-xs">Ссылка на чек или скрин перевода нужна администратору для проверки оплаты.</p>
+          <p className="text-[11px] leading-5 text-emerald-100/80 sm:text-xs">Прикрепите файл чека или скрин перевода: PNG, JPG, WEBP или PDF до 8 МБ.</p>
         </div>
       </div>
 

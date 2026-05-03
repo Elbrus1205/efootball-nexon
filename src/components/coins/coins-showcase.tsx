@@ -4,7 +4,7 @@ import { ArrowRight, Coins, Sparkles } from "lucide-react";
 import { Reveal } from "@/components/shared/reveal";
 import { StartCheckoutButton } from "@/components/coins/start-checkout-button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatRubles, type CoinsOffer, type CoinsPlatform } from "@/lib/coins-catalog";
+import { formatRubles, getCoinsCheckoutPath, type CoinsOffer, type CoinsPlatform } from "@/lib/coins-catalog";
 import { cn } from "@/lib/utils";
 
 const toneClasses = {
@@ -69,7 +69,7 @@ function OfferCard({ offer, platform }: { offer: CoinsOffer; platform: CoinsPlat
           </div>
         </div>
 
-        <StartCheckoutButton className={cn("h-9 min-h-0 w-full rounded-xl px-3 text-xs font-bold sm:h-10 sm:text-sm", tone.button)}>
+        <StartCheckoutButton href={getCoinsCheckoutPath(platform, offer.id)} className={cn("h-9 min-h-0 w-full rounded-xl px-3 text-xs font-bold sm:h-10 sm:text-sm", tone.button)}>
           <span className="flex items-center justify-center gap-1.5">
             Купить
             <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
