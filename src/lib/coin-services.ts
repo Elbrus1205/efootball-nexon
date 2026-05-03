@@ -69,6 +69,10 @@ export function serviceOrderStatusLabel(status: CoinServiceOrderStatus) {
   switch (status) {
     case "PENDING_REVIEW":
       return "Ожидает проверки оплаты";
+    case "AWAITING_EXECUTOR":
+      return "Ожидает свободного исполнителя";
+    case "ASSIGNED":
+      return "Ожидает ответа исполнителя";
     case "ACCEPTED":
       return "В работе";
     case "EXECUTOR_DONE":
@@ -86,6 +90,10 @@ export function serviceOrderStatusTone(status: CoinServiceOrderStatus) {
   switch (status) {
     case "PENDING_REVIEW":
       return "border-amber-300/25 bg-amber-300/10 text-amber-100";
+    case "AWAITING_EXECUTOR":
+      return "border-orange-300/25 bg-orange-400/10 text-orange-100";
+    case "ASSIGNED":
+      return "border-cyan-300/25 bg-cyan-400/10 text-cyan-100";
     case "ACCEPTED":
       return "border-sky-300/25 bg-sky-400/10 text-sky-100";
     case "EXECUTOR_DONE":
@@ -99,10 +107,12 @@ export function serviceOrderStatusTone(status: CoinServiceOrderStatus) {
   }
 }
 
-export async function pickFairCoinServiceExecutor() {
+export async function pickFairCoinServiceExecutor(options?: { excludeUserIds?: string[] }) {
+  const excludeUserIds = options?.excludeUserIds ?? [];
   const executorProfiles = await db.coinServiceExecutor.findMany({
     where: {
       isActive: true,
+      userId: excludeUserIds.length ? { notIn: excludeUserIds } : undefined,
       user: {
         isBanned: false,
       },
@@ -137,5 +147,45 @@ export async function pickFairCoinServiceExecutor() {
   const leastAssignedCount = Math.min(...executorIds.map((id) => countByExecutorId.get(id) ?? 0));
   const candidates = executorProfiles.filter((profile) => (countByExecutorId.get(profile.userId) ?? 0) === leastAssignedCount);
 
-  return candidates[Math.floor(Math.random() * candidates.length)]?.user ?? null;
+  return candidates[0]?.user ?? null;
+}
+
+export async function assignNextCoinServiceExecutor(orderId: string) {
+  const previousAttempts = await db.coinServiceExecutorAttempt.findMany({
+    where: { orderId },
+    select: { executorId: true },
+    orderBy: { createdAt: "asc" },
+  });
+  const executor = await pickFairCoinServiceExecutor({
+    excludeUserIds: previousAttempts.map((attempt) => attempt.executorId),
+  });
+
+  if (!executor) {
+    await db.coinServiceOrder.update({
+      where: { id: orderId },
+      data: {
+        executorId: null,
+        status: CoinServiceOrderStatus.AWAITING_EXECUTOR,
+      },
+    });
+    return null;
+  }
+
+  await db.coinServiceExecutorAttempt.create({
+    data: {
+      orderId,
+      executorId: executor.id,
+      status: "ASSIGNED",
+    },
+  });
+
+  await db.coinServiceOrder.update({
+    where: { id: orderId },
+    data: {
+      executorId: executor.id,
+      status: CoinServiceOrderStatus.ASSIGNED,
+    },
+  });
+
+  return executor;
 }

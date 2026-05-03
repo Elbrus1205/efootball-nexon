@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CoinServiceOrderStatus, UserRole } from "@prisma/client";
-import { ArrowLeft, CheckCircle2, Clock, CreditCard, KeyRound, MessageSquareText, Paperclip, UserRoundCheck } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, CreditCard, KeyRound, MessageSquareText, Paperclip, UserRoundCheck, XCircle } from "lucide-react";
 import { notFound } from "next/navigation";
 import { BankLogo } from "@/components/coins/bank-logo";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,7 @@ export default async function CoinServiceOrderPage({ params, searchParams }: Ord
     notFound();
   }
 
+  const canExecutorRespond = order.status === CoinServiceOrderStatus.ASSIGNED && (admin || order.executorId === session.user.id);
   const canExecutorComplete = order.status === CoinServiceOrderStatus.ACCEPTED && (admin || order.executorId === session.user.id);
   const canBuyerComplete =
     (order.status === CoinServiceOrderStatus.ACCEPTED || order.status === CoinServiceOrderStatus.EXECUTOR_DONE) && (admin || order.buyerId === session.user.id);
@@ -163,6 +164,27 @@ export default async function CoinServiceOrderPage({ params, searchParams }: Ord
           </Card>
 
           <div className="grid gap-3 sm:grid-cols-2">
+            {canExecutorRespond ? (
+              <div className="space-y-3 sm:col-span-2">
+                <form action={`/api/coins/service-orders/${order.id}/actions`} method="post">
+                  <input type="hidden" name="_action" value="executor_accept" />
+                  <Button className="w-full rounded-xl bg-emerald-400 text-black hover:bg-emerald-300">
+                    <UserRoundCheck className="mr-2 h-4 w-4" />
+                    Принять заказ в работу
+                  </Button>
+                </form>
+
+                <form action={`/api/coins/service-orders/${order.id}/actions`} method="post" className="space-y-2 rounded-2xl border border-rose-400/20 bg-rose-500/10 p-3">
+                  <input type="hidden" name="_action" value="executor_reject" />
+                  <Textarea name="reason" required placeholder="Причина отказа" className="min-h-[92px] resize-none bg-black/30" />
+                  <Button variant="outline" className="w-full rounded-xl border-rose-400/25 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20">
+                    <XCircle className="mr-2 h-4 w-4" />
+                    Отказаться от заказа
+                  </Button>
+                </form>
+              </div>
+            ) : null}
+
             {canExecutorComplete ? (
               <form action={`/api/coins/service-orders/${order.id}/actions`} method="post">
                 <input type="hidden" name="_action" value="executor_done" />

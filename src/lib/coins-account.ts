@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 
 export const activeCoinServiceOrderStatuses = [
   CoinServiceOrderStatus.PENDING_REVIEW,
+  CoinServiceOrderStatus.AWAITING_EXECUTOR,
+  CoinServiceOrderStatus.ASSIGNED,
   CoinServiceOrderStatus.ACCEPTED,
   CoinServiceOrderStatus.EXECUTOR_DONE,
 ];

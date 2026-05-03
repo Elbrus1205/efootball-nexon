@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { CoinServiceOrderStatus, NotificationType, UserRole } from "@prisma/client";
 import { getRequestBaseUrl } from "@/lib/affiliate";
-import { pickFairCoinServiceExecutor } from "@/lib/coin-services";
+import { assignNextCoinServiceExecutor } from "@/lib/coin-services";
 import { createNotification, createNotificationsForUsers } from "@/lib/services/notifications";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
@@ -27,6 +27,11 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 
   if (action === "reject") {
+    if (!adminComment) {
+      redirectUrl.searchParams.set("error", "Укажите причину отмены заказа.");
+      return NextResponse.redirect(redirectUrl, 303);
+    }
+
     await db.coinServiceOrder.update({
       where: { id: order.id },
       data: {
@@ -53,27 +58,25 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.redirect(redirectUrl, 303);
   }
 
-  if (order.status !== CoinServiceOrderStatus.PENDING_REVIEW) {
-    redirectUrl.searchParams.set("error", "Проверить оплату можно только у заказа на проверке.");
-    return NextResponse.redirect(redirectUrl, 303);
-  }
-
-  const executor = await pickFairCoinServiceExecutor();
-
-  if (!executor) {
-    redirectUrl.searchParams.set("error", "Добавьте активного исполнителя перед принятием заказа.");
+  if (order.status !== CoinServiceOrderStatus.PENDING_REVIEW && order.status !== CoinServiceOrderStatus.AWAITING_EXECUTOR) {
+    redirectUrl.searchParams.set("error", "Проверить оплату или назначить исполнителя можно только у заказа на проверке или без свободного исполнителя.");
     return NextResponse.redirect(redirectUrl, 303);
   }
 
   await db.coinServiceOrder.update({
     where: { id: order.id },
     data: {
-      executorId: executor.id,
-      status: CoinServiceOrderStatus.ACCEPTED,
-      acceptedAt: order.acceptedAt ?? new Date(),
+      paidAt: order.paidAt ?? new Date(),
       adminComment: adminComment || order.adminComment,
     },
   });
+
+  const executor = await assignNextCoinServiceExecutor(order.id);
+
+  if (!executor) {
+    redirectUrl.searchParams.set("error", "Оплата подтверждена, но активных исполнителей нет. Добавьте исполнителя и нажмите «Заказ оплачен» ещё раз.");
+    return NextResponse.redirect(redirectUrl, 303);
+  }
 
   const executorName = executor.nickname || executor.name || executor.email || "Исполнитель";
 
@@ -81,14 +84,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
     createNotification({
       userId: order.buyerId,
       title: "Оплата проверена",
-      body: `Заказ "${order.productTitle}" принят. Исполнитель: ${executorName}.`,
+      body: `Заказ "${order.productTitle}" оплачен. Исполнитель ${executorName} получил заявку и должен принять её в работу.`,
       type: NotificationType.SYSTEM,
       link: `/coins/orders/${order.id}`,
     }),
     createNotification({
       userId: executor.id,
       title: "Вам назначен заказ",
-      body: `Новый заказ услуги: ${order.productTitle}.`,
+      body: `Новый заказ услуги: ${order.productTitle}. Примите его в работу или откажитесь с причиной.`,
       type: NotificationType.SYSTEM,
       link: `/coins/orders/${order.id}`,
     }),

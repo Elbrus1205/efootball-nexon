@@ -30,7 +30,7 @@ const orderGroups: OrderGroup[] = [
     title: "Активные заказы",
     description: "Ожидают проверки, находятся в работе или ждут подтверждения.",
     icon: Clock3,
-    statuses: ["PENDING_REVIEW", "ACCEPTED", "EXECUTOR_DONE"],
+    statuses: ["PENDING_REVIEW", "AWAITING_EXECUTOR", "ASSIGNED", "ACCEPTED", "EXECUTOR_DONE"],
     tone: "border-sky-300/20 bg-sky-400/10 text-sky-100",
     emptyText: "Активных заказов сейчас нет.",
   },

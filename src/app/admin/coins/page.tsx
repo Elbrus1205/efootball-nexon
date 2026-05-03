@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { requireRole } from "@/lib/auth/session";
-import { coinPaymentBankOptions, getCoinStoreSettings } from "@/lib/coin-services";
+import { coinPaymentBankOptions, getCoinStoreSettings, serviceOrderStatusLabel, serviceOrderStatusTone } from "@/lib/coin-services";
 import { db } from "@/lib/db";
 
 function formatMoney(value: number) {
@@ -15,6 +15,10 @@ function formatMoney(value: number) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(value / 100);
+}
+
+function displayUser(user?: { nickname?: string | null; name?: string | null; email?: string | null } | null) {
+  return user?.nickname || user?.name || user?.email || "Пользователь";
 }
 
 export default async function AdminCoinsPage({
@@ -36,6 +40,7 @@ export default async function AdminCoinsPage({
     paymentCardDeleted?: string;
     executorCreated?: string;
     executorDeleted?: string;
+    orderUpdated?: string;
     error?: string;
   };
 }) {
@@ -60,7 +65,7 @@ export default async function AdminCoinsPage({
       });
 
   const settings = await getCoinStoreSettings();
-  const [partners, products, serviceProducts, executorProfiles, paymentCards] = await Promise.all([
+  const [partners, products, serviceProducts, executorProfiles, paymentCards, serviceOrders] = await Promise.all([
     db.affiliatePartner.findMany({
     include: {
       owner: true,
@@ -98,6 +103,20 @@ export default async function AdminCoinsPage({
       where: { isActive: true },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     }),
+    db.coinServiceOrder.findMany({
+      include: {
+        buyer: { select: { nickname: true, name: true, email: true } },
+        executor: { select: { nickname: true, name: true, email: true } },
+        executorAttempts: {
+          include: {
+            executor: { select: { nickname: true, name: true, email: true } },
+          },
+          orderBy: { createdAt: "desc" },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+    }),
   ]);
   const executorIds = executorProfiles.map((profile) => profile.userId);
   const executorOrderCounts = executorIds.length
@@ -128,6 +147,7 @@ export default async function AdminCoinsPage({
       {searchParams?.paymentCardDeleted ? <Card className="border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">Карта оплаты удалена.</Card> : null}
       {searchParams?.executorCreated ? <Card className="border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Исполнитель добавлен.</Card> : null}
       {searchParams?.executorDeleted ? <Card className="border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">Исполнитель убран из активных.</Card> : null}
+      {searchParams?.orderUpdated ? <Card className="border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Заказ обновлён.</Card> : null}
       {searchParams?.deleted ? <Card className="border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">Партнёрская программа удалена.</Card> : null}
       {searchParams?.error ? <Card className="border-rose-400/25 bg-rose-500/10 p-4 text-sm text-rose-100">{searchParams.error}</Card> : null}
 
@@ -253,6 +273,89 @@ export default async function AdminCoinsPage({
               </div>
             </div>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserCheck className="h-5 w-5 text-emerald-300" />
+            Заказы услуг
+          </CardTitle>
+          <CardDescription>Подтвердите оплату или отмените заказ с причиной. После подтверждения исполнитель назначится автоматически.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3">
+            {serviceOrders.map((order) => (
+              <div key={order.id} className="grid gap-4 rounded-2xl border border-white/10 bg-black/20 p-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+                <div className="min-w-0 space-y-3">
+                  {(() => {
+                    const lastRejectedAttempt = order.executorAttempts.find((attempt) => attempt.status === "REJECTED" && attempt.reason);
+
+                    return lastRejectedAttempt ? (
+                      <div className="rounded-xl border border-rose-400/20 bg-rose-500/10 p-3 text-sm text-rose-100">
+                        Отказ: {displayUser(lastRejectedAttempt.executor)} — {lastRejectedAttempt.reason}
+                      </div>
+                    ) : null;
+                  })()}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <a href={`/coins/orders/${order.id}`} className="truncate text-base font-bold text-white underline-offset-4 hover:text-primary hover:underline">
+                      {order.productTitle}
+                    </a>
+                    <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${serviceOrderStatusTone(order.status)}`}>
+                      {serviceOrderStatusLabel(order.status)}
+                    </span>
+                  </div>
+                  <div className="grid gap-2 text-sm text-zinc-400 sm:grid-cols-2 xl:grid-cols-4">
+                    <div>
+                      <span className="text-zinc-600">Покупатель: </span>
+                      <span className="font-medium text-zinc-200">{displayUser(order.buyer)}</span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-600">Исполнитель: </span>
+                      <span className="font-medium text-zinc-200">{order.executor ? displayUser(order.executor) : "не назначен"}</span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-600">Сумма: </span>
+                      <span className="font-medium text-emerald-100">{formatMoney(order.priceKopecks)}</span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-600">Чек: </span>
+                      {order.paymentReceiptUrl ? (
+                        <a href={order.paymentReceiptUrl} target="_blank" rel="noreferrer" className="font-medium text-sky-200 underline-offset-4 hover:underline">
+                          открыть
+                        </a>
+                      ) : (
+                        <span className="font-medium text-amber-100">нет</span>
+                      )}
+                    </div>
+                  </div>
+                  {order.adminComment ? <div className="rounded-xl border border-primary/15 bg-primary/10 p-3 text-sm text-blue-100">{order.adminComment}</div> : null}
+                </div>
+
+                {order.status === CoinServiceOrderStatus.PENDING_REVIEW || order.status === CoinServiceOrderStatus.AWAITING_EXECUTOR ? (
+                  <div className="grid gap-3">
+                    <form action={`/api/admin/coins/service-orders/${order.id}`} method="post" className="space-y-2">
+                      <input type="hidden" name="_action" value="accept" />
+                      <Textarea name="adminComment" placeholder="Комментарий администратора" className="min-h-[76px] resize-none bg-black/30" />
+                      <Button className="w-full rounded-xl bg-emerald-400 text-black hover:bg-emerald-300">
+                        {order.status === CoinServiceOrderStatus.AWAITING_EXECUTOR ? "Назначить исполнителя" : "Заказ оплачен"}
+                      </Button>
+                    </form>
+
+                    <form action={`/api/admin/coins/service-orders/${order.id}`} method="post" className="space-y-2 rounded-xl border border-rose-400/20 bg-rose-500/10 p-3">
+                      <input type="hidden" name="_action" value="reject" />
+                      <Textarea name="adminComment" required placeholder="Причина отмены" className="min-h-[76px] resize-none bg-black/30" />
+                      <Button variant="outline" className="w-full rounded-xl border-rose-400/25 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20">
+                        Отменить заказ
+                      </Button>
+                    </form>
+                  </div>
+                ) : null}
+              </div>
+            ))}
+            {!serviceOrders.length ? <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-zinc-500">Заказов услуг пока нет.</div> : null}
+          </div>
         </CardContent>
       </Card>
 

@@ -142,9 +142,17 @@ enum CoinProductPlatform {
 
 enum CoinServiceOrderStatus {
   PENDING_REVIEW
+  AWAITING_EXECUTOR
+  ASSIGNED
   ACCEPTED
   EXECUTOR_DONE
   COMPLETED
+  REJECTED
+}
+
+enum CoinServiceExecutorAttemptStatus {
+  ASSIGNED
+  ACCEPTED
   REJECTED
 }
 
@@ -204,6 +212,7 @@ model User {
   affiliatePurchases  AffiliatePurchase[]
   coinServiceOrders    CoinServiceOrder[]          @relation("serviceOrderBuyer")
   assignedCoinServiceOrders CoinServiceOrder[]     @relation("serviceOrderExecutor")
+  coinServiceExecutorAttempts CoinServiceExecutorAttempt[]
   coinServiceOrderMessages CoinServiceOrderMessage[]
   coinServiceExecutorProfile CoinServiceExecutor?
 }
@@ -789,9 +798,25 @@ model CoinServiceOrder {
   buyer                 User                   @relation("serviceOrderBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
   executor              User?                  @relation("serviceOrderExecutor", fields: [executorId], references: [id], onDelete: SetNull)
   messages              CoinServiceOrderMessage[]
+  executorAttempts      CoinServiceExecutorAttempt[]
 
   @@index([status, createdAt])
   @@index([buyerId, createdAt])
+  @@index([executorId, status])
+}
+
+model CoinServiceExecutorAttempt {
+  id          String                            @id @default(cuid())
+  orderId     String
+  executorId  String
+  status      CoinServiceExecutorAttemptStatus @default(ASSIGNED)
+  reason      String?                           @db.Text
+  createdAt   DateTime                          @default(now())
+  respondedAt DateTime?
+  order       CoinServiceOrder                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  executor    User                              @relation(fields: [executorId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
   @@index([executorId, status])
 }
 
