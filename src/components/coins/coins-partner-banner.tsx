@@ -61,7 +61,7 @@ export function CoinsPartnerBanner() {
 
       <div className="relative z-10 grid gap-4 lg:grid-cols-[minmax(0,1fr)_190px] lg:items-center">
         <div className="min-w-0">
-          <div className="flex items-start justify-end lg:hidden">
+          <div className="flex items-start justify-center lg:hidden">
             <PartnerLogoPair className="lg:hidden" logoClassName="h-11 w-11 sm:h-12 sm:w-12" sizes="48px" />
           </div>
 

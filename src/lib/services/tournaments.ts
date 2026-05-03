@@ -46,6 +46,30 @@ function nextPowerOfTwo(value: number) {
   return Math.pow(2, Math.ceil(Math.log2(Math.max(value, 2))));
 }
 
+function getGroupsPlayoffQualifiedCount(tournament: {
+  participants: unknown[];
+  groupsCount: number | null;
+  playoffTeamsPerGroup: number | null;
+}) {
+  const groupsCount = tournament.groupsCount ?? Math.max(1, Math.floor(Math.sqrt(Math.max(tournament.participants.length, 1))));
+  const advancingPerGroup = tournament.playoffTeamsPerGroup ?? 2;
+
+  return Math.max(2, Math.min(tournament.participants.length, groupsCount * advancingPerGroup));
+}
+
+function getDefaultPlayoffSize(tournament: {
+  format: TournamentFormat;
+  participants: unknown[];
+  groupsCount: number | null;
+  playoffTeamsPerGroup: number | null;
+}) {
+  if (tournament.format === TournamentFormat.GROUPS_PLAYOFF) {
+    return nextPowerOfTwo(getGroupsPlayoffQualifiedCount(tournament));
+  }
+
+  return nextPowerOfTwo(Math.max(tournament.participants.length, 2));
+}
+
 function createSeriesKey(bracketId: string, bracket: string, round: number, matchNumber: number, kind: "main" | "third-place" = "main") {
   return `${bracketId}:${bracket}:${round}:${matchNumber}:${kind}`;
 }
@@ -636,6 +660,87 @@ async function createPlayoffMatches({
   }
 }
 
+async function ensureGroupsPlayoffBracketShape(params: {
+  tournamentId: string;
+  stageId: string;
+  bracketId: string;
+  type: PlayoffType;
+  legsCount: number;
+  thirdPlaceMatch: boolean;
+  bracketSize: number;
+}) {
+  const existingMatches = await db.match.findMany({
+    where: { bracketId: params.bracketId },
+    select: { id: true, status: true },
+  });
+  const expectedRoundOneMatches = params.bracketSize / 2;
+  const existingRoundOneMatches = await db.match.count({
+    where: { bracketId: params.bracketId, round: 1, bracket: "upper", isThirdPlaceMatch: false, legNumber: 1 },
+  });
+
+  if (!existingMatches.length) {
+    await db.playoffBracket.update({
+      where: { id: params.bracketId },
+      data: { size: params.bracketSize },
+    });
+    await db.tournamentStage.update({
+      where: { id: params.stageId },
+      data: { roundsCount: Math.log2(params.bracketSize) },
+    });
+    await createPlayoffMatches({
+      tournamentId: params.tournamentId,
+      stageId: params.stageId,
+      bracketId: params.bracketId,
+      entries: [],
+      type: params.type,
+      legsCount: params.legsCount,
+      thirdPlaceMatch: params.thirdPlaceMatch,
+      sizeOverride: params.bracketSize,
+    });
+    return;
+  }
+
+  if (existingRoundOneMatches === expectedRoundOneMatches) {
+    return;
+  }
+
+  if (existingMatches.some((match) => TERMINAL_MATCH_STATUSES.has(match.status))) {
+    throw new Error("Нельзя перестроить сетку плей-офф: в ней уже есть завершённые матчи.");
+  }
+
+  await db.matchResultSubmission.deleteMany({
+    where: { match: { bracketId: params.bracketId } },
+  });
+  await db.matchSchedule.deleteMany({
+    where: { match: { bracketId: params.bracketId } },
+  });
+  await db.match.deleteMany({
+    where: { bracketId: params.bracketId },
+  });
+  await db.bracketSlot.deleteMany({
+    where: { bracketId: params.bracketId },
+  });
+  await db.playoffBracket.update({
+    where: { id: params.bracketId },
+    data: { size: params.bracketSize },
+  });
+  await db.tournamentStage.update({
+    where: { id: params.stageId },
+    data: { roundsCount: Math.log2(params.bracketSize) },
+  });
+
+  await createPlayoffMatches({
+    tournamentId: params.tournamentId,
+    stageId: params.stageId,
+    bracketId: params.bracketId,
+    entries: [],
+    type: params.type,
+    legsCount: params.legsCount,
+    thirdPlaceMatch: params.thirdPlaceMatch,
+    sizeOverride: params.bracketSize,
+  });
+}
+
 async function createCustomFormatStages(params: {
   tournamentId: string;
   tournament: {
@@ -1011,6 +1116,7 @@ export async function generateTournamentStages(tournamentId: string, options?: {
     tournament.format === TournamentFormat.GROUPS_PLAYOFF
   ) {
     const stageOrder = stages.length + 1;
+    const playoffSize = getDefaultPlayoffSize(tournament);
     const playoffStage = await db.tournamentStage.create({
       data: {
         tournamentId,
@@ -1018,7 +1124,7 @@ export async function generateTournamentStages(tournamentId: string, options?: {
         type: StageType.PLAYOFF,
         status: stages.length ? StageStatus.PENDING : TournamentStatus.IN_PROGRESS === tournament.status ? StageStatus.ACTIVE : StageStatus.PENDING,
         orderIndex: stageOrder,
-        roundsCount: Math.log2(nextPowerOfTwo(Math.max(tournament.participants.length, 2))),
+        roundsCount: Math.log2(playoffSize),
       },
     });
 
@@ -1029,7 +1135,7 @@ export async function generateTournamentStages(tournamentId: string, options?: {
           (tournament.format === TournamentFormat.DOUBLE_ELIMINATION ? PlayoffType.DOUBLE : PlayoffType.SINGLE),
         tournamentId,
         stageId: playoffStage.id,
-        size: nextPowerOfTwo(Math.max(tournament.participants.length, 2)),
+        size: playoffSize,
         legsCount:
           (tournament.playoffType ??
             (tournament.format === TournamentFormat.DOUBLE_ELIMINATION ? PlayoffType.DOUBLE : PlayoffType.SINGLE)) === PlayoffType.DOUBLE
@@ -1178,14 +1284,19 @@ export async function generateTournamentMatches(tournamentId: string) {
       if (customSettings) {
         continue;
       } else {
+        const playoffEntries =
+          tournament.format === TournamentFormat.GROUPS_PLAYOFF
+            ? []
+            : tournament.participants.map((entry) => ({ id: entry.id, userId: entry.userId, seed: entry.seed }));
         await createPlayoffMatches({
           tournamentId,
           stageId: stage.id,
           bracketId: stage.bracket.id,
-          entries: tournament.participants.map((entry) => ({ id: entry.id, userId: entry.userId, seed: entry.seed })),
+          entries: playoffEntries,
           type: stage.bracket.type,
           legsCount: stage.bracket.legsCount,
           thirdPlaceMatch: stage.bracket.thirdPlaceMatch,
+          sizeOverride: stage.bracket.size,
         });
       }
     }
@@ -1488,6 +1599,10 @@ export async function generatePlayoffFromGroups(tournamentId: string) {
   const tournament = await db.tournament.findUnique({
     where: { id: tournamentId },
     include: {
+      participants: {
+        where: { status: ParticipantStatus.CONFIRMED },
+        orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
+      },
       stages: {
         include: {
           groups: {
@@ -1542,6 +1657,17 @@ export async function generatePlayoffFromGroups(tournamentId: string) {
   const groupStage = tournament.stages.find((stage) => stage.type === StageType.GROUP_STAGE);
   const playoffStage = tournament.stages.find((stage) => stage.type === StageType.PLAYOFF);
   if (!groupStage || !playoffStage?.bracket) throw new Error("Stages for groups/playoff are not configured");
+
+  const bracketSize = getDefaultPlayoffSize(tournament);
+  await ensureGroupsPlayoffBracketShape({
+    tournamentId,
+    stageId: playoffStage.id,
+    bracketId: playoffStage.bracket.id,
+    type: playoffStage.bracket.type,
+    legsCount: playoffStage.bracket.legsCount,
+    thirdPlaceMatch: playoffStage.bracket.thirdPlaceMatch,
+    bracketSize,
+  });
 
   const roundOneMatches = await db.match.findMany({
     where: {
@@ -1896,8 +2022,11 @@ export async function startTournament(tournamentId: string) {
     include: { bracket: true },
   });
 
-  if (playoffStage?.bracket && isDirectPlayoffFormat(tournament.format)) {
-    const bracketSize = nextPowerOfTwo(confirmedParticipants);
+  if (playoffStage?.bracket && (isDirectPlayoffFormat(tournament.format) || tournament.format === TournamentFormat.GROUPS_PLAYOFF)) {
+    const bracketSize =
+      tournament.format === TournamentFormat.GROUPS_PLAYOFF
+        ? getDefaultPlayoffSize(tournament)
+        : nextPowerOfTwo(confirmedParticipants);
     await db.playoffBracket.update({
       where: { id: playoffStage.bracket.id },
       data: { size: bracketSize },
