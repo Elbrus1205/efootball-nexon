@@ -786,6 +786,10 @@ model CoinServiceOrder {
   paymentRecipient      String?                @db.Text
   paymentComment        String?                @db.Text
   paymentReceiptUrl     String?                @db.Text
+  paymentReceiptFileName String?               @db.Text
+  paymentReceiptMimeType String?
+  paymentReceiptSize    Int?
+  paymentReceiptData    Bytes?
   paidAt                DateTime?
   adminComment          String?                @db.Text
   createdAt             DateTime               @default(now())

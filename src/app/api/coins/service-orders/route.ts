@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server";
 import { NotificationType, UserRole } from "@prisma/client";
-import { randomUUID } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import { z } from "zod";
 import { getRequestBaseUrl } from "@/lib/affiliate";
 import { calculatePercentAmount, formatKopecks, getCoinStoreSettings } from "@/lib/coin-services";
@@ -24,7 +21,7 @@ const serviceOrderSchema = z.object({
 const receiptFileTypes = new Set(["image/png", "image/jpeg", "image/webp", "application/pdf"]);
 const receiptFileMaxSize = 8 * 1024 * 1024;
 
-async function saveReceiptFile(file: File) {
+async function parseReceiptFile(file: File) {
   if (!receiptFileTypes.has(file.type)) {
     throw new Error("bad-type");
   }
@@ -33,20 +30,12 @@ async function saveReceiptFile(file: File) {
     throw new Error("bad-size");
   }
 
-  const extensionByType: Record<string, string> = {
-    "image/png": "png",
-    "image/jpeg": "jpg",
-    "image/webp": "webp",
-    "application/pdf": "pdf",
+  return {
+    fileName: file.name || "receipt",
+    mimeType: file.type,
+    size: file.size,
+    data: Buffer.from(await file.arrayBuffer()),
   };
-  const extension = extensionByType[file.type] ?? "bin";
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "receipts");
-  const fileName = `${new Date().toISOString().slice(0, 10)}-${randomUUID()}.${extension}`;
-
-  await mkdir(uploadDir, { recursive: true });
-  await writeFile(path.join(uploadDir, fileName), Buffer.from(await file.arrayBuffer()));
-
-  return `/uploads/receipts/${fileName}`;
 }
 
 export async function POST(request: Request) {
@@ -114,10 +103,10 @@ export async function POST(request: Request) {
     return NextResponse.redirect(fallbackUrl, 303);
   }
 
-  let paymentReceiptUrl: string;
+  let paymentReceipt: Awaited<ReturnType<typeof parseReceiptFile>>;
 
   try {
-    paymentReceiptUrl = await saveReceiptFile(paymentReceiptFile);
+    paymentReceipt = await parseReceiptFile(paymentReceiptFile);
   } catch {
     fallbackUrl.searchParams.set("error", "Чек должен быть файлом PNG, JPG, WEBP или PDF до 8 МБ.");
     return NextResponse.redirect(fallbackUrl, 303);
@@ -144,8 +133,18 @@ export async function POST(request: Request) {
       paymentCard: selectedCard.cardNumber,
       paymentRecipient: selectedCard.recipient,
       paymentComment: settings.paymentComment || null,
-      paymentReceiptUrl,
+      paymentReceiptFileName: paymentReceipt.fileName,
+      paymentReceiptMimeType: paymentReceipt.mimeType,
+      paymentReceiptSize: paymentReceipt.size,
+      paymentReceiptData: paymentReceipt.data,
       paidAt: new Date(),
+    },
+  });
+
+  await db.coinServiceOrder.update({
+    where: { id: order.id },
+    data: {
+      paymentReceiptUrl: `/api/coins/service-orders/${order.id}/receipt`,
     },
   });
 
