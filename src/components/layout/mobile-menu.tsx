@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   ArrowRight,
   BarChart3,
@@ -39,7 +39,34 @@ const fallbackMeta = {
 
 export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
   const [open, setOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<CSSProperties>({});
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
+
+  function updateMenuPosition() {
+    const button = buttonRef.current;
+    if (!button) return;
+
+    const rect = button.getBoundingClientRect();
+    const gap = 10;
+    const edgeGap = 12;
+    const viewportHeight = window.innerHeight;
+    const spaceBelow = viewportHeight - rect.bottom - gap - edgeGap;
+    const spaceAbove = rect.top - gap - edgeGap;
+    const openBelow = spaceBelow >= 300 || spaceBelow >= spaceAbove;
+
+    setMenuPosition(
+      openBelow
+        ? {
+            top: rect.bottom + gap,
+            maxHeight: Math.max(220, spaceBelow),
+          }
+        : {
+            bottom: viewportHeight - rect.top + gap,
+            maxHeight: Math.max(220, spaceAbove),
+          },
+    );
+  }
 
   useEffect(() => {
     setOpen(false);
@@ -59,6 +86,9 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
   useEffect(() => {
     if (!open) return;
 
+    updateMenuPosition();
+
+    const handleViewportChange = () => updateMenuPosition();
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpen(false);
@@ -66,18 +96,29 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleViewportChange, true);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
+    };
   }, [open]);
 
   return (
     <div className="md:hidden">
       <button
+        ref={buttonRef}
         type="button"
         aria-controls="mobile-navigation"
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={open ? "Закрыть меню" : "Открыть меню"}
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => {
+          updateMenuPosition();
+          setOpen((value) => !value);
+        }}
         className={cn(
           "group relative z-[80] flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.05] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_14px_28px_rgba(2,6,23,0.16)] backdrop-blur-xl transition-[background-color,border-color,box-shadow,transform] duration-300 ease-out hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70",
           open &&
@@ -121,8 +162,9 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
           role="dialog"
           aria-modal="true"
           aria-label="Мобильная навигация"
+          style={menuPosition}
           className={cn(
-            "absolute left-3 right-3 top-[5.35rem] flex max-h-[calc(100dvh-6.1rem)] origin-top flex-col overflow-hidden rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(9,14,24,0.94))] shadow-[0_20px_48px_rgba(2,6,23,0.32),0_0_0_1px_rgba(148,163,184,0.06)] backdrop-blur-2xl transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] sm:left-4 sm:right-4",
+            "fixed left-3 right-3 flex origin-top flex-col overflow-hidden rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(9,14,24,0.94))] shadow-[0_20px_48px_rgba(2,6,23,0.32),0_0_0_1px_rgba(148,163,184,0.06)] backdrop-blur-2xl transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] sm:left-4 sm:right-4",
             open ? "translate-y-0 scale-100 opacity-100" : "-translate-y-3 scale-[0.985] opacity-0",
           )}
           onClick={(event) => event.stopPropagation()}
