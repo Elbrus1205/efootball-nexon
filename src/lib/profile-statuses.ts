@@ -6,11 +6,17 @@ import { MAX_SELECTED_PROFILE_STATUSES } from "@/lib/profile-status-style";
 
 export { MAX_SELECTED_PROFILE_STATUSES };
 
+function formatSeasonStatusPeriod(seasonName: string) {
+  return seasonName.trim().replace(/^сезон\s+/i, "");
+}
+
 export function getSeasonStatusDraft(rank: number, seasonName: string) {
+  const seasonPeriod = formatSeasonStatusPeriod(seasonName);
+
   if (rank === 1) {
     return {
       type: ProfileStatusType.SEASON_CHAMPION,
-      title: `Чемпион сезона ${seasonName}`,
+      title: `Чемпион сезона ${seasonPeriod}`,
       description: "1 место в сезонном рейтинге.",
       tone: ProfileStatusTone.GOLD,
     };
@@ -19,7 +25,7 @@ export function getSeasonStatusDraft(rank: number, seasonName: string) {
   if (rank === 2) {
     return {
       type: ProfileStatusType.SEASON_VICE_CHAMPION,
-      title: `Вице-чемпион сезона ${seasonName}`,
+      title: `Вице-чемпион сезона ${seasonPeriod}`,
       description: "2 место в сезонном рейтинге.",
       tone: ProfileStatusTone.PURPLE,
     };
@@ -27,7 +33,7 @@ export function getSeasonStatusDraft(rank: number, seasonName: string) {
 
   return {
     type: ProfileStatusType.SEASON_BRONZE,
-    title: `Бронзовый призёр сезона ${seasonName}`,
+    title: `Бронзовый призёр сезона ${seasonPeriod}`,
     description: "3 место в сезонном рейтинге.",
     tone: ProfileStatusTone.BLUE,
   };
