@@ -88,10 +88,10 @@ export default async function RatingsPage({
 
         <div className="overflow-hidden">
           <div className="min-w-0">
-            <div className="grid grid-cols-[64px_minmax(0,1fr)_84px] items-center border-b border-white/10 bg-black/20 text-xs uppercase tracking-[0.18em] text-zinc-500 sm:grid-cols-[72px_minmax(0,1fr)_110px]">
-              <div className="px-3 py-3 text-center">#</div>
+            <div className="grid grid-cols-[52px_minmax(0,1fr)_112px] items-center border-b border-white/10 bg-black/20 text-xs uppercase tracking-[0.16em] text-zinc-500 sm:grid-cols-[72px_minmax(0,1fr)_120px] sm:tracking-[0.18em]">
+              <div className="px-2 py-3 text-center sm:px-3">#</div>
               <div className="py-3 pl-0 pr-2">Игрок</div>
-              <div className="py-3 pl-2 pr-4 text-center">Рейтинг</div>
+              <div className="py-3 pl-1 pr-2 text-right sm:pl-2 sm:pr-4 sm:text-center">Рейтинг</div>
             </div>
 
             <div className="divide-y divide-white/10">
@@ -104,27 +104,27 @@ export default async function RatingsPage({
                 return (
                   <Fragment key={player.playerId}>
                     {currentUserBelowTop && index === visibleRatings.length - 1 ? (
-                      <div key="current-user-separator" className="grid grid-cols-[64px_minmax(0,1fr)_84px] items-center text-sm text-zinc-500 sm:grid-cols-[72px_minmax(0,1fr)_110px]">
-                        <div className="px-3 py-3 text-center">...</div>
+                      <div key="current-user-separator" className="grid grid-cols-[52px_minmax(0,1fr)_112px] items-center text-sm text-zinc-500 sm:grid-cols-[72px_minmax(0,1fr)_120px]">
+                        <div className="px-2 py-3 text-center sm:px-3">...</div>
                         <div className="py-3 pl-0 pr-2">...</div>
-                        <div className="py-3 pl-2 pr-4 text-center">...</div>
+                        <div className="py-3 pl-1 pr-2 text-right sm:pl-2 sm:pr-4 sm:text-center">...</div>
                       </div>
                     ) : null}
 
                     <div
                       key={player.playerId}
-                      className={`grid grid-cols-[64px_minmax(0,1fr)_84px] items-center text-sm transition hover:bg-white/[0.03] sm:grid-cols-[72px_minmax(0,1fr)_110px] ${
+                      className={`grid grid-cols-[52px_minmax(0,1fr)_112px] items-center text-sm transition hover:bg-white/[0.03] sm:grid-cols-[72px_minmax(0,1fr)_120px] ${
                         isCurrentUser ? "bg-primary/10" : ""
                       }`}
                     >
-                      <div className="px-3 py-4">
+                      <div className="px-2 py-4 sm:px-3">
                         <div className={`mx-auto flex h-8 w-8 items-center justify-center rounded-lg border ${rankStyle(rank)}`}>
                           <RankIcon rank={rank} />
                         </div>
                       </div>
                       <div className="min-w-0 py-4 pl-0 pr-2">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/20">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/20 sm:h-10 sm:w-10">
                             {player.image ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img src={proxyTelegramAssetUrl(player.image)} alt={player.playerName} className="h-full w-full object-cover" />
@@ -148,11 +148,11 @@ export default async function RatingsPage({
                           </div>
                         </div>
                       </div>
-                      <div className="py-4 pl-2 pr-4 text-center">
-                        <div className="inline-flex items-baseline justify-center gap-1.5">
-                          <span className="text-lg font-black text-white">{formatRating(player.rating)}</span>
+                      <div className="min-w-0 py-4 pl-1 pr-2 text-right sm:pl-2 sm:pr-4 sm:text-center">
+                        <div className="inline-flex max-w-full items-center justify-end gap-1.5 rounded-full border border-white/5 bg-black/10 px-1.5 py-1 sm:justify-center sm:bg-transparent sm:px-0 sm:py-0">
+                          <span className="text-lg font-black leading-none text-white">{formatRating(player.rating)}</span>
                           {showRatingChange ? (
-                            <span className={`text-[11px] font-black leading-none ${ratingChangeTone}`}>
+                            <span className={`shrink-0 rounded-full bg-black/25 px-1.5 py-0.5 text-[10px] font-black leading-none ring-1 ring-white/10 sm:text-[11px] ${ratingChangeTone}`}>
                               {player.lastRatingChange > 0 ? "+" : ""}
                               {formatRating(player.lastRatingChange)}
                             </span>
