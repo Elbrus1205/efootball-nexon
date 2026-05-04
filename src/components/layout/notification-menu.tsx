@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import Pusher from "pusher-js";
-import { Bell, CheckCheck, ExternalLink, Loader2 } from "lucide-react";
+import { Bell, CalendarCheck2, CheckCheck, ExternalLink, Loader2, ShieldCheck, Sparkles, Swords, Trophy } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 
@@ -15,6 +15,37 @@ type NotificationItem = {
   link?: string | null;
   isRead: boolean;
   createdAt: string;
+};
+
+const notificationStyles = {
+  TOURNAMENT: {
+    icon: Trophy,
+    label: "Турнир",
+    accent: "text-accent",
+    shell: "border-accent/25 bg-accent/10 hover:bg-accent/15",
+    iconBox: "border-accent/25 bg-accent/15 text-accent",
+  },
+  MATCH: {
+    icon: Swords,
+    label: "Матч",
+    accent: "text-primary",
+    shell: "border-primary/25 bg-primary/10 hover:bg-primary/15",
+    iconBox: "border-primary/25 bg-primary/15 text-primary",
+  },
+  RESULT: {
+    icon: ShieldCheck,
+    label: "Результат",
+    accent: "text-emerald-300",
+    shell: "border-emerald-400/25 bg-emerald-500/10 hover:bg-emerald-500/15",
+    iconBox: "border-emerald-400/25 bg-emerald-500/15 text-emerald-300",
+  },
+  SYSTEM: {
+    icon: CalendarCheck2,
+    label: "Система",
+    accent: "text-sky-300",
+    shell: "border-sky-400/25 bg-sky-500/10 hover:bg-sky-500/15",
+    iconBox: "border-sky-400/25 bg-sky-500/15 text-sky-300",
+  },
 };
 
 export function NotificationMenu({
@@ -111,8 +142,8 @@ export function NotificationMenu({
           ) : null}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[min(380px,calc(100vw-24px))] rounded-2xl border-white/10 bg-[#0b0f17]/95 p-0 text-white shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-        <div className="flex items-start justify-between gap-4 border-b border-white/10 p-4">
+      <DropdownMenuContent align="end" className="w-[min(400px,calc(100vw-24px))] rounded-2xl border-white/10 bg-[#0b0f17]/95 p-0 text-white shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+        <div className="flex items-start justify-between gap-4 border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.16),transparent_42%)] p-4">
           <div>
             <div className="flex items-center gap-2 font-medium">
               <Bell className="h-4 w-4 text-primary" />
@@ -133,14 +164,29 @@ export function NotificationMenu({
             </div>
           ) : items.length ? (
             items.map((item) => {
+              const style = notificationStyles[item.type ?? "SYSTEM"];
+              const Icon = style.icon;
               const content = (
-                <div className={`group rounded-xl border px-3 py-3 text-sm transition ${item.isRead ? "border-white/5 bg-white/[0.03] hover:bg-white/[0.06]" : "border-primary/20 bg-primary/10 hover:bg-primary/15"}`}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 font-medium text-white">{item.title}</div>
-                    {item.link ? <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-500 group-hover:text-primary" /> : null}
+                <div className={`group rounded-xl border px-3 py-3 text-sm transition ${item.isRead ? "border-white/5 bg-white/[0.03] hover:bg-white/[0.06]" : style.shell}`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${style.iconBox}`}>
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 font-medium text-white">{item.title}</div>
+                        {item.link ? <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-500 group-hover:text-primary" /> : null}
+                      </div>
+                      <div className="mt-1 line-clamp-3 text-zinc-400">{item.body}</div>
+                      <div className="mt-3 flex items-center justify-between gap-3 text-[11px]">
+                        <span className={`inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-1 font-semibold ${style.accent}`}>
+                          <Sparkles className="h-3 w-3" />
+                          {style.label}
+                        </span>
+                        <span className="text-zinc-600">{formatNotificationDate(item.createdAt)}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-1 line-clamp-3 text-zinc-400">{item.body}</div>
-                  <div className="mt-2 text-[11px] text-zinc-600">{formatNotificationDate(item.createdAt)}</div>
                 </div>
               );
 
@@ -157,7 +203,7 @@ export function NotificationMenu({
           ) : (
             <div className="px-3 py-10 text-center text-sm text-zinc-500">
               Пока уведомлений нет.
-              <span className="mt-1 block text-xs text-zinc-600">Матчи, турниры и регламент появятся здесь сразу после событий.</span>
+              <span className="mt-1 block text-xs text-zinc-600">Матчи, турниры, сезоны и регламент появятся здесь сразу после событий.</span>
             </div>
           )}
         </div>

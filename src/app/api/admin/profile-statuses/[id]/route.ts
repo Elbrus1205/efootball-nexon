@@ -6,8 +6,8 @@ import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { approveProfileStatus } from "@/lib/profile-statuses";
 
-function redirectToSeasons(request: Request, params: Record<string, string>) {
-  const url = new URL("/admin/seasons", getRequestBaseUrl(request));
+function redirectToStatuses(request: Request, params: Record<string, string>) {
+  const url = new URL("/admin/statuses", getRequestBaseUrl(request));
 
   for (const [key, value] of Object.entries(params)) {
     url.searchParams.set(key, value);
@@ -25,15 +25,16 @@ export async function POST(request: Request, { params }: { params: { id: string 
   });
 
   if (!status) {
-    return redirectToSeasons(request, { error: "Статус не найден." });
+    return redirectToStatuses(request, { error: "Статус не найден." });
   }
 
   if (action === "approve") {
     await approveProfileStatus(status, session.user.id);
+    revalidatePath("/admin/statuses");
     revalidatePath("/admin/seasons");
     revalidatePath(`/players/${status.userId}`);
     revalidatePath("/dashboard");
-    return redirectToSeasons(request, { statusApproved: "1" });
+    return redirectToStatuses(request, { statusApproved: "1" });
   }
 
   if (action === "reject") {
@@ -47,9 +48,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
       },
     });
 
+    revalidatePath("/admin/statuses");
     revalidatePath("/admin/seasons");
-    return redirectToSeasons(request, { statusRejected: "1" });
+    return redirectToStatuses(request, { statusRejected: "1" });
   }
 
-  return redirectToSeasons(request, { error: "Некорректное действие со статусом." });
+  return redirectToStatuses(request, { error: "Некорректное действие со статусом." });
 }

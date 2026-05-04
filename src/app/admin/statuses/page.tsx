@@ -1,0 +1,148 @@
+import { Award, CheckCircle2, Clock3, ShieldCheck, Sparkles, XCircle } from "lucide-react";
+import { ProfileStatusApprovalStatus, UserRole } from "@prisma/client";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import { requireRole } from "@/lib/auth/session";
+import { db } from "@/lib/db";
+import { profileStatusClassName } from "@/lib/profile-status-style";
+import { formatDate } from "@/lib/utils";
+
+const approvalBadge: Record<ProfileStatusApprovalStatus, { label: string; variant: "neutral" | "success" | "danger" }> = {
+  PENDING: { label: "На проверке", variant: "neutral" },
+  APPROVED: { label: "Выдан", variant: "success" },
+  REJECTED: { label: "Отклонён", variant: "danger" },
+};
+
+export default async function AdminStatusesPage({
+  searchParams,
+}: {
+  searchParams?: { statusApproved?: string; statusRejected?: string; error?: string };
+}) {
+  await requireRole([UserRole.FOUNDER]);
+
+  const statuses = await db.userProfileStatus.findMany({
+    include: {
+      user: { select: { nickname: true, name: true, email: true } },
+      season: { select: { name: true } },
+      reviewedBy: { select: { nickname: true, name: true, email: true } },
+    },
+    orderBy: [{ approvalStatus: "asc" }, { createdAt: "desc" }],
+  });
+
+  const pendingStatuses = statuses.filter((status) => status.approvalStatus === ProfileStatusApprovalStatus.PENDING);
+  const approvedCount = statuses.filter((status) => status.approvalStatus === ProfileStatusApprovalStatus.APPROVED).length;
+  const rejectedCount = statuses.filter((status) => status.approvalStatus === ProfileStatusApprovalStatus.REJECTED).length;
+
+  return (
+    <div className="space-y-6">
+      {searchParams?.statusApproved ? (
+        <Card className="rounded-lg border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Статус подтверждён и выдан игроку.</Card>
+      ) : null}
+
+      {searchParams?.statusRejected ? (
+        <Card className="rounded-lg border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">Статус отклонён.</Card>
+      ) : null}
+
+      {searchParams?.error ? (
+        <Card className="rounded-lg border-rose-400/25 bg-rose-500/10 p-4 text-sm text-rose-100">{searchParams.error}</Card>
+      ) : null}
+
+      <Card className="rounded-lg overflow-hidden p-0">
+        <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] p-5">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                <Sparkles className="h-3.5 w-3.5" />
+                Профильные награды
+              </div>
+              <CardTitle>Статусы игроков</CardTitle>
+              <CardDescription className="mt-2 max-w-2xl">
+                Проверка сезонных наград, история решений и быстрые действия для выдачи статусов в профиль.
+              </CardDescription>
+            </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-white/10 bg-black/25 text-accent">
+              <Award className="h-6 w-6" />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-3 p-5 md:grid-cols-3">
+          <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+            <div className="flex items-center gap-2 text-sm text-zinc-400">
+              <Clock3 className="h-4 w-4 text-amber-300" />
+              На проверке
+            </div>
+            <div className="mt-3 text-3xl font-semibold text-white">{pendingStatuses.length}</div>
+          </div>
+          <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+            <div className="flex items-center gap-2 text-sm text-zinc-400">
+              <CheckCircle2 className="h-4 w-4 text-emerald-300" />
+              Выдано
+            </div>
+            <div className="mt-3 text-3xl font-semibold text-white">{approvedCount}</div>
+          </div>
+          <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+            <div className="flex items-center gap-2 text-sm text-zinc-400">
+              <XCircle className="h-4 w-4 text-rose-300" />
+              Отклонено
+            </div>
+            <div className="mt-3 text-3xl font-semibold text-white">{rejectedCount}</div>
+          </div>
+        </div>
+      </Card>
+
+      <div className="grid gap-4">
+        {statuses.map((status) => {
+          const userName = status.user.nickname || status.user.name || status.user.email || "Игрок";
+          const reviewerName = status.reviewedBy?.nickname || status.reviewedBy?.name || status.reviewedBy?.email || null;
+          const approval = approvalBadge[status.approvalStatus];
+
+          return (
+            <Card key={status.id} className="rounded-lg p-5">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div className="min-w-0 space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="font-semibold text-white">{userName}</div>
+                    <Badge variant={approval.variant}>{approval.label}</Badge>
+                    {status.sourceRank ? <Badge>#{status.sourceRank}</Badge> : null}
+                  </div>
+                  <div className={profileStatusClassName(status.tone, "w-fit")}>{status.title}</div>
+                  <div className="max-w-3xl text-sm text-zinc-400">{status.description}</div>
+                  <div className="flex flex-wrap gap-4 text-xs text-zinc-500">
+                    <span>Сезон: {status.season?.name ?? "Без сезона"}</span>
+                    <span>Создан: {formatDate(status.createdAt, "d MMM yyyy")}</span>
+                    {reviewerName ? <span>Проверил: {reviewerName}</span> : null}
+                  </div>
+                </div>
+
+                <div className="grid min-w-[220px] gap-2 sm:grid-cols-2 xl:w-[300px]">
+                  <form action={`/api/admin/profile-statuses/${status.id}`} method="post">
+                    <input type="hidden" name="_action" value="approve" />
+                    <Button type="submit" className="w-full rounded-lg bg-emerald-400 text-black hover:bg-emerald-300" disabled={status.approvalStatus === ProfileStatusApprovalStatus.APPROVED}>
+                      <ShieldCheck className="mr-2 h-4 w-4" />
+                      Выдать
+                    </Button>
+                  </form>
+                  <form action={`/api/admin/profile-statuses/${status.id}`} method="post">
+                    <input type="hidden" name="_action" value="reject" />
+                    <Button type="submit" variant="outline" className="w-full rounded-lg border-rose-400/25 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20" disabled={status.approvalStatus === ProfileStatusApprovalStatus.REJECTED}>
+                      <XCircle className="mr-2 h-4 w-4" />
+                      Отклонить
+                    </Button>
+                  </form>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+
+        {!statuses.length ? (
+          <Card className="rounded-lg border-dashed border-white/10 bg-black/20 p-6 text-sm text-zinc-500">
+            Статусов пока нет. Они появятся здесь после завершения сезона.
+          </Card>
+        ) : null}
+      </div>
+    </div>
+  );
+}

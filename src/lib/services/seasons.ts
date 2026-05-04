@@ -51,6 +51,33 @@ export async function createSeason(rawName: FormDataEntryValue | null) {
   return season;
 }
 
+export async function finishSeason(seasonId: string) {
+  const season = await db.season.findUnique({
+    where: { id: seasonId },
+    select: { id: true, isActive: true },
+  });
+
+  if (!season) {
+    throw new Error("Сезон не найден.");
+  }
+
+  if (!season.isActive) {
+    throw new Error("Этот сезон уже завершён.");
+  }
+
+  const finishedSeason = await db.season.update({
+    where: { id: season.id },
+    data: {
+      isActive: false,
+      endsAt: new Date(),
+    },
+  });
+
+  await createSeasonStatusNominations(season.id);
+
+  return finishedSeason;
+}
+
 export async function deleteSeason(seasonId: string) {
   await db.$transaction(async (tx) => {
     await tx.tournament.updateMany({

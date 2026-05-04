@@ -1,4 +1,5 @@
-import { Archive, CalendarRange, CheckCircle2, Play, Trash2, UserCheck, XCircle } from "lucide-react";
+import Link from "next/link";
+import { Archive, Award, CalendarRange, CheckCircle2, Flag, Play, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,9 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { profileStatusClassName } from "@/lib/profile-status-style";
 import { formatDate } from "@/lib/utils";
-import { ProfileStatusApprovalStatus, UserRole } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 
 function dateRange(startsAt: Date | null, endsAt: Date | null) {
   if (!startsAt && !endsAt) return "Даты не указаны";
@@ -20,24 +20,17 @@ function dateRange(startsAt: Date | null, endsAt: Date | null) {
 export default async function AdminSeasonsPage({
   searchParams,
 }: {
-  searchParams?: { created?: string; deleted?: string; cleared?: string; statusApproved?: string; statusRejected?: string; error?: string };
+  searchParams?: { created?: string; deleted?: string; cleared?: string; finished?: string; error?: string };
 }) {
   await requireRole([UserRole.FOUNDER]);
 
-  const [seasons, tournamentsWithoutSeason, pendingStatuses] = await db.$transaction([
+  const [seasons, tournamentsWithoutSeason, pendingStatusesCount] = await db.$transaction([
     db.season.findMany({
       include: { _count: { select: { tournaments: true } } },
       orderBy: [{ isActive: "desc" }, { startsAt: "desc" }, { createdAt: "desc" }],
     }),
     db.tournament.count({ where: { seasonId: null } }),
-    db.userProfileStatus.findMany({
-      where: { approvalStatus: ProfileStatusApprovalStatus.PENDING },
-      include: {
-        user: { select: { nickname: true, name: true, email: true } },
-        season: { select: { name: true } },
-      },
-      orderBy: [{ createdAt: "asc" }],
-    }),
+    db.userProfileStatus.count({ where: { approvalStatus: "PENDING" } }),
   ]);
 
   const activeSeason = seasons.find((season) => season.isActive) ?? null;
@@ -52,20 +45,18 @@ export default async function AdminSeasonsPage({
         </Card>
       ) : null}
 
+      {searchParams?.finished ? (
+        <Card className="rounded-lg border-sky-400/20 bg-sky-500/10 p-4 text-sm text-sky-100">
+          Сезон завершён. Игроки получили уведомление, а сезонные статусы отправлены в раздел проверки.
+        </Card>
+      ) : null}
+
       {searchParams?.deleted ? (
         <Card className="rounded-lg border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">Сезон удалён.</Card>
       ) : null}
 
       {searchParams?.cleared ? (
         <Card className="rounded-lg border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">Все сезоны очищены.</Card>
-      ) : null}
-
-      {searchParams?.statusApproved ? (
-        <Card className="rounded-lg border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">Статус подтверждён и выдан игроку.</Card>
-      ) : null}
-
-      {searchParams?.statusRejected ? (
-        <Card className="rounded-lg border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">Статус отклонён.</Card>
       ) : null}
 
       {searchParams?.error ? (
@@ -78,7 +69,7 @@ export default async function AdminSeasonsPage({
             <div>
               <CardTitle>Сезоны</CardTitle>
               <CardDescription>
-                Новый сезон делает рейтинг чистым: все игроки начинают с базового значения, а старые рейтинги остаются доступными в архиве.
+                Управляйте стартом, завершением и архивом сезонов. Статусы вынесены в отдельный раздел админ-панели.
               </CardDescription>
             </div>
             <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-primary/25 bg-primary/10 text-primary">
@@ -121,7 +112,7 @@ export default async function AdminSeasonsPage({
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
+      <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
         <Card className="rounded-lg p-5">
           <CardHeader>
             <CardTitle>Список сезонов</CardTitle>
@@ -143,18 +134,30 @@ export default async function AdminSeasonsPage({
                     </div>
                   </div>
 
-                  <form action={`/api/admin/seasons/${season.id}`} method="post" className="grid min-w-[240px] gap-2 sm:grid-cols-[1fr_auto] xl:w-[360px]">
-                    <input type="hidden" name="_method" value="delete" />
-                    <Input name="confirmation" placeholder="УДАЛИТЬ" className="rounded-lg" aria-label="Подтверждение удаления сезона" />
-                    <Button
-                      type="submit"
-                      variant="outline"
-                      className="rounded-lg border-rose-400/25 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20"
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Удалить
-                    </Button>
-                  </form>
+                  <div className="grid min-w-[240px] gap-2 xl:w-[380px]">
+                    {season.isActive ? (
+                      <form action={`/api/admin/seasons/${season.id}`} method="post">
+                        <input type="hidden" name="_action" value="finish" />
+                        <Button type="submit" variant="accent" className="w-full rounded-lg">
+                          <Flag className="mr-2 h-4 w-4" />
+                          Завершить сезон
+                        </Button>
+                      </form>
+                    ) : null}
+
+                    <form action={`/api/admin/seasons/${season.id}`} method="post" className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                      <input type="hidden" name="_method" value="delete" />
+                      <Input name="confirmation" placeholder="УДАЛИТЬ" className="rounded-lg" aria-label="Подтверждение удаления сезона" />
+                      <Button
+                        type="submit"
+                        variant="outline"
+                        className="rounded-lg border-rose-400/25 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Удалить
+                      </Button>
+                    </form>
+                  </div>
                 </div>
               </div>
             ))}
@@ -168,77 +171,46 @@ export default async function AdminSeasonsPage({
         </Card>
 
         <div className="space-y-4">
-        <Card className="rounded-lg p-5">
-          <CardHeader>
-            <CardTitle>Статусы на подтверждение</CardTitle>
-            <CardDescription>Сезонные статусы создаются автоматически после закрытия сезона, но выдаются только после подтверждения.</CardDescription>
-          </CardHeader>
+          <Card className="rounded-lg border-primary/20 bg-primary/5 p-5">
+            <CardHeader>
+              <CardTitle>Статусы игроков</CardTitle>
+              <CardDescription>Подтверждение и настройка сезонных статусов теперь находятся в отдельном меню.</CardDescription>
+            </CardHeader>
+            <Link href="/admin/statuses" className="block">
+              <Button type="button" variant="secondary" className="w-full rounded-lg">
+                <Award className="mr-2 h-4 w-4" />
+                Открыть статусы
+                {pendingStatusesCount ? <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-black">{pendingStatusesCount}</span> : null}
+              </Button>
+            </Link>
+          </Card>
 
-          <div className="space-y-3">
-            {pendingStatuses.map((status) => {
-              const userName = status.user.nickname || status.user.name || status.user.email || "Игрок";
-
-              return (
-                <div key={status.id} className="rounded-lg border border-white/10 bg-black/20 p-3">
-                  <div className="space-y-2">
-                    <div className="font-semibold text-white">{userName}</div>
-                    <div className={profileStatusClassName(status.tone)}>{status.title}</div>
-                    <div className="text-xs text-zinc-500">
-                      {status.season?.name ?? "Сезон"} • место: {status.sourceRank ?? "-"}
-                    </div>
-                  </div>
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                    <form action={`/api/admin/profile-statuses/${status.id}`} method="post">
-                      <input type="hidden" name="_action" value="approve" />
-                      <Button type="submit" className="w-full rounded-lg bg-emerald-400 text-black hover:bg-emerald-300">
-                        <UserCheck className="mr-2 h-4 w-4" />
-                        Выдать
-                      </Button>
-                    </form>
-                    <form action={`/api/admin/profile-statuses/${status.id}`} method="post">
-                      <input type="hidden" name="_action" value="reject" />
-                      <Button type="submit" variant="outline" className="w-full rounded-lg border-rose-400/25 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20">
-                        <XCircle className="mr-2 h-4 w-4" />
-                        Отклонить
-                      </Button>
-                    </form>
-                  </div>
+          <Card className="rounded-lg border-rose-400/20 bg-rose-500/5 p-5">
+            <CardHeader>
+              <CardTitle>Очистка сезонов</CardTitle>
+              <CardDescription>Удалит все сезоны и отвяжет турниры от сезонного архива. Матчи и турниры не удаляются.</CardDescription>
+            </CardHeader>
+            <form action="/api/admin/seasons" method="post" className="space-y-3">
+              <input type="hidden" name="_action" value="clear" />
+              <div className="rounded-lg border border-amber-300/20 bg-amber-400/10 p-3 text-sm text-amber-100">
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>Для подтверждения введите ОЧИСТИТЬ.</span>
                 </div>
-              );
-            })}
-
-            {!pendingStatuses.length ? (
-              <div className="rounded-lg border border-dashed border-white/10 bg-black/20 p-4 text-sm text-zinc-500">Статусов на подтверждение нет.</div>
-            ) : null}
-          </div>
-        </Card>
-
-        <Card className="rounded-lg border-rose-400/20 bg-rose-500/5 p-5">
-          <CardHeader>
-            <CardTitle>Очистка сезонов</CardTitle>
-            <CardDescription>Удалит все сезоны и отвяжет турниры от сезонного архива. Матчи и турниры не удаляются.</CardDescription>
-          </CardHeader>
-          <form action="/api/admin/seasons" method="post" className="space-y-3">
-            <input type="hidden" name="_action" value="clear" />
-            <div className="rounded-lg border border-amber-300/20 bg-amber-400/10 p-3 text-sm text-amber-100">
-              <div className="flex items-start gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-                <span>Для подтверждения введите ОЧИСТИТЬ.</span>
               </div>
-            </div>
-            <Input name="confirmation" placeholder="ОЧИСТИТЬ" className="rounded-lg" />
-            <Button type="submit" variant="outline" className="w-full rounded-lg border-rose-400/25 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20">
-              <Archive className="mr-2 h-4 w-4" />
-              Очистить все сезоны
-            </Button>
-          </form>
+              <Input name="confirmation" placeholder="ОЧИСТИТЬ" className="rounded-lg" />
+              <Button type="submit" variant="outline" className="w-full rounded-lg border-rose-400/25 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20">
+                <Archive className="mr-2 h-4 w-4" />
+                Очистить все сезоны
+              </Button>
+            </form>
 
-          {tournamentsWithoutSeason ? (
-            <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-3 text-xs text-zinc-500">
-              Турниров без сезона: {tournamentsWithoutSeason}. Они учитываются только в рейтинге за всё время.
-            </div>
-          ) : null}
-        </Card>
+            {tournamentsWithoutSeason ? (
+              <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-3 text-xs text-zinc-500">
+                Турниров без сезона: {tournamentsWithoutSeason}. Они учитываются только в рейтинге за всё время.
+              </div>
+            ) : null}
+          </Card>
         </div>
       </div>
     </div>
