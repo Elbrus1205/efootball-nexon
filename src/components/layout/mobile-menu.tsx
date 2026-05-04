@@ -50,9 +50,12 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
     const rect = button.getBoundingClientRect();
     const gap = 10;
     const edgeGap = 12;
-    const viewportHeight = window.innerHeight;
-    const spaceBelow = viewportHeight - rect.bottom - gap - edgeGap;
-    const spaceAbove = rect.top - gap - edgeGap;
+    const visualViewport = window.visualViewport;
+    const viewportTop = visualViewport?.offsetTop ?? 0;
+    const viewportHeight = visualViewport?.height ?? window.innerHeight;
+    const viewportBottom = viewportTop + viewportHeight;
+    const spaceBelow = viewportBottom - rect.bottom - gap - edgeGap;
+    const spaceAbove = rect.top - viewportTop - gap - edgeGap;
     const openBelow = spaceBelow >= 300 || spaceBelow >= spaceAbove;
 
     setMenuPosition(
@@ -62,7 +65,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
             maxHeight: Math.max(220, spaceBelow),
           }
         : {
-            bottom: viewportHeight - rect.top + gap,
+            bottom: viewportBottom - rect.top + gap,
             maxHeight: Math.max(220, spaceAbove),
           },
     );
@@ -73,22 +76,12 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
   }, [pathname]);
 
   useEffect(() => {
-    const overflow = open ? "hidden" : "";
-    document.documentElement.style.overflow = overflow;
-    document.body.style.overflow = overflow;
-
-    return () => {
-      document.documentElement.style.overflow = "";
-      document.body.style.overflow = "";
-    };
-  }, [open]);
-
-  useEffect(() => {
     if (!open) return;
 
     updateMenuPosition();
 
     const handleViewportChange = () => updateMenuPosition();
+    const handleScroll = () => setOpen(false);
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpen(false);
@@ -97,12 +90,16 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("resize", handleViewportChange);
-    window.addEventListener("scroll", handleViewportChange, true);
+    window.visualViewport?.addEventListener("resize", handleViewportChange);
+    window.visualViewport?.addEventListener("scroll", handleViewportChange);
+    window.addEventListener("scroll", handleScroll, { passive: true });
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("resize", handleViewportChange);
-      window.removeEventListener("scroll", handleViewportChange, true);
+      window.visualViewport?.removeEventListener("resize", handleViewportChange);
+      window.visualViewport?.removeEventListener("scroll", handleViewportChange);
+      window.removeEventListener("scroll", handleScroll);
     };
   }, [open]);
 
