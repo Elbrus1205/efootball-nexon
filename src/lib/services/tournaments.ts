@@ -191,6 +191,10 @@ function isDirectPlayoffFormat(format: TournamentFormat) {
   return format === TournamentFormat.SINGLE_ELIMINATION || format === TournamentFormat.DOUBLE_ELIMINATION;
 }
 
+function isCustomDirectPlayoff(format: TournamentFormat, blueprintJson: unknown) {
+  return format === TournamentFormat.CUSTOM && normalizeFormatBlueprint(blueprintJson).openingStageMode === "NONE";
+}
+
 function getStageStatus(hasPreviousStages: boolean, tournamentStatus: TournamentStatus) {
   if (hasPreviousStages) return StageStatus.PENDING;
   return tournamentStatus === TournamentStatus.IN_PROGRESS ? StageStatus.ACTIVE : StageStatus.PENDING;
@@ -1940,7 +1944,7 @@ export async function closeTournamentRegistration(tournamentId: string) {
     throw new Error("Для закрытия регистрации нужно минимум 2 участника.");
   }
 
-  if (isDirectPlayoffFormat(tournament.format) && !isPowerOfTwo(confirmedParticipants)) {
+  if ((isDirectPlayoffFormat(tournament.format) || isCustomDirectPlayoff(tournament.format, tournament.formatBlueprintJson)) && !isPowerOfTwo(confirmedParticipants)) {
     throw new Error("Для плей-офф нужно 2, 4, 8, 16 или 32 участника.");
   }
 
@@ -1993,7 +1997,7 @@ export async function startTournament(tournamentId: string) {
     throw new Error("Для старта турнира нужно минимум 2 участника.");
   }
 
-  if (isDirectPlayoffFormat(tournament.format) && !isPowerOfTwo(confirmedParticipants)) {
+  if ((isDirectPlayoffFormat(tournament.format) || isCustomDirectPlayoff(tournament.format, tournament.formatBlueprintJson)) && !isPowerOfTwo(confirmedParticipants)) {
     throw new Error("Для плей-офф нужно 2, 4, 8, 16 или 32 участника.");
   }
 
@@ -2009,7 +2013,7 @@ export async function startTournament(tournamentId: string) {
   }
 
   const requiresGroupAssignments =
-    tournament.format === TournamentFormat.CUSTOM ||
+    (tournament.format === TournamentFormat.CUSTOM && !isCustomDirectPlayoff(tournament.format, tournament.formatBlueprintJson)) ||
     tournament.format === TournamentFormat.GROUPS ||
     tournament.format === TournamentFormat.GROUPS_PLAYOFF;
 
@@ -2022,7 +2026,12 @@ export async function startTournament(tournamentId: string) {
     include: { bracket: true },
   });
 
-  if (playoffStage?.bracket && (isDirectPlayoffFormat(tournament.format) || tournament.format === TournamentFormat.GROUPS_PLAYOFF)) {
+  if (
+    playoffStage?.bracket &&
+    (isDirectPlayoffFormat(tournament.format) ||
+      isCustomDirectPlayoff(tournament.format, tournament.formatBlueprintJson) ||
+      tournament.format === TournamentFormat.GROUPS_PLAYOFF)
+  ) {
     const bracketSize =
       tournament.format === TournamentFormat.GROUPS_PLAYOFF
         ? getDefaultPlayoffSize(tournament)
