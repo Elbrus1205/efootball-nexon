@@ -39,7 +39,7 @@ export default async function CoinsPartnerPage() {
   const partnerEarning = partner?.purchases.reduce((sum, purchase) => sum + purchase.partnerEarningKopecks, 0) ?? 0;
 
   return (
-    <main className="page-shell space-y-6 py-0 pb-[calc(8.5rem+env(safe-area-inset-bottom))] sm:pb-[calc(9rem+env(safe-area-inset-bottom))]">
+    <main className="page-shell space-y-6 pt-4 sm:pt-6 pb-[calc(8.5rem+env(safe-area-inset-bottom))] sm:pb-[calc(9rem+env(safe-area-inset-bottom))]">
       {partner ? (
         <PartnerDashboard
           defaultOpen

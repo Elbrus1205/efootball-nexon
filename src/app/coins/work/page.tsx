@@ -59,7 +59,7 @@ export default async function CoinsWorkPage() {
   ).length;
 
   return (
-    <main className="page-shell space-y-6 py-0 pb-[calc(8.5rem+env(safe-area-inset-bottom))] sm:pb-[calc(9rem+env(safe-area-inset-bottom))]">
+    <main className="page-shell space-y-6 pt-4 sm:pt-6 pb-[calc(8.5rem+env(safe-area-inset-bottom))] sm:pb-[calc(9rem+env(safe-area-inset-bottom))]">
       <Card className="rounded-[2rem] border-emerald-300/20 bg-[linear-gradient(180deg,rgba(8,20,17,0.96),rgba(5,10,13,0.98))] p-4 sm:p-5">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[

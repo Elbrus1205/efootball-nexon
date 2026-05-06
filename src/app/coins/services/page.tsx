@@ -29,7 +29,7 @@ export default async function CoinsServicesPage() {
   ]);
 
   return (
-    <main className="page-shell space-y-3 py-0 pb-[calc(8.5rem+env(safe-area-inset-bottom))] sm:space-y-6 sm:pb-[calc(9rem+env(safe-area-inset-bottom))]">
+    <main className="page-shell space-y-3 pt-4 sm:pt-6 pb-[calc(8.5rem+env(safe-area-inset-bottom))] sm:space-y-6 sm:pb-[calc(9rem+env(safe-area-inset-bottom))]">
       <CoinsPartnerBanner />
       {settings.coinsStoreEnabled ? <CoinsShowcase offersByPlatform={offersByPlatform} /> : null}
       {settings.servicesStoreEnabled ? <CoinsServicesShowcase products={serviceProducts} /> : null}

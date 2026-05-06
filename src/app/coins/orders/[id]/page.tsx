@@ -59,7 +59,7 @@ export default async function CoinServiceOrderPage({ params, searchParams }: Ord
   const chatOpen = order.status !== CoinServiceOrderStatus.COMPLETED;
 
   return (
-    <main className="page-shell space-y-6 py-0 pb-12 sm:pb-16">
+    <main className="page-shell space-y-6 pt-4 sm:pt-6 pb-12 sm:pb-16">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button asChild variant="outline" className="h-11 rounded-full border-white/15 bg-white/[0.04] hover:bg-white/[0.08]">
           <Link href="/coins/orders">

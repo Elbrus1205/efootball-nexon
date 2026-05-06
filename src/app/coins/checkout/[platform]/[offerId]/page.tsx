@@ -47,7 +47,7 @@ export default async function CoinsCheckoutPage({ params }: CoinsCheckoutPagePro
   const OfferIcon = offer.kind === "bundle" ? Gift : Coins;
 
   return (
-    <main className="page-shell space-y-8 py-0 pb-12 sm:pb-16">
+    <main className="page-shell space-y-8 pt-4 sm:pt-6 pb-12 sm:pb-16">
       <section className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
         <div className="rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(9,12,18,0.98),rgba(11,16,24,0.94))] p-6 shadow-[0_26px_90px_rgba(0,0,0,0.28)] sm:p-8">
           <Button asChild variant="outline" className="h-11 rounded-full border-white/15 bg-white/[0.04] hover:bg-white/[0.08]">

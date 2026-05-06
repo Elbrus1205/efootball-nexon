@@ -45,7 +45,7 @@ export default async function CoinServicePage({ params, searchParams }: ServiceP
   const selectedPaymentCard = paymentCards.length ? paymentCards[Math.floor(Math.random() * paymentCards.length)] : null;
 
   return (
-    <main className="page-shell space-y-4 py-0 pb-10 sm:space-y-8 sm:pb-16">
+    <main className="page-shell space-y-4 pt-4 sm:pt-6 pb-10 sm:space-y-8 sm:pb-16">
       <section className="grid gap-3 lg:grid-cols-[0.95fr_1.05fr]">
         <div className="rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(9,12,18,0.98),rgba(11,16,24,0.94))] p-4 shadow-[0_22px_70px_rgba(0,0,0,0.26)] sm:rounded-[2rem] sm:p-8">
           <Button asChild variant="outline" className="h-10 min-h-0 rounded-xl border-white/15 bg-white/[0.04] px-3 text-xs hover:bg-white/[0.08] sm:h-11 sm:rounded-full sm:text-sm">

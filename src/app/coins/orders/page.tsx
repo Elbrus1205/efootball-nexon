@@ -35,7 +35,7 @@ export default async function CoinsOrdersPage() {
   ]);
 
   return (
-    <main className="page-shell space-y-6 py-0 pb-[calc(8.5rem+env(safe-area-inset-bottom))] sm:pb-[calc(9rem+env(safe-area-inset-bottom))]">
+    <main className="page-shell space-y-6 pt-4 sm:pt-6 pb-[calc(8.5rem+env(safe-area-inset-bottom))] sm:pb-[calc(9rem+env(safe-area-inset-bottom))]">
       <CoinsOrdersMenu
         title="Мои заказы"
         description="Активные, завершенные и отмененные заказы услуг. В карточке видно номер заказа, статус, сумму и дату оформления."
