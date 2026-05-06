@@ -104,12 +104,6 @@ export default async function PlayerProfilePage({
         </div>
 
         <StatsPeriodSwitcher basePath={`/players/${user.id}`} seasons={seasons} selectedSeasonId={selectedSeason?.id ?? null} />
-
-        {!seasons.length ? (
-          <div className="mt-4 rounded-lg border border-dashed border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-500">
-            Отдельные сезоны появятся после запуска сезона в админ-панели.
-          </div>
-        ) : null}
       </Card>
 
       <PlayerCareerStatsPanel stats={careerStats} periodLabel={periodLabel} />
