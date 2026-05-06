@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { profileStatusClassName } from "@/lib/profile-status-style";
+import { profileStatusClassName, profileStatusToneMeta, profileStatusToneOrder } from "@/lib/profile-status-style";
 import { formatDate } from "@/lib/utils";
 
 const approvalBadge: Record<ProfileStatusApprovalStatus, { label: string; variant: "neutral" | "success" | "danger" }> = {
@@ -90,6 +90,20 @@ export default async function AdminStatusesPage({
             <div className="mt-3 text-3xl font-semibold text-white">{rejectedCount}</div>
           </div>
         </div>
+
+        <div className="grid gap-3 border-t border-white/10 p-5 sm:grid-cols-2 xl:grid-cols-5">
+          {profileStatusToneOrder.map((tone) => {
+            const toneMeta = profileStatusToneMeta[tone];
+
+            return (
+              <div key={tone} className="rounded-lg border border-white/10 bg-black/20 p-3">
+                <div className={profileStatusClassName(tone, "mb-3 w-fit")}>{toneMeta.level}</div>
+                <div className="text-sm font-semibold text-white">{toneMeta.color}</div>
+                <div className="mt-1 text-xs text-zinc-400">{toneMeta.value}</div>
+              </div>
+            );
+          })}
+        </div>
       </Card>
 
       <div className="grid gap-4">
@@ -97,6 +111,7 @@ export default async function AdminStatusesPage({
           const userName = status.user.nickname || status.user.name || status.user.email || "Игрок";
           const reviewerName = status.reviewedBy?.nickname || status.reviewedBy?.name || status.reviewedBy?.email || null;
           const approval = approvalBadge[status.approvalStatus];
+          const toneMeta = profileStatusToneMeta[status.tone];
 
           return (
             <Card key={status.id} className="rounded-lg p-5">
@@ -105,9 +120,13 @@ export default async function AdminStatusesPage({
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="font-semibold text-white">{userName}</div>
                     <Badge variant={approval.variant}>{approval.label}</Badge>
-                    {status.sourceRank ? <Badge>#{status.sourceRank}</Badge> : null}
+                    <Badge>{toneMeta.level}</Badge>
                   </div>
                   <div className={profileStatusClassName(status.tone, "w-fit")}>{status.title}</div>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-zinc-300">{toneMeta.color}</span>
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-zinc-300">{toneMeta.value}</span>
+                  </div>
                   <div className="max-w-3xl text-sm text-zinc-400">{status.description}</div>
                   <div className="flex flex-wrap gap-4 text-xs text-zinc-500">
                     <span>Сезон: {status.season?.name ?? "Без сезона"}</span>

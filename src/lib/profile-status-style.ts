@@ -3,6 +3,16 @@ import { cn } from "@/lib/utils";
 
 export const MAX_SELECTED_PROFILE_STATUSES = 3;
 
+export const profileStatusToneMeta: Record<ProfileStatusTone, { level: string; color: string; value: string }> = {
+  GOLD: { level: "TOP 1", color: "Золото", value: "Лучшие" },
+  PURPLE: { level: "TOP 2", color: "Фиолетовый", value: "Очень сильные" },
+  BLUE: { level: "TOP 3", color: "Синий", value: "Уважаемые" },
+  GREEN: { level: "TOP 4", color: "Зелёный", value: "Активные" },
+  GRAY: { level: "TOP 5", color: "Серый", value: "Обычные" },
+};
+
+export const profileStatusToneOrder: ProfileStatusTone[] = ["GOLD", "PURPLE", "BLUE", "GREEN", "GRAY"];
+
 export const profileStatusToneClasses: Record<ProfileStatusTone, string> = {
   GOLD: "border-amber-300/45 bg-amber-300/15 text-amber-100 shadow-[0_0_20px_rgba(251,191,36,0.14)]",
   PURPLE: "border-violet-300/40 bg-violet-400/15 text-violet-100 shadow-[0_0_20px_rgba(167,139,250,0.12)]",
