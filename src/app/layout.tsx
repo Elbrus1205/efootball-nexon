@@ -66,7 +66,7 @@ export default function RootLayout({
         <AppProviders>
           <div className="min-h-screen bg-hero">
             <Navbar />
-            <main className="pt-6 sm:pt-8">{children}</main>
+            <main>{children}</main>
             <SiteFooter />
           </div>
         </AppProviders>
