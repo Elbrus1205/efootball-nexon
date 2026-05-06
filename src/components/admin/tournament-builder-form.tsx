@@ -3,6 +3,7 @@
 import { ClubSelectionMode, SeedingMethod, SortRule, TournamentFormat, TournamentStatus } from "@prisma/client";
 import type { PlayoffType } from "@prisma/client";
 import { ChangeEvent, useState } from "react";
+import { genUploader } from "uploadthing/client";
 import { seedingMethodLabel, sortRuleLabel, tournamentStatusLabel } from "@/lib/admin-display";
 import { FormatBlueprintBuilder } from "@/components/admin/format-blueprint-builder";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { type FormatBlueprint } from "@/lib/format-blueprint";
+import type { OurFileRouter } from "@/lib/uploadthing/core";
+
+const { uploadFiles } = genUploader<OurFileRouter>();
 
 type BuilderValues = {
   title?: string;
@@ -57,6 +61,8 @@ export function TournamentBuilderForm({
   initialValues?: BuilderValues;
 }) {
   const [coverImage, setCoverImage] = useState(initialValues?.coverImage ?? "");
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [coverUploadError, setCoverUploadError] = useState("");
 
   const selectedSortRules = initialValues?.sortRules ?? [
     SortRule.POINTS,
@@ -65,50 +71,23 @@ export function TournamentBuilderForm({
     SortRule.WINS,
   ];
 
-  const optimizeCover = (file: File) =>
-    new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-
-      reader.onerror = () => reject(new Error("Не удалось прочитать изображение."));
-      reader.onload = () => {
-        const source = typeof reader.result === "string" ? reader.result : "";
-        const image = new window.Image();
-
-        image.onerror = () => reject(new Error("Не удалось обработать изображение."));
-        image.onload = () => {
-          const maxSize = 1600;
-          const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
-          const width = Math.max(1, Math.round(image.width * scale));
-          const height = Math.max(1, Math.round(image.height * scale));
-          const canvas = document.createElement("canvas");
-          canvas.width = width;
-          canvas.height = height;
-
-          const context = canvas.getContext("2d");
-          if (!context) {
-            reject(new Error("Не удалось подготовить изображение."));
-            return;
-          }
-
-          context.drawImage(image, 0, 0, width, height);
-          resolve(canvas.toDataURL("image/webp", 0.88));
-        };
-
-        image.src = source;
-      };
-
-      reader.readAsDataURL(file);
-    });
-
   const onCoverChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) return;
 
+    setCoverUploading(true);
+    setCoverUploadError("");
+
     try {
-      setCoverImage(await optimizeCover(file));
+      const [uploaded] = await uploadFiles("coverUploader", { files: [file] });
+      setCoverImage(uploaded.serverData?.url || uploaded.ufsUrl || uploaded.url);
     } catch {
       setCoverImage("");
+      setCoverUploadError("Не удалось загрузить обложку. Попробуйте другое изображение.");
+    } finally {
+      setCoverUploading(false);
+      event.target.value = "";
     }
   };
 
@@ -176,7 +155,9 @@ export function TournamentBuilderForm({
           <div className="space-y-2">
             <Label htmlFor="coverImageFile">Обложка</Label>
             <input type="hidden" name="coverImage" value={coverImage} />
-            <Input id="coverImageFile" type="file" accept="image/*" onChange={onCoverChange} />
+            <Input id="coverImageFile" type="file" accept="image/*" onChange={onCoverChange} disabled={coverUploading} />
+            {coverUploading ? <div className="text-sm text-primary">Загрузка обложки без сжатия...</div> : null}
+            {coverUploadError ? <div className="text-sm text-red-300">{coverUploadError}</div> : null}
             {coverImage ? (
               <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -294,9 +275,11 @@ export function TournamentBuilderForm({
       </Card>
 
       <div className="flex flex-wrap gap-3">
-        <Button type="submit">{submitLabel}</Button>
+        <Button type="submit" disabled={coverUploading}>
+          {submitLabel}
+        </Button>
         {secondaryLabel ? (
-          <Button type="submit" name="status" value={TournamentStatus.DRAFT} variant="secondary">
+          <Button type="submit" name="status" value={TournamentStatus.DRAFT} variant="secondary" disabled={coverUploading}>
             {secondaryLabel}
           </Button>
         ) : null}

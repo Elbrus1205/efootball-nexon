@@ -7,6 +7,10 @@ export const ourFileRouter = {
     const uploaded = file as unknown as { url?: string; key?: string };
     return { url: uploaded.url ?? uploaded.key ?? "" };
   }),
+  coverUploader: f({ image: { maxFileSize: "16MB", maxFileCount: 1 } }).onUploadComplete(async ({ file }) => {
+    const uploaded = file as unknown as { url?: string; ufsUrl?: string; key?: string };
+    return { url: uploaded.ufsUrl ?? uploaded.url ?? uploaded.key ?? "" };
+  }),
   screenshotUploader: f({ image: { maxFileSize: "8MB", maxFileCount: 1 } }).onUploadComplete(async ({ file }) => {
     const uploaded = file as unknown as { url?: string; key?: string };
     return { url: uploaded.url ?? uploaded.key ?? "" };
