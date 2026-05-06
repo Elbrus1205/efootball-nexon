@@ -16,6 +16,23 @@ import type { OurFileRouter } from "@/lib/uploadthing/core";
 
 const { uploadFiles } = genUploader<OurFileRouter>();
 
+const readFileAsDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onerror = () => reject(new Error("Failed to read image"));
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+
+      reject(new Error("Failed to read image"));
+    };
+
+    reader.readAsDataURL(file);
+  });
+
 type BuilderValues = {
   title?: string;
   rules?: string;
@@ -83,8 +100,12 @@ export function TournamentBuilderForm({
       const [uploaded] = await uploadFiles("coverUploader", { files: [file] });
       setCoverImage(uploaded.serverData?.url || uploaded.ufsUrl || uploaded.url);
     } catch {
-      setCoverImage("");
-      setCoverUploadError("Не удалось загрузить обложку. Попробуйте другое изображение.");
+      try {
+        setCoverImage(await readFileAsDataUrl(file));
+      } catch {
+        setCoverImage("");
+        setCoverUploadError("Не удалось прочитать обложку. Попробуйте другое изображение.");
+      }
     } finally {
       setCoverUploading(false);
       event.target.value = "";
