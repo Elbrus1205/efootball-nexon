@@ -167,6 +167,8 @@ enum ProfileStatusType {
   SEASON_CHAMPION
   SEASON_VICE_CHAMPION
   SEASON_BRONZE
+  LEGEND
+  ACTIVE
 }
 
 enum ProfileStatusTone {

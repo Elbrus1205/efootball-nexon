@@ -6,6 +6,21 @@ import { MAX_SELECTED_PROFILE_STATUSES } from "@/lib/profile-status-style";
 
 export { MAX_SELECTED_PROFILE_STATUSES };
 
+export const manualProfileStatusDrafts = [
+  {
+    type: ProfileStatusType.LEGEND,
+    title: "Легенда",
+    description: "Особый статус для легендарных игроков сообщества.",
+    tone: ProfileStatusTone.PURPLE,
+  },
+  {
+    type: ProfileStatusType.ACTIVE,
+    title: "Активный",
+    description: "Статус для активных игроков, которые регулярно участвуют в жизни проекта.",
+    tone: ProfileStatusTone.BLUE,
+  },
+] as const;
+
 function formatSeasonStatusPeriod(seasonName: string) {
   return seasonName.trim().replace(/^сезон\s+/i, "");
 }
@@ -108,4 +123,73 @@ export async function approveProfileStatus(status: UserProfileStatus, adminId: s
   });
 
   return approved;
+}
+
+export async function grantManualProfileStatuses({
+  userId,
+  adminId,
+  statusTypes,
+}: {
+  userId: string;
+  adminId: string;
+  statusTypes: ProfileStatusType[];
+}) {
+  const uniqueStatusTypes = Array.from(new Set(statusTypes));
+  const drafts = manualProfileStatusDrafts.filter((draft) => uniqueStatusTypes.includes(draft.type));
+  const now = new Date();
+
+  const statuses = await Promise.all(
+    drafts.map(async (draft) => {
+      const existing = await db.userProfileStatus.findFirst({
+        where: {
+          userId,
+          seasonId: null,
+          type: draft.type,
+        },
+      });
+
+      if (existing) {
+        return db.userProfileStatus.update({
+          where: { id: existing.id },
+          data: {
+            title: draft.title,
+            description: draft.description,
+            tone: draft.tone,
+            approvalStatus: ProfileStatusApprovalStatus.APPROVED,
+            approvedAt: now,
+            reviewedAt: now,
+            reviewedById: adminId,
+          },
+        });
+      }
+
+      return db.userProfileStatus.create({
+        data: {
+          userId,
+          type: draft.type,
+          title: draft.title,
+          description: draft.description,
+          tone: draft.tone,
+          approvalStatus: ProfileStatusApprovalStatus.APPROVED,
+          approvedAt: now,
+          reviewedAt: now,
+          reviewedById: adminId,
+        },
+      });
+    }),
+  );
+
+  await Promise.all(
+    statuses.map((status) =>
+      createNotification({
+        userId,
+        title: "Новый статус профиля",
+        body: `Администратор выдал вам статус: ${status.title}. Его можно выбрать в редакторе профиля.`,
+        type: NotificationType.SYSTEM,
+        link: "/dashboard/edit",
+      }),
+    ),
+  );
+
+  return statuses;
 }

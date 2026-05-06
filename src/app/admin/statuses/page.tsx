@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { manualProfileStatusDrafts } from "@/lib/profile-statuses";
 import { profileStatusClassName, profileStatusToneMeta, profileStatusToneOrder } from "@/lib/profile-status-style";
 import { formatDate } from "@/lib/utils";
 
@@ -17,7 +18,7 @@ const approvalBadge: Record<ProfileStatusApprovalStatus, { label: string; varian
 export default async function AdminStatusesPage({
   searchParams,
 }: {
-  searchParams?: { statusApproved?: string; statusRejected?: string; error?: string };
+  searchParams?: { statusApproved?: string; statusRejected?: string; statusAdded?: string; error?: string };
 }) {
   await requireRole([UserRole.FOUNDER]);
 
@@ -42,6 +43,12 @@ export default async function AdminStatusesPage({
 
       {searchParams?.statusRejected ? (
         <Card className="rounded-lg border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">Статус отклонён.</Card>
+      ) : null}
+
+      {searchParams?.statusAdded ? (
+        <Card className="rounded-lg border-sky-400/20 bg-sky-500/10 p-4 text-sm text-sky-100">
+          Добавлено статусов: {searchParams.statusAdded}. Игроку отправлено уведомление.
+        </Card>
       ) : null}
 
       {searchParams?.error ? (
@@ -104,6 +111,69 @@ export default async function AdminStatusesPage({
             );
           })}
         </div>
+      </Card>
+
+      <Card className="overflow-hidden rounded-lg p-0">
+        <div className="border-b border-white/10 bg-[linear-gradient(135deg,rgba(124,58,237,0.16),rgba(59,130,246,0.08),rgba(255,255,255,0.02))] p-5">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <CardTitle>Добавить статус игроку</CardTitle>
+              <CardDescription className="mt-2 max-w-2xl">
+                Введите никнейм, email, Telegram, публичный ID или eFootball ID игрока, выберите один или несколько статусов и выдайте их сразу.
+              </CardDescription>
+            </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-violet-300/20 bg-violet-500/10 text-violet-100">
+              <Sparkles className="h-6 w-6" />
+            </div>
+          </div>
+        </div>
+
+        <form action="/api/admin/profile-statuses" method="post" className="grid gap-5 p-5">
+          <div className="grid gap-2">
+            <label htmlFor="player" className="text-sm font-semibold text-white">
+              Игрок
+            </label>
+            <input
+              id="player"
+              name="player"
+              placeholder="Например: kumyk007"
+              className="h-12 rounded-lg border border-white/10 bg-black/25 px-4 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+              required
+            />
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            {manualProfileStatusDrafts.map((draft) => {
+              const toneMeta = profileStatusToneMeta[draft.tone];
+
+              return (
+                <label
+                  key={draft.type}
+                  className="group flex cursor-pointer gap-3 rounded-lg border border-white/10 bg-black/20 p-4 transition hover:border-primary/30 hover:bg-white/[0.04]"
+                >
+                  <input type="checkbox" name="statusTypes" value={draft.type} className="mt-1 h-4 w-4 accent-primary" />
+                  <span className="min-w-0">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className={profileStatusClassName(draft.tone, "w-fit")}>{draft.title}</span>
+                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-xs font-semibold text-zinc-300">
+                        {toneMeta.level}
+                      </span>
+                    </span>
+                    <span className="mt-3 block text-sm text-zinc-300">{draft.description}</span>
+                    <span className="mt-2 block text-xs text-zinc-500">
+                      {toneMeta.color} · {toneMeta.value}
+                    </span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+
+          <Button type="submit" className="h-12 w-full rounded-lg sm:w-fit">
+            <ShieldCheck className="mr-2 h-4 w-4" />
+            Добавить выбранные статусы
+          </Button>
+        </form>
       </Card>
 
       <div className="grid gap-4">
