@@ -46,7 +46,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 RUN mkdir -p .next/cache/images \
-  && chown -R nextjs:nodejs .next/cache
+  && chown -R nextjs:nodejs /app
 
 USER nextjs
 
