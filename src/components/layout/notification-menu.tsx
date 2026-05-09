@@ -148,21 +148,21 @@ export function NotificationMenu({
         collisionPadding={12}
         className="max-h-[min(620px,calc(100vh-104px))] w-[calc(100vw-24px)] overflow-hidden rounded-[1.35rem] border-white/10 bg-[#0b0f17]/95 p-0 text-white shadow-[0_24px_70px_rgba(0,0,0,0.5)] backdrop-blur-2xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:w-[420px] sm:rounded-[1.75rem]"
       >
-        <div className="flex items-start justify-between gap-3 border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.22),transparent_38%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3 border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.22),transparent_38%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] p-3.5 sm:p-5">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 text-lg font-black leading-tight text-white">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/15 text-primary">
-                <Bell className="h-4 w-4" />
+            <div className="flex items-center gap-2 text-base font-black leading-tight text-white sm:text-lg">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary/15 text-primary sm:h-8 sm:w-8 sm:rounded-xl">
+                <Bell className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </span>
               <span className="truncate">Уведомления</span>
             </div>
-            <div className="mt-2 text-xs font-semibold text-zinc-400">Непрочитанных: {unread}</div>
+            <div className="mt-1.5 text-[11px] font-semibold text-zinc-400 sm:mt-2 sm:text-xs">Непрочитанных: {unread}</div>
           </div>
           <Button
             type="button"
             size="sm"
             variant="ghost"
-            className="h-9 shrink-0 gap-1.5 rounded-xl px-2.5 text-xs text-zinc-300 hover:bg-white/10 hover:text-white sm:gap-2 sm:px-3"
+            className="h-8 shrink-0 gap-1.5 rounded-lg px-2 text-[11px] text-zinc-300 hover:bg-white/10 hover:text-white sm:h-9 sm:rounded-xl sm:px-3 sm:text-xs"
             onClick={markAllAsRead}
             disabled={!unread}
           >
@@ -170,7 +170,7 @@ export function NotificationMenu({
             <span className="hidden sm:inline">Прочитано</span>
           </Button>
         </div>
-        <div className="max-h-[calc(100vh-190px)] overflow-y-auto overscroll-contain p-2.5 sm:max-h-[520px] sm:p-3">
+        <div className="max-h-[calc(100vh-176px)] overflow-y-auto overscroll-contain p-2 sm:max-h-[520px] sm:p-3">
           {loading && !items.length ? (
             <div className="flex items-center justify-center gap-2 px-3 py-10 text-sm text-zinc-500">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -182,23 +182,23 @@ export function NotificationMenu({
               const Icon = style.icon;
               const content = (
                 <div
-                  className={`group rounded-2xl border px-3 py-3 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition sm:px-4 sm:py-4 ${
+                  className={`group rounded-xl border px-2.5 py-2.5 text-xs shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition sm:rounded-2xl sm:px-4 sm:py-4 sm:text-sm ${
                     item.isRead ? "border-white/10 bg-white/[0.035] hover:bg-white/[0.06]" : style.shell
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border sm:h-11 sm:w-11 ${style.iconBox}`}>
-                      <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <div className="flex items-start gap-2.5 sm:gap-3">
+                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border sm:h-11 sm:w-11 sm:rounded-xl ${style.iconBox}`}>
+                      <Icon className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
                     </div>
-                    <div className="min-w-0 flex-1 pt-0.5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 break-words text-[15px] font-black leading-snug text-white sm:text-base">{item.title}</div>
-                        {item.link ? <ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500 group-hover:text-primary" /> : null}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2 sm:gap-3">
+                        <div className="min-w-0 break-words text-[13px] font-black leading-snug text-white sm:text-base">{item.title}</div>
+                        {item.link ? <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-500 group-hover:text-primary sm:h-4 sm:w-4" /> : null}
                       </div>
-                      <div className="mt-1.5 line-clamp-4 break-words text-[13px] font-semibold leading-5 text-zinc-400 sm:text-sm sm:leading-6">{item.body}</div>
-                      <div className="mt-3 flex items-center justify-between gap-3 text-[11px] sm:mt-4">
-                        <span className={`inline-flex min-w-0 items-center gap-1 rounded-full bg-white/5 px-2.5 py-1 font-bold ${style.accent}`}>
-                          <Sparkles className="h-3 w-3" />
+                      <div className="mt-1 line-clamp-3 break-words text-[11px] font-semibold leading-4 text-zinc-400 sm:mt-1.5 sm:line-clamp-4 sm:text-sm sm:leading-6">{item.body}</div>
+                      <div className="mt-2 flex items-center justify-between gap-2 text-[10px] sm:mt-4 sm:gap-3 sm:text-[11px]">
+                        <span className={`inline-flex min-w-0 items-center gap-1 rounded-full bg-white/5 px-2 py-0.5 font-bold sm:px-2.5 sm:py-1 ${style.accent}`}>
+                          <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                           <span className="truncate">{style.label}</span>
                         </span>
                         <span className="shrink-0 text-zinc-600">{formatNotificationDate(item.createdAt)}</span>
