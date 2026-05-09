@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { TournamentCard } from "@/components/tournaments/tournament-card";
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 export default async function TournamentsPage() {
   const tournaments = await db.tournament.findMany({

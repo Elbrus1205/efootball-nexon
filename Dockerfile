@@ -45,8 +45,9 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-RUN mkdir -p .next/cache/images \
-  && chown -R nextjs:nodejs /app
+RUN mkdir -p .next/cache/images .next/cache/fetch-cache /tmp/next-cache \
+  && chown -R nextjs:nodejs /app /tmp/next-cache \
+  && chmod -R 777 .next/cache /tmp/next-cache
 
 USER nextjs
 
