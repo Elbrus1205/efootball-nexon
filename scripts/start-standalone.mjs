@@ -71,7 +71,7 @@ const child = spawn(process.execPath, [serverPath], {
   env: {
     ...process.env,
     NODE_ENV: process.env.NODE_ENV || "production",
-    HOSTNAME: process.env.HOSTNAME || "0.0.0.0",
+    HOSTNAME: process.env.NEXT_HOSTNAME || "0.0.0.0",
   },
 });
 
