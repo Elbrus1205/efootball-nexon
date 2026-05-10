@@ -11,7 +11,10 @@ function attachmentIcon(kind: FaqAttachmentKind) {
 }
 
 function answerParagraphs(answer: string) {
-  return answer.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
+  return answer
+    .split(/\n{2,}/)
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
 
 export default async function FaqPage() {

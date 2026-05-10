@@ -1,6 +1,6 @@
 import { FaqItemForm } from "@/components/admin/faq-item-form";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/db";
 
 export default async function AdminFaqPage({
@@ -17,7 +17,9 @@ export default async function AdminFaqPage({
     <div className="space-y-6">
       <div className="space-y-2">
         <h2 className="font-display text-2xl font-thin text-white">FAQ</h2>
-        <p className="max-w-2xl text-sm text-zinc-400">Добавляйте вопросы, ответы и вложения. Опубликованные записи сразу появляются на публичной странице FAQ.</p>
+        <p className="max-w-2xl text-sm text-zinc-400">
+          Добавляйте вопросы, ответы и вложения. Опубликованные записи сразу появляются на публичной странице FAQ.
+        </p>
       </div>
 
       {searchParams?.created ? <Card className="border-emerald-400/25 bg-emerald-500/10 p-4 text-sm text-emerald-100">FAQ добавлен.</Card> : null}
