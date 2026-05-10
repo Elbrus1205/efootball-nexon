@@ -12,22 +12,22 @@ const features = [
   {
     icon: Trophy,
     title: "Турниры",
-    description: "Сезонные события и быстрый вход в актуальные розыгрыши.",
+    description: "Сезонные события и быстрый доступ к актуальным розыгрышам.",
   },
   {
     icon: Sparkles,
     title: "Турнирные сетки",
-    description: "Single и double elimination в наглядной структуре.",
+    description: "Single и double elimination в понятной и наглядной структуре.",
   },
   {
     icon: ShieldCheck,
     title: "Результаты матчей",
-    description: "Подтверждённые итоги и прозрачное движение по сезонам.",
+    description: "Подтверждённые результаты и прозрачное движение по сезонам.",
   },
   {
     icon: Smartphone,
     title: "Участие с телефона",
-    description: "Ключевые действия доступны в мобильном формате без перегруза.",
+    description: "Основные функции платформы доступны в мобильном формате.",
   },
 ];
 
@@ -141,28 +141,36 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <Reveal>
-        <section className="mx-auto max-w-3xl text-center">
-          <div className="text-sm font-semibold uppercase tracking-[0.3em] text-primary">О платформе</div>
-          <h2 className="mt-4 font-display text-3xl font-thin text-white sm:text-4xl">Турнирная система без лишнего шума</h2>
-          <p className="mt-4 text-base leading-7 text-zinc-400 sm:text-lg">
-            eFootball Nexon объединяет матчи, сетки и подтверждение результатов в одном мобильном пространстве. Игрок быстро понимает статус сезона и ближайший следующий шаг.
-          </p>
-        </section>
-      </Reveal>
+      <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(9,15,27,0.96),rgba(5,8,14,0.98))] px-3 py-5 shadow-[0_24px_80px_rgba(0,0,0,0.34)] sm:rounded-[1.75rem] sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+        <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-sky-300/50 to-transparent" />
+        <div className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-sky-400/10 blur-3xl" />
+        <div className="pointer-events-none absolute -left-24 bottom-0 h-48 w-48 rounded-full bg-blue-500/10 blur-3xl" />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {features.map((item, index) => (
-          <Reveal key={item.title} delay={index * 90}>
-            <div className="group rounded-[1.75rem] border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-[0_24px_60px_rgba(59,130,246,0.12)]">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 via-blue-500/20 to-emerald-400/10 text-primary shadow-[0_0_24px_rgba(59,130,246,0.16)] transition group-hover:scale-105">
-                <item.icon className="h-5 w-5" />
+        <Reveal>
+          <div className="relative mx-auto max-w-3xl text-center">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-sky-300 sm:text-xs sm:tracking-[0.3em]">О платформе</div>
+            <h2 className="mt-3 font-display text-2xl font-thin leading-tight text-white sm:mt-4 sm:text-4xl lg:text-5xl">
+              Турнирная система для eFootball Mobile
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-zinc-300 sm:mt-4 sm:text-base sm:leading-7">
+              Платформа объединяет турниры, сетки, результаты матчей и сезонное продвижение в одном пространстве. Участники получают быстрый доступ ко всем этапам соревнований с мобильного устройства.
+            </p>
+          </div>
+        </Reveal>
+
+        <div className="relative mx-auto mt-5 grid max-w-[22rem] gap-3 sm:mt-7 sm:max-w-none sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
+          {features.map((item, index) => (
+            <Reveal key={item.title} delay={index * 90}>
+              <div className="group flex h-full min-h-[150px] flex-col rounded-2xl border border-white/10 bg-white/[0.035] p-4 backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-sky-300/35 hover:bg-white/[0.055] hover:shadow-[0_20px_50px_rgba(56,189,248,0.12)] sm:min-h-[170px] sm:p-5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-sky-300/20 bg-sky-400/10 text-sky-200 shadow-[0_0_24px_rgba(56,189,248,0.12)] transition group-hover:scale-105 group-hover:bg-sky-400/15 sm:h-11 sm:w-11">
+                  <item.icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                </div>
+                <div className="mt-4 font-display text-lg font-thin leading-tight text-white sm:text-xl">{item.title}</div>
+                <p className="mt-2 flex-1 text-sm leading-6 text-zinc-400 sm:text-[15px]">{item.description}</p>
               </div>
-              <div className="mt-5 font-display text-xl font-thin text-white">{item.title}</div>
-              <p className="mt-2 text-sm leading-6 text-zinc-400">{item.description}</p>
-            </div>
-          </Reveal>
-        ))}
+            </Reveal>
+          ))}
+        </div>
       </section>
 
     </div>
