@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Award, CalendarDays, CalendarRange, Coins, FileText, Megaphone, ShieldCheck, Swords, Trophy, Users } from "lucide-react";
+import { Award, CalendarDays, CalendarRange, CircleHelp, Coins, FileText, Megaphone, ShieldCheck, Swords, Trophy, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
@@ -11,6 +11,7 @@ const items = [
   { href: "/admin/statuses", label: "Статусы", icon: Award },
   { href: "/admin/coins", label: "Coins", icon: Coins },
   { href: "/admin/regulations", label: "Регламент", icon: FileText },
+  { href: "/admin/faq", label: "FAQ", icon: CircleHelp },
   { href: "/admin/users", label: "Участники", icon: Users },
   { href: "/admin/matches", label: "Матчи", icon: Swords },
   { href: "/admin/schedule", label: "Расписание", icon: CalendarDays },

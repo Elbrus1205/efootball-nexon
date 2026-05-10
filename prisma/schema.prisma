@@ -186,6 +186,13 @@ enum ProfileStatusApprovalStatus {
   REJECTED
 }
 
+enum FaqAttachmentKind {
+  IMAGE
+  FILE
+  VIDEO
+  LINK
+}
+
 model User {
   id                  String                   @id @default(cuid())
   publicId            String                   @unique
@@ -667,6 +674,35 @@ model SiteContent {
   key       String   @id
   body      String   @db.Text
   updatedAt DateTime @default(now()) @updatedAt
+}
+
+model FaqItem {
+  id          String          @id @default(cuid())
+  title       String
+  answer      String          @db.Text
+  category    String          @default("Общее")
+  sortOrder   Int             @default(0)
+  isPublished Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  attachments FaqAttachment[]
+
+  @@index([isPublished, sortOrder, createdAt])
+  @@index([category, sortOrder])
+}
+
+model FaqAttachment {
+  id          String            @id @default(cuid())
+  faqItemId   String
+  title       String
+  url         String            @db.Text
+  kind        FaqAttachmentKind @default(LINK)
+  mimeType    String?
+  sortOrder   Int               @default(0)
+  createdAt   DateTime          @default(now())
+  faqItem     FaqItem           @relation(fields: [faqItemId], references: [id], onDelete: Cascade)
+
+  @@index([faqItemId, sortOrder])
 }
 
 model AffiliatePartner {
