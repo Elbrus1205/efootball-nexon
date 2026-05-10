@@ -21,7 +21,7 @@ export async function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-black/60 backdrop-blur-xl">
-      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-2 px-4 sm:gap-3 sm:px-6 lg:px-8">
+      <div className="relative mx-auto flex h-20 max-w-7xl items-center justify-between gap-2 px-4 sm:gap-3 sm:px-6 lg:px-8">
         <div className="min-w-0 flex flex-1 items-center gap-2 sm:gap-3">
           <MobileMenu links={links} />
           <Link href="/" className="brand-link group min-w-0 flex-1 items-center gap-2 sm:flex-none sm:gap-3">
@@ -33,7 +33,7 @@ export async function Navbar() {
           </Link>
         </div>
 
-        <nav className="hidden items-center gap-6 md:flex">
+        <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-6 lg:flex">
           {links.map((link) => (
             <Link key={link.href} href={link.href} className="text-sm text-zinc-300 hover:text-white">
               {link.label}
