@@ -81,7 +81,6 @@ export default async function PlayersPage({
                   <div className="min-w-0">
                     <div className="flex min-w-0 flex-wrap items-center gap-2">
                       <span className="truncate text-sm font-semibold text-white sm:text-base">{displayName}</span>
-                      <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] font-semibold text-zinc-400">ID {user.publicId}</span>
                     </div>
                     {user.profileStatuses.length ? (
                       <div className="mt-2 flex flex-wrap gap-1.5">
