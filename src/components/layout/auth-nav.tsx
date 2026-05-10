@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { Bell, LogIn, LogOut, Shield, ShieldCheck, User2, UserPlus } from "lucide-react";
+import { Bell, LogIn, LogOut, Shield, ShieldCheck, User2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -38,7 +38,6 @@ export function AuthNav({ unread = 0 }: { unread?: number }) {
           className="registration-cta h-9 rounded-full border border-amber-300/35 bg-[linear-gradient(135deg,rgba(18,27,42,0.98),rgba(15,19,28,0.98)_48%,rgba(70,47,10,0.94)_100%)] px-2.5 font-black text-amber-100 shadow-[0_12px_32px_rgba(245,158,11,0.18),inset_0_1px_0_rgba(255,255,255,0.14)] hover:bg-[linear-gradient(135deg,rgba(28,41,62,0.98),rgba(20,26,38,0.98)_48%,rgba(92,61,12,0.96)_100%)] hover:text-white sm:px-3"
         >
           <Link href="/register">
-            <UserPlus className="h-4 w-4 text-amber-200" />
             <span className="hidden min-[390px]:inline">Регистрация</span>
           </Link>
         </Button>

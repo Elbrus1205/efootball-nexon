@@ -260,14 +260,15 @@ export function AuthForm({
         {!twoFactorStep ? (
           <>
             <div className="grid gap-2.5">
-              <Button
-                variant="secondary"
-                className="h-10 w-full rounded-lg"
+              <button
+                type="button"
+                className="flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#0077ff] px-3 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,119,255,0.18)] transition hover:bg-[#096de0] disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={() => startVkAuth("/dashboard")}
                 disabled={pending || (requiresLegalAcceptance && !legalAccepted)}
               >
-                Продолжить через VK
-              </Button>
+                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white text-[11px] font-black leading-none text-[#0077ff]">VK</span>
+                Продолжить с VK ID
+              </button>
               <TelegramLogin
                 mode={type}
                 enabled={telegramEnabled}

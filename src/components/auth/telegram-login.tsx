@@ -75,23 +75,13 @@ export function TelegramLogin({
   };
 
   return (
-    <div className="rounded-2xl border border-[#229ED9]/25 bg-[linear-gradient(180deg,rgba(34,158,217,0.14),rgba(34,158,217,0.05))] p-3 shadow-[0_12px_30px_rgba(34,158,217,0.08)]">
-      <div className="mb-3 flex items-start gap-2.5">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#229ED9] text-white shadow-lg shadow-[#229ED9]/20">
-          <Send className="h-4 w-4" />
-        </div>
-        <div className="min-w-0 space-y-0.5">
-          <div className="text-sm font-semibold text-white">Вход через Telegram</div>
-          <p className="text-xs leading-4 text-sky-100/80">Быстрый вход без пароля.</p>
-        </div>
-      </div>
-
+    <div>
       {isBlockedByLegal ? (
         <div className="rounded-xl border border-dashed border-[#229ED9]/25 bg-black/20 px-3 py-2 text-xs leading-5 text-sky-100">
           Примите документы выше, чтобы продолжить регистрацию через Telegram.
         </div>
       ) : enabled ? (
-        <div className="rounded-xl bg-black/20 p-2">
+        <>
           <button
             type="button"
             onClick={startTelegramLogin}
@@ -108,7 +98,7 @@ export function TelegramLogin({
               <span>{error}</span>
             </div>
           ) : null}
-        </div>
+        </>
       ) : (
         <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
