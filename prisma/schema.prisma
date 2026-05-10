@@ -169,6 +169,7 @@ enum ProfileStatusType {
   SEASON_BRONZE
   LEGEND
   ACTIVE
+  RELIABLE
 }
 
 enum ProfileStatusTone {

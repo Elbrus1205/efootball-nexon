@@ -19,6 +19,12 @@ export const manualProfileStatusDrafts = [
     description: "Статус для активных игроков, которые регулярно участвуют в жизни проекта.",
     tone: ProfileStatusTone.BLUE,
   },
+  {
+    type: ProfileStatusType.RELIABLE,
+    title: "Надежный",
+    description: "Статус для надежных игроков сообщества.",
+    tone: ProfileStatusTone.BLUE,
+  },
 ] as const;
 
 function formatSeasonStatusPeriod(seasonName: string) {
