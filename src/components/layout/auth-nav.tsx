@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { Bell, LogIn, LogOut, Shield, ShieldCheck, User2 } from "lucide-react";
+import { Bell, LogOut, Shield, ShieldCheck, User2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -20,17 +20,6 @@ export function AuthNav({ unread = 0 }: { unread?: number }) {
   if (!session?.user) {
     return (
       <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.035] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur">
-        <Button
-          asChild
-          variant="ghost"
-          aria-label="Войти"
-          className="h-9 rounded-full px-2.5 text-zinc-200 transition hover:bg-white/10 hover:text-white hover:shadow-[0_10px_24px_rgba(255,255,255,0.06)] sm:px-3"
-        >
-          <Link href="/login">
-            <LogIn className="h-4 w-4" />
-            <span className="hidden sm:inline">Войти</span>
-          </Link>
-        </Button>
         <Button
           asChild
           variant="ghost"

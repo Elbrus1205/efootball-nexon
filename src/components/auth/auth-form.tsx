@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { Check, FileText, ShieldCheck } from "lucide-react";
+import { Check, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { TelegramLogin } from "@/components/auth/telegram-login";
 import { Button } from "@/components/ui/button";
@@ -277,23 +277,6 @@ export function AuthForm({
                 requireLegalAcceptance={requiresLegalAcceptance}
               />
             </div>
-
-            <p className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[11px] leading-4 text-zinc-400 sm:text-xs sm:leading-5">
-              <FileText className="mr-1.5 inline h-3.5 w-3.5 text-primary" />
-              {type === "register" ? "Нажимая «Создать аккаунт» или продолжая через VK/Telegram, вы принимаете " : "Продолжая вход, вы принимаете "}
-              <Link className="text-primary transition hover:text-white" href="/terms">
-                пользовательское соглашение
-              </Link>
-              {", "}
-              <Link className="text-primary transition hover:text-white" href="/privacy">
-                политику конфиденциальности
-              </Link>
-              {" и "}
-              <Link className="text-primary transition hover:text-white" href="/consent">
-                согласие на обработку данных
-              </Link>
-              .
-            </p>
 
             <div className="text-xs text-zinc-400 sm:text-sm">
               {type === "login" ? (
