@@ -41,9 +41,36 @@ const TERMINAL_MATCH_STATUSES = new Set<MatchStatus>([
   MatchStatus.FINISHED,
   MatchStatus.FORFEIT,
 ]);
+const AUTO_BYE_NOTE = "AUTO_BYE";
 
 function nextPowerOfTwo(value: number) {
   return Math.pow(2, Math.ceil(Math.log2(Math.max(value, 2))));
+}
+
+function createFirstRoundSlotEntries<T>(entries: T[], bracketSize: number): (T | null)[] {
+  const slotEntries: (T | null)[] = Array.from({ length: bracketSize }, () => null);
+  const byeCount = Math.max(0, bracketSize - entries.length);
+  const directMatchCount = bracketSize / 2;
+
+  for (let index = 0; index < entries.length; index += 1) {
+    if (index < byeCount) {
+      slotEntries[index * 2] = entries[index];
+      continue;
+    }
+
+    const compactIndex = index - byeCount;
+    const slotIndex = byeCount * 2 + compactIndex;
+    if (slotIndex < bracketSize) {
+      slotEntries[slotIndex] = entries[index];
+      continue;
+    }
+
+    const fallbackMatch = index % directMatchCount;
+    const fallbackSlot = index < directMatchCount ? 0 : 1;
+    slotEntries[fallbackMatch * 2 + fallbackSlot] = entries[index];
+  }
+
+  return slotEntries;
 }
 
 function getGroupsPlayoffQualifiedCount(tournament: {
@@ -123,6 +150,14 @@ async function assignParticipantToSeries(params: {
   for (const targetMatch of targetMatches) {
     const nextPlayer1Id = params.slot === 1 ? params.userId : targetMatch.player1Id;
     const nextPlayer2Id = params.slot === 2 ? params.userId : targetMatch.player2Id;
+    const nextStatus =
+      nextPlayer1Id && nextPlayer2Id && targetMatch.status === MatchStatus.PENDING
+        ? MatchStatus.READY
+        : nextPlayer1Id && nextPlayer2Id && targetMatch.status === MatchStatus.SCHEDULED
+          ? MatchStatus.SCHEDULED
+          : (!nextPlayer1Id || !nextPlayer2Id) && (targetMatch.status === MatchStatus.READY || targetMatch.status === MatchStatus.SCHEDULED)
+            ? MatchStatus.PENDING
+            : targetMatch.status;
 
     await db.match.update({
       where: { id: targetMatch.id },
@@ -130,12 +165,17 @@ async function assignParticipantToSeries(params: {
         ...(params.slot === 1
           ? { player1Id: params.userId, participant1EntryId: params.entryId }
           : { player2Id: params.userId, participant2EntryId: params.entryId }),
-        status:
-          nextPlayer1Id && nextPlayer2Id && targetMatch.status === MatchStatus.PENDING
-            ? MatchStatus.READY
-            : nextPlayer1Id && nextPlayer2Id && targetMatch.status === MatchStatus.SCHEDULED
-              ? MatchStatus.SCHEDULED
-              : targetMatch.status,
+        ...(!nextPlayer1Id || !nextPlayer2Id
+          ? {
+              winnerId: null,
+              winnerEntryId: null,
+              player1Score: null,
+              player2Score: null,
+              finishedAt: null,
+              notes: null,
+            }
+          : {}),
+        status: nextStatus,
       },
     });
 
@@ -181,6 +221,138 @@ async function advanceResolvedWinnerForMatch(matchId: string, winnerId: string, 
   }
 
   await syncTournamentLifecycleStatus(match.tournamentId);
+}
+
+async function clearAutoByeAdvance(match: {
+  nextMatchId: string | null;
+  nextMatchSlot: number | null;
+  winnerEntryId: string | null;
+}) {
+  if (!match.nextMatchId || !match.nextMatchSlot || !match.winnerEntryId) return;
+
+  const nextMatch = await db.match.findUnique({
+    where: { id: match.nextMatchId },
+    select: {
+      id: true,
+      seriesKey: true,
+      participant1EntryId: true,
+      participant2EntryId: true,
+      status: true,
+    },
+  });
+
+  if (!nextMatch || TERMINAL_MATCH_STATUSES.has(nextMatch.status)) return;
+
+  const targetEntryId = match.nextMatchSlot === 1 ? nextMatch.participant1EntryId : nextMatch.participant2EntryId;
+  if (targetEntryId !== match.winnerEntryId) return;
+
+  await assignParticipantToSeries({
+    matchId: nextMatch.id,
+    slot: match.nextMatchSlot as 1 | 2,
+    userId: null,
+    entryId: null,
+  });
+}
+
+async function resetAutoByeMatch(match: {
+  id: string;
+  seriesKey: string | null;
+  nextMatchId: string | null;
+  nextMatchSlot: number | null;
+  winnerEntryId: string | null;
+  status?: MatchStatus;
+}) {
+  await clearAutoByeAdvance(match);
+
+  const where = match.seriesKey ? { seriesKey: match.seriesKey, isPenaltyTiebreak: false } : { id: match.id };
+  await db.match.updateMany({
+    where,
+    data: {
+      winnerId: null,
+      winnerEntryId: null,
+      player1Score: null,
+      player2Score: null,
+      finishedAt: null,
+      notes: null,
+      status: match.status ?? MatchStatus.PENDING,
+    },
+  });
+}
+
+async function reconcileBracketByes(bracketId: string) {
+  const matches = await db.match.findMany({
+    where: {
+      bracketId,
+      bracket: "upper",
+      round: 1,
+      isThirdPlaceMatch: false,
+      isPenaltyTiebreak: false,
+    },
+    orderBy: [{ matchNumber: "asc" }, { legNumber: "asc" }],
+    select: {
+      id: true,
+      seriesKey: true,
+      legNumber: true,
+      player1Id: true,
+      player2Id: true,
+      participant1EntryId: true,
+      participant2EntryId: true,
+      winnerId: true,
+      winnerEntryId: true,
+      status: true,
+      notes: true,
+      nextMatchId: true,
+      nextMatchSlot: true,
+    },
+  });
+
+  const grouped = new Map<string, Array<(typeof matches)[number]>>();
+  for (const match of matches) {
+    const key = match.seriesKey ?? match.id;
+    grouped.set(key, [...(grouped.get(key) ?? []), match]);
+  }
+
+  for (const seriesMatches of Array.from(grouped.values())) {
+    const match = seriesMatches.find((item) => (item.legNumber ?? 1) === 1) ?? seriesMatches[0];
+    if (!match || (match.status !== MatchStatus.PENDING && match.status !== MatchStatus.READY && match.notes !== AUTO_BYE_NOTE)) continue;
+
+    const first = match.player1Id
+      ? { userId: match.player1Id, entryId: match.participant1EntryId }
+      : null;
+    const second = match.player2Id
+      ? { userId: match.player2Id, entryId: match.participant2EntryId }
+      : null;
+    const byeWinner = first && !second ? first : second && !first ? second : null;
+
+    if (!byeWinner) {
+      if (match.notes === AUTO_BYE_NOTE) {
+        await resetAutoByeMatch({ ...match, status: first && second ? MatchStatus.READY : MatchStatus.PENDING });
+      }
+      continue;
+    }
+
+    if (match.notes === AUTO_BYE_NOTE && match.winnerId === byeWinner.userId) continue;
+
+    if (match.notes === AUTO_BYE_NOTE) {
+      await clearAutoByeAdvance(match);
+    }
+
+    const where = match.seriesKey ? { seriesKey: match.seriesKey, isPenaltyTiebreak: false } : { id: match.id };
+    await db.match.updateMany({
+      where,
+      data: {
+        winnerId: byeWinner.userId,
+        winnerEntryId: byeWinner.entryId,
+        player1Score: 0,
+        player2Score: 0,
+        finishedAt: new Date(),
+        notes: AUTO_BYE_NOTE,
+        status: MatchStatus.CONFIRMED,
+      },
+    });
+
+    await advanceResolvedWinnerForMatch(match.id, byeWinner.userId, null, byeWinner.entryId);
+  }
 }
 
 function isPowerOfTwo(value: number) {
@@ -499,6 +671,7 @@ async function createPlayoffMatches({
 }) {
   const orderedEntries = [...entries].sort((a, b) => (a.seed ?? Number.MAX_SAFE_INTEGER) - (b.seed ?? Number.MAX_SAFE_INTEGER));
   const bracketSize = sizeOverride && isPowerOfTwo(sizeOverride) ? sizeOverride : nextPowerOfTwo(orderedEntries.length);
+  const firstRoundSlots = createFirstRoundSlotEntries(orderedEntries, bracketSize);
   const rounds = Math.log2(bracketSize);
   const effectiveLegsCount = type === PlayoffType.DOUBLE ? 1 : Math.max(1, Math.min(legsCount, 2));
   const createdMatches: { id: string; round: number; matchNumber: number; legNumber: number; seriesKey: string }[] = [];
@@ -547,8 +720,8 @@ async function createPlayoffMatches({
   if (orderedEntries.length) {
     await Promise.all(
       firstRound.filter((item) => item.legNumber === 1).map(async (match, index) => {
-        const player1 = orderedEntries[index * 2];
-        const player2 = orderedEntries[index * 2 + 1];
+        const player1 = firstRoundSlots[index * 2];
+        const player2 = firstRoundSlots[index * 2 + 1];
         const seriesMatches = createdMatches.filter((item) => item.seriesKey === match.seriesKey);
 
         await Promise.all(
@@ -611,6 +784,8 @@ async function createPlayoffMatches({
         }
       }),
     );
+
+    await reconcileBracketByes(bracketId);
   }
 
   if (type === PlayoffType.DOUBLE) {
@@ -949,6 +1124,8 @@ async function seedCustomPlayoffBracket(params: {
       );
     }),
   );
+
+  await reconcileBracketByes(bracket.id);
 
   await Promise.all(
     lowerMatches.map(async (match, index) => {
@@ -1755,6 +1932,8 @@ export async function generatePlayoffFromGroups(tournamentId: string) {
     ),
   );
 
+  await reconcileBracketByes(playoffStage.bracket.id);
+
   await notifyPlayoffQualified(tournamentId);
 
   return db.playoffBracket.findUnique({
@@ -1921,6 +2100,8 @@ export async function setBracketSlot(input: {
     );
   }
 
+  await reconcileBracketByes(input.bracketId);
+
   return slot;
 }
 
@@ -1942,10 +2123,6 @@ export async function closeTournamentRegistration(tournamentId: string) {
   const confirmedParticipants = tournament.participants.length;
   if (confirmedParticipants < 2) {
     throw new Error("Для закрытия регистрации нужно минимум 2 участника.");
-  }
-
-  if ((isDirectPlayoffFormat(tournament.format) || isCustomDirectPlayoff(tournament.format, tournament.formatBlueprintJson)) && !isPowerOfTwo(confirmedParticipants)) {
-    throw new Error("Для плей-офф нужно 2, 4, 8, 16 или 32 участника.");
   }
 
   await db.tournament.update({
@@ -1995,10 +2172,6 @@ export async function startTournament(tournamentId: string) {
   const confirmedParticipants = tournament.participants.length;
   if (confirmedParticipants < 2) {
     throw new Error("Для старта турнира нужно минимум 2 участника.");
-  }
-
-  if ((isDirectPlayoffFormat(tournament.format) || isCustomDirectPlayoff(tournament.format, tournament.formatBlueprintJson)) && !isPowerOfTwo(confirmedParticipants)) {
-    throw new Error("Для плей-офф нужно 2, 4, 8, 16 или 32 участника.");
   }
 
   const missingClub = tournament.participants.find(
