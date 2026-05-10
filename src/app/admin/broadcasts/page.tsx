@@ -80,7 +80,7 @@ export default async function AdminBroadcastsPage({
                         {data?.buttonsCount ? <span className="ml-2 rounded-full border border-white/10 bg-white/[0.06] px-2 py-0.5 text-xs text-zinc-300">Кнопок: {data.buttonsCount}</span> : null}
                       </div>
                       <div className="text-zinc-500">
-                        {broadcast.admin.nickname ?? broadcast.admin.name ?? broadcast.admin.email ?? "Администратор"}
+                        {broadcast.admin.name ?? broadcast.admin.email ?? "Администратор"}
                       </div>
                     </div>
                     <div className="text-zinc-500">
@@ -105,3 +105,4 @@ export default async function AdminBroadcastsPage({
     </div>
   );
 }
+

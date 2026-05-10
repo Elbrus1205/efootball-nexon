@@ -17,8 +17,8 @@ function formatMoney(value: number) {
   }).format(value / 100);
 }
 
-function displayUser(user?: { nickname?: string | null; name?: string | null; email?: string | null } | null) {
-  return user?.nickname || user?.name || user?.email || "Пользователь";
+function displayUser(user?: { name?: string | null; email?: string | null } | null) {
+  return user?.name || user?.email || "Пользователь";
 }
 
 export default async function AdminCoinsPage({
@@ -51,16 +51,15 @@ export default async function AdminCoinsPage({
     ? await db.user.findMany({
         where: {
           OR: [
-            { nickname: { contains: userQuery, mode: "insensitive" } },
             { name: { contains: userQuery, mode: "insensitive" } },
             { email: { contains: userQuery, mode: "insensitive" } },
           ],
         },
-        orderBy: [{ nickname: "asc" }, { createdAt: "desc" }],
+        orderBy: [{ name: "asc" }, { createdAt: "desc" }],
         take: 12,
       })
     : await db.user.findMany({
-        orderBy: [{ nickname: "asc" }, { createdAt: "desc" }],
+        orderBy: [{ name: "asc" }, { createdAt: "desc" }],
         take: 12,
       });
 
@@ -94,7 +93,7 @@ export default async function AdminCoinsPage({
       where: { isActive: true },
       include: {
         user: {
-          select: { id: true, nickname: true, name: true, email: true, role: true },
+          select: { id: true, name: true, email: true, role: true },
         },
       },
       orderBy: { createdAt: "asc" },
@@ -105,11 +104,11 @@ export default async function AdminCoinsPage({
     }),
     db.coinServiceOrder.findMany({
       include: {
-        buyer: { select: { nickname: true, name: true, email: true } },
-        executor: { select: { nickname: true, name: true, email: true } },
+        buyer: { select: { name: true, email: true } },
+        executor: { select: { name: true, email: true } },
         executorAttempts: {
           include: {
-            executor: { select: { nickname: true, name: true, email: true } },
+            executor: { select: { name: true, email: true } },
           },
           orderBy: { createdAt: "desc" },
         },
@@ -176,7 +175,7 @@ export default async function AdminCoinsPage({
               <input
                 name="userQuery"
                 defaultValue={userQuery}
-                placeholder="Поиск исполнителя по нику, имени или email"
+                placeholder="Поиск исполнителя по имени или email"
                 className="h-11 w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-4 text-sm text-white outline-none focus:border-primary/40"
               />
             </div>
@@ -192,7 +191,7 @@ export default async function AdminCoinsPage({
                   .filter((user) => !activeExecutorIds.has(user.id))
                   .map((user) => (
                     <option key={user.id} value={user.id}>
-                      {user.nickname || user.name || user.email || user.id}
+                      {user.name || user.email || user.id}
                     </option>
                   ))}
               </select>
@@ -204,7 +203,7 @@ export default async function AdminCoinsPage({
 
           <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
             {executorProfiles.map((profile) => {
-              const userName = profile.user.nickname || profile.user.name || profile.user.email || profile.user.id;
+              const userName = profile.user.name || profile.user.email || profile.user.id;
 
               return (
                 <div key={profile.id} className="space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4">
@@ -642,7 +641,7 @@ export default async function AdminCoinsPage({
               <input
                 name="userQuery"
                 defaultValue={userQuery}
-                placeholder="Поиск по нику, имени или email"
+                placeholder="Поиск по имени или email"
                 className="h-11 w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-4 text-sm text-white outline-none focus:border-primary/40"
               />
             </div>
@@ -656,7 +655,7 @@ export default async function AdminCoinsPage({
                 <option value="">Выберите пользователя</option>
                 {users.map((user) => (
                   <option key={user.id} value={user.id}>
-                    {user.nickname || user.name || user.email || user.id}
+                    {user.name || user.email || user.id}
                   </option>
                 ))}
               </select>
@@ -696,7 +695,7 @@ export default async function AdminCoinsPage({
               <div className="flex flex-col gap-4 border-b border-white/10 pb-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <CardTitle>{partner.owner.nickname || partner.owner.name || partner.owner.email || "Партнёр"}</CardTitle>
+                    <CardTitle>{partner.owner.name || partner.owner.email || "Партнёр"}</CardTitle>
                     <span className="rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold text-blue-100">{partner.partnerPercent}% от профита</span>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-400">
@@ -777,3 +776,4 @@ export default async function AdminCoinsPage({
     </div>
   );
 }
+

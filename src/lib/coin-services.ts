@@ -1,4 +1,4 @@
-import { CoinServiceOrderStatus, type CoinPaymentBank } from "@prisma/client";
+﻿import { CoinServiceOrderStatus, type CoinPaymentBank } from "@prisma/client";
 import { db } from "@/lib/db";
 
 export const DEFAULT_COIN_STORE_SETTINGS_ID = "default";
@@ -121,7 +121,6 @@ export async function pickFairCoinServiceExecutor(options?: { excludeUserIds?: s
       user: {
         select: {
           id: true,
-          nickname: true,
           name: true,
           email: true,
         },
@@ -189,3 +188,4 @@ export async function assignNextCoinServiceExecutor(orderId: string) {
 
   return executor;
 }
+

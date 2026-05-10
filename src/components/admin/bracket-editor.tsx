@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils";
 type ParticipantOption = {
   id: string;
   user: {
-    nickname: string | null;
     name: string | null;
   };
 };
@@ -45,7 +44,7 @@ type DragPayload =
     };
 
 function participantName(participant?: ParticipantOption | null) {
-  return participant?.user.nickname ?? participant?.user.name ?? participant?.id ?? null;
+  return participant?.user.name ?? participant?.id ?? null;
 }
 
 export function BracketEditor({
@@ -243,3 +242,4 @@ export function BracketEditor({
     </div>
   );
 }
+

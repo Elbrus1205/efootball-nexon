@@ -24,9 +24,9 @@ export default async function AdminStatusesPage({
 
   const statuses = await db.userProfileStatus.findMany({
     include: {
-      user: { select: { nickname: true, name: true, email: true } },
+      user: { select: { name: true, email: true } },
       season: { select: { name: true } },
-      reviewedBy: { select: { nickname: true, name: true, email: true } },
+      reviewedBy: { select: { name: true, email: true } },
     },
     orderBy: [{ approvalStatus: "asc" }, { createdAt: "desc" }],
   });
@@ -119,7 +119,7 @@ export default async function AdminStatusesPage({
             <div>
               <CardTitle>Добавить статус игроку</CardTitle>
               <CardDescription className="mt-2 max-w-2xl">
-                Введите никнейм, email, Telegram, публичный ID или eFootball ID игрока, выберите один или несколько статусов и выдайте их сразу.
+                Введите имя, email, Telegram или публичный ID игрока, выберите один или несколько статусов и выдайте их сразу.
               </CardDescription>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-violet-300/20 bg-violet-500/10 text-violet-100">
@@ -178,8 +178,8 @@ export default async function AdminStatusesPage({
 
       <div className="grid gap-4">
         {statuses.map((status) => {
-          const userName = status.user.nickname || status.user.name || status.user.email || "Игрок";
-          const reviewerName = status.reviewedBy?.nickname || status.reviewedBy?.name || status.reviewedBy?.email || null;
+          const userName = status.user.name || status.user.email || "Игрок";
+          const reviewerName = status.reviewedBy?.name || status.reviewedBy?.email || null;
           const approval = approvalBadge[status.approvalStatus];
           const toneMeta = profileStatusToneMeta[status.tone];
 
@@ -235,3 +235,4 @@ export default async function AdminStatusesPage({
     </div>
   );
 }
+

@@ -23,7 +23,6 @@ export default async function AdminUsersPage({
     where: query
       ? {
           OR: [
-            { nickname: { contains: query, mode: "insensitive" } },
             { name: { contains: query, mode: "insensitive" } },
             { email: { contains: query, mode: "insensitive" } },
             { telegramUsername: { contains: query, mode: "insensitive" } },
@@ -40,12 +39,12 @@ export default async function AdminUsersPage({
       <div className="space-y-2">
         <h1 className="font-display text-3xl font-thin text-white">Пользователи</h1>
         <p className="max-w-2xl text-sm text-zinc-400">
-          Найдите игрока по никнейму, имени, email или Telegram. Бан запрещает регистрацию в турнирах, а вечный бан также блокирует вход.
+          Найдите игрока по имени, email или Telegram. Бан запрещает регистрацию в турнирах, а вечный бан также блокирует вход.
         </p>
       </div>
 
       <form className="grid gap-3 rounded-3xl border border-white/10 bg-white/[0.04] p-4 sm:grid-cols-[1fr_auto]" action="/admin/users">
-        <Input name="q" defaultValue={query} placeholder="Поиск по ID игрока, никнейму, email или Telegram" />
+        <Input name="q" defaultValue={query} placeholder="Поиск по ID игрока, имени, email или Telegram" />
         <Button type="submit" variant="secondary">
           Найти
         </Button>
@@ -64,13 +63,12 @@ export default async function AdminUsersPage({
             <Card key={user.id} className="space-y-5 p-5">
               <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-start">
                 <div className="min-w-0">
-                  <div className="truncate font-medium text-white">{user.nickname ?? user.name ?? user.email ?? "Игрок без имени"}</div>
+                  <div className="truncate font-medium text-white">{user.name ?? user.email ?? "Игрок без имени"}</div>
                   <div className="mt-1 text-sm text-zinc-500">
                     {user.email ?? user.telegramUsername ?? "social login"} • {userRoleLabel[user.role]}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-400">
                     <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">ID игрока: {user.publicId}</span>
-                    {user.nickname ? <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">Ник: {user.nickname}</span> : null}
                     {user.telegramUsername ? <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">TG: @{user.telegramUsername}</span> : null}
                   </div>
                   {activeBan ? (
@@ -167,3 +165,4 @@ export default async function AdminUsersPage({
     </div>
   );
 }
+

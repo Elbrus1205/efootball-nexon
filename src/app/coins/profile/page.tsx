@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { CoinsBottomMenu } from "@/components/coins/coins-bottom-menu";
 import { CoinsProfileSidebar } from "@/components/coins/coins-profile-sidebar";
 import { requireAuth } from "@/lib/auth/session";
@@ -22,7 +22,7 @@ export default async function CoinsProfilePage() {
       <div className="max-w-xl">
         <CoinsProfileSidebar
           isSignedIn
-          userName={session.user.nickname || session.user.name || session.user.email || undefined}
+          userName={session.user.name || session.user.email || undefined}
           isPartner={navigationData.isPartner}
           isExecutor={navigationData.isExecutor}
           buyerOrdersCount={navigationData.buyerOrdersCount}
@@ -48,3 +48,4 @@ export default async function CoinsProfilePage() {
     </main>
   );
 }
+

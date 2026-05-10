@@ -16,7 +16,6 @@ type StandingItem = {
   goalDifference: number;
   participant: {
     user: {
-      nickname: string | null;
       name: string | null;
     };
   };
@@ -51,7 +50,7 @@ export function StandingsManager({ groups }: { groups: GroupItem[] }) {
           <div className="space-y-3">
             {group.standings.map((standing) => (
               <div key={standing.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                <div className="mb-3 font-medium text-white">{standing.participant.user.nickname ?? standing.participant.user.name}</div>
+                <div className="mb-3 font-medium text-white">{standing.participant.user.name}</div>
                 <div className="grid gap-2 sm:grid-cols-4">
                   {[
                     ["rank", standing.rank ?? 0, "Место"],
@@ -79,3 +78,4 @@ export function StandingsManager({ groups }: { groups: GroupItem[] }) {
     </div>
   );
 }
+

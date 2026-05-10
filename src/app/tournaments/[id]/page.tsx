@@ -242,7 +242,7 @@ function buildLeagueTable(
     clubSlug: string | null;
     clubName: string | null;
     clubBadgePath: string | null;
-    user: { id: string; nickname: string | null; name: string | null };
+    user: { id: string; name: string | null };
   }>,
   matches: Array<{
     player1Id: string | null;

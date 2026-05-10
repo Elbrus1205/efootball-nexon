@@ -22,7 +22,7 @@ export default async function CoinsWorkPage() {
     db.coinServiceOrder.findMany({
       where: { executorId: session.user.id },
       include: {
-        buyer: { select: { nickname: true, name: true, email: true } },
+        buyer: { select: { name: true, email: true } },
       },
       orderBy: { createdAt: "desc" },
       take: 50,
@@ -112,7 +112,7 @@ export default async function CoinsWorkPage() {
               priceKopecks: order.priceKopecks,
               status: order.status,
               createdAt: order.createdAt,
-              buyerName: order.buyer?.nickname || order.buyer?.name || order.buyer?.email || undefined,
+              buyerName: order.buyer?.name || order.buyer?.email || undefined,
             }))}
             emptyText="Назначенных заказов пока нет."
           />
@@ -139,3 +139,4 @@ export default async function CoinsWorkPage() {
     </main>
   );
 }
+

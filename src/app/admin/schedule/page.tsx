@@ -58,13 +58,11 @@ export default async function AdminSchedulePage() {
             },
             player1: item.match.player1
               ? {
-                  nickname: item.match.player1.nickname,
                   name: item.match.player1.name,
                 }
               : null,
             player2: item.match.player2
               ? {
-                  nickname: item.match.player2.nickname,
                   name: item.match.player2.name,
                 }
               : null,
@@ -111,3 +109,4 @@ export default async function AdminSchedulePage() {
     </div>
   );
 }
+

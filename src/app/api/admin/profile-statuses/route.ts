@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   const statusTypes = requestedTypes.filter((type) => allowedTypes.has(type));
 
   if (!playerQuery) {
-    return redirectToStatuses(request, { error: "Введите никнейм, email или ID игрока." });
+    return redirectToStatuses(request, { error: "Введите имя, email или ID игрока." });
   }
 
   if (!statusTypes.length) {
@@ -35,11 +35,9 @@ export async function POST(request: Request) {
   const user = await db.user.findFirst({
     where: {
       OR: [
-        { nickname: { equals: playerQuery, mode: "insensitive" } },
         { name: { equals: playerQuery, mode: "insensitive" } },
         { email: { equals: playerQuery, mode: "insensitive" } },
         { publicId: playerQuery },
-        { efootballUid: playerQuery },
         { telegramUsername: { equals: playerQuery.replace(/^@/, ""), mode: "insensitive" } },
       ],
     },
@@ -47,7 +45,7 @@ export async function POST(request: Request) {
   });
 
   if (!user) {
-    return redirectToStatuses(request, { error: "Игрок не найден. Проверьте никнейм, email или ID." });
+    return redirectToStatuses(request, { error: "Игрок не найден. Проверьте имя, email или ID." });
   }
 
   const statuses = await grantManualProfileStatuses({
@@ -63,3 +61,4 @@ export async function POST(request: Request) {
 
   return redirectToStatuses(request, { statusAdded: String(statuses.length) });
 }
+

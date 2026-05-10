@@ -17,8 +17,8 @@ type ScheduleItem = {
     round: number;
     deadlineAt: string | null;
     tournament: { title: string };
-    player1: { nickname: string | null; name: string | null } | null;
-    player2: { nickname: string | null; name: string | null } | null;
+    player1: { name: string | null } | null;
+    player2: { name: string | null } | null;
   };
 };
 
@@ -108,7 +108,7 @@ export function ScheduleCalendar({ days }: { days: ScheduleDay[] }) {
                   <div>
                     <div className="font-medium text-white">{schedule.match.tournament.title}</div>
                     <div className="mt-1 text-sm text-zinc-400">
-                      {(schedule.match.player1?.nickname ?? schedule.match.player1?.name ?? "TBD")} vs {(schedule.match.player2?.nickname ?? schedule.match.player2?.name ?? "TBD")}
+                      {(schedule.match.player1?.name ?? "TBD")} vs {(schedule.match.player2?.name ?? "TBD")}
                     </div>
                     {schedule.match.deadlineAt ? (
                       <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-xs font-medium text-amber-100">
@@ -161,3 +161,4 @@ export function ScheduleCalendar({ days }: { days: ScheduleDay[] }) {
     </div>
   );
 }
+

@@ -48,7 +48,7 @@ export default async function DashboardPage({
 
   const selectedSeason = searchParams?.season ? seasons.find((season) => season.id === searchParams.season || season.slug === searchParams.season) ?? null : null;
   const careerStats = await getPlayerCareerStats(user.id, { seasonId: selectedSeason?.id ?? null });
-  const displayName = user.name || user.nickname || "Игрок eFootball Nexon";
+  const displayName = user.name || "Игрок eFootball Nexon";
   const favoriteClub = clubs.find((club) => club.slug === user.favoriteTeam || club.name === user.favoriteTeam) ?? null;
   const socialLinks = getUserSocialLinks(user);
   const selectedStatuses = user.profileStatuses.filter((status) => status.selectedOrder !== null).slice(0, 3);
@@ -196,3 +196,4 @@ export default async function DashboardPage({
     </div>
   );
 }
+

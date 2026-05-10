@@ -16,11 +16,9 @@ type FakeUser = {
   image: string | null;
   isBanned: boolean;
   name: string | null;
-  nickname: string | null;
   role: UserRole;
   telegramId: string | null;
   telegramUsername: string | null;
-  efootballUid: string | null;
   legalAcceptedAt?: Date | null;
 };
 
@@ -72,11 +70,9 @@ function createFakeDb(params?: {
             image: (data.image as string | null | undefined) ?? null,
             isBanned: Boolean(data.isBanned ?? false),
             name: (data.name as string | null | undefined) ?? null,
-            nickname: (data.nickname as string | null | undefined) ?? null,
             role: (data.role as UserRole | undefined) ?? UserRole.PLAYER,
             telegramId: (data.telegramId as string | null | undefined) ?? null,
             telegramUsername: (data.telegramUsername as string | null | undefined) ?? null,
-            efootballUid: (data.efootballUid as string | null | undefined) ?? null,
             legalAcceptedAt: (data.legalAcceptedAt as Date | null | undefined) ?? new Date(),
           };
           users.push(user);
@@ -205,11 +201,9 @@ test("finalizeTelegramBotLogin logs in an existing user without duplication", as
         image: null,
         isBanned: false,
         name: "Existing Player",
-        nickname: null,
-        role: UserRole.PLAYER,
+role: UserRole.PLAYER,
         telegramId: "900",
         telegramUsername: "old_name",
-        efootballUid: null,
         legalAcceptedAt: null,
       },
     ],
@@ -332,3 +326,4 @@ test("finalizeTelegramBotLogin rejects expired tokens", async () => {
   assert.equal(result, null);
   assert.equal(fake.state.verificationTokens.length, 0);
 });
+

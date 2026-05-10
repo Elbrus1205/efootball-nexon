@@ -16,7 +16,6 @@ type ParticipantItem = {
   seed: number | null;
   user: {
     id: string;
-    nickname: string | null;
     name: string | null;
     email: string | null;
   };
@@ -33,17 +32,16 @@ type GroupItem = {
 
 type UserOption = {
   id: string;
-  nickname: string | null;
   name: string | null;
   email: string | null;
 };
 
 function userLabel(user: UserOption) {
-  return user.nickname ?? user.name ?? user.email ?? user.id;
+  return user.name ?? user.email ?? user.id;
 }
 
 function userMeta(user: UserOption) {
-  return [user.nickname ? `@${user.nickname}` : null, user.name, user.email].filter(Boolean).join(" • ");
+  return [user.name, user.email].filter(Boolean).join(" • ");
 }
 
 function normalizeSearch(value: string) {
@@ -111,7 +109,7 @@ export function ParticipantManager({
           <select value={selectedUserId} onChange={(event) => setSelectedUserId(event.target.value)} className="h-11 rounded-xl border border-white/10 bg-white/5 px-4 text-white">
             {users.map((user) => (
               <option key={user.id} value={user.id}>
-                {user.nickname ?? user.name ?? user.email ?? user.id}
+                {user.name ?? user.email ?? user.id}
               </option>
             ))}
           </select>
@@ -133,7 +131,7 @@ export function ParticipantManager({
           const replacementMatches = normalizedReplacementQuery
             ? users
                 .filter((user) =>
-                  [user.nickname, user.name, user.email, user.id]
+                  [user.name, user.email, user.id]
                     .filter(Boolean)
                     .some((value) => value?.toLowerCase().includes(normalizedReplacementQuery)),
                 )
@@ -146,7 +144,7 @@ export function ParticipantManager({
             <div key={participant.id} className="rounded-3xl border border-white/10 bg-black/20 p-4">
               <div className="grid gap-4 xl:grid-cols-[1fr_minmax(280px,0.9fr)] xl:items-start">
                 <div>
-                  <div className="font-medium text-white">{participant.user.nickname ?? participant.user.name ?? participant.user.email}</div>
+                  <div className="font-medium text-white">{participant.user.name ?? participant.user.email}</div>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
                     <Badge variant="neutral">{participantStatusLabel[participant.status]}</Badge>
                     <span>{participant.group ? participant.group.name : "Без группы"}</span>
@@ -209,7 +207,7 @@ export function ParticipantManager({
                           <Input
                             value={replacementQuery}
                             disabled={pending || !canReplace || !users.length}
-                            placeholder="Найти игрока по никнейму"
+                            placeholder="Найти игрока по имени"
                             onChange={(event) =>
                               setReplacementSearchByParticipant((current) => ({
                                 ...current,
@@ -295,10 +293,10 @@ export function ParticipantManager({
                                 );
                               })
                             ) : (
-                              <div className="px-3 py-3 text-sm text-zinc-500">По такому никнейму игрок не найден.</div>
+                              <div className="px-3 py-3 text-sm text-zinc-500">По такому имени игрок не найден.</div>
                             )
                           ) : (
-                            <div className="px-3 py-3 text-sm text-zinc-500">Начните вводить никнейм, имя или email игрока.</div>
+                            <div className="px-3 py-3 text-sm text-zinc-500">Начните вводить имя или email игрока.</div>
                           )}
                         </div>
                       </div>
@@ -334,3 +332,4 @@ export function ParticipantManager({
     </div>
   );
 }
+

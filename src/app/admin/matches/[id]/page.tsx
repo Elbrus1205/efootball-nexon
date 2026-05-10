@@ -19,7 +19,6 @@ type SubmissionItem = {
   submittedById: string;
   submittedBy: {
     id: string;
-    nickname: string | null;
     name: string | null;
     email: string | null;
   };

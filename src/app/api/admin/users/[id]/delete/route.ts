@@ -23,7 +23,6 @@ export async function POST(request: Request, { params }: { params: { id: string 
       id: true,
       name: true,
       email: true,
-      nickname: true,
       telegramUsername: true,
       role: true,
       isBanned: true,

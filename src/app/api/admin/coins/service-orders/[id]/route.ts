@@ -16,8 +16,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const order = await db.coinServiceOrder.findUnique({
     where: { id: params.id },
     include: {
-      buyer: { select: { id: true, nickname: true, name: true, email: true } },
-      executor: { select: { id: true, nickname: true, name: true, email: true } },
+      buyer: { select: { id: true, name: true, email: true } },
+      executor: { select: { id: true, name: true, email: true } },
     },
   });
 
@@ -78,7 +78,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.redirect(redirectUrl, 303);
   }
 
-  const executorName = executor.nickname || executor.name || executor.email || "Исполнитель";
+  const executorName = executor.name || executor.email || "Исполнитель";
 
   await Promise.all([
     createNotification({

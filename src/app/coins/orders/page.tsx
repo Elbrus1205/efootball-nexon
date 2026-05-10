@@ -19,7 +19,7 @@ export default async function CoinsOrdersPage() {
     db.coinServiceOrder.findMany({
       where: { buyerId: session.user.id },
       include: {
-        executor: { select: { nickname: true, name: true, email: true } },
+        executor: { select: { name: true, email: true } },
       },
       orderBy: { createdAt: "desc" },
       take: 50,
@@ -27,7 +27,7 @@ export default async function CoinsOrdersPage() {
     db.coinServiceOrder.findMany({
       where: { executorId: session.user.id },
       include: {
-        buyer: { select: { nickname: true, name: true, email: true } },
+        buyer: { select: { name: true, email: true } },
       },
       orderBy: { createdAt: "desc" },
       take: 50,
@@ -46,7 +46,7 @@ export default async function CoinsOrdersPage() {
           priceKopecks: order.priceKopecks,
           status: order.status,
           createdAt: order.createdAt,
-          executorName: order.executor?.nickname || order.executor?.name || order.executor?.email || undefined,
+          executorName: order.executor?.name || order.executor?.email || undefined,
         }))}
       />
 
@@ -61,7 +61,7 @@ export default async function CoinsOrdersPage() {
             priceKopecks: order.priceKopecks,
             status: order.status,
             createdAt: order.createdAt,
-            buyerName: order.buyer?.nickname || order.buyer?.name || order.buyer?.email || undefined,
+            buyerName: order.buyer?.name || order.buyer?.email || undefined,
           }))}
         />
       ) : null}
@@ -79,3 +79,4 @@ export default async function CoinsOrdersPage() {
     </main>
   );
 }
+

@@ -5,7 +5,6 @@ type SocialAccount = {
 
 type SocialUser = {
   name?: string | null;
-  nickname?: string | null;
   telegramUsername?: string | null;
   vkId?: string | null;
   accounts?: SocialAccount[];
@@ -20,7 +19,7 @@ export type SocialLink = {
 
 export function getUserSocialLinks(user: SocialUser): SocialLink[] {
   const links: SocialLink[] = [];
-  const displayLabel = user.name?.trim() || user.nickname?.trim() || "Профиль";
+  const displayLabel = user.name?.trim() || "Профиль";
   const vkAccountId = user.vkId || user.accounts?.find((account) => account.provider === "vk")?.providerAccountId;
 
   if (user.telegramUsername?.trim()) {
@@ -45,3 +44,4 @@ export function getUserSocialLinks(user: SocialUser): SocialLink[] {
 
   return links;
 }
+

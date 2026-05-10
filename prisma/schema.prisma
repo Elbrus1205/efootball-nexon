@@ -197,8 +197,6 @@ model User {
   bannerImage         String?
   bio                 String?                  @db.Text
   passwordHash        String?
-  nickname            String?
-  efootballUid        String?
   favoriteTeam        String?
   telegramId          String?                  @unique
   telegramUsername    String?

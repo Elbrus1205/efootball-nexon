@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { NotificationType, UserRole } from "@prisma/client";
 import { z } from "zod";
 import { getRequestBaseUrl } from "@/lib/affiliate";
@@ -148,7 +148,7 @@ export async function POST(request: Request) {
     },
   });
 
-  const buyerName = session.user.nickname || session.user.name || session.user.email || "Покупатель";
+  const buyerName = session.user.name || session.user.email || "Покупатель";
   const founders = await db.user.findMany({
     where: {
       role: UserRole.FOUNDER,
@@ -185,3 +185,4 @@ export async function POST(request: Request) {
   redirectUrl.searchParams.set("created", "1");
   return NextResponse.redirect(redirectUrl, 303);
 }
+

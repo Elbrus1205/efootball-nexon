@@ -1,4 +1,4 @@
-import { MatchStatus, UserRole } from "@prisma/client";
+﻿import { MatchStatus, UserRole } from "@prisma/client";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,6 @@ type SubmissionItem = {
   submittedById: string;
   submittedBy: {
     id: string;
-    nickname: string | null;
     name: string | null;
     email: string | null;
   };
@@ -143,3 +142,4 @@ export default async function AdminModerationPage() {
     </div>
   );
 }
+

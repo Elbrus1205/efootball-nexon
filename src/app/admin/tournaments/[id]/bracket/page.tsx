@@ -65,7 +65,7 @@ export default async function AdminTournamentBracketPage({ params }: { params: {
           groupName: group.name,
           rank: standing.rank ?? 999,
           label: `${groupAlphabet[groupIndex] ?? `G${groupIndex + 1}`}${standing.rank ?? "?"}`,
-          participantName: standing.participant.user.nickname ?? standing.participant.user.name ?? null,
+          participantName: standing.participant.user.name ?? null,
           sourceRef: `group:${group.id}:rank:${standing.rank ?? 999}`,
         })),
     ) ?? [];

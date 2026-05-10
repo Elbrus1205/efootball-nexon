@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+﻿import { Badge } from "@/components/ui/badge";
 import { ProfileForm } from "@/components/dashboard/profile-form";
 import { requireAuth } from "@/lib/auth/session";
 import { getAvailableClubs } from "@/lib/clubs";
@@ -34,7 +34,7 @@ export default async function DashboardEditPage() {
 
       <ProfileForm
         initialValues={{
-          name: user.name ?? user.nickname ?? "",
+          name: user.name ?? "",
           favoriteTeam: user.favoriteTeam ?? "",
           bio: user.bio ?? "",
           image: user.image ?? "",
@@ -54,3 +54,4 @@ export default async function DashboardEditPage() {
     </div>
   );
 }
+

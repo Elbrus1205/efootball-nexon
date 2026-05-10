@@ -15,8 +15,6 @@ async function main() {
       email: "admin@efoottourney.local",
       passwordHash: adminPassword,
       name: "Admin",
-      nickname: "TournamentAdmin",
-      efootballUid: "UID-ADMIN-001",
       role: UserRole.FOUNDER,
     },
   });

@@ -409,8 +409,8 @@ function shuffle<T>(items: T[]) {
   return [...items].sort(() => Math.random() - 0.5);
 }
 
-function getPlayerName(user?: { nickname?: string | null; name?: string | null; telegramUsername?: string | null; email?: string | null } | null) {
-  return user?.nickname ?? user?.name ?? (user?.telegramUsername ? `@${user.telegramUsername}` : null) ?? user?.email ?? "соперник";
+function getPlayerName(user?: { name?: string | null; telegramUsername?: string | null; email?: string | null } | null) {
+  return user?.name ?? (user?.telegramUsername ? `@${user.telegramUsername}` : null) ?? user?.email ?? "соперник";
 }
 
 function formatMatchDescriptor(match: { round: number; matchNumber: number; legNumber?: number | null; isPenaltyTiebreak?: boolean }) {
@@ -2579,4 +2579,5 @@ export async function advanceMatch(matchId: string, winnerId: string, loserId?: 
 
   await advanceResolvedWinnerForMatch(matchId, winnerId, loserId, winnerEntryId, loserEntryId);
 }
+
 

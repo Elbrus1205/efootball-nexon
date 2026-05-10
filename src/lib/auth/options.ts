@@ -8,7 +8,7 @@ import { buildSecurityContext, createLoginHistory, createSecuritySession, touchS
 import { fetchVkUserProfile } from "@/lib/auth/vk";
 import { db } from "@/lib/db";
 import { getLegalAcceptanceData, isLegalAccepted } from "@/lib/legal-acceptance";
-import { generateFallbackNickname } from "@/lib/player-name";
+import { generateFallbackName } from "@/lib/player-name";
 import { generateUniquePublicPlayerId } from "@/lib/public-player-id";
 import { finalizeTelegramBotLogin, logTelegramBotAuth } from "@/lib/telegram-bot-auth";
 import { describeTelegramOidcError, verifyAndConsumeTelegramIdToken } from "@/lib/telegram-oidc-server";
@@ -148,10 +148,8 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           image: user.image,
-          name: user.name ?? user.nickname ?? user.email ?? "Player",
+          name: user.name ?? user.email ?? "Player",
           role: user.role,
-          nickname: user.nickname,
-          efootballUid: user.efootballUid,
           isBanned: user.isBanned,
           authSessionId,
         };
@@ -239,10 +237,8 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           image: user.image,
-          name: user.name ?? user.nickname ?? "VK Player",
+          name: user.name ?? "VK Player",
           role: user.role,
-          nickname: user.nickname,
-          efootballUid: user.efootballUid,
           isBanned: user.isBanned,
           authSessionId,
         };
@@ -276,7 +272,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         const telegramId = profile.telegramId.trim();
-        const telegramUsername = profile.username?.trim() || generateFallbackNickname(telegramId);
+        const telegramUsername = profile.username?.trim() || generateFallbackName(telegramId);
         const role = telegramId === TELEGRAM_ADMIN_ID ? UserRole.FOUNDER : UserRole.PLAYER;
         const existingRoleUpdate = telegramId === TELEGRAM_ADMIN_ID ? UserRole.FOUNDER : undefined;
         const acceptedLegalDocuments = isLegalAccepted(credentials?.legalAccepted);
@@ -362,8 +358,6 @@ export const authOptions: NextAuthOptions = {
           image: user.image,
           name: user.name ?? "Telegram Player",
           role: user.role,
-          nickname: user.nickname,
-          efootballUid: user.efootballUid,
           isBanned: user.isBanned,
           authSessionId,
         };
@@ -415,8 +409,6 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.role = user.role;
-        token.nickname = user.nickname;
-        token.efootballUid = user.efootballUid;
         token.telegramUsername = user.telegramUsername;
         token.isBanned = user.isBanned;
         token.authSessionId = user.authSessionId ?? token.authSessionId;
@@ -451,12 +443,10 @@ export const authOptions: NextAuthOptions = {
 
         if (dbUser) {
           token.role = dbUser.role;
-          token.nickname = dbUser.nickname;
-          token.efootballUid = dbUser.efootballUid;
           token.telegramUsername = dbUser.telegramUsername;
           token.isBanned = dbUser.isBanned;
           token.picture = dbUser.image;
-          token.name = dbUser.name ?? dbUser.nickname ?? token.name;
+          token.name = dbUser.name ?? token.name;
           token.email = dbUser.email ?? token.email;
         }
       }
@@ -467,8 +457,6 @@ export const authOptions: NextAuthOptions = {
       if (session.user && token.sub) {
         session.user.id = token.sub;
         session.user.role = token.role ?? "PLAYER";
-        session.user.nickname = token.nickname;
-        session.user.efootballUid = token.efootballUid;
         session.user.telegramUsername = token.telegramUsername;
         session.user.isBanned = Boolean(token.isBanned);
         session.user.authSessionId = token.authSessionId;
@@ -478,3 +466,4 @@ export const authOptions: NextAuthOptions = {
     },
   },
 };
+

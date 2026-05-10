@@ -6,8 +6,6 @@ declare module "next-auth" {
     user: DefaultSession["user"] & {
       id: string;
       role: UserRole;
-      nickname?: string | null;
-      efootballUid?: string | null;
       telegramUsername?: string | null;
       isBanned: boolean;
       authSessionId?: string | null;
@@ -16,8 +14,6 @@ declare module "next-auth" {
 
   interface User {
     role?: UserRole;
-    nickname?: string | null;
-    efootballUid?: string | null;
     telegramUsername?: string | null;
     isBanned?: boolean;
     authSessionId?: string | null;
@@ -27,8 +23,6 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     role?: UserRole;
-    nickname?: string | null;
-    efootballUid?: string | null;
     telegramUsername?: string | null;
     isBanned?: boolean;
     authSessionId?: string | null;

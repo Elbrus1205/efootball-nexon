@@ -36,7 +36,7 @@ function hashSeed(value: string) {
   return hash;
 }
 
-export function generateFallbackNickname(seed: string) {
+export function generateFallbackName(seed: string) {
   const hash = hashSeed(seed || "player");
   const adjective = ADJECTIVES[hash % ADJECTIVES.length];
   const noun = NOUNS[Math.floor(hash / ADJECTIVES.length) % NOUNS.length];
@@ -46,13 +46,11 @@ export function generateFallbackNickname(seed: string) {
 
 export function getPlayerDisplayName(user: {
   id?: string | null;
-  nickname?: string | null;
   name?: string | null;
   email?: string | null;
 }) {
   if (user.name?.trim()) return user.name.trim();
-  if (user.nickname?.trim()) return user.nickname.trim();
 
   const seed = user.id || user.email || user.name || "player";
-  return generateFallbackNickname(seed);
+  return generateFallbackName(seed);
 }

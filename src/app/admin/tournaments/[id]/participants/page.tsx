@@ -30,7 +30,7 @@ export default async function AdminTournamentParticipantsPage({ params }: { para
       OR: [{ bannedUntil: null }, { bannedUntil: { lte: new Date() } }],
       id: { notIn: tournament.participants.map((item) => item.userId) },
     },
-    orderBy: [{ nickname: "asc" }, { createdAt: "desc" }],
+    orderBy: [{ name: "asc" }, { createdAt: "desc" }],
   });
 
   return (

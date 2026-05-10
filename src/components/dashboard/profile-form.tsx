@@ -284,7 +284,7 @@ export function ProfileForm({
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <Label className="block text-[11px] uppercase tracking-[0.24em] text-zinc-500">Статусы профиля</Label>
-                <div className="mt-1 text-sm text-zinc-400">Выберите до {MAX_SELECTED_PROFILE_STATUSES} подтверждённых статусов для показа под никнеймом.</div>
+                <div className="mt-1 text-sm text-zinc-400">Выберите до {MAX_SELECTED_PROFILE_STATUSES} подтверждённых статусов для показа под именем игрока.</div>
               </div>
               <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-semibold text-zinc-300">
                 {selectedStatusIds.length}/{MAX_SELECTED_PROFILE_STATUSES}

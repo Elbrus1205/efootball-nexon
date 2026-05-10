@@ -1,5 +1,5 @@
 import { LoginAttemptStatus, UserRole, type User } from "@prisma/client";
-import { generateFallbackNickname } from "@/lib/player-name";
+import { generateFallbackName } from "@/lib/player-name";
 import {
   buildVerifiedTelegramBotLoginIdentifier,
   parseTelegramBotLoginIdentifier,
@@ -16,7 +16,7 @@ type VerificationTokenRecord = {
 
 type UserRecord = Pick<
   User,
-  "id" | "email" | "image" | "isBanned" | "name" | "nickname" | "role" | "telegramId" | "telegramUsername" | "efootballUid"
+  "id" | "email" | "image" | "isBanned" | "name" | "role" | "telegramId" | "telegramUsername"
 > & {
   legalAcceptedAt?: Date | null;
 };
@@ -87,7 +87,7 @@ function getExistingRoleUpdate(telegramId: string) {
 }
 
 function resolveTelegramName(profile: TelegramBotLoginProfile) {
-  const fallback = profile.username?.trim() || generateFallbackNickname(profile.id);
+  const fallback = profile.username?.trim() || generateFallbackName(profile.id);
   return [profile.firstName, profile.lastName].filter(Boolean).join(" ").trim() || fallback;
 }
 
@@ -377,10 +377,9 @@ export async function finalizeTelegramBotLogin(
     image: user.image,
     name: user.name ?? "Telegram Player",
     role: user.role,
-    nickname: user.nickname,
-    efootballUid: user.efootballUid,
     telegramUsername: user.telegramUsername,
     isBanned: user.isBanned,
     authSessionId,
   };
 }
+

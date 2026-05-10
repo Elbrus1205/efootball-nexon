@@ -14,7 +14,7 @@ function roundToTenths(value: number) {
   return Math.round(value * 10) / 10;
 }
 
-type RatingPlayer = Pick<User, "id" | "name" | "nickname" | "image"> & {
+type RatingPlayer = Pick<User, "id" | "name" | "image"> & {
   profileStatuses?: Array<{ id: string; title: string; tone: ProfileStatusTone; selectedOrder: number | null }>;
 };
 
@@ -111,7 +111,6 @@ export async function getPlayerRatings(options: PlayerRatingOptions = {}) {
       select: {
         id: true,
         name: true,
-        nickname: true,
         image: true,
         profileStatuses: {
           where: { approvalStatus: ProfileStatusApprovalStatus.APPROVED, selectedOrder: { not: null } },
@@ -125,8 +124,8 @@ export async function getPlayerRatings(options: PlayerRatingOptions = {}) {
     db.match.findMany({
       where: matchWhere,
       include: {
-        player1: { select: { id: true, name: true, nickname: true, image: true } },
-        player2: { select: { id: true, name: true, nickname: true, image: true } },
+        player1: { select: { id: true, name: true, image: true } },
+        player2: { select: { id: true, name: true, image: true } },
       },
       orderBy: [{ finishedAt: "asc" }, { updatedAt: "asc" }, { createdAt: "asc" }],
     }),
@@ -143,9 +142,9 @@ export async function getPlayerRatings(options: PlayerRatingOptions = {}) {
             isPenaltyTiebreak: false,
           },
           include: {
-            player1: { select: { id: true, name: true, nickname: true, image: true } },
-            player2: { select: { id: true, name: true, nickname: true, image: true } },
-            winner: { select: { id: true, name: true, nickname: true, image: true } },
+            player1: { select: { id: true, name: true, image: true } },
+            player2: { select: { id: true, name: true, image: true } },
+            winner: { select: { id: true, name: true, image: true } },
           },
           orderBy: [{ round: "desc" }, { matchNumber: "asc" }],
         },
@@ -248,3 +247,4 @@ export async function getPlayerRatings(options: PlayerRatingOptions = {}) {
         a.playerName.localeCompare(b.playerName),
     );
 }
+

@@ -57,7 +57,7 @@ export default async function AdminTournamentHistoryPage({ params }: { params: {
                   <div className="font-medium text-white">{adminEntityLabel(action.entityType)}</div>
                   <Badge variant="neutral">{adminActionLabel[action.actionType] ?? action.actionType}</Badge>
                 </div>
-                <div className="text-sm text-zinc-400">{action.admin.nickname ?? action.admin.name ?? action.admin.email ?? "Администратор"}</div>
+                <div className="text-sm text-zinc-400">{action.admin.name ?? action.admin.email ?? "Администратор"}</div>
                 <div className="text-sm text-zinc-500">{formatDate(action.createdAt)}</div>
                 <AuditDiff before={action.beforeJson} after={action.afterJson} />
               </CardContent>

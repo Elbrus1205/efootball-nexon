@@ -28,7 +28,11 @@ const optionalIntField = (minimum: number, maximum: number, message?: string) =>
 export const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
-  name: z.string().min(2),
+  name: z
+    .string()
+    .min(2, "Имя должно быть не короче 2 символов.")
+    .max(32, "Имя должно быть не длиннее 32 символов.")
+    .regex(/^[A-Za-z_]+$/, "Имя может содержать только английские буквы и нижнее подчёркивание."),
   legalAccepted: z.boolean().refine(Boolean, {
     message: "Необходимо принять документы сайта.",
   }),
@@ -44,7 +48,7 @@ export const profileSchema = z.object({
     .string()
     .min(2, "Имя должно быть не короче 2 символов.")
     .max(32, "Имя должно быть не длиннее 32 символов.")
-    .regex(/^[A-Za-z0-9_]+$/, "Имя может содержать только английские буквы, цифры и нижнее подчёркивание."),
+    .regex(/^[A-Za-z_]+$/, "Имя может содержать только английские буквы и нижнее подчёркивание."),
   favoriteTeam: z.string().optional().or(z.literal("")),
   bio: z
     .string()

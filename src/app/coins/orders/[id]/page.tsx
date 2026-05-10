@@ -21,8 +21,8 @@ type OrderPageProps = {
   };
 };
 
-function displayUser(user?: { nickname?: string | null; name?: string | null; email?: string | null } | null) {
-  return user?.nickname || user?.name || user?.email || "Пользователь";
+function displayUser(user?: { name?: string | null; email?: string | null } | null) {
+  return user?.name || user?.email || "Пользователь";
 }
 
 function isAdmin(role: UserRole) {
@@ -34,11 +34,11 @@ export default async function CoinServiceOrderPage({ params, searchParams }: Ord
   const order = await db.coinServiceOrder.findUnique({
     where: { id: params.id },
     include: {
-      buyer: { select: { id: true, nickname: true, name: true, email: true } },
-      executor: { select: { id: true, nickname: true, name: true, email: true } },
+      buyer: { select: { id: true, name: true, email: true } },
+      executor: { select: { id: true, name: true, email: true } },
       messages: {
         include: {
-          sender: { select: { id: true, nickname: true, name: true, email: true } },
+          sender: { select: { id: true, name: true, email: true } },
         },
         orderBy: { createdAt: "asc" },
       },

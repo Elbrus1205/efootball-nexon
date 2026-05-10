@@ -43,13 +43,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const [sourceUser, targetUser] = await Promise.all([
     db.user.findUnique({
       where: { id: sourceUserId },
-      select: { id: true, publicId: true, email: true, nickname: true, name: true, telegramUsername: true },
+      select: { id: true, publicId: true, email: true, name: true, telegramUsername: true },
     }),
     db.user.findFirst({
       where: {
         OR: [{ id: targetUserLookup }, { publicId: targetUserLookup }],
       },
-      select: { id: true, publicId: true, email: true, nickname: true, name: true, telegramUsername: true },
+      select: { id: true, publicId: true, email: true, name: true, telegramUsername: true },
     }),
   ]);
 

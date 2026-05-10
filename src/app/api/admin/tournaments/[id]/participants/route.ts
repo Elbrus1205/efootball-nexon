@@ -96,7 +96,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     const replacementUser = await db.user.findUnique({
       where: { id: replacementUserId },
-      select: { id: true, nickname: true, name: true, email: true, isBanned: true, banReason: true, bannedUntil: true },
+      select: { id: true, name: true, email: true, isBanned: true, banReason: true, bannedUntil: true },
     });
 
     if (!replacementUser) {
@@ -140,7 +140,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       const replacedAt = new Date();
       const removedNotes = [
         before.notes?.trim(),
-        `Заменён на ${replacementUser.nickname ?? replacementUser.name ?? replacementUser.email ?? replacementUser.id} ${replacedAt.toISOString()}.`,
+        `Заменён на ${replacementUser.name ?? replacementUser.email ?? replacementUser.id} ${replacedAt.toISOString()}.`,
       ]
         .filter(Boolean)
         .join("\n");

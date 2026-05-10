@@ -15,7 +15,6 @@ type ParticipantOption = {
   id: string;
   userId: string;
   user: {
-    nickname: string | null;
     name: string | null;
   };
 };
@@ -33,8 +32,8 @@ type MatchItem = {
   player2Id: string | null;
   participant1EntryId: string | null;
   participant2EntryId: string | null;
-  player1: { nickname: string | null; name: string | null } | null;
-  player2: { nickname: string | null; name: string | null } | null;
+  player1: { name: string | null } | null;
+  player2: { name: string | null } | null;
   bracketId?: string | null;
   stage?: { name: string | null; type: StageType } | null;
   group?: { name: string } | null;
@@ -87,9 +86,7 @@ export function MatchManager({
     const normalized = query.trim().toLowerCase();
     return orderedMatches.filter((match) => {
       const haystack = [
-        match.player1?.nickname,
         match.player1?.name,
-        match.player2?.nickname,
         match.player2?.name,
         match.stage?.name,
         match.group?.name,
@@ -263,7 +260,7 @@ export function MatchManager({
                       <option value="">Игрок 1</option>
                       {participants.map((participant) => (
                         <option key={participant.id} value={participant.id}>
-                          {participant.user.nickname ?? participant.user.name ?? participant.id}
+                          {participant.user.name ?? participant.id}
                         </option>
                       ))}
                     </select>
@@ -283,7 +280,7 @@ export function MatchManager({
                       <option value="">Игрок 2</option>
                       {participants.map((participant) => (
                         <option key={participant.id} value={participant.id}>
-                          {participant.user.nickname ?? participant.user.name ?? participant.id}
+                          {participant.user.name ?? participant.id}
                         </option>
                       ))}
                     </select>
@@ -321,7 +318,7 @@ export function MatchManager({
                     </div>
 
                     <div className="flex items-center text-sm text-zinc-400">
-                      {(match.player1?.nickname ?? match.player1?.name ?? "Игрок 1")} vs {(match.player2?.nickname ?? match.player2?.name ?? "Игрок 2")}
+                      {(match.player1?.name ?? "Игрок 1")} vs {(match.player2?.name ?? "Игрок 2")}
                     </div>
                   </div>
 
@@ -353,3 +350,4 @@ export function MatchManager({
     </div>
   );
 }
+

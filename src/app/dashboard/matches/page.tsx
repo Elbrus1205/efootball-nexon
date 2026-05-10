@@ -65,7 +65,7 @@ export default async function DashboardMatchesPage() {
                       <Badge variant={statusVariant[match.status] ?? "neutral"}>{match.status}</Badge>
                       {match.stage ? <Badge variant="neutral">{match.stage.name}</Badge> : null}
                     </div>
-                    <div className="text-sm text-zinc-300">Соперник: {opponent?.nickname ?? opponent?.name ?? "Будет определён позже"}</div>
+                    <div className="text-sm text-zinc-300">Соперник: {opponent?.name ?? "Будет определён позже"}</div>
                     <div className="flex flex-wrap gap-4 text-sm text-zinc-500">
                       <span className="inline-flex items-center gap-2">
                         <CalendarDays className="h-4 w-4 text-primary" />
@@ -107,3 +107,4 @@ export default async function DashboardMatchesPage() {
     </div>
   );
 }
+
