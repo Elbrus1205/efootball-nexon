@@ -9,7 +9,7 @@ import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
 export default async function AdminTournamentDeadlinesPage({ params }: { params: { id: string } }) {
-  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.JUDGE]);
+  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
 
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },

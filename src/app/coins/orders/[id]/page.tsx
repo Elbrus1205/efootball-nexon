@@ -26,7 +26,7 @@ function displayUser(user?: { name?: string | null; email?: string | null } | nu
 }
 
 function isAdmin(role: UserRole) {
-  return role === UserRole.FOUNDER || role === UserRole.ORGANIZER;
+  return role === UserRole.FOUNDER || role === UserRole.ORGANIZER || role === UserRole.ADMIN;
 }
 
 export default async function CoinServiceOrderPage({ params, searchParams }: OrderPageProps) {

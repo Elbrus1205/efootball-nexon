@@ -58,7 +58,7 @@ function parseAttachments(value: FormDataEntryValue | null) {
 }
 
 export async function POST(request: Request) {
-  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER]);
+  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN]);
 
   const formData = await request.formData();
   const action = getString(formData.get("_action"));

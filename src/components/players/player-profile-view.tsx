@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { PencilLine } from "lucide-react";
-import type { ProfileStatusTone, Season } from "@prisma/client";
+import type { ProfileStatusTone, Season, UserRole } from "@prisma/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { PlayerCareerStatsPanel } from "@/components/players/player-career-stats";
 import { PlayerSocialLinks } from "@/components/players/player-social-links";
 import { StatsPeriodSwitcher } from "@/components/players/stats-period-switcher";
+import { UserRoleBadge } from "@/components/users/user-role-badge";
 import type { ClubOption } from "@/lib/clubs";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import type { PlayerCareerStats } from "@/lib/player-stats";
@@ -32,6 +33,7 @@ type ProfileUser = {
   favoriteTeam: string | null;
   telegramUsername: string | null;
   vkId: string | null;
+  role: UserRole;
   createdAt: Date;
   accounts?: Array<{ provider: string; providerAccountId: string }>;
   profileStatuses: ProfileStatus[];
@@ -114,7 +116,10 @@ export function PlayerProfileView({
                 </div>
 
                 <div className="min-w-0 pb-[12px] sm:pb-1">
-                  <h1 className="truncate text-[18px] font-semibold leading-none text-white sm:text-3xl">{displayName}</h1>
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <h1 className="truncate text-[18px] font-semibold leading-none text-white sm:text-3xl">{displayName}</h1>
+                    <UserRoleBadge role={user.role} />
+                  </div>
                   {selectedStatuses.length ? (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {selectedStatuses.map((status) => (

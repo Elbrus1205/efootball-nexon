@@ -11,7 +11,7 @@ import { formatTournamentBanMessage } from "@/lib/user-ban";
 const replaceableMatchStatuses = [MatchStatus.PENDING, MatchStatus.READY, MatchStatus.SCHEDULED];
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
-  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.JUDGE]);
+  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
 
   const participants = await db.tournamentRegistration.findMany({
     where: { tournamentId: params.id },

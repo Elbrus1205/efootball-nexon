@@ -16,8 +16,17 @@ import {
 export const userRoleLabel: Record<UserRole, string> = {
   FOUNDER: "Основатель",
   ORGANIZER: "Организатор",
+  ADMIN: "Администратор",
   JUDGE: "Судья",
   PLAYER: "Игрок",
+};
+
+export const userRoleColor: Record<UserRole, string> = {
+  FOUNDER: "#FFD700",
+  ORGANIZER: "#FF8C00",
+  ADMIN: "#DC143C",
+  JUDGE: "#2E8B57",
+  PLAYER: "#1E90FF",
 };
 
 export const matchStatusLabel: Record<MatchStatus, string> = {
@@ -159,7 +168,7 @@ export function adminEntityLabel(entityType: string) {
     TOURNAMENT: "Турнир",
     STAGE: "Этап",
     MATCH: "Матч",
-    MATCH_RANDOM_SCORES: "Случайные счета",
+    MATCH_RANDOM_SCORES: "Случайные счёта",
     MATCH_REVIEW: "Проверка результата",
     ROUND_DEADLINE: "Дедлайн тура",
     TOURNAMENT_PARTICIPANT: "Участник турнира",

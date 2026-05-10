@@ -4,7 +4,7 @@ import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
 function isOrderAdmin(role: UserRole) {
-  return role === UserRole.FOUNDER || role === UserRole.ORGANIZER;
+  return role === UserRole.FOUNDER || role === UserRole.ORGANIZER || role === UserRole.ADMIN;
 }
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {

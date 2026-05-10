@@ -211,7 +211,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   if (shouldDispute) {
     const moderators = await db.user.findMany({
-      where: { role: { in: [UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.JUDGE] } },
+      where: { role: { in: [UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE] } },
     });
 
     await Promise.all(

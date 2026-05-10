@@ -6,7 +6,7 @@ import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
 function canAccessOrder(params: { buyerId: string; executorId?: string | null; userId: string; role: UserRole }) {
-  return params.buyerId === params.userId || params.executorId === params.userId || params.role === UserRole.FOUNDER || params.role === UserRole.ORGANIZER;
+  return params.buyerId === params.userId || params.executorId === params.userId || params.role === UserRole.FOUNDER || params.role === UserRole.ORGANIZER || params.role === UserRole.ADMIN;
 }
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
@@ -65,4 +65,3 @@ export async function POST(request: Request, { params }: { params: { id: string 
   redirectUrl.searchParams.set("messageSent", "1");
   return NextResponse.redirect(redirectUrl, 303);
 }
-

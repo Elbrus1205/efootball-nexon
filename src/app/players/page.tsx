@@ -4,6 +4,7 @@ import { ProfileStatusApprovalStatus } from "@prisma/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { UserRoleBadge } from "@/components/users/user-role-badge";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { profileStatusClassName } from "@/lib/profile-status-style";
@@ -81,6 +82,7 @@ export default async function PlayersPage({
                   <div className="min-w-0">
                     <div className="flex min-w-0 flex-wrap items-center gap-2">
                       <span className="truncate text-sm font-semibold text-white sm:text-base">{displayName}</span>
+                      <UserRoleBadge role={user.role} />
                     </div>
                     {user.profileStatuses.length ? (
                       <div className="mt-2 flex flex-wrap gap-1.5">

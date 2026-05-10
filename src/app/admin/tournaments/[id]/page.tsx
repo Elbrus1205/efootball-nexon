@@ -18,7 +18,7 @@ function stageRoundUnit(stage?: { type: StageType } | null) {
 }
 
 export default async function AdminTournamentWorkspacePage({ params }: { params: { id: string } }) {
-  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.JUDGE]);
+  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
 
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },

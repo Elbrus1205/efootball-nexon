@@ -51,7 +51,7 @@ function PlayerSubmissionCard({
 }
 
 export default async function AdminMatchWorkspacePage({ params }: { params: { id: string } }) {
-  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.JUDGE]);
+  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
 
   const match = await db.match.findUnique({
     where: { id: params.id },

@@ -6,7 +6,7 @@ import { StandingsManager } from "@/components/admin/standings-manager";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function AdminTournamentStandingsPage({ params }: { params: { id: string } }) {
-  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.JUDGE]);
+  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
 
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },

@@ -16,7 +16,7 @@ function matchRoundLabel(match: { round: number; stage?: { type: StageType } | n
 }
 
 export default async function AdminMatchesPage() {
-  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.JUDGE]);
+  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
 
   const matches = await db.match.findMany({
     include: {

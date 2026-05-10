@@ -6,7 +6,7 @@ import { logAdminAction } from "@/lib/services/admin-actions";
 import { matchReorderSchema } from "@/lib/validators";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const session = await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.JUDGE]);
+  const session = await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
   const body = matchReorderSchema.parse(await request.json());
 
   const before = await db.match.findMany({
