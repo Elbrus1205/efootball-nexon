@@ -34,7 +34,7 @@ export function AuthNav({ unread = 0 }: { unread?: number }) {
         >
           <Link href="/register">
             <UserPlus className="h-4 w-4 text-amber-200" />
-            <span>Регистрация</span>
+            <span className="max-[420px]:hidden">Регистрация</span>
           </Link>
         </Button>
       </div>

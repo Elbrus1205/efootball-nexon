@@ -69,6 +69,45 @@ textarea,
     animation: float-orb 10s ease-in-out infinite;
   }
 
+  .brand-link {
+    display: flex;
+  }
+
+  .brand-logo-mark {
+    filter:
+      drop-shadow(0 0 12px rgba(59, 130, 246, 0.16))
+      drop-shadow(0 0 20px rgba(34, 211, 238, 0.1));
+    animation: brand-logo-breathe 4.8s ease-in-out infinite;
+  }
+
+  .brand-logo-scan {
+    transform-origin: center;
+    stroke-dasharray: 18 72;
+    animation: brand-logo-scan 3.6s ease-in-out infinite;
+  }
+
+  .brand-wordmark {
+    position: relative;
+    text-shadow:
+      0 0 14px rgba(147, 197, 253, 0.16),
+      0 0 26px rgba(34, 211, 238, 0.08);
+  }
+
+  .brand-wordmark::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 18%;
+    bottom: -7px;
+    height: 1px;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0), rgba(125, 211, 252, 0.74), rgba(255, 255, 255, 0));
+    opacity: 0;
+    transform: translateX(-16%) scaleX(0.65);
+    transform-origin: left;
+    animation: brand-wordmark-line 4.2s ease-in-out infinite;
+  }
+
   .hero-label,
   .hero-subtitle,
   .hero-cta,
@@ -236,6 +275,55 @@ textarea,
   }
 }
 
+@keyframes brand-logo-breathe {
+  0%,
+  100% {
+    transform: translateZ(0) scale(1);
+    opacity: 0.96;
+  }
+
+  50% {
+    transform: translateZ(0) scale(1.025);
+    opacity: 1;
+  }
+}
+
+@keyframes brand-logo-scan {
+  0%,
+  42% {
+    opacity: 0;
+    stroke-dashoffset: 92;
+  }
+
+  58% {
+    opacity: 0.75;
+  }
+
+  82%,
+  100% {
+    opacity: 0;
+    stroke-dashoffset: -92;
+  }
+}
+
+@keyframes brand-wordmark-line {
+  0%,
+  48% {
+    opacity: 0;
+    transform: translateX(-16%) scaleX(0.65);
+  }
+
+  64% {
+    opacity: 0.85;
+  }
+
+  88%,
+  100% {
+    opacity: 0;
+    transform: translateX(28%) scaleX(0.95);
+  }
+}
+
 @keyframes hero-fade-up {
   from {
     opacity: 0;
@@ -387,6 +475,9 @@ textarea,
 @media (prefers-reduced-motion: reduce) {
   .registration-cta,
   .registration-cta::before,
+  .brand-logo-mark,
+  .brand-logo-scan,
+  .brand-wordmark::after,
   .animate-mobile-menu-item,
   .coins-partner-banner::before,
   .coins-partner-logo,

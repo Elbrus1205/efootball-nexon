@@ -21,13 +21,13 @@ export async function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-black/60 backdrop-blur-xl">
-      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
-        <div className="min-w-0 flex items-center gap-3">
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-2 px-4 sm:gap-3 sm:px-6 lg:px-8">
+        <div className="min-w-0 flex flex-1 items-center gap-2 sm:gap-3">
           <MobileMenu links={links} />
-          <Link href="/" className="min-w-0 flex items-center gap-2 sm:gap-3">
+          <Link href="/" className="brand-link group min-w-0 flex-1 items-center gap-2 sm:flex-none sm:gap-3">
             <SiteLogoMark />
-            <div className="min-w-0">
-              <div className="truncate font-display text-base font-thin leading-none text-white sm:text-lg">eFootball Nexon</div>
+            <div className="min-w-0 max-w-[132px] sm:max-w-none">
+              <div className="brand-wordmark truncate font-display text-sm font-thin leading-none text-white min-[390px]:text-base sm:text-lg">eFootball Nexon</div>
               <div className="mt-1 hidden text-xs leading-tight text-zinc-400 sm:block">eFootball Mobile Tournaments</div>
             </div>
           </Link>
