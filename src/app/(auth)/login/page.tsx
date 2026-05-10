@@ -11,7 +11,7 @@ export default function LoginPage({
   const vkAppId = process.env.NEXT_PUBLIC_VK_APP_ID ?? process.env.VK_CLIENT_ID;
 
   return (
-    <div className="page-shell space-y-4 py-12">
+    <div className="page-shell space-y-3 py-6 sm:py-10">
       {searchParams?.banned ? (
         <Card className="mx-auto w-full max-w-md border-rose-400/25 bg-rose-500/10 p-4 text-sm text-rose-100">
           Аккаунт заблокирован навсегда. Вход закрыт.

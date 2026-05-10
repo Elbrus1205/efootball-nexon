@@ -6,7 +6,7 @@ export default function RegisterPage() {
   const vkAppId = process.env.NEXT_PUBLIC_VK_APP_ID ?? process.env.VK_CLIENT_ID;
 
   return (
-    <div className="page-shell py-12">
+    <div className="page-shell py-6 sm:py-10">
       <AuthForm
         type="register"
         telegramEnabled={telegramEnabled}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { Bell, LogOut, Shield, ShieldCheck, User2, UserPlus } from "lucide-react";
+import { Bell, LogIn, LogOut, Shield, ShieldCheck, User2, UserPlus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -14,27 +14,32 @@ export function AuthNav({ unread = 0 }: { unread?: number }) {
   const router = useRouter();
 
   if (status === "loading") {
-    return <div className="h-11 w-28 rounded-full bg-white/5" />;
+    return <div className="h-10 w-20 rounded-full bg-white/5 sm:w-28" />;
   }
 
   if (!session?.user) {
     return (
-      <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur">
+      <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.035] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur">
         <Button
           asChild
           variant="ghost"
-          className="hidden h-10 rounded-xl px-4 text-zinc-200 transition hover:bg-white/10 hover:text-white hover:shadow-[0_10px_24px_rgba(255,255,255,0.06)] sm:inline-flex"
+          aria-label="Войти"
+          className="h-9 rounded-full px-2.5 text-zinc-200 transition hover:bg-white/10 hover:text-white hover:shadow-[0_10px_24px_rgba(255,255,255,0.06)] sm:px-3"
         >
-          <Link href="/login">Войти</Link>
+          <Link href="/login">
+            <LogIn className="h-4 w-4" />
+            <span className="hidden sm:inline">Войти</span>
+          </Link>
         </Button>
         <Button
           asChild
           variant="ghost"
-          className="registration-cta h-10 rounded-lg border border-amber-300/35 bg-[linear-gradient(135deg,rgba(18,27,42,0.98),rgba(15,19,28,0.98)_48%,rgba(70,47,10,0.94)_100%)] px-3 font-black text-amber-100 shadow-[0_12px_32px_rgba(245,158,11,0.18),inset_0_1px_0_rgba(255,255,255,0.14)] hover:bg-[linear-gradient(135deg,rgba(28,41,62,0.98),rgba(20,26,38,0.98)_48%,rgba(92,61,12,0.96)_100%)] hover:text-white sm:px-4"
+          aria-label="Регистрация"
+          className="registration-cta h-9 rounded-full border border-amber-300/35 bg-[linear-gradient(135deg,rgba(18,27,42,0.98),rgba(15,19,28,0.98)_48%,rgba(70,47,10,0.94)_100%)] px-2.5 font-black text-amber-100 shadow-[0_12px_32px_rgba(245,158,11,0.18),inset_0_1px_0_rgba(255,255,255,0.14)] hover:bg-[linear-gradient(135deg,rgba(28,41,62,0.98),rgba(20,26,38,0.98)_48%,rgba(92,61,12,0.96)_100%)] hover:text-white sm:px-3"
         >
           <Link href="/register">
             <UserPlus className="h-4 w-4 text-amber-200" />
-            <span className="max-[420px]:hidden">Регистрация</span>
+            <span className="hidden min-[390px]:inline">Регистрация</span>
           </Link>
         </Button>
       </div>

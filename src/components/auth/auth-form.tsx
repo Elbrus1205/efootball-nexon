@@ -137,16 +137,16 @@ export function AuthForm({
   };
 
   return (
-    <Card className="mx-auto w-full max-w-md">
-      <CardHeader>
-        <CardTitle>
+    <Card className="mx-auto w-full max-w-[420px] rounded-2xl p-4 sm:p-5">
+      <CardHeader className="mb-3 space-y-1">
+        <CardTitle className="text-lg leading-tight sm:text-xl">
           {type === "login"
             ? twoFactorStep
               ? "Подтверждение входа"
               : "Вход в eFootball Nexon"
             : "Регистрация игрока"}
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-xs leading-5 sm:text-sm">
           {type === "login"
             ? twoFactorStep
               ? "Введите код, который бот отправил вам в Telegram."
@@ -154,31 +154,32 @@ export function AuthForm({
             : "Создайте аккаунт, чтобы регистрироваться на турниры и отправлять результаты."}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3">
         {type === "register" ? (
           <div className="space-y-2">
-            <Label htmlFor="name">Имя</Label>
-            <Input id="name" value={name} onChange={(event) => setName(event.target.value)} />
+            <Label htmlFor="name" className="text-xs">Имя</Label>
+            <Input id="name" className="h-10 rounded-lg px-3" value={name} onChange={(event) => setName(event.target.value)} />
           </div>
         ) : null}
 
         {!twoFactorStep ? (
           <>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
+              <Label htmlFor="email" className="text-xs">Email</Label>
+              <Input id="email" className="h-10 rounded-lg px-3" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Пароль</Label>
-              <Input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+              <Label htmlFor="password" className="text-xs">Пароль</Label>
+              <Input id="password" className="h-10 rounded-lg px-3" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
             </div>
           </>
         ) : (
           <div className="space-y-2">
-            <Label htmlFor="twoFactorCode">Код из Telegram</Label>
+            <Label htmlFor="twoFactorCode" className="text-xs">Код из Telegram</Label>
             <Input
               id="twoFactorCode"
+              className="h-10 rounded-lg px-3"
               inputMode="numeric"
               placeholder="Введите 6-значный код"
               value={twoFactorCode}
@@ -190,7 +191,7 @@ export function AuthForm({
         {requiresLegalAcceptance && !twoFactorStep ? (
           <label
             htmlFor="legalAccepted"
-            className={`group flex cursor-pointer gap-3 rounded-lg border p-3 transition ${
+            className={`group flex cursor-pointer gap-2.5 rounded-lg border p-2.5 transition ${
               legalAccepted
                 ? "border-emerald-300/25 bg-emerald-400/10"
                 : "border-white/10 bg-black/20 hover:border-primary/30 hover:bg-white/[0.04]"
@@ -204,18 +205,18 @@ export function AuthForm({
               className="sr-only"
             />
             <span
-              className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border transition ${
+              className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
                 legalAccepted ? "border-emerald-300/35 bg-emerald-400 text-black" : "border-white/15 bg-white/[0.04] text-transparent"
               }`}
             >
-              <Check className="h-4 w-4" />
+              <Check className="h-3.5 w-3.5" />
             </span>
             <span className="min-w-0">
-              <span className="flex items-center gap-2 text-sm font-semibold text-white">
-                <ShieldCheck className="h-4 w-4 text-primary" />
+              <span className="flex items-center gap-2 text-xs font-semibold text-white sm:text-sm">
+                <ShieldCheck className="h-3.5 w-3.5 text-primary sm:h-4 sm:w-4" />
                 Принимаю документы сайта
               </span>
-              <span className="mt-1 block text-xs leading-5 text-zinc-400">
+              <span className="mt-1 block text-[11px] leading-4 text-zinc-400 sm:text-xs sm:leading-5">
                 Я принимаю{" "}
                 <Link className="text-primary transition hover:text-white" href="/terms">
                   пользовательское соглашение
@@ -238,14 +239,14 @@ export function AuthForm({
           </label>
         ) : null}
 
-        <Button className="w-full" onClick={submit} disabled={pending || (requiresLegalAcceptance && !legalAccepted)}>
+        <Button className="h-10 w-full rounded-lg" onClick={submit} disabled={pending || (requiresLegalAcceptance && !legalAccepted)}>
           {pending ? "Подождите..." : type === "login" ? (twoFactorStep ? "Подтвердить вход" : "Войти") : "Создать аккаунт"}
         </Button>
 
         {type === "login" && twoFactorStep ? (
           <Button
             variant="outline"
-            className="w-full"
+            className="h-10 w-full rounded-lg"
             onClick={() => {
               setTwoFactorStep(false);
               setTwoFactorCode("");
@@ -258,10 +259,10 @@ export function AuthForm({
 
         {!twoFactorStep ? (
           <>
-            <div className="grid gap-3">
+            <div className="grid gap-2.5">
               <Button
                 variant="secondary"
-                className="w-full"
+                className="h-10 w-full rounded-lg"
                 onClick={() => startVkAuth("/dashboard")}
                 disabled={pending || (requiresLegalAcceptance && !legalAccepted)}
               >
@@ -276,7 +277,7 @@ export function AuthForm({
               />
             </div>
 
-            <p className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs leading-5 text-zinc-400">
+            <p className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[11px] leading-4 text-zinc-400 sm:text-xs sm:leading-5">
               <FileText className="mr-1.5 inline h-3.5 w-3.5 text-primary" />
               {type === "register" ? "Нажимая «Создать аккаунт» или продолжая через VK/Telegram, вы принимаете " : "Продолжая вход, вы принимаете "}
               <Link className="text-primary transition hover:text-white" href="/terms">
@@ -293,7 +294,7 @@ export function AuthForm({
               .
             </p>
 
-            <div className="text-sm text-zinc-400">
+            <div className="text-xs text-zinc-400 sm:text-sm">
               {type === "login" ? (
                 <>
                   Нет аккаунта?{" "}
@@ -312,7 +313,7 @@ export function AuthForm({
             </div>
 
             {type === "login" ? (
-              <Link href="/forgot-password" className="inline-block text-sm text-primary">
+              <Link href="/forgot-password" className="inline-block text-xs text-primary sm:text-sm">
                 Забыли пароль?
               </Link>
             ) : null}
