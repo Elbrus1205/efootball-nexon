@@ -40,6 +40,7 @@ const socialLinks = [
 
 const navigationLinks = [
   { href: "/tournaments", label: "Турниры" },
+  { href: "/players", label: "Пользователи" },
   { href: "/ratings", label: "Рейтинги" },
   { href: "/regulations", label: "Регламент" },
   { href: "/faq", label: "FAQ" },

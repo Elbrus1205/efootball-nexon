@@ -10,6 +10,7 @@ import {
   FileText,
   Home,
   Phone,
+  Users,
   Trophy,
   type LucideIcon,
 } from "lucide-react";
@@ -25,6 +26,7 @@ const linkMeta: Record<string, { icon: LucideIcon; caption: string }> = {
   "/": { icon: Home, caption: "Главная сцена" },
   "/regulations": { icon: FileText, caption: "Правила и формат" },
   "/tournaments": { icon: Trophy, caption: "Ближайшие турниры" },
+  "/players": { icon: Users, caption: "Игроки сайта" },
   "/coins": { icon: Coins, caption: "Магазин Coins" },
   "/coins/services": { icon: Coins, caption: "Услуги и донат Coins" },
   "/ratings": { icon: BarChart3, caption: "Таблица игроков" },
