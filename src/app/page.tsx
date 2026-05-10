@@ -61,11 +61,11 @@ export default async function HomePage() {
 
   const highlights = [
     {
-      value: activeSessions.length,
+      value: activeSessions.length + archivedHomeStats.online,
       label: "сейчас онлайн",
     },
     {
-      value: totalUsers,
+      value: totalUsers + archivedHomeStats.users,
       label: "всего игроков",
     },
     {

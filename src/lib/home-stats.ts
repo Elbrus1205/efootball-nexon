@@ -7,11 +7,15 @@ type HomeStatsStore = Pick<typeof db, "siteContent">;
 export type ArchivedHomeStats = {
   tournaments: number;
   prizePool: number;
+  users: number;
+  online: number;
 };
 
 const defaultArchivedHomeStats: ArchivedHomeStats = {
   tournaments: 0,
   prizePool: 0,
+  users: 0,
+  online: 0,
 };
 
 function normalizeArchivedHomeStats(value: unknown): ArchivedHomeStats {
@@ -24,6 +28,8 @@ function normalizeArchivedHomeStats(value: unknown): ArchivedHomeStats {
   return {
     tournaments: Number.isFinite(stats.tournaments) ? Math.max(0, Number(stats.tournaments)) : 0,
     prizePool: Number.isFinite(stats.prizePool) ? Math.max(0, Number(stats.prizePool)) : 0,
+    users: Number.isFinite(stats.users) ? Math.max(0, Number(stats.users)) : 0,
+    online: Number.isFinite(stats.online) ? Math.max(0, Number(stats.online)) : 0,
   };
 }
 
@@ -57,6 +63,8 @@ export async function addArchivedTournamentStats(
   const next: ArchivedHomeStats = {
     tournaments: current.tournaments + 1,
     prizePool: current.prizePool + parsePrizePoolValue(tournament.prizePool),
+    users: current.users,
+    online: current.online,
   };
 
   await client.siteContent.upsert({
