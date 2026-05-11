@@ -8,6 +8,37 @@ declare global {
   var prisma: PrismaClientWithErrorLog | undefined;
 }
 
+function appendPostgresOption(currentOptions: string | null, option: string) {
+  const options = currentOptions?.trim();
+  if (!options) return option;
+  if (options.includes(option)) return options;
+  return `${options} ${option}`;
+}
+
+function prepareDatabaseUrl() {
+  const rawUrl = process.env.DATABASE_URL;
+  if (!rawUrl) return;
+
+  try {
+    const url = new URL(rawUrl);
+    if (!url.protocol.startsWith("postgres")) return;
+
+    url.searchParams.set("connect_timeout", url.searchParams.get("connect_timeout") ?? "10");
+    url.searchParams.set("pool_timeout", url.searchParams.get("pool_timeout") ?? "10");
+    url.searchParams.set("connection_limit", url.searchParams.get("connection_limit") ?? "3");
+    url.searchParams.set(
+      "options",
+      appendPostgresOption(url.searchParams.get("options"), "-c idle_session_timeout=0"),
+    );
+
+    process.env.DATABASE_URL = url.toString();
+  } catch {
+    // Prisma will report the original connection error with its normal diagnostics.
+  }
+}
+
+prepareDatabaseUrl();
+
 const prismaLog: Prisma.LogDefinition[] =
   process.env.NODE_ENV === "development"
     ? [
