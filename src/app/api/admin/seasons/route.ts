@@ -15,7 +15,7 @@ function redirectToSeasons(request: Request, params: Record<string, string>) {
 }
 
 function isClearConfirmed(value: FormDataEntryValue | null) {
-  return typeof value === "string" && value.trim().toUpperCase() === "РћР§РРЎРўРРўР¬";
+  return typeof value === "string" && value.trim().toUpperCase() === "ОЧИСТИТЬ";
 }
 
 export async function POST(request: Request) {
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   try {
     if (action === "clear") {
       if (!isClearConfirmed(formData.get("confirmation"))) {
-        throw new Error("Р’РІРµРґРёС‚Рµ РћР§РРЎРўРРўР¬ РґР»СЏ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ РѕС‡РёСЃС‚РєРё СЃРµР·РѕРЅРѕРІ.");
+        throw new Error("Введите ОЧИСТИТЬ для подтверждения очистки сезонов.");
       }
 
       await clearSeasons();
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     revalidatePath("/ratings");
     return redirectToSeasons(request, { created: "1" });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "РќРµ СѓРґР°Р»РѕСЃСЊ РІС‹РїРѕР»РЅРёС‚СЊ РґРµР№СЃС‚РІРёРµ СЃ СЃРµР·РѕРЅР°РјРё.";
+    const message = error instanceof Error ? error.message : "Не удалось выполнить действие с сезонами.";
     return redirectToSeasons(request, { error: message });
   }
 }

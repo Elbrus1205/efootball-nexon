@@ -127,7 +127,7 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
   });
 
   if (!tournament) {
-    return NextResponse.json({ error: "РўСѓСЂРЅРёСЂ РЅРµ РЅР°Р№РґРµРЅ." }, { status: 404 });
+    return NextResponse.json({ error: "Турнир не найден." }, { status: 404 });
   }
 
   const confirmedPlayoffMatches = tournament.matches.filter(

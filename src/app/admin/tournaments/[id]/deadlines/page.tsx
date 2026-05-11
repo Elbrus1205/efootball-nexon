@@ -64,16 +64,16 @@ export default async function AdminTournamentDeadlinesPage({ params }: { params:
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CalendarClock className="h-5 w-5 text-primary" />
-              Р”РµРґР»Р°Р№РЅС‹ С‚СѓСЂРЅРёСЂР°
+              Дедлайны турнира
             </CardTitle>
-            <CardDescription>{tournament.title}: СЃСЂРѕРєРё РґР»СЏ С‚СѓСЂРѕРІ РіСЂСѓРїРї/Р»РёРіРё Рё СЂР°СѓРЅРґРѕРІ РїР»РµР№-РѕС„С„.</CardDescription>
+            <CardDescription>{tournament.title}: сроки для туров групп/лиги и раундов плей-офф.</CardDescription>
           </CardHeader>
         </Card>
 
         <Button asChild variant="outline" className="w-full lg:w-auto">
           <Link href={`/admin/tournaments/${tournament.id}`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            РќР°Р·Р°Рґ Рє С‚СѓСЂРЅРёСЂСѓ
+            Назад к турниру
           </Link>
         </Button>
       </div>

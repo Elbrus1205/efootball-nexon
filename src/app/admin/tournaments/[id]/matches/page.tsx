@@ -38,16 +38,16 @@ export default async function AdminTournamentMatchesPage({ params }: { params: {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Swords className="h-5 w-5 text-primary" />
-              Р СѓС‡РЅРѕР№ СЂРµРґР°РєС‚РѕСЂ РјР°С‚С‡РµР№
+              Ручной редактор матчей
             </CardTitle>
-            <CardDescription>{tournament.title}: live search, С„РёР»СЊС‚СЂС‹, drag-and-drop Рё СЂСѓС‡РЅР°СЏ РїСЂР°РІРєР° РјР°С‚С‡РµР№.</CardDescription>
+            <CardDescription>{tournament.title}: live search, фильтры, drag-and-drop и ручная правка матчей.</CardDescription>
           </CardHeader>
         </Card>
 
         <Button asChild variant="outline" className="w-full lg:w-auto">
           <Link href={`/admin/tournaments/${tournament.id}`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            РќР°Р·Р°Рґ Рє С‚СѓСЂРЅРёСЂСѓ
+            Назад к турниру
           </Link>
         </Button>
       </div>

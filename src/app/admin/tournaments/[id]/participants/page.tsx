@@ -37,8 +37,8 @@ export default async function AdminTournamentParticipantsPage({ params }: { para
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>РЈС‡Р°СЃС‚РЅРёРєРё, РїРѕСЃРµРІ Рё РіСЂСѓРїРїС‹</CardTitle>
-          <CardDescription>РџРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ, СѓРґР°Р»РµРЅРёРµ, СЂР°СЃРїСЂРµРґРµР»РµРЅРёРµ РїРѕ РіСЂСѓРїРїР°Рј Рё СЂСѓС‡РЅРѕР№ РєРѕРЅС‚СЂРѕР»СЊ СЃРѕСЃС‚Р°РІР° С‚СѓСЂРЅРёСЂР°.</CardDescription>
+          <CardTitle>Участники, посев и группы</CardTitle>
+          <CardDescription>Подтверждение, удаление, распределение по группам и ручной контроль состава турнира.</CardDescription>
         </CardHeader>
       </Card>
 

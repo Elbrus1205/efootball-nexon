@@ -23,7 +23,7 @@ export default async function AdminTournamentEditPage({ params }: { params: { id
     <div className="space-y-6">
       <TournamentBuilderForm
         action={`/api/admin/tournaments/${tournament.id}/update`}
-        submitLabel="РЎРѕС…СЂР°РЅРёС‚СЊ РёР·РјРµРЅРµРЅРёСЏ"
+        submitLabel="Сохранить изменения"
         initialValues={{
           title: tournament.title,
           rules: tournament.rules,

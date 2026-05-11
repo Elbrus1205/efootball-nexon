@@ -23,7 +23,7 @@ export default async function AdminTournamentStagesPage({ params }: { params: { 
       <Card>
         <CardHeader>
           <CardTitle>Stage Editor</CardTitle>
-          <CardDescription>РЈРїСЂР°РІР»РµРЅРёРµ РїРѕСЂСЏРґРєРѕРј, СЃС‚Р°С‚СѓСЃРѕРј Рё visual pipeline СЌС‚Р°РїРѕРІ С‚СѓСЂРЅРёСЂР°: Р»РёРіР°, РіСЂСѓРїРїС‹ Рё РїР»РµР№-РѕС„С„.</CardDescription>
+          <CardDescription>Управление порядком, статусом и visual pipeline этапов турнира: лига, группы и плей-офф.</CardDescription>
         </CardHeader>
       </Card>
 

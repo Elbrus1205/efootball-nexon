@@ -28,7 +28,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         });
 
         if (!tournament) {
-          throw new Error("РўСѓСЂРЅРёСЂ РЅРµ РЅР°Р№РґРµРЅ.");
+          throw new Error("Турнир не найден.");
         }
 
         if (preserveHomeStats) {
@@ -60,7 +60,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       await assignRandomClubsToTournament(params.id);
     }
   } catch (error) {
-    redirectUrl.searchParams.set("warning", error instanceof Error ? error.message : "РќРµ СѓРґР°Р»РѕСЃСЊ РІС‹РїРѕР»РЅРёС‚СЊ РґРµР№СЃС‚РІРёРµ.");
+    redirectUrl.searchParams.set("warning", error instanceof Error ? error.message : "Не удалось выполнить действие.");
   }
 
   return NextResponse.redirect(redirectUrl, 303);

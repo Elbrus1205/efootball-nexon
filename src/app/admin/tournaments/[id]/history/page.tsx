@@ -33,16 +33,16 @@ export default async function AdminTournamentHistoryPage({ params }: { params: {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <History className="h-5 w-5 text-primary" />
-              РСЃС‚РѕСЂРёСЏ РґРµР№СЃС‚РІРёР№
+              История действий
             </CardTitle>
-            <CardDescription>{tournament.title}: РїРѕСЃР»РµРґРЅРёРµ РёР·РјРµРЅРµРЅРёСЏ, РґРµР№СЃС‚РІРёСЏ Р°РґРјРёРЅРѕРІ Рё diff РєР»СЋС‡РµРІС‹С… РґР°РЅРЅС‹С….</CardDescription>
+            <CardDescription>{tournament.title}: последние изменения, действия админов и diff ключевых данных.</CardDescription>
           </CardHeader>
         </Card>
 
         <Button asChild variant="outline" className="w-full lg:w-auto">
           <Link href={`/admin/tournaments/${tournament.id}`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            РќР°Р·Р°Рґ Рє С‚СѓСЂРЅРёСЂСѓ
+            Назад к турниру
           </Link>
         </Button>
       </div>
@@ -56,7 +56,7 @@ export default async function AdminTournamentHistoryPage({ params }: { params: {
                   <div className="font-medium text-white">{adminEntityLabel(action.entityType)}</div>
                   <Badge variant="neutral">{adminActionLabel[action.actionType] ?? action.actionType}</Badge>
                 </div>
-                <div className="text-sm text-zinc-400">{action.admin.name ?? action.admin.email ?? "РђРґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ"}</div>
+                <div className="text-sm text-zinc-400">{action.admin.name ?? action.admin.email ?? "Администратор"}</div>
                 <div className="text-sm text-zinc-500">{formatDate(action.createdAt)}</div>
                 <AuditDiff before={action.beforeJson} after={action.afterJson} />
               </CardContent>
@@ -64,7 +64,7 @@ export default async function AdminTournamentHistoryPage({ params }: { params: {
           ))}
         </div>
       ) : (
-        <Card className="p-5 text-sm text-zinc-500">РСЃС‚РѕСЂРёСЏ РґРµР№СЃС‚РІРёР№ РїРѕСЏРІРёС‚СЃСЏ РїРѕСЃР»Рµ РїРµСЂРІС‹С… РёР·РјРµРЅРµРЅРёР№ РїРѕ С‚СѓСЂРЅРёСЂСѓ.</Card>
+        <Card className="p-5 text-sm text-zinc-500">История действий появится после первых изменений по турниру.</Card>
       )}
     </div>
   );

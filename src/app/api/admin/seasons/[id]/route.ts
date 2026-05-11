@@ -17,7 +17,7 @@ function redirectToSeasons(request: Request, params: Record<string, string>) {
 }
 
 function isDeleteConfirmed(value: FormDataEntryValue | null) {
-  return typeof value === "string" && value.trim().toUpperCase() === "РЈР”РђР›РРўР¬";
+  return typeof value === "string" && value.trim().toUpperCase() === "УДАЛИТЬ";
 }
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
@@ -31,8 +31,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       const season = await finishSeason(params.id);
 
       await createNotificationForAllUsers({
-        title: "РЎРµР·РѕРЅ Р·Р°РІРµСЂС€С‘РЅ",
-        body: `Р¤РёРЅР°Р»СЊРЅС‹Р№ СЃРІРёСЃС‚ СЃРµР·РѕРЅР° В«${season.name}В». Р РµР№С‚РёРЅРі Р·Р°С„РёРєСЃРёСЂРѕРІР°РЅ, Р°СЂС…РёРІ РѕС‚РєСЂС‹С‚, Р° Р»СѓС‡С€РёРµ РёРіСЂРѕРєРё СЃРєРѕСЂРѕ РїРѕР»СѓС‡Р°С‚ СЃРµР·РѕРЅРЅС‹Рµ СЃС‚Р°С‚СѓСЃС‹ РїРѕСЃР»Рµ РїСЂРѕРІРµСЂРєРё Р°РґРјРёРЅРёСЃС‚СЂР°С†РёРё.`,
+        title: "Сезон завершён",
+        body: `Финальный свист сезона «${season.name}». Рейтинг зафиксирован, архив открыт, а лучшие игроки скоро получат сезонные статусы после проверки администрации.`,
         type: NotificationType.SYSTEM,
         link: "/ratings",
         dedupeWithinHours: 24,
@@ -45,11 +45,11 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }
 
     if (formData.get("_method") !== "delete") {
-      throw new Error("РќРµРёР·РІРµСЃС‚РЅРѕРµ РґРµР№СЃС‚РІРёРµ.");
+      throw new Error("Неизвестное действие.");
     }
 
     if (!isDeleteConfirmed(formData.get("confirmation"))) {
-      throw new Error("Р’РІРµРґРёС‚Рµ РЈР”РђР›РРўР¬ РґР»СЏ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ СѓРґР°Р»РµРЅРёСЏ СЃРµР·РѕРЅР°.");
+      throw new Error("Введите УДАЛИТЬ для подтверждения удаления сезона.");
     }
 
     await deleteSeason(params.id);
@@ -57,7 +57,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     revalidatePath("/ratings");
     return redirectToSeasons(request, { deleted: "1" });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "РќРµ СѓРґР°Р»РѕСЃСЊ РІС‹РїРѕР»РЅРёС‚СЊ РґРµР№СЃС‚РІРёРµ СЃ СЃРµР·РѕРЅРѕРј.";
+    const message = error instanceof Error ? error.message : "Не удалось выполнить действие с сезоном.";
     return redirectToSeasons(request, { error: message });
   }
 }
