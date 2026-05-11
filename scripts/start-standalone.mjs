@@ -81,9 +81,28 @@ const child = spawn(process.execPath, [serverPath], {
   },
 });
 
+let shuttingDown = false;
+
+function shutdown(signal) {
+  if (shuttingDown) {
+    return;
+  }
+
+  shuttingDown = true;
+
+  if (!child.killed) {
+    child.kill(signal);
+  }
+
+  setTimeout(() => process.exit(0), 5000).unref();
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
 child.on("exit", (code, signal) => {
   if (signal) {
-    process.kill(process.pid, signal);
+    process.exit(signal === "SIGTERM" || signal === "SIGINT" ? 0 : 1);
     return;
   }
 
