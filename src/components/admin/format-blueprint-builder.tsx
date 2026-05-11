@@ -18,12 +18,30 @@ import { Label } from "@/components/ui/label";
 
 function createOpeningStageSelections(mode: OpeningStageMode, playoffType: PlayoffType, divisionsCount: number) {
   if (mode === "LEAGUE") {
-    return [
-      createDefaultPlayoffSelection({ divisionIndex: 1, fromRank: 1, toRank: 8, targetBracket: "upper" }),
-      ...(playoffType === PlayoffType.DOUBLE
-        ? [createDefaultPlayoffSelection({ divisionIndex: 1, fromRank: 9, toRank: 16, targetBracket: "lower" })]
-        : []),
-    ];
+    const leaguesCount = Math.max(1, Math.min(16, divisionsCount));
+
+    if (leaguesCount === 1) {
+      return [
+        createDefaultPlayoffSelection({ divisionIndex: 1, fromRank: 1, toRank: 8, targetBracket: "upper" }),
+        ...(playoffType === PlayoffType.DOUBLE
+          ? [createDefaultPlayoffSelection({ divisionIndex: 1, fromRank: 9, toRank: 16, targetBracket: "lower" })]
+          : []),
+      ];
+    }
+
+    const upperSelections = Array.from({ length: leaguesCount }, (_, index) =>
+      createDefaultPlayoffSelection({ divisionIndex: index + 1, fromRank: 1, toRank: 4, targetBracket: "upper" }),
+    );
+
+    if (playoffType !== PlayoffType.DOUBLE) {
+      return upperSelections;
+    }
+
+    const lowerSelections = Array.from({ length: leaguesCount }, (_, index) =>
+      createDefaultPlayoffSelection({ divisionIndex: index + 1, fromRank: 5, toRank: 8, targetBracket: "lower" }),
+    );
+
+    return [...upperSelections, ...lowerSelections];
   }
 
   const groupsCount = Math.max(1, Math.min(4, divisionsCount));
@@ -91,7 +109,7 @@ export function FormatBlueprintBuilder({
             onChange={(event) => {
               const openingStageMode = event.target.value as OpeningStageMode;
               setBlueprint((current) => {
-                const divisionsCount = openingStageMode === "LEAGUE" ? 1 : current.divisionsCount;
+                const divisionsCount = openingStageMode === "NONE" ? current.divisionsCount : Math.max(1, current.divisionsCount);
                 const resetSelections = current.openingStageMode !== openingStageMode && openingStageMode !== "NONE";
                 const next = {
                   ...current,
@@ -112,7 +130,7 @@ export function FormatBlueprintBuilder({
             className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white"
           >
             <option value="GROUPS">Группы, затем плей-офф</option>
-            <option value="LEAGUE">Одна лига, затем плей-офф</option>
+            <option value="LEAGUE">Одна или несколько лиг, затем плей-офф</option>
             <option value="NONE">Сразу плей-офф</option>
           </select>
         </div>
@@ -129,9 +147,9 @@ export function FormatBlueprintBuilder({
           </div>
         ) : null}
 
-        {hasOpeningStage && blueprint.openingStageMode === "GROUPS" ? (
+        {hasOpeningStage ? (
           <div className="space-y-2">
-            <Label htmlFor="divisionsCount">Количество групп</Label>
+            <Label htmlFor="divisionsCount">{blueprint.openingStageMode === "LEAGUE" ? "Количество лиг" : "Количество групп"}</Label>
             <Input
               id="divisionsCount"
               type="number"
@@ -171,9 +189,9 @@ export function FormatBlueprintBuilder({
           </div>
         ) : null}
 
-        {hasOpeningStage && blueprint.openingStageMode === "GROUPS" ? (
+        {hasOpeningStage ? (
           <div className="space-y-2">
-            <Label htmlFor="participantsPerGroup">Игроков в группе</Label>
+            <Label htmlFor="participantsPerGroup">{blueprint.openingStageMode === "LEAGUE" ? "Игроков в лиге" : "Игроков в группе"}</Label>
             <Input
               id="participantsPerGroup"
               type="number"

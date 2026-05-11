@@ -146,7 +146,7 @@ export function TournamentBuilderForm({
             <input type="hidden" name="format" value={TournamentFormat.CUSTOM} />
             <div className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm">
               <span className="font-semibold text-white">Гибкий</span>
-              <span className="text-xs text-blue-100">группы, лига, single/double</span>
+              <span className="text-xs text-blue-100">Группы, лига, одиночный или двойной плей-офф</span>
             </div>
           </div>
 
