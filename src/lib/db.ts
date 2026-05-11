@@ -15,6 +15,10 @@ function appendPostgresOption(currentOptions: string | null, option: string) {
   return `${options} ${option}`;
 }
 
+function preparePostgresOptions() {
+  process.env.PGOPTIONS = appendPostgresOption(process.env.PGOPTIONS ?? null, "-c idle_session_timeout=0");
+}
+
 function prepareDatabaseUrl() {
   const rawUrl = process.env.DATABASE_URL;
   if (!rawUrl) return;
@@ -37,6 +41,7 @@ function prepareDatabaseUrl() {
   }
 }
 
+preparePostgresOptions();
 prepareDatabaseUrl();
 
 const prismaLog: Prisma.LogDefinition[] =
@@ -55,12 +60,23 @@ export const db =
 
 if (process.env.NODE_ENV === "production") {
   db.$on("error", (event) => {
-    if (!event.message.includes("idle-session timeout")) {
-      return;
-    }
-
-    db.$disconnect().catch(() => null);
+    console.error(event.message);
   });
+
+  const keepAliveInterval = setInterval(() => {
+    db.$queryRaw`SELECT 1`.catch((error) => {
+      console.error("[prisma-keepalive]", error instanceof Error ? error.message : error);
+    });
+  }, 30_000);
+  keepAliveInterval.unref?.();
+
+  const disconnect = () => {
+    clearInterval(keepAliveInterval);
+    db.$disconnect().catch(() => null);
+  };
+
+  process.once("SIGTERM", disconnect);
+  process.once("SIGINT", disconnect);
 }
 
 if (process.env.NODE_ENV !== "production") global.prisma = db;
