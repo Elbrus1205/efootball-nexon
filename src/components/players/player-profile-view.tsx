@@ -116,9 +116,9 @@ export function PlayerProfileView({
                 </div>
 
                 <div className="min-w-0 pb-[12px] sm:pb-1">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <h1 className="truncate text-[18px] font-semibold leading-none text-white sm:text-3xl">{displayName}</h1>
-                    <UserRoleBadge role={user.role} />
+                  <div className="flex min-w-0 max-w-full items-center gap-2">
+                    <h1 className="min-w-0 truncate text-[18px] font-semibold leading-none text-white sm:text-3xl">{displayName}</h1>
+                    <UserRoleBadge role={user.role} className="max-w-[42vw] sm:max-w-none" />
                   </div>
                   {selectedStatuses.length ? (
                     <div className="mt-2 flex flex-wrap gap-2">

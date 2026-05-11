@@ -7,8 +7,8 @@ const standaloneDir = path.join(root, ".next", "standalone");
 const standaloneServer = path.join(standaloneDir, "server.js");
 const dockerServer = path.join(root, "server.js");
 
-function copyIfExists(from, to) {
-  if (!existsSync(from) || existsSync(to)) {
+function copyIntoIfExists(from, to) {
+  if (!existsSync(from)) {
     return;
   }
 
@@ -51,8 +51,8 @@ if (!existsSync(serverPath)) {
 }
 
 if (serverPath === standaloneServer) {
-  copyIfExists(path.join(root, "public"), path.join(standaloneDir, "public"));
-  copyIfExists(path.join(root, ".next", "static"), path.join(standaloneDir, ".next", "static"));
+  copyIntoIfExists(path.join(root, "public"), path.join(standaloneDir, "public"));
+  copyIntoIfExists(path.join(root, ".next", "static"), path.join(standaloneDir, ".next", "static"));
 }
 
 for (const cacheRoot of [

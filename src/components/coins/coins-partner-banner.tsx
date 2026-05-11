@@ -39,7 +39,15 @@ function PartnerLogoPair({
             style={{ animationDelay: `${index * 0.45}s` }}
           >
             <div className="relative z-10 h-full w-full overflow-hidden rounded-full bg-black">
-              <Image src={logo.src} alt={logo.name} fill sizes={sizes} className="object-cover" />
+              <Image
+                src={logo.src}
+                alt={logo.name}
+                fill
+                sizes={sizes}
+                className="object-cover"
+                priority
+                unoptimized
+              />
             </div>
           </div>
 

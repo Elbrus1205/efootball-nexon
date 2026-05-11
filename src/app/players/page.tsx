@@ -80,9 +80,9 @@ export default async function PlayersPage({
                   </Avatar>
 
                   <div className="min-w-0">
-                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <div className="flex min-w-0 max-w-full items-center gap-2">
                       <span className="truncate text-sm font-semibold text-white sm:text-base">{displayName}</span>
-                      <UserRoleBadge role={user.role} />
+                      <UserRoleBadge role={user.role} className="max-w-[38vw] sm:max-w-none" />
                     </div>
                     {user.profileStatuses.length ? (
                       <div className="mt-2 flex flex-wrap gap-1.5">

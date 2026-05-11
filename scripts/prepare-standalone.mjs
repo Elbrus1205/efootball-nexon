@@ -4,8 +4,8 @@ import path from "node:path";
 const root = process.cwd();
 const standaloneDir = path.join(root, ".next", "standalone");
 
-function copyIfExists(from, to) {
-  if (!existsSync(from) || existsSync(to)) {
+function copyIntoIfExists(from, to) {
+  if (!existsSync(from)) {
     return;
   }
 
@@ -41,8 +41,8 @@ function makeWritable(dir) {
 }
 
 if (existsSync(standaloneDir)) {
-  copyIfExists(path.join(root, "public"), path.join(standaloneDir, "public"));
-  copyIfExists(path.join(root, ".next", "static"), path.join(standaloneDir, ".next", "static"));
+  copyIntoIfExists(path.join(root, "public"), path.join(standaloneDir, "public"));
+  copyIntoIfExists(path.join(root, ".next", "static"), path.join(standaloneDir, ".next", "static"));
 }
 
 for (const cacheRoot of [
