@@ -16,6 +16,18 @@ export type SecurityContext = {
   location: string;
 };
 
+type IpApiResponse = {
+  status?: string;
+  country?: string;
+  city?: string;
+  regionName?: string;
+};
+
+const UNKNOWN_LOCATION = "Не определено";
+const UNKNOWN_DEVICE = "Неизвестное устройство";
+const locationCache = new Map<string, { value: string; expiresAt: number }>();
+const LOCATION_CACHE_TTL_MS = 1000 * 60 * 60 * 6;
+
 function getHeader(headers: HeaderLike, name: string) {
   if (!headers) return null;
 
@@ -43,7 +55,7 @@ function parsePlatform(userAgent: string) {
   if (/windows/i.test(userAgent)) return "Windows";
   if (/mac os|macintosh/i.test(userAgent)) return "macOS";
   if (/linux/i.test(userAgent)) return "Linux";
-  return "Не определено";
+  return UNKNOWN_LOCATION;
 }
 
 function parseDevice(userAgent: string) {
@@ -54,7 +66,7 @@ function parseDevice(userAgent: string) {
     return `${browser} на ${platform}`;
   }
 
-  if (platform === "Не определено") {
+  if (platform === UNKNOWN_LOCATION) {
     return browser;
   }
 
@@ -72,25 +84,74 @@ function parseCountryName(countryCode: string) {
   }
 }
 
-function parseLocation(headers: HeaderLike) {
-  const city =
-    getHeader(headers, "x-vercel-ip-city") ??
-    getHeader(headers, "x-city") ??
-    getHeader(headers, "cf-ipcity") ??
-    "";
-  const countryCode =
-    getHeader(headers, "x-vercel-ip-country") ??
-    getHeader(headers, "cf-ipcountry") ??
-    getHeader(headers, "x-country") ??
-    "";
+function isPublicIp(ipAddress: string | null) {
+  if (!ipAddress) return false;
 
-  const country = parseCountryName(countryCode);
-  const parts = [country, city].map((value) => value.trim()).filter(Boolean);
-  return parts.length ? parts.join(", ") : "Не определено";
+  const normalized = ipAddress.trim().replace(/^::ffff:/, "");
+  if (
+    normalized === "127.0.0.1" ||
+    normalized === "::1" ||
+    normalized.startsWith("10.") ||
+    normalized.startsWith("192.168.") ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(normalized) ||
+    /^169\.254\./.test(normalized) ||
+    /^fc/i.test(normalized) ||
+    /^fd/i.test(normalized) ||
+    /^fe80:/i.test(normalized)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function formatLocation(parts: Array<string | null | undefined>) {
+  const uniqueParts = Array.from(new Set(parts.map((part) => part?.trim()).filter(Boolean) as string[]));
+  return uniqueParts.length ? uniqueParts.join(", ") : UNKNOWN_LOCATION;
+}
+
+async function resolveLocationByIp(ipAddress: string | null) {
+  if (!isPublicIp(ipAddress)) return UNKNOWN_LOCATION;
+
+  const cached = locationCache.get(ipAddress!);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1500);
+
+  try {
+    const response = await fetch(
+      `http://ip-api.com/json/${encodeURIComponent(ipAddress!)}?fields=status,country,regionName,city&lang=ru`,
+      {
+        signal: controller.signal,
+        headers: {
+          "user-agent": "eFootball Nexon security sessions",
+        },
+      },
+    );
+
+    if (!response.ok) return UNKNOWN_LOCATION;
+
+    const data = (await response.json().catch(() => null)) as IpApiResponse | null;
+    if (!data || data.status !== "success") return UNKNOWN_LOCATION;
+
+    const location = formatLocation([data.country, data.regionName, data.city]);
+    locationCache.set(ipAddress!, {
+      value: location,
+      expiresAt: Date.now() + LOCATION_CACHE_TTL_MS,
+    });
+    return location;
+  } catch {
+    return UNKNOWN_LOCATION;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export function buildSecurityContext(headers: HeaderLike): SecurityContext {
-  const userAgent = getHeader(headers, "user-agent") ?? "Неизвестное устройство";
+  const userAgent = getHeader(headers, "user-agent") ?? UNKNOWN_DEVICE;
   const forwarded = getHeader(headers, "x-forwarded-for");
   const realIp = getHeader(headers, "x-real-ip");
   const ipAddress = (forwarded?.split(",")[0] ?? realIp ?? "").trim() || null;
@@ -100,7 +161,15 @@ export function buildSecurityContext(headers: HeaderLike): SecurityContext {
     userAgent,
     device: parseDevice(userAgent),
     platform: parsePlatform(userAgent),
-    location: parseLocation(headers),
+    location: UNKNOWN_LOCATION,
+  };
+}
+
+export async function resolveSecurityContext(headers: HeaderLike): Promise<SecurityContext> {
+  const context = buildSecurityContext(headers);
+  return {
+    ...context,
+    location: await resolveLocationByIp(context.ipAddress),
   };
 }
 

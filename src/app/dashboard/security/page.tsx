@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { Badge } from "@/components/ui/badge";
 import { SecurityPanel } from "@/components/dashboard/security-panel";
-import { buildSecurityContext } from "@/lib/auth/security";
+import { resolveSecurityContext } from "@/lib/auth/security";
 import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
@@ -13,7 +13,7 @@ function sessionIcon(platform: string | null): "laptop" | "phone" {
 
 export default async function DashboardSecurityPage() {
   const session = await requireAuth();
-  const currentContext = buildSecurityContext(headers());
+  const currentContext = await resolveSecurityContext(headers());
   const telegramClientId = process.env.TELEGRAM_CLIENT_ID;
   const telegramEnabled = Boolean(telegramClientId);
   const vkAppId = process.env.NEXT_PUBLIC_VK_APP_ID ?? process.env.VK_CLIENT_ID;

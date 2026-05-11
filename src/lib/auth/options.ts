@@ -4,7 +4,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { compare, hash } from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { buildSecurityContext, createLoginHistory, createSecuritySession, touchSecuritySession } from "@/lib/auth/security";
+import { createLoginHistory, createSecuritySession, resolveSecurityContext, touchSecuritySession } from "@/lib/auth/security";
 import { fetchVkUserProfile } from "@/lib/auth/vk";
 import { db } from "@/lib/db";
 import { getLegalAcceptanceData, isLegalAccepted } from "@/lib/legal-acceptance";
@@ -47,7 +47,7 @@ export const authOptions: NextAuthOptions = {
         const normalizedEmail = credentials.email.trim().toLowerCase();
         const rawPassword = credentials.password;
         const trimmedPassword = rawPassword.trim();
-        const context = buildSecurityContext(req?.headers);
+        const context = await resolveSecurityContext(req?.headers);
 
         const user = await db.user.findFirst({
           where: {
@@ -166,7 +166,7 @@ export const authOptions: NextAuthOptions = {
         const accessToken = credentials?.accessToken?.trim();
         if (!accessToken) return null;
 
-        const context = buildSecurityContext(req?.headers);
+        const context = await resolveSecurityContext(req?.headers);
         const acceptedLegalDocuments = isLegalAccepted(credentials?.legalAccepted);
         const vkProfile = await fetchVkUserProfile(accessToken);
 
@@ -252,7 +252,7 @@ export const authOptions: NextAuthOptions = {
         legalAccepted: { label: "Legal Accepted", type: "text" },
       },
       async authorize(credentials, req) {
-        const context = buildSecurityContext(req?.headers);
+        const context = await resolveSecurityContext(req?.headers);
         const idToken = credentials?.idToken?.trim();
         if (!idToken) {
           console.warn("[telegram-auth] missing-id-token");
@@ -373,7 +373,7 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials, req) {
         const loginToken = credentials?.token?.trim();
         if (!loginToken) return null;
-        const context = buildSecurityContext(req?.headers);
+        const context = await resolveSecurityContext(req?.headers);
         const legalAcceptanceData = getLegalAcceptanceData(req?.headers);
 
         try {
@@ -463,6 +463,22 @@ export const authOptions: NextAuthOptions = {
       }
 
       return session;
+    },
+  },
+  events: {
+    async signOut(message) {
+      const authSessionId = "token" in message ? message.token.authSessionId : null;
+      if (typeof authSessionId !== "string" || !authSessionId) return;
+
+      await db.securitySession.updateMany({
+        where: {
+          authSessionId,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: new Date(),
+        },
+      });
     },
   },
 };
