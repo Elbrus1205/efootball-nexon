@@ -1,12 +1,12 @@
-import { MatchStatus, UserRole } from "@prisma/client";
+import { MatchStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
-import { requireRole } from "@/lib/auth/session";
+import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { matchUpdateSchema } from "@/lib/validators";
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const session = await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
+  const session = await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
   const body = matchUpdateSchema.parse(await request.json());
 
   const before = await db.match.findUnique({

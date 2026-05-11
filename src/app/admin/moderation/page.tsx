@@ -1,11 +1,11 @@
-﻿import { MatchStatus, UserRole } from "@prisma/client";
+﻿import { MatchStatus } from "@prisma/client";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { matchStatusLabel, matchStatusVariant } from "@/lib/admin-display";
-import { requireRole } from "@/lib/auth/session";
+import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { formatDate } from "@/lib/utils";
@@ -46,7 +46,7 @@ function SubmissionPill({
 }
 
 export default async function AdminModerationPage() {
-  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
+  await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
   const disputedMatches = await db.match.findMany({
     where: { status: MatchStatus.DISPUTED },

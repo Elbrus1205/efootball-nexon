@@ -1,8 +1,8 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
-import { FaqAttachmentKind, UserRole } from "@prisma/client";
+import { FaqAttachmentKind } from "@prisma/client";
 import { getRequestBaseUrl } from "@/lib/affiliate";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
 type AttachmentInput = {
@@ -58,7 +58,7 @@ function parseAttachments(value: FormDataEntryValue | null) {
 }
 
 export async function POST(request: Request) {
-  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN]);
+  await requirePermission("content.manage");
 
   const formData = await request.formData();
   const action = getString(formData.get("_action"));

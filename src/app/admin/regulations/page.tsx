@@ -1,11 +1,10 @@
-import { UserRole } from "@prisma/client";
 import { RegulationsEditor } from "@/components/admin/regulations-editor";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { getRegulationsText } from "@/lib/regulations";
 
 export default async function AdminRegulationsPage() {
-  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
+  await requirePermission("content.manage");
 
   const regulations = await getRegulationsText();
 

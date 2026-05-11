@@ -1,12 +1,12 @@
-import { NextResponse } from "next/server";
-import { StageStatus, UserRole } from "@prisma/client";
-import { requireRole } from "@/lib/auth/session";
+﻿import { NextResponse } from "next/server";
+import { StageStatus } from "@prisma/client";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { stageUpdateSchema } from "@/lib/validators";
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const session = await requireRole([UserRole.FOUNDER]);
+  const session = await requirePermission("tournaments.manageStructure");
 
   const payload = await request.json();
   const body = stageUpdateSchema.parse({

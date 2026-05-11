@@ -1,6 +1,6 @@
 import { UserRole } from "@prisma/client";
 import { userRoleLabel } from "@/lib/admin-display";
-import { requireRole } from "@/lib/auth/session";
+import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getActiveUserBan } from "@/lib/user-ban";
 import { formatDate } from "@/lib/utils";
@@ -15,7 +15,7 @@ export default async function AdminUsersPage({
 }: {
   searchParams?: { q?: string; updated?: string; error?: string };
 }) {
-  const session = await requireRole([UserRole.FOUNDER]);
+  const session = await requireAnyPermission(["users.view", "users.ban", "users.changeLowerRoles"]);
 
   const query = searchParams?.q?.trim() ?? "";
   const returnTo = query ? `/admin/users?q=${encodeURIComponent(query)}` : "/admin/users";

@@ -1,6 +1,5 @@
-import { UserRole } from "@prisma/client";
-import { notFound } from "next/navigation";
-import { requireRole } from "@/lib/auth/session";
+﻿import { notFound } from "next/navigation";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { TournamentBuilderForm } from "@/components/admin/tournament-builder-form";
 
@@ -12,7 +11,7 @@ function toInputDate(value?: Date | null) {
 }
 
 export default async function AdminTournamentEditPage({ params }: { params: { id: string } }) {
-  await requireRole([UserRole.FOUNDER]);
+  await requirePermission("tournaments.createEdit");
 
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
@@ -24,7 +23,7 @@ export default async function AdminTournamentEditPage({ params }: { params: { id
     <div className="space-y-6">
       <TournamentBuilderForm
         action={`/api/admin/tournaments/${tournament.id}/update`}
-        submitLabel="Сохранить изменения"
+        submitLabel="РЎРѕС…СЂР°РЅРёС‚СЊ РёР·РјРµРЅРµРЅРёСЏ"
         initialValues={{
           title: tournament.title,
           rules: tournament.rules,

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { TournamentStatus, UserRole } from "@prisma/client";
+import { TournamentStatus } from "@prisma/client";
 import { Eye, Layers3, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import {
   tournamentStatusLabel,
   tournamentStatusVariant,
 } from "@/lib/admin-display";
-import { requireRole } from "@/lib/auth/session";
+import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 
@@ -18,7 +18,7 @@ export default async function AdminTournamentsPage({
 }: {
   searchParams?: { created?: string; warning?: string };
 }) {
-  await requireRole([UserRole.FOUNDER]);
+  await requireAnyPermission(["tournaments.createEdit", "tournaments.manageParticipants", "tournaments.manageStructure", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
   const tournaments = await db.tournament.findMany({
     include: {

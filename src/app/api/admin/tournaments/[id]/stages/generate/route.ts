@@ -1,12 +1,11 @@
-import { NextResponse } from "next/server";
-import { UserRole } from "@prisma/client";
-import { requireRole } from "@/lib/auth/session";
+﻿import { NextResponse } from "next/server";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { generateTournamentMatches, generateTournamentSchedule, generateTournamentStages } from "@/lib/services/tournaments";
 import { stageGenerationSchema } from "@/lib/validators";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  await requireRole([UserRole.FOUNDER]);
+  await requirePermission("tournaments.manageStructure");
 
   const body = stageGenerationSchema.parse(await request.json().catch(() => ({})));
   const stages = await generateTournamentStages(params.id, { regenerate: body.regenerate });

@@ -1,8 +1,7 @@
-import { UserRole } from "@prisma/client";
 import { Megaphone } from "lucide-react";
 import { TelegramBroadcastForm } from "@/components/admin/telegram-broadcast-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
 export default async function AdminBroadcastsPage({
@@ -10,7 +9,7 @@ export default async function AdminBroadcastsPage({
 }: {
   searchParams?: { sent?: string; failed?: string; error?: string };
 }) {
-  await requireRole([UserRole.FOUNDER]);
+  await requirePermission("broadcasts.manage");
 
   const [telegramRecipients, totalUsers, latestBroadcasts] = await db.$transaction([
     db.user.count({ where: { telegramId: { not: null } } }),

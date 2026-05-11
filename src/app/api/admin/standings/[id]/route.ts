@@ -1,12 +1,11 @@
-import { NextResponse } from "next/server";
-import { UserRole } from "@prisma/client";
-import { requireRole } from "@/lib/auth/session";
+﻿import { NextResponse } from "next/server";
+import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { standingUpdateSchema } from "@/lib/validators";
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const session = await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
+  const session = await requireAnyPermission(["tournaments.manageParticipants", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
   const payload = await request.json();
   const body = standingUpdateSchema.parse({

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { MatchStatus, NotificationType, ParticipantStatus, UserRole } from "@prisma/client";
-import { requireRole } from "@/lib/auth/session";
+import { MatchStatus, NotificationType, ParticipantStatus } from "@prisma/client";
+import { requireAnyPermission, requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { createNotification } from "@/lib/services/notifications";
@@ -11,7 +11,7 @@ import { formatTournamentBanMessage } from "@/lib/user-ban";
 const replaceableMatchStatuses = [MatchStatus.PENDING, MatchStatus.READY, MatchStatus.SCHEDULED];
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
-  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
+  await requireAnyPermission(["tournaments.manageParticipants", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
   const participants = await db.tournamentRegistration.findMany({
     where: { tournamentId: params.id },
@@ -23,7 +23,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 }
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const session = await requireRole([UserRole.FOUNDER]);
+  const session = await requirePermission("tournaments.manageParticipants");
   const body = participantManageSchema.parse(await request.json());
 
   if (body.action === "add" && body.userId) {

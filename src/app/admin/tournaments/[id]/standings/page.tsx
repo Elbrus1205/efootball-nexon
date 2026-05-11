@@ -1,12 +1,12 @@
-import { ParticipantStatus, StageType, UserRole } from "@prisma/client";
+﻿import { ParticipantStatus, StageType } from "@prisma/client";
 import { notFound } from "next/navigation";
-import { requireRole } from "@/lib/auth/session";
+import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { StandingsManager } from "@/components/admin/standings-manager";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function AdminTournamentStandingsPage({ params }: { params: { id: string } }) {
-  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
+  await requireAnyPermission(["tournaments.manageParticipants", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
@@ -47,14 +47,14 @@ export default async function AdminTournamentStandingsPage({ params }: { params:
       <Card>
         <CardHeader>
           <CardTitle>Standings Manager</CardTitle>
-          <CardDescription>Живые таблицы групп с ручной правкой мест, очков, разницы мячей и статистики.</CardDescription>
+          <CardDescription>Р–РёРІС‹Рµ С‚Р°Р±Р»РёС†С‹ РіСЂСѓРїРї СЃ СЂСѓС‡РЅРѕР№ РїСЂР°РІРєРѕР№ РјРµСЃС‚, РѕС‡РєРѕРІ, СЂР°Р·РЅРёС†С‹ РјСЏС‡РµР№ Рё СЃС‚Р°С‚РёСЃС‚РёРєРё.</CardDescription>
         </CardHeader>
       </Card>
 
       {groups.length ? (
         <StandingsManager groups={groups} />
       ) : (
-        <Card className="p-5 text-sm text-zinc-500">Таблицы появятся после создания группового этапа.</Card>
+        <Card className="p-5 text-sm text-zinc-500">РўР°Р±Р»РёС†С‹ РїРѕСЏРІСЏС‚СЃСЏ РїРѕСЃР»Рµ СЃРѕР·РґР°РЅРёСЏ РіСЂСѓРїРїРѕРІРѕРіРѕ СЌС‚Р°РїР°.</Card>
       )}
     </div>
   );

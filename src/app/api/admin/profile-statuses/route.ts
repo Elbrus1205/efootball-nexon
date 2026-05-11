@@ -1,8 +1,8 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
-import { ProfileStatusType, UserRole } from "@prisma/client";
+import { ProfileStatusType } from "@prisma/client";
 import { getRequestBaseUrl } from "@/lib/affiliate";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { grantManualProfileStatuses, manualProfileStatusDrafts } from "@/lib/profile-statuses";
 
@@ -17,7 +17,7 @@ function redirectToStatuses(request: Request, params: Record<string, string>) {
 }
 
 export async function POST(request: Request) {
-  const session = await requireRole([UserRole.FOUNDER]);
+  const session = await requirePermission("profileStatuses.manage");
   const formData = await request.formData();
   const playerQuery = String(formData.get("player") ?? "").trim();
   const requestedTypes = formData.getAll("statusTypes").map((value) => String(value)) as ProfileStatusType[];

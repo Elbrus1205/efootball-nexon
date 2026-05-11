@@ -1,7 +1,6 @@
-import { NextResponse } from "next/server";
-import { UserRole } from "@prisma/client";
+﻿import { NextResponse } from "next/server";
 import { getRequestBaseUrl } from "@/lib/affiliate";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { addArchivedTournamentStats } from "@/lib/home-stats";
 import {
@@ -14,7 +13,7 @@ import {
 } from "@/lib/services/tournaments";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  await requireRole([UserRole.FOUNDER]);
+  await requirePermission("tournaments.createEdit");
   const formData = await request.formData();
   const method = formData.get("_method");
   const redirectUrl = new URL("/admin/tournaments", getRequestBaseUrl(request));
@@ -29,7 +28,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         });
 
         if (!tournament) {
-          throw new Error("Турнир не найден.");
+          throw new Error("РўСѓСЂРЅРёСЂ РЅРµ РЅР°Р№РґРµРЅ.");
         }
 
         if (preserveHomeStats) {
@@ -61,7 +60,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       await assignRandomClubsToTournament(params.id);
     }
   } catch (error) {
-    redirectUrl.searchParams.set("warning", error instanceof Error ? error.message : "Не удалось выполнить действие.");
+    redirectUrl.searchParams.set("warning", error instanceof Error ? error.message : "РќРµ СѓРґР°Р»РѕСЃСЊ РІС‹РїРѕР»РЅРёС‚СЊ РґРµР№СЃС‚РІРёРµ.");
   }
 
   return NextResponse.redirect(redirectUrl, 303);

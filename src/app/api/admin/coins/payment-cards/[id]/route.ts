@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { CoinPaymentBank, UserRole } from "@prisma/client";
+import { CoinPaymentBank } from "@prisma/client";
 import { z } from "zod";
 import { getRequestBaseUrl } from "@/lib/affiliate";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
 const paymentCardSchema = z.object({
@@ -13,7 +13,7 @@ const paymentCardSchema = z.object({
 });
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  await requireRole([UserRole.FOUNDER]);
+  await requirePermission("coins.manage");
 
   const formData = await request.formData();
   const redirectUrl = new URL("/admin/coins", getRequestBaseUrl(request));
@@ -67,4 +67,3 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   return NextResponse.redirect(redirectUrl, 303);
 }
-

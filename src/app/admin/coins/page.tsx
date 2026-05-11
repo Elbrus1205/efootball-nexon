@@ -1,10 +1,10 @@
 import { Coins, CreditCard, Handshake, PackagePlus, Percent, Search, Settings, Trash2, UserCheck, Users } from "lucide-react";
-import { CoinServiceOrderStatus, UserRole } from "@prisma/client";
+import { CoinServiceOrderStatus } from "@prisma/client";
 import { BankLogo } from "@/components/coins/bank-logo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { coinPaymentBankOptions, getCoinStoreSettings, serviceOrderStatusLabel, serviceOrderStatusTone } from "@/lib/coin-services";
 import { db } from "@/lib/db";
 
@@ -44,7 +44,7 @@ export default async function AdminCoinsPage({
     error?: string;
   };
 }) {
-  await requireRole([UserRole.FOUNDER]);
+  await requirePermission("coins.manage");
 
   const userQuery = searchParams?.userQuery?.trim() ?? "";
   const users = userQuery

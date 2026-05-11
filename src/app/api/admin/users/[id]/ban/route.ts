@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { UserRole } from "@prisma/client";
 import { getRequestBaseUrl } from "@/lib/affiliate";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { banSchema } from "@/lib/validators";
 
@@ -18,7 +17,7 @@ function redirectWithStatus(request: Request, returnTo: string, key: "updated" |
 }
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const session = await requireRole([UserRole.FOUNDER]);
+  const session = await requirePermission("users.ban");
   const formData = await request.formData();
   const returnTo = getSafeReturnTo(formData.get("returnTo"));
   const parsed = banSchema.safeParse({

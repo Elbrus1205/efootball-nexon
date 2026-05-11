@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import { UserRole } from "@prisma/client";
 import { z } from "zod";
 import { getRequestBaseUrl } from "@/lib/affiliate";
 import { rublesToKopecks } from "@/lib/coins-products";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
 const serviceProductSchema = z.object({
@@ -16,7 +15,7 @@ const serviceProductSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  await requireRole([UserRole.FOUNDER]);
+  await requirePermission("coins.manage");
 
   const formData = await request.formData();
   const redirectUrl = new URL("/admin/coins", getRequestBaseUrl(request));

@@ -1,13 +1,13 @@
-import Link from "next/link";
-import { TournamentStatus, UserRole } from "@prisma/client";
+﻿import Link from "next/link";
+import { TournamentStatus } from "@prisma/client";
 import { Activity, CalendarRange, FileText, Megaphone, ShieldCheck, Trophy, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { requireRole } from "@/lib/auth/session";
+import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
 export default async function AdminPage() {
-  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
+  await requireAnyPermission(["admin.matchesOnly", "matches.reviewResults", "tournaments.createEdit", "users.view", "coins.manage", "content.manage", "broadcasts.manage", "profileStatuses.manage", "schedule.manage"]);
 
   const [totalTournaments, activeTournaments, completedTournaments, totalParticipants, activeSeason] = await db.$transaction([
     db.tournament.count(),
@@ -18,17 +18,17 @@ export default async function AdminPage() {
   ]);
 
   const stats = [
-    { label: "Всего турниров", value: totalTournaments, icon: Trophy },
-    { label: "Активные турниры", value: activeTournaments, icon: Activity },
-    { label: "Завершённые", value: completedTournaments, icon: ShieldCheck },
-    { label: "Участники", value: totalParticipants, icon: Users },
+    { label: "Р’СЃРµРіРѕ С‚СѓСЂРЅРёСЂРѕРІ", value: totalTournaments, icon: Trophy },
+    { label: "РђРєС‚РёРІРЅС‹Рµ С‚СѓСЂРЅРёСЂС‹", value: activeTournaments, icon: Activity },
+    { label: "Р—Р°РІРµСЂС€С‘РЅРЅС‹Рµ", value: completedTournaments, icon: ShieldCheck },
+    { label: "РЈС‡Р°СЃС‚РЅРёРєРё", value: totalParticipants, icon: Users },
   ];
 
   const shortcuts = [
-    { href: "/admin/tournaments", label: "Редактор турниров", variant: "default" as const, icon: Trophy },
-    { href: "/admin/seasons", label: "Сезоны", variant: "secondary" as const, icon: CalendarRange },
-    { href: "/admin/regulations", label: "Регламент", variant: "outline" as const, icon: FileText },
-    { href: "/admin/broadcasts", label: "Рассылки", variant: "outline" as const, icon: Megaphone },
+    { href: "/admin/tournaments", label: "Р РµРґР°РєС‚РѕСЂ С‚СѓСЂРЅРёСЂРѕРІ", variant: "default" as const, icon: Trophy },
+    { href: "/admin/seasons", label: "РЎРµР·РѕРЅС‹", variant: "secondary" as const, icon: CalendarRange },
+    { href: "/admin/regulations", label: "Р РµРіР»Р°РјРµРЅС‚", variant: "outline" as const, icon: FileText },
+    { href: "/admin/broadcasts", label: "Р Р°СЃСЃС‹Р»РєРё", variant: "outline" as const, icon: Megaphone },
   ];
 
   return (
@@ -51,9 +51,9 @@ export default async function AdminPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Быстрые действия</CardTitle>
+          <CardTitle>Р‘С‹СЃС‚СЂС‹Рµ РґРµР№СЃС‚РІРёСЏ</CardTitle>
           <CardDescription>
-            Ключевые сценарии ежедневной работы по турнирам. Активный сезон: {activeSeason?.name ?? "не выбран"}.
+            РљР»СЋС‡РµРІС‹Рµ СЃС†РµРЅР°СЂРёРё РµР¶РµРґРЅРµРІРЅРѕР№ СЂР°Р±РѕС‚С‹ РїРѕ С‚СѓСЂРЅРёСЂР°Рј. РђРєС‚РёРІРЅС‹Р№ СЃРµР·РѕРЅ: {activeSeason?.name ?? "РЅРµ РІС‹Р±СЂР°РЅ"}.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 space-y-0 sm:grid-cols-4 lg:flex lg:flex-wrap">

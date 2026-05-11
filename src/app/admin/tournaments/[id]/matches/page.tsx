@@ -1,15 +1,14 @@
-import Link from "next/link";
-import { UserRole } from "@prisma/client";
+﻿import Link from "next/link";
 import { ArrowLeft, Swords } from "lucide-react";
 import { notFound } from "next/navigation";
 import { MatchManager } from "@/components/admin/match-manager";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { requireRole } from "@/lib/auth/session";
+import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
 export default async function AdminTournamentMatchesPage({ params }: { params: { id: string } }) {
-  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
+  await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
@@ -39,16 +38,16 @@ export default async function AdminTournamentMatchesPage({ params }: { params: {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Swords className="h-5 w-5 text-primary" />
-              Ручной редактор матчей
+              Р СѓС‡РЅРѕР№ СЂРµРґР°РєС‚РѕСЂ РјР°С‚С‡РµР№
             </CardTitle>
-            <CardDescription>{tournament.title}: live search, фильтры, drag-and-drop и ручная правка матчей.</CardDescription>
+            <CardDescription>{tournament.title}: live search, С„РёР»СЊС‚СЂС‹, drag-and-drop Рё СЂСѓС‡РЅР°СЏ РїСЂР°РІРєР° РјР°С‚С‡РµР№.</CardDescription>
           </CardHeader>
         </Card>
 
         <Button asChild variant="outline" className="w-full lg:w-auto">
           <Link href={`/admin/tournaments/${tournament.id}`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Назад к турниру
+            РќР°Р·Р°Рґ Рє С‚СѓСЂРЅРёСЂСѓ
           </Link>
         </Button>
       </div>

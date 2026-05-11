@@ -1,6 +1,7 @@
 import { FaqItemForm } from "@/components/admin/faq-item-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
 export default async function AdminFaqPage({
@@ -8,6 +9,8 @@ export default async function AdminFaqPage({
 }: {
   searchParams?: { created?: string; updated?: string; deleted?: string; error?: string };
 }) {
+  await requirePermission("content.manage");
+
   const items = await db.faqItem.findMany({
     include: { attachments: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] } },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],

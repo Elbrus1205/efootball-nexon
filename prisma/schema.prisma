@@ -248,6 +248,18 @@ model User {
   reviewedProfileStatuses UserProfileStatus[]      @relation("profileStatusReviewer")
 }
 
+model RolePermission {
+  id         String   @id @default(cuid())
+  role       UserRole
+  permission String
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([role, permission])
+  @@index([role, enabled])
+}
+
 model Account {
   id                String  @id @default(cuid())
   userId            String

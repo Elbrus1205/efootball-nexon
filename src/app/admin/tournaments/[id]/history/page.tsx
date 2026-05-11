@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { UserRole } from "@prisma/client";
+﻿import Link from "next/link";
 import { ArrowLeft, History } from "lucide-react";
 import { notFound } from "next/navigation";
 import { AuditDiff } from "@/components/admin/audit-diff";
@@ -7,12 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { adminActionLabel, adminEntityLabel } from "@/lib/admin-display";
-import { requireRole } from "@/lib/auth/session";
+import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 
 export default async function AdminTournamentHistoryPage({ params }: { params: { id: string } }) {
-  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
+  await requireAnyPermission(["tournaments.createEdit", "tournaments.manageParticipants", "tournaments.manageStructure", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
@@ -34,16 +33,16 @@ export default async function AdminTournamentHistoryPage({ params }: { params: {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <History className="h-5 w-5 text-primary" />
-              История действий
+              РСЃС‚РѕСЂРёСЏ РґРµР№СЃС‚РІРёР№
             </CardTitle>
-            <CardDescription>{tournament.title}: последние изменения, действия админов и diff ключевых данных.</CardDescription>
+            <CardDescription>{tournament.title}: РїРѕСЃР»РµРґРЅРёРµ РёР·РјРµРЅРµРЅРёСЏ, РґРµР№СЃС‚РІРёСЏ Р°РґРјРёРЅРѕРІ Рё diff РєР»СЋС‡РµРІС‹С… РґР°РЅРЅС‹С….</CardDescription>
           </CardHeader>
         </Card>
 
         <Button asChild variant="outline" className="w-full lg:w-auto">
           <Link href={`/admin/tournaments/${tournament.id}`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Назад к турниру
+            РќР°Р·Р°Рґ Рє С‚СѓСЂРЅРёСЂСѓ
           </Link>
         </Button>
       </div>
@@ -57,7 +56,7 @@ export default async function AdminTournamentHistoryPage({ params }: { params: {
                   <div className="font-medium text-white">{adminEntityLabel(action.entityType)}</div>
                   <Badge variant="neutral">{adminActionLabel[action.actionType] ?? action.actionType}</Badge>
                 </div>
-                <div className="text-sm text-zinc-400">{action.admin.name ?? action.admin.email ?? "Администратор"}</div>
+                <div className="text-sm text-zinc-400">{action.admin.name ?? action.admin.email ?? "РђРґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ"}</div>
                 <div className="text-sm text-zinc-500">{formatDate(action.createdAt)}</div>
                 <AuditDiff before={action.beforeJson} after={action.afterJson} />
               </CardContent>
@@ -65,7 +64,7 @@ export default async function AdminTournamentHistoryPage({ params }: { params: {
           ))}
         </div>
       ) : (
-        <Card className="p-5 text-sm text-zinc-500">История действий появится после первых изменений по турниру.</Card>
+        <Card className="p-5 text-sm text-zinc-500">РСЃС‚РѕСЂРёСЏ РґРµР№СЃС‚РІРёР№ РїРѕСЏРІРёС‚СЃСЏ РїРѕСЃР»Рµ РїРµСЂРІС‹С… РёР·РјРµРЅРµРЅРёР№ РїРѕ С‚СѓСЂРЅРёСЂСѓ.</Card>
       )}
     </div>
   );

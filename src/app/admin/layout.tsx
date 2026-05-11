@@ -1,5 +1,5 @@
-import { UserRole } from "@prisma/client";
-import { requireRole } from "@/lib/auth/session";
+import { getAllowedAdminNavHrefs } from "@/lib/role-permissions";
+import { requireAnyPermission } from "@/lib/auth/session";
 import { AdminNav } from "@/components/admin/admin-nav";
 
 export default async function AdminLayout({
@@ -7,7 +7,24 @@ export default async function AdminLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
+  const session = await requireAnyPermission([
+    "admin.matchesOnly",
+    "matches.reviewResults",
+    "tournaments.createEdit",
+    "tournaments.manageParticipants",
+    "tournaments.manageStructure",
+    "ownTournaments.moderateMatches",
+    "allTournaments.moderateMatches",
+    "users.view",
+    "users.ban",
+    "users.changeLowerRoles",
+    "profileStatuses.manage",
+    "broadcasts.manage",
+    "content.manage",
+    "coins.manage",
+    "schedule.manage",
+  ]);
+  const allowedHrefs = await getAllowedAdminNavHrefs(session.user.role);
 
   return (
     <div className="page-shell space-y-6">
@@ -19,7 +36,7 @@ export default async function AdminLayout({
         </p>
       </div>
 
-      <AdminNav />
+      <AdminNav allowedHrefs={allowedHrefs} />
       {children}
     </div>
   );

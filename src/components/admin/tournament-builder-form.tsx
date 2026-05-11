@@ -276,16 +276,12 @@ export function TournamentBuilderForm({
       <Card>
         <CardHeader>
           <CardTitle>Автоматизация</CardTitle>
-          <CardDescription>Переключатели для матчей, расписания, выхода из групп и ручного контроля плей-офф.</CardDescription>
+          <CardDescription>Настройки ручного контроля плей-офф.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {[
-            ["autoCreateMatches", "Автоматически создать матчи", initialValues?.autoCreateMatches ?? false],
-            ["autoCreateSchedule", "Автоматически создать расписание", initialValues?.autoCreateSchedule ?? false],
-            ["autoAdvanceFromGroups", "Автоматически выводить из групп", initialValues?.autoAdvanceFromGroups ?? false],
             ["manualBracketControl", "Ручное управление сеткой", initialValues?.manualBracketControl ?? false],
             ["manualPlayoffSelection", "Ручной выбор в плей-офф", initialValues?.manualPlayoffSelection ?? false],
-            ["checkInRequired", "Подтверждение участия перед стартом", initialValues?.checkInRequired ?? false],
           ].map(([name, label, checked]) => (
             <label key={String(name)} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-sm text-zinc-300">
               <input type="checkbox" name={String(name)} value="true" defaultChecked={Boolean(checked)} />

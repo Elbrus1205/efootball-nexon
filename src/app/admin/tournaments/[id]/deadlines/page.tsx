@@ -1,15 +1,14 @@
-import Link from "next/link";
-import { UserRole } from "@prisma/client";
+﻿import Link from "next/link";
 import { ArrowLeft, CalendarClock } from "lucide-react";
 import { notFound } from "next/navigation";
 import { RoundDeadlineManager } from "@/components/admin/round-deadline-manager";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
 export default async function AdminTournamentDeadlinesPage({ params }: { params: { id: string } }) {
-  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
+  await requirePermission("tournaments.manageDeadlines");
 
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
@@ -65,16 +64,16 @@ export default async function AdminTournamentDeadlinesPage({ params }: { params:
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CalendarClock className="h-5 w-5 text-primary" />
-              Дедлайны турнира
+              Р”РµРґР»Р°Р№РЅС‹ С‚СѓСЂРЅРёСЂР°
             </CardTitle>
-            <CardDescription>{tournament.title}: сроки для туров групп/лиги и раундов плей-офф.</CardDescription>
+            <CardDescription>{tournament.title}: СЃСЂРѕРєРё РґР»СЏ С‚СѓСЂРѕРІ РіСЂСѓРїРї/Р»РёРіРё Рё СЂР°СѓРЅРґРѕРІ РїР»РµР№-РѕС„С„.</CardDescription>
           </CardHeader>
         </Card>
 
         <Button asChild variant="outline" className="w-full lg:w-auto">
           <Link href={`/admin/tournaments/${tournament.id}`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Назад к турниру
+            РќР°Р·Р°Рґ Рє С‚СѓСЂРЅРёСЂСѓ
           </Link>
         </Button>
       </div>

@@ -1,6 +1,6 @@
-import { AdminActionType, MatchStatus, StageType, UserRole } from "@prisma/client";
+﻿import { AdminActionType, MatchStatus, StageType } from "@prisma/client";
 import { NextResponse } from "next/server";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { recalculateGroupStandings, resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 
@@ -112,7 +112,7 @@ async function fallbackAdvancePlayoffWinner(matchId: string) {
 }
 
 export async function POST(_: Request, { params }: { params: { id: string } }) {
-  const session = await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
+  const session = await requirePermission("matches.generate");
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
     include: {
@@ -127,7 +127,7 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
   });
 
   if (!tournament) {
-    return NextResponse.json({ error: "Турнир не найден." }, { status: 404 });
+    return NextResponse.json({ error: "РўСѓСЂРЅРёСЂ РЅРµ РЅР°Р№РґРµРЅ." }, { status: 404 });
   }
 
   const confirmedPlayoffMatches = tournament.matches.filter(

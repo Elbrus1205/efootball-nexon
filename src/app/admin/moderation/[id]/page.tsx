@@ -1,4 +1,4 @@
-import { MatchStatus, UserRole } from "@prisma/client";
+﻿import { MatchStatus } from "@prisma/client";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { matchStatusLabel, matchStatusVariant } from "@/lib/admin-display";
-import { requireRole } from "@/lib/auth/session";
+import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { formatDate } from "@/lib/utils";
 
 export default async function AdminModerationWorkspacePage({ params }: { params: { id: string } }) {
-  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
+  await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
   const match = await db.match.findUnique({
     where: { id: params.id },
@@ -29,8 +29,8 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
 
   if (!match) notFound();
 
-  const player1Name = match.player1 ? getPlayerDisplayName(match.player1) : "Игрок 1";
-  const player2Name = match.player2 ? getPlayerDisplayName(match.player2) : "Игрок 2";
+  const player1Name = match.player1 ? getPlayerDisplayName(match.player1) : "РРіСЂРѕРє 1";
+  const player2Name = match.player2 ? getPlayerDisplayName(match.player2) : "РРіСЂРѕРє 2";
   const latestSubmission = match.submissions[0];
 
   return (
@@ -38,11 +38,11 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
       <div className="space-y-2">
         <div className="inline-flex items-center gap-2 rounded-full border border-rose-400/20 bg-rose-400/10 px-4 py-2 text-sm font-medium text-rose-200">
           <AlertTriangle className="h-4 w-4" />
-          Матч в споре
+          РњР°С‚С‡ РІ СЃРїРѕСЂРµ
         </div>
-        <h1 className="font-display text-3xl font-thin text-white">Модерация матча</h1>
+        <h1 className="font-display text-3xl font-thin text-white">РњРѕРґРµСЂР°С†РёСЏ РјР°С‚С‡Р°</h1>
         <p className="max-w-3xl text-zinc-400">
-          Игроки отправили разные результаты несколько раз. Администратор вводит финальный счёт и подтверждает результат.
+          РРіСЂРѕРєРё РѕС‚РїСЂР°РІРёР»Рё СЂР°Р·РЅС‹Рµ СЂРµР·СѓР»СЊС‚Р°С‚С‹ РЅРµСЃРєРѕР»СЊРєРѕ СЂР°Р·. РђРґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ РІРІРѕРґРёС‚ С„РёРЅР°Р»СЊРЅС‹Р№ СЃС‡С‘С‚ Рё РїРѕРґС‚РІРµСЂР¶РґР°РµС‚ СЂРµР·СѓР»СЊС‚Р°С‚.
         </p>
       </div>
 
@@ -56,29 +56,29 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
           </div>
 
           <Badge variant={matchStatusVariant[match.status] ?? "danger"}>
-            {matchStatusLabel[match.status] ?? (match.status === MatchStatus.DISPUTED ? "Спор" : match.status)}
+            {matchStatusLabel[match.status] ?? (match.status === MatchStatus.DISPUTED ? "РЎРїРѕСЂ" : match.status)}
           </Badge>
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
           <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-            <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">Последний отправленный счёт</div>
+            <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">РџРѕСЃР»РµРґРЅРёР№ РѕС‚РїСЂР°РІР»РµРЅРЅС‹Р№ СЃС‡С‘С‚</div>
             <div className="mt-2 text-2xl font-semibold text-white">
-              {latestSubmission ? `${latestSubmission.player1Score} : ${latestSubmission.player2Score}` : "Нет отправок"}
+              {latestSubmission ? `${latestSubmission.player1Score} : ${latestSubmission.player2Score}` : "РќРµС‚ РѕС‚РїСЂР°РІРѕРє"}
             </div>
             {latestSubmission ? (
               <div className="mt-2 text-sm text-zinc-500">
-                {latestSubmission.submittedBy ? getPlayerDisplayName(latestSubmission.submittedBy) : "Игрок"} • {formatDate(latestSubmission.createdAt)}
+                {latestSubmission.submittedBy ? getPlayerDisplayName(latestSubmission.submittedBy) : "РРіСЂРѕРє"} вЂў {formatDate(latestSubmission.createdAt)}
               </div>
             ) : null}
           </div>
 
           <form action={`/api/admin/matches/${match.id}/review`} method="post" className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
             <input type="hidden" name="action" value="approve" />
-            <input type="hidden" name="moderatorComment" value="Администратор вручную подтвердил финальный счёт спорного матча." />
+            <input type="hidden" name="moderatorComment" value="РђРґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ РІСЂСѓС‡РЅСѓСЋ РїРѕРґС‚РІРµСЂРґРёР» С„РёРЅР°Р»СЊРЅС‹Р№ СЃС‡С‘С‚ СЃРїРѕСЂРЅРѕРіРѕ РјР°С‚С‡Р°." />
             <input type="hidden" name="returnTo" value={`/admin/moderation/${match.id}`} />
 
-            <div className="text-xs uppercase tracking-[0.18em] text-primary">Финальный счёт</div>
+            <div className="text-xs uppercase tracking-[0.18em] text-primary">Р¤РёРЅР°Р»СЊРЅС‹Р№ СЃС‡С‘С‚</div>
             <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-end gap-3">
               <label className="space-y-2">
                 <span className="block truncate text-xs text-zinc-400">{player1Name}</span>
@@ -93,7 +93,7 @@ export default async function AdminModerationWorkspacePage({ params }: { params:
 
             <Button className="mt-4 w-full">
               <CheckCircle2 className="mr-2 h-4 w-4" />
-              Подтвердить результат
+              РџРѕРґС‚РІРµСЂРґРёС‚СЊ СЂРµР·СѓР»СЊС‚Р°С‚
             </Button>
           </form>
         </div>

@@ -1,13 +1,13 @@
-import { ParticipantStatus, UserRole } from "@prisma/client";
+﻿import { ParticipantStatus } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { BracketEditor } from "@/components/admin/bracket-editor";
 import { PlayoffMappingEditor } from "@/components/admin/playoff-mapping-editor";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
 export default async function AdminTournamentBracketPage({ params }: { params: { id: string } }) {
-  await requireRole([UserRole.FOUNDER]);
+  await requirePermission("tournaments.manageStructure");
 
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
@@ -94,8 +94,8 @@ export default async function AdminTournamentBracketPage({ params }: { params: {
         <CardHeader>
           <CardTitle>Bracket Editor</CardTitle>
           <CardDescription>
-            Ручная расстановка участников по слотам плей-офф, настройка схемы выхода из групп и автозаполнение сетки по
-            актуальным таблицам.
+            Р СѓС‡РЅР°СЏ СЂР°СЃСЃС‚Р°РЅРѕРІРєР° СѓС‡Р°СЃС‚РЅРёРєРѕРІ РїРѕ СЃР»РѕС‚Р°Рј РїР»РµР№-РѕС„С„, РЅР°СЃС‚СЂРѕР№РєР° СЃС…РµРјС‹ РІС‹С…РѕРґР° РёР· РіСЂСѓРїРї Рё Р°РІС‚РѕР·Р°РїРѕР»РЅРµРЅРёРµ СЃРµС‚РєРё РїРѕ
+            Р°РєС‚СѓР°Р»СЊРЅС‹Рј С‚Р°Р±Р»РёС†Р°Рј.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -120,7 +120,7 @@ export default async function AdminTournamentBracketPage({ params }: { params: {
           />
         </div>
       ) : (
-        <Card className="p-5 text-sm text-zinc-500">Сетка появится после генерации стадий и матчей для плей-офф.</Card>
+        <Card className="p-5 text-sm text-zinc-500">РЎРµС‚РєР° РїРѕСЏРІРёС‚СЃСЏ РїРѕСЃР»Рµ РіРµРЅРµСЂР°С†РёРё СЃС‚Р°РґРёР№ Рё РјР°С‚С‡РµР№ РґР»СЏ РїР»РµР№-РѕС„С„.</Card>
       )}
     </div>
   );

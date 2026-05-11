@@ -1,8 +1,8 @@
-import { revalidatePath } from "next/cache";
+﻿import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
-import { NotificationType, UserRole } from "@prisma/client";
+import { NotificationType } from "@prisma/client";
 import { getRequestBaseUrl } from "@/lib/affiliate";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { createNotificationForAllUsers } from "@/lib/services/notifications";
 import { deleteSeason, finishSeason } from "@/lib/services/seasons";
 
@@ -17,11 +17,11 @@ function redirectToSeasons(request: Request, params: Record<string, string>) {
 }
 
 function isDeleteConfirmed(value: FormDataEntryValue | null) {
-  return typeof value === "string" && value.trim().toUpperCase() === "УДАЛИТЬ";
+  return typeof value === "string" && value.trim().toUpperCase() === "РЈР”РђР›РРўР¬";
 }
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  await requireRole([UserRole.FOUNDER]);
+  await requirePermission("tournaments.createEdit");
 
   const formData = await request.formData();
   const action = String(formData.get("_action") ?? "");
@@ -31,8 +31,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       const season = await finishSeason(params.id);
 
       await createNotificationForAllUsers({
-        title: "Сезон завершён",
-        body: `Финальный свист сезона «${season.name}». Рейтинг зафиксирован, архив открыт, а лучшие игроки скоро получат сезонные статусы после проверки администрации.`,
+        title: "РЎРµР·РѕРЅ Р·Р°РІРµСЂС€С‘РЅ",
+        body: `Р¤РёРЅР°Р»СЊРЅС‹Р№ СЃРІРёСЃС‚ СЃРµР·РѕРЅР° В«${season.name}В». Р РµР№С‚РёРЅРі Р·Р°С„РёРєСЃРёСЂРѕРІР°РЅ, Р°СЂС…РёРІ РѕС‚РєСЂС‹С‚, Р° Р»СѓС‡С€РёРµ РёРіСЂРѕРєРё СЃРєРѕСЂРѕ РїРѕР»СѓС‡Р°С‚ СЃРµР·РѕРЅРЅС‹Рµ СЃС‚Р°С‚СѓСЃС‹ РїРѕСЃР»Рµ РїСЂРѕРІРµСЂРєРё Р°РґРјРёРЅРёСЃС‚СЂР°С†РёРё.`,
         type: NotificationType.SYSTEM,
         link: "/ratings",
         dedupeWithinHours: 24,
@@ -45,11 +45,11 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }
 
     if (formData.get("_method") !== "delete") {
-      throw new Error("Неизвестное действие.");
+      throw new Error("РќРµРёР·РІРµСЃС‚РЅРѕРµ РґРµР№СЃС‚РІРёРµ.");
     }
 
     if (!isDeleteConfirmed(formData.get("confirmation"))) {
-      throw new Error("Введите УДАЛИТЬ для подтверждения удаления сезона.");
+      throw new Error("Р’РІРµРґРёС‚Рµ РЈР”РђР›РРўР¬ РґР»СЏ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ СѓРґР°Р»РµРЅРёСЏ СЃРµР·РѕРЅР°.");
     }
 
     await deleteSeason(params.id);
@@ -57,7 +57,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     revalidatePath("/ratings");
     return redirectToSeasons(request, { deleted: "1" });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Не удалось выполнить действие с сезоном.";
+    const message = error instanceof Error ? error.message : "РќРµ СѓРґР°Р»РѕСЃСЊ РІС‹РїРѕР»РЅРёС‚СЊ РґРµР№СЃС‚РІРёРµ СЃ СЃРµР·РѕРЅРѕРј.";
     return redirectToSeasons(request, { error: message });
   }
 }

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { UserRole } from "@prisma/client";
 import { getRequestBaseUrl } from "@/lib/affiliate";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import {
@@ -144,7 +143,7 @@ async function sendBroadcastToChat(params: {
 }
 
 export async function POST(request: Request) {
-  const session = await requireRole([UserRole.FOUNDER]);
+  const session = await requirePermission("broadcasts.manage");
 
   if (!process.env.TELEGRAM_BOT_TOKEN) {
     return redirectToBroadcasts(request, { error: "TELEGRAM_BOT_TOKEN не настроен. Рассылка в Telegram недоступна." });

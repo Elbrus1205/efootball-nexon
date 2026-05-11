@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { NotificationType, UserRole } from "@prisma/client";
+import { NotificationType } from "@prisma/client";
 import { z } from "zod";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { saveRegulationsText } from "@/lib/regulations";
 import { createNotificationForAllUsers } from "@/lib/services/notifications";
 
@@ -10,7 +10,7 @@ const regulationsSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
+  await requirePermission("content.manage");
 
   const parsed = regulationsSchema.safeParse(await request.json());
   if (!parsed.success) {

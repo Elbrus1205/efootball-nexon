@@ -1,8 +1,7 @@
-import { revalidatePath } from "next/cache";
+﻿import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
-import { UserRole } from "@prisma/client";
 import { getRequestBaseUrl } from "@/lib/affiliate";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { clearSeasons, createSeason } from "@/lib/services/seasons";
 
 function redirectToSeasons(request: Request, params: Record<string, string>) {
@@ -16,11 +15,11 @@ function redirectToSeasons(request: Request, params: Record<string, string>) {
 }
 
 function isClearConfirmed(value: FormDataEntryValue | null) {
-  return typeof value === "string" && value.trim().toUpperCase() === "ОЧИСТИТЬ";
+  return typeof value === "string" && value.trim().toUpperCase() === "РћР§РРЎРўРРўР¬";
 }
 
 export async function POST(request: Request) {
-  await requireRole([UserRole.FOUNDER]);
+  await requirePermission("tournaments.createEdit");
 
   const formData = await request.formData();
   const action = formData.get("_action");
@@ -28,7 +27,7 @@ export async function POST(request: Request) {
   try {
     if (action === "clear") {
       if (!isClearConfirmed(formData.get("confirmation"))) {
-        throw new Error("Введите ОЧИСТИТЬ для подтверждения очистки сезонов.");
+        throw new Error("Р’РІРµРґРёС‚Рµ РћР§РРЎРўРРўР¬ РґР»СЏ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ РѕС‡РёСЃС‚РєРё СЃРµР·РѕРЅРѕРІ.");
       }
 
       await clearSeasons();
@@ -42,7 +41,7 @@ export async function POST(request: Request) {
     revalidatePath("/ratings");
     return redirectToSeasons(request, { created: "1" });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Не удалось выполнить действие с сезонами.";
+    const message = error instanceof Error ? error.message : "РќРµ СѓРґР°Р»РѕСЃСЊ РІС‹РїРѕР»РЅРёС‚СЊ РґРµР№СЃС‚РІРёРµ СЃ СЃРµР·РѕРЅР°РјРё.";
     return redirectToSeasons(request, { error: message });
   }
 }

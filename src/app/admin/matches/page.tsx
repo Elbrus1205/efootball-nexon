@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { StageType, UserRole } from "@prisma/client";
+import { StageType } from "@prisma/client";
 import { CalendarDays, ExternalLink, Settings2, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { matchStatusLabel, matchStatusVariant } from "@/lib/admin-display";
-import { requireRole } from "@/lib/auth/session";
+import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { formatDate } from "@/lib/utils";
@@ -16,7 +16,7 @@ function matchRoundLabel(match: { round: number; stage?: { type: StageType } | n
 }
 
 export default async function AdminMatchesPage() {
-  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
+  await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
   const matches = await db.match.findMany({
     include: {

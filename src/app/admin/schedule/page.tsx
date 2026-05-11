@@ -1,13 +1,12 @@
-import { UserRole } from "@prisma/client";
 import { CalendarDays, Clock3, Trophy } from "lucide-react";
 import { ScheduleCalendar } from "@/components/admin/schedule-calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 
 export default async function AdminSchedulePage() {
-  await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
+  await requirePermission("schedule.manage");
 
   const schedules = await db.matchSchedule.findMany({
     include: {

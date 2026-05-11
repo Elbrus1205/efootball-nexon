@@ -1,5 +1,4 @@
-import { UserRole } from "@prisma/client";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TournamentBuilderForm } from "@/components/admin/tournament-builder-form";
@@ -9,7 +8,7 @@ export default async function AdminTournamentBuilderPage({
 }: {
   searchParams?: { error?: string };
 }) {
-  await requireRole([UserRole.FOUNDER]);
+  await requirePermission("tournaments.createEdit");
 
   return (
     <div className="space-y-6">

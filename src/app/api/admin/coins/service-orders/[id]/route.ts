@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { CoinServiceOrderStatus, NotificationType, UserRole } from "@prisma/client";
+import { CoinServiceOrderStatus, NotificationType } from "@prisma/client";
 import { getRequestBaseUrl } from "@/lib/affiliate";
 import { assignNextCoinServiceExecutor } from "@/lib/coin-services";
 import { createNotification, createNotificationsForUsers } from "@/lib/services/notifications";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  await requireRole([UserRole.FOUNDER]);
+  await requirePermission("coins.manage");
 
   const formData = await request.formData();
   const redirectUrl = new URL("/admin/coins", getRequestBaseUrl(request));

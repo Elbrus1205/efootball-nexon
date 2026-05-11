@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { NotificationType, UserRole } from "@prisma/client";
-import { requireRole } from "@/lib/auth/session";
+import { NotificationType } from "@prisma/client";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { createNotificationsForUsers } from "@/lib/services/notifications";
 import { scheduleUpdateSchema } from "@/lib/validators";
 
 export async function PATCH(request: Request) {
-  const session = await requireRole([UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE]);
+  const session = await requirePermission("schedule.manage");
   const body = scheduleUpdateSchema.parse(await request.json());
 
   const existing = await db.matchSchedule.findFirst({

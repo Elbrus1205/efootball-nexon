@@ -1,8 +1,8 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
-import { ProfileStatusApprovalStatus, UserRole } from "@prisma/client";
+import { ProfileStatusApprovalStatus } from "@prisma/client";
 import { getRequestBaseUrl } from "@/lib/affiliate";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { approveProfileStatus } from "@/lib/profile-statuses";
 
@@ -17,7 +17,7 @@ function redirectToStatuses(request: Request, params: Record<string, string>) {
 }
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const session = await requireRole([UserRole.FOUNDER]);
+  const session = await requirePermission("profileStatuses.manage");
   const formData = await request.formData();
   const action = String(formData.get("_action") ?? "");
   const status = await db.userProfileStatus.findUnique({

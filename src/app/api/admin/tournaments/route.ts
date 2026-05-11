@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { NotificationType, Prisma, TournamentFormat, TournamentStatus, UserRole } from "@prisma/client";
+import { NotificationType, Prisma, TournamentFormat, TournamentStatus } from "@prisma/client";
 import { getRequestBaseUrl } from "@/lib/affiliate";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { parseFormatBlueprintJson } from "@/lib/format-blueprint";
 import { createNotificationForAllUsers } from "@/lib/services/notifications";
@@ -15,7 +15,7 @@ function checkboxValue(value: FormDataEntryValue | null) {
 }
 
 export async function POST(request: Request) {
-  const session = await requireRole([UserRole.FOUNDER]);
+  const session = await requirePermission("tournaments.createEdit");
   const origin = getRequestBaseUrl(request);
   let tournamentCreated = false;
 

@@ -10,6 +10,7 @@ import {
   Coins,
   FileText,
   Megaphone,
+  SlidersHorizontal,
   ShieldCheck,
   Swords,
   Trophy,
@@ -25,19 +26,20 @@ const items = [
   { href: "/admin/regulations", label: "Регламент", icon: FileText },
   { href: "/admin/faq", label: "FAQ", icon: CircleHelp },
   { href: "/admin/users", label: "Участники", icon: Users },
+  { href: "/admin/role-permissions", label: "Права ролей", icon: SlidersHorizontal },
   { href: "/admin/matches", label: "Матчи", icon: Swords },
   { href: "/admin/schedule", label: "Расписание", icon: CalendarDays },
   { href: "/admin/moderation", label: "Споры", icon: ShieldCheck },
   { href: "/admin/broadcasts", label: "Рассылки", icon: Megaphone },
 ];
 
-export function AdminNav() {
+export function AdminNav({ allowedHrefs }: { allowedHrefs: string[] }) {
   const pathname = usePathname();
 
   return (
     <div className="max-w-full overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <div className="inline-flex min-w-max gap-2">
-        {items.map((item) => {
+        {items.filter((item) => allowedHrefs.includes(item.href)).map((item) => {
           const active = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href));
 
           return (

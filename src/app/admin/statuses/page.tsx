@@ -1,9 +1,9 @@
 import { Award, CheckCircle2, Clock3, ShieldCheck, Sparkles, XCircle } from "lucide-react";
-import { ProfileStatusApprovalStatus, UserRole } from "@prisma/client";
+import { ProfileStatusApprovalStatus } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { manualProfileStatusDrafts } from "@/lib/profile-statuses";
 import { profileStatusClassName, profileStatusToneMeta, profileStatusToneOrder } from "@/lib/profile-status-style";
@@ -20,7 +20,7 @@ export default async function AdminStatusesPage({
 }: {
   searchParams?: { statusApproved?: string; statusRejected?: string; statusAdded?: string; error?: string };
 }) {
-  await requireRole([UserRole.FOUNDER]);
+  await requirePermission("profileStatuses.manage");
 
   const statuses = await db.userProfileStatus.findMany({
     include: {
