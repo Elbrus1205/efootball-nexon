@@ -7,25 +7,31 @@ const standaloneDir = path.join(root, ".next", "standalone");
 const standaloneServer = path.join(standaloneDir, "server.js");
 const dockerServer = path.join(root, "server.js");
 
-function copyIntoIfExists(from, to) {
+function copyMissingIfExists(from, to) {
   if (!existsSync(from)) {
     return;
   }
 
   mkdirSync(path.dirname(to), { recursive: true });
-  copyRecursive(from, to);
+  copyMissingRecursive(from, to);
 }
 
-function copyRecursive(from, to) {
+function copyMissingRecursive(from, to) {
   const stats = statSync(from);
 
   if (stats.isDirectory()) {
-    mkdirSync(to, { recursive: true });
-
-    for (const entry of readdirSync(from)) {
-      copyRecursive(path.join(from, entry), path.join(to, entry));
+    if (!existsSync(to)) {
+      mkdirSync(to, { recursive: true });
     }
 
+    for (const entry of readdirSync(from)) {
+      copyMissingRecursive(path.join(from, entry), path.join(to, entry));
+    }
+
+    return;
+  }
+
+  if (existsSync(to)) {
     return;
   }
 
@@ -51,8 +57,8 @@ if (!existsSync(serverPath)) {
 }
 
 if (serverPath === standaloneServer) {
-  copyIntoIfExists(path.join(root, "public"), path.join(standaloneDir, "public"));
-  copyIntoIfExists(path.join(root, ".next", "static"), path.join(standaloneDir, ".next", "static"));
+  copyMissingIfExists(path.join(root, "public"), path.join(standaloneDir, "public"));
+  copyMissingIfExists(path.join(root, ".next", "static"), path.join(standaloneDir, ".next", "static"));
 }
 
 for (const cacheRoot of [
