@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   Award,
-  CalendarDays,
   CalendarRange,
   CircleHelp,
   Coins,
@@ -31,7 +30,6 @@ const items = [
   { href: "/admin/users", label: "Участники", icon: Users },
   { href: "/admin/role-permissions", label: "Права ролей", icon: SlidersHorizontal },
   { href: "/admin/matches", label: "Матчи", icon: Swords },
-  { href: "/admin/schedule", label: "Расписание", icon: CalendarDays },
   { href: "/admin/moderation", label: "Споры", icon: ShieldCheck },
   { href: "/admin/broadcasts", label: "Рассылки", icon: Megaphone },
 ];

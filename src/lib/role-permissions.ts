@@ -152,7 +152,6 @@ export const adminNavPermissions: Record<string, RolePermissionId[]> = {
   "/admin/users": ["users.view", "users.ban", "users.changeLowerRoles"],
   "/admin/role-permissions": [],
   "/admin/matches": ["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"],
-  "/admin/schedule": ["schedule.manage"],
   "/admin/moderation": ["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"],
   "/admin/broadcasts": ["broadcasts.manage"],
 };
