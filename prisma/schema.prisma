@@ -206,6 +206,8 @@ model User {
   bio                 String?                  @db.Text
   passwordHash        String?
   favoriteTeam        String?
+  timeZone            String?
+  timeZoneUpdatedAt   DateTime?
   telegramId          String?                  @unique
   telegramUsername    String?
   telegram2faEnabled  Boolean                  @default(false)

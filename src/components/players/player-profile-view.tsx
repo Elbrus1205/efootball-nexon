@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PencilLine } from "lucide-react";
+import { Clock3, PencilLine } from "lucide-react";
 import type { ProfileStatusTone, Season, UserRole } from "@prisma/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import { getPlayerDisplayName } from "@/lib/player-name";
 import type { PlayerCareerStats } from "@/lib/player-stats";
 import { profileStatusClassName } from "@/lib/profile-status-style";
 import { getUserSocialLinks } from "@/lib/social-links";
+import { formatTimeZoneLabel, formatTimeZoneLocalTime } from "@/lib/time-zone";
 import { formatDate } from "@/lib/utils";
 
 type ProfileStatus = {
@@ -31,6 +32,7 @@ type ProfileUser = {
   bannerImage: string | null;
   bio: string | null;
   favoriteTeam: string | null;
+  timeZone: string | null;
   telegramUsername: string | null;
   vkId: string | null;
   role: UserRole;
@@ -65,6 +67,7 @@ export function PlayerProfileView({
   const socialLinks = getUserSocialLinks(user);
   const selectedStatuses = user.profileStatuses.filter((status) => status.selectedOrder !== null).slice(0, 3);
   const periodLabel = selectedSeason ? `Сезон: ${selectedSeason.name}` : "За всё время";
+  const timeZoneLocalTime = formatTimeZoneLocalTime(user.timeZone);
   const registeredAt = new Intl.DateTimeFormat("ru-RU", {
     day: "numeric",
     month: "short",
@@ -178,6 +181,15 @@ export function PlayerProfileView({
           <div className="border-b border-white/10 pb-3">
             <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Дата регистрации</div>
             <div className="mt-2 text-sm font-medium text-white">{registeredAt}</div>
+          </div>
+
+          <div className="border-b border-white/10 pb-3 sm:col-span-2 lg:col-span-4">
+            <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Часовой пояс</div>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm font-medium text-white">
+              <Clock3 className="h-4 w-4 text-primary" />
+              <span>{formatTimeZoneLabel(user.timeZone)}</span>
+              {timeZoneLocalTime ? <span className="text-zinc-500">местное время {timeZoneLocalTime}</span> : null}
+            </div>
           </div>
 
           {socialLinks.length > 0 ? (

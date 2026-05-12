@@ -1,0 +1,2 @@
+ALTER TABLE "User" ADD COLUMN "timeZone" TEXT;
+ALTER TABLE "User" ADD COLUMN "timeZoneUpdatedAt" TIMESTAMP(3);

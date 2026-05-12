@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth/session";
 import { getLegalAcceptanceData, LEGAL_ACCEPTANCE_REQUIRED_MESSAGE } from "@/lib/legal-acceptance";
 import { generateUniquePublicPlayerId } from "@/lib/public-player-id";
+import { resolveRequestTimeZone } from "@/lib/time-zone";
 import { profileSchema, registerSchema } from "@/lib/validators";
 
 export async function POST(request: Request) {
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
 
   const body = parsedBody.data;
   const normalizedEmail = body.email.trim().toLowerCase();
+  const requestTimeZone = resolveRequestTimeZone(request.headers);
   const existing = await db.user.findFirst({
     where: {
       email: {
@@ -45,6 +47,8 @@ export async function POST(request: Request) {
       email: normalizedEmail,
       passwordHash,
       name: body.name,
+      timeZone: requestTimeZone,
+      timeZoneUpdatedAt: requestTimeZone ? new Date() : null,
       ...getLegalAcceptanceData(request.headers),
     },
   });
