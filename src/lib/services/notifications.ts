@@ -24,6 +24,7 @@ export async function createNotification({
   type,
   link,
   dedupeWithinHours,
+  skipTelegram,
 }: {
   userId: string;
   title: string;
@@ -31,6 +32,7 @@ export async function createNotification({
   type: NotificationType;
   link?: string;
   dedupeWithinHours?: number;
+  skipTelegram?: boolean;
 }) {
   const safeTitle = repairMojibake(title);
   const safeBody = repairMojibake(body);
@@ -82,7 +84,7 @@ export async function createNotification({
     });
   }
 
-  if (notification.user.telegramId && process.env.TELEGRAM_BOT_TOKEN) {
+  if (!skipTelegram && notification.user.telegramId && process.env.TELEGRAM_BOT_TOKEN) {
     const absoluteLink = buildAbsoluteNotificationLink(link);
     await sendTelegramMessage({
       chatId: notification.user.telegramId,

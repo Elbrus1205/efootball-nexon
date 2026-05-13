@@ -4,6 +4,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { compare, hash } from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { notifySuccessfulLogin } from "@/lib/auth/notifications";
 import { createLoginHistory, createSecuritySession, resolveSecurityContext, touchSecuritySession } from "@/lib/auth/security";
 import { fetchVkUserProfile } from "@/lib/auth/vk";
 import { db } from "@/lib/db";
@@ -144,6 +145,14 @@ export const authOptions: NextAuthOptions = {
           context,
         });
 
+        await notifySuccessfulLogin({
+          userId: user.id,
+          provider: "email",
+          context,
+        }).catch((error) => {
+          console.error("Failed to send auth security notifications", error);
+        });
+
         return {
           id: user.id,
           email: user.email,
@@ -231,6 +240,14 @@ export const authOptions: NextAuthOptions = {
           email: user.email ?? vkProfile.email,
           status: LoginAttemptStatus.SUCCESS,
           context,
+        });
+
+        await notifySuccessfulLogin({
+          userId: user.id,
+          provider: "vkid",
+          context,
+        }).catch((error) => {
+          console.error("Failed to send auth security notifications", error);
         });
 
         return {
@@ -347,6 +364,14 @@ export const authOptions: NextAuthOptions = {
           context,
         });
 
+        await notifySuccessfulLogin({
+          userId: user.id,
+          provider: "telegram",
+          context,
+        }).catch((error) => {
+          console.error("Failed to send auth security notifications", error);
+        });
+
         console.info("[telegram-auth] authorize-success", {
           telegramId,
           userId: user.id,
@@ -377,7 +402,7 @@ export const authOptions: NextAuthOptions = {
         const legalAcceptanceData = getLegalAcceptanceData(req?.headers);
 
         try {
-          return await finalizeTelegramBotLogin(
+          const user = await finalizeTelegramBotLogin(
             {
               db,
               createLoginHistory,
@@ -391,6 +416,18 @@ export const authOptions: NextAuthOptions = {
               context,
             },
           );
+
+          if (user) {
+            await notifySuccessfulLogin({
+              userId: user.id,
+              provider: "telegram-bot",
+              context,
+            }).catch((error) => {
+              console.error("Failed to send auth security notifications", error);
+            });
+          }
+
+          return user;
         } catch (error) {
           logTelegramBotAuth("login-failure", {
             token: loginToken,
