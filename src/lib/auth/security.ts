@@ -149,3 +149,12 @@ export async function revokeSecuritySessions(userId: string, authSessionIds?: st
     },
   });
 }
+
+export async function deleteSecuritySessions(userId: string, authSessionIds?: string[]) {
+  await db.securitySession.deleteMany({
+    where: {
+      userId,
+      ...(authSessionIds ? { authSessionId: { in: authSessionIds } } : {}),
+    },
+  });
+}

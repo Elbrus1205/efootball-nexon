@@ -5,7 +5,7 @@ import { compare, hash } from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { notifySuccessfulLogin } from "@/lib/auth/notifications";
-import { createLoginHistory, createSecuritySession, resolveSecurityContext, touchSecuritySession } from "@/lib/auth/security";
+import { createLoginHistory, createSecuritySession, deleteSecuritySessions, resolveSecurityContext, touchSecuritySession } from "@/lib/auth/security";
 import { fetchVkUserProfile } from "@/lib/auth/vk";
 import { db } from "@/lib/db";
 import { getLegalAcceptanceData, isLegalAccepted } from "@/lib/legal-acceptance";
@@ -507,15 +507,10 @@ export const authOptions: NextAuthOptions = {
       const authSessionId = "token" in message ? message.token.authSessionId : null;
       if (typeof authSessionId !== "string" || !authSessionId) return;
 
-      await db.securitySession.updateMany({
-        where: {
-          authSessionId,
-          revokedAt: null,
-        },
-        data: {
-          revokedAt: new Date(),
-        },
-      });
+      const userId = typeof message.token.sub === "string" ? message.token.sub : null;
+      if (!userId) return;
+
+      await deleteSecuritySessions(userId, [authSessionId]);
     },
   },
 };

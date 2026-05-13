@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
-import { revokeSecuritySessions } from "@/lib/auth/security";
+import { deleteSecuritySessions } from "@/lib/auth/security";
 import { securitySessionSchema } from "@/lib/validators";
 
 export async function DELETE(request: Request) {
@@ -8,7 +8,7 @@ export async function DELETE(request: Request) {
   const body = securitySessionSchema.parse(await request.json());
 
   if (body.revokeAll) {
-    await revokeSecuritySessions(session.user.id);
+    await deleteSecuritySessions(session.user.id);
 
     return NextResponse.json({ ok: true, signOut: true });
   }
@@ -21,7 +21,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Текущую сессию нельзя завершить этой кнопкой." }, { status: 400 });
   }
 
-  await revokeSecuritySessions(session.user.id, [body.authSessionId]);
+  await deleteSecuritySessions(session.user.id, [body.authSessionId]);
 
   return NextResponse.json({ ok: true });
 }
