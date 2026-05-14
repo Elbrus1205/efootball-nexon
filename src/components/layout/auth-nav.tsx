@@ -64,7 +64,6 @@ export function AuthNav({ unread = 0 }: { unread?: number }) {
         <DropdownMenuContent align="end" className="w-72 rounded-3xl border-white/10 bg-[#0b111d]/95 p-2 text-white shadow-[0_24px_70px_rgba(2,6,23,0.48)] backdrop-blur-2xl">
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3">
             <div className="text-sm font-bold">{session.user.name}</div>
-            <div className="mt-0.5 text-xs text-sky-100/55">eFootball Nexon аккаунт</div>
           </div>
 
           <DropdownMenuItem asChild>

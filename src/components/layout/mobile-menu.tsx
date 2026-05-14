@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import {
   ArrowRight,
   BarChart3,
@@ -11,15 +11,13 @@ import {
   FileText,
   Home,
   LogIn,
-  LogOut,
   Phone,
-  ShieldCheck,
   Users,
   Trophy,
   User2,
   type LucideIcon,
 } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
@@ -50,7 +48,6 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
   const [menuPosition, setMenuPosition] = useState<CSSProperties>({});
   const buttonRef = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
-  const router = useRouter();
   const { data: session } = useSession();
 
   function updateMenuPosition() {
@@ -261,40 +258,8 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
             </div>
           </nav>
 
-          <div className="border-t border-white/10 p-3">
-            {session?.user ? (
-              <div className="grid grid-cols-2 gap-2">
-                <Link
-                  href="/dashboard"
-                  onClick={() => setOpen(false)}
-                  className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] px-3 text-sm font-bold text-white transition hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
-                >
-                  <User2 className="h-4 w-4 text-sky-200" />
-                  Профиль
-                </Link>
-                <Link
-                  href="/dashboard/security"
-                  onClick={() => setOpen(false)}
-                  className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] px-3 text-sm font-bold text-white transition hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
-                >
-                  <ShieldCheck className="h-4 w-4 text-emerald-200" />
-                  Защита
-                </Link>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setOpen(false);
-                    await signOut({ redirect: false });
-                    router.refresh();
-                    router.push("/");
-                  }}
-                  className="col-span-2 flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-rose-300/15 bg-rose-500/10 px-3 text-sm font-bold text-rose-100 transition hover:bg-rose-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300/60"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Выйти
-                </button>
-              </div>
-            ) : (
+          {!session?.user ? (
+            <div className="border-t border-white/10 p-3">
               <div className="grid grid-cols-2 gap-2">
                 <Link
                   href="/login"
@@ -312,8 +277,8 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
                   Регистрация
                 </Link>
               </div>
-            )}
-          </div>
+            </div>
+          ) : null}
 
         </div>
       </div>
