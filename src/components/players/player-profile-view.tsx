@@ -205,7 +205,7 @@ export function PlayerProfileView({
         <div className="mt-1 text-sm text-zinc-500">Все подтверждённые статусы этого профиля.</div>
         <div className="mt-4 flex flex-wrap gap-2">
           {user.profileStatuses.map((status) => (
-            <span key={status.id} className={profileStatusClassName(status.tone)}>
+            <span key={status.id} className={profileStatusClassName(status.tone, "min-h-7 px-2.5 py-1 text-xs sm:min-h-10 sm:px-4 sm:py-1.5 sm:text-[19px]")}>
               {status.title}
             </span>
           ))}
