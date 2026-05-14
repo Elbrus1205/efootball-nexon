@@ -606,7 +606,7 @@ export function SecurityPanel({
   };
 
   return (
-    <div className="security-panel-mobile-compact">
+    <div className="security-panel-mobile-compact space-y-3 sm:space-y-6">
       <SecuritySection
         sectionId="password"
         isOpen={openSection === "password"}
