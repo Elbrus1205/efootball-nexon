@@ -87,8 +87,7 @@ function getExistingRoleUpdate(telegramId: string) {
 }
 
 function resolveTelegramName(profile: TelegramBotLoginProfile) {
-  const fallback = profile.username?.trim() || generateFallbackName(profile.id);
-  return [profile.firstName, profile.lastName].filter(Boolean).join(" ").trim() || fallback;
+  return profile.username?.trim() || generateFallbackName(profile.id);
 }
 
 export function logTelegramBotAuth(event: string, details: Record<string, unknown> = {}) {

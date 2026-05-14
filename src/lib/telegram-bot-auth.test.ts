@@ -285,8 +285,54 @@ test("finalizeTelegramBotLogin creates a new user only when needed", async () =>
   assert.ok(result);
   assert.equal(fake.state.users.length, 1);
   assert.equal(fake.state.users[0]?.telegramId, "901");
-  assert.equal(fake.state.users[0]?.name, "New Player");
+  assert.equal(fake.state.users[0]?.name, "new_player");
   assert.equal(fake.state.verificationTokens.length, 0);
+});
+
+test("finalizeTelegramBotLogin ignores Telegram first and last name when username is missing", async () => {
+  const fake = createFakeDb({
+    verificationTokens: [
+      {
+        token: "fallback-name-token",
+        identifier: buildVerifiedTelegramBotLoginIdentifier(
+          {
+            id: "902",
+            firstName: "Иван",
+            lastName: "Петров",
+          },
+          true,
+        ),
+        expires: new Date(Date.now() + 60_000),
+      },
+    ],
+  });
+
+  const result = await finalizeTelegramBotLogin(
+    {
+      db: fake.db,
+      async createLoginHistory() {
+        return;
+      },
+      async createSecuritySession() {
+        return "security-session";
+      },
+      async generateUniquePublicPlayerId() {
+        return "PUB-FALLBACK";
+      },
+      getLegalAcceptanceData() {
+        return { legalAcceptedAt: new Date("2026-01-01T00:00:00.000Z") };
+      },
+    },
+    {
+      loginToken: "fallback-name-token",
+      legalAcceptedFallback: false,
+      context,
+    },
+  );
+
+  assert.ok(result);
+  assert.equal(fake.state.users[0]?.name, "UltraFalcon615");
+  assert.equal(fake.state.users[0]?.telegramUsername, null);
 });
 
 test("finalizeTelegramBotLogin rejects expired tokens", async () => {
