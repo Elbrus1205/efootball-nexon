@@ -82,8 +82,8 @@ export default async function DashboardSecurityPage() {
         <div className="space-y-3">
           <Badge variant="primary">Безопасность</Badge>
           <div className="space-y-2">
-            <h1 className="text-3xl font-semibold text-white">Безопасность аккаунта</h1>
-            <p className="max-w-2xl text-sm text-zinc-400">
+            <h1 className="text-2xl font-semibold text-white sm:text-3xl">Безопасность аккаунта</h1>
+            <p className="max-w-2xl text-xs text-zinc-400 sm:text-sm">
               Управление паролем, email, защитой входа и устройствами аккаунта.
             </p>
           </div>

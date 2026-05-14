@@ -68,7 +68,7 @@ export default function ContactsPage() {
             <div className="space-y-2.5">
               <h1 className="font-display text-2xl font-thin leading-tight text-white sm:text-4xl">Связь с eFootball Nexon</h1>
               <p className="text-sm leading-6 text-zinc-300 sm:text-base sm:leading-7">
-                Для помощи по турнирам и матчам пишите администратору в Telegram. Каналы проекта используйте для новостей и объявлений.
+                Для помощи по турнирам и матчам пишите администратору в Telegram. Если у вас есть предложения по улучшению сайта или вы нашли технические неполадки, сразу сообщите администратору.
               </p>
             </div>
 
