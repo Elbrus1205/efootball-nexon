@@ -22,9 +22,9 @@ export async function Navbar() {
   const unread = session?.user ? await db.notification.count({ where: { userId: session.user.id, isRead: false } }) : 0;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-[linear-gradient(180deg,rgba(4,8,16,0.9),rgba(6,10,18,0.72))] shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
+    <header className="sticky top-0 z-40 overflow-hidden border-b border-white/10 bg-[radial-gradient(circle_at_16%_35%,rgba(56,189,248,0.18),transparent_32%),radial-gradient(circle_at_84%_28%,rgba(245,158,11,0.1),transparent_30%),linear-gradient(180deg,rgba(4,8,16,0.94),rgba(6,10,18,0.86))] shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-sky-300/60 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[radial-gradient(circle_at_18%_0%,rgba(56,189,248,0.16),transparent_34%),radial-gradient(circle_at_82%_0%,rgba(245,158,11,0.1),transparent_32%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(14,165,233,0.1),transparent_28%,transparent_70%,rgba(245,158,11,0.06))]" />
       <div className="relative mx-auto flex h-[72px] max-w-7xl items-center justify-between gap-2 px-3 sm:h-20 sm:gap-3 sm:px-6 lg:px-8">
         <div className="min-w-0 flex flex-1 items-center gap-2 sm:gap-3 lg:flex-none">
           <MobileMenu links={links} />

@@ -18,7 +18,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 type MobileMenuLink = {
@@ -178,32 +177,19 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
           onClick={(event) => event.stopPropagation()}
         >
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-300/65 to-transparent" />
-          <div className="relative border-b border-white/10 px-4 py-4">
-            <div className="flex items-center gap-3">
-              {session?.user ? (
-                <>
-                  <Avatar className="h-12 w-12 rounded-2xl border border-sky-300/20 bg-black/30 shadow-[0_0_28px_rgba(56,189,248,0.14)]">
-                    <AvatarImage src={session.user.image ?? undefined} alt={session.user.name ?? "Avatar"} />
-                    <AvatarFallback>{(session.user.name ?? "U").slice(0, 1)}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-bold text-white">{session.user.name ?? "Игрок"}</div>
-                    <div className="mt-0.5 text-xs font-medium text-sky-100/60">Профиль eFootball Nexon</div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-300/25 bg-amber-400/10 text-amber-100 shadow-[0_0_28px_rgba(245,158,11,0.14)]">
-                    <User2 className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-bold text-white">eFootball Nexon</div>
-                    <div className="mt-0.5 text-xs font-medium text-zinc-400">Войдите, чтобы играть в турнирах</div>
-                  </div>
-                </>
-              )}
+          {!session?.user ? (
+            <div className="relative border-b border-white/10 px-4 py-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-300/25 bg-amber-400/10 text-amber-100 shadow-[0_0_28px_rgba(245,158,11,0.14)]">
+                  <User2 className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-bold text-white">eFootball Nexon</div>
+                  <div className="mt-0.5 text-xs font-medium text-zinc-400">Войдите, чтобы играть в турнирах</div>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : null}
 
           <nav className="relative flex-1 overflow-y-auto px-2 py-4">
             <div className="flex flex-col gap-1.5">
