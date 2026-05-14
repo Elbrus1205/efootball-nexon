@@ -13,7 +13,7 @@ export function UserRoleBadge({ role, className = "" }: UserRoleBadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex min-h-6 max-w-full shrink-0 items-center overflow-hidden truncate whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-black uppercase leading-none tracking-[0.1em] sm:px-2.5 sm:text-[11px]",
+        "inline-flex min-h-4 max-w-full shrink-0 items-center overflow-hidden truncate whitespace-nowrap rounded-full border px-1.5 py-0 text-[7px] font-black uppercase leading-none tracking-[0.07em] sm:min-h-6 sm:px-2.5 sm:py-0.5 sm:text-[11px] sm:tracking-[0.1em]",
         className,
       )}
       style={{

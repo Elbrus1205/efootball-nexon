@@ -23,7 +23,7 @@ export const profileStatusToneClasses: Record<ProfileStatusTone, string> = {
 
 export function profileStatusClassName(tone: ProfileStatusTone, className?: string) {
   return cn(
-    "inline-flex min-h-6 items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold leading-none",
+    "inline-flex min-h-4 items-center rounded-full border px-1.5 py-0 text-[7px] font-bold leading-none sm:min-h-6 sm:px-2.5 sm:py-0.5 sm:text-[11px]",
     profileStatusToneClasses[tone],
     className,
   );

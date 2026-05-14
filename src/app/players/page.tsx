@@ -87,7 +87,7 @@ export default async function PlayersPage({
                     {user.profileStatuses.length ? (
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {user.profileStatuses.map((status) => (
-                          <span key={status.id} className={profileStatusClassName(status.tone, "min-h-6 px-2 text-[10px]")}>
+                          <span key={status.id} className={profileStatusClassName(status.tone, "sm:min-h-6 sm:px-2 sm:text-[10px]")}>
                             {status.title}
                           </span>
                         ))}
