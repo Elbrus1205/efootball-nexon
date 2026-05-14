@@ -156,7 +156,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
       </button>
 
       <div
-        className={cn("fixed inset-0 z-[70] lg:hidden", open ? "pointer-events-auto" : "pointer-events-none")}
+        className={cn("fixed inset-0 z-[200] lg:hidden", open ? "pointer-events-auto" : "pointer-events-none")}
         aria-hidden={!open}
       >
         <div
