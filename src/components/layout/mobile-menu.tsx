@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { signOut, useSession } from "next-auth/react";
 import {
   ArrowRight,
   BarChart3,
@@ -9,12 +10,17 @@ import {
   Coins,
   FileText,
   Home,
+  LogIn,
+  LogOut,
   Phone,
+  ShieldCheck,
   Users,
   Trophy,
+  User2,
   type LucideIcon,
 } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 type MobileMenuLink = {
@@ -44,6 +50,8 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
   const [menuPosition, setMenuPosition] = useState<CSSProperties>({});
   const buttonRef = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
+  const router = useRouter();
+  const { data: session } = useSession();
 
   function updateMenuPosition() {
     const button = buttonRef.current;
@@ -80,6 +88,9 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
   useEffect(() => {
     if (!open) return;
 
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
     updateMenuPosition();
 
     const handleViewportChange = () => updateMenuPosition();
@@ -97,6 +108,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
     window.addEventListener("scroll", handleScroll, { passive: true });
 
     return () => {
+      document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("resize", handleViewportChange);
       window.visualViewport?.removeEventListener("resize", handleViewportChange);
@@ -106,7 +118,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
   }, [open]);
 
   return (
-    <div className="md:hidden">
+    <div className="lg:hidden">
       <button
         ref={buttonRef}
         type="button"
@@ -119,7 +131,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
           setOpen((value) => !value);
         }}
         className={cn(
-          "group relative z-[80] flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.05] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_14px_28px_rgba(2,6,23,0.16)] backdrop-blur-xl transition-[background-color,border-color,box-shadow,transform] duration-300 ease-out hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70",
+          "group relative z-[80] flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.055] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_14px_28px_rgba(2,6,23,0.2)] backdrop-blur-xl transition-[background-color,border-color,box-shadow,transform] duration-300 ease-out hover:-translate-y-0.5 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70",
           open &&
             "border-primary/35 bg-primary/12 shadow-[0_0_0_1px_rgba(59,130,246,0.14),0_18px_44px_rgba(15,23,42,0.34),inset_0_1px_0_rgba(255,255,255,0.14)]",
         )}
@@ -148,11 +160,11 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
       </button>
 
       <div
-        className={cn("fixed inset-0 z-[70] md:hidden", open ? "pointer-events-auto" : "pointer-events-none")}
+        className={cn("fixed inset-0 z-[70] lg:hidden", open ? "pointer-events-auto" : "pointer-events-none")}
         aria-hidden={!open}
       >
         <div
-          className="absolute inset-0 bg-transparent"
+          className={cn("absolute inset-0 bg-black/0 backdrop-blur-0 transition duration-300", open && "bg-black/35 backdrop-blur-[2px]")}
           onClick={() => setOpen(false)}
         />
 
@@ -163,12 +175,38 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
           aria-label="Мобильная навигация"
           style={menuPosition}
           className={cn(
-            "fixed left-3 right-3 flex origin-top flex-col overflow-hidden rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(9,14,24,0.94))] shadow-[0_20px_48px_rgba(2,6,23,0.32),0_0_0_1px_rgba(148,163,184,0.06)] backdrop-blur-2xl transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] sm:left-4 sm:right-4",
+            "fixed left-3 right-3 flex origin-top flex-col overflow-hidden rounded-[1.8rem] border border-white/10 bg-[radial-gradient(circle_at_12%_0%,rgba(56,189,248,0.14),transparent_34%),linear-gradient(180deg,rgba(15,23,42,0.97),rgba(6,10,18,0.96))] shadow-[0_24px_70px_rgba(2,6,23,0.46),0_0_0_1px_rgba(148,163,184,0.06)] backdrop-blur-2xl transition-[transform,opacity,filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] sm:left-4 sm:right-4",
             open ? "translate-y-0 scale-100 opacity-100" : "-translate-y-3 scale-[0.985] opacity-0",
           )}
           onClick={(event) => event.stopPropagation()}
         >
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-300/65 to-transparent" />
+          <div className="relative border-b border-white/10 px-4 py-4">
+            <div className="flex items-center gap-3">
+              {session?.user ? (
+                <>
+                  <Avatar className="h-12 w-12 rounded-2xl border border-sky-300/20 bg-black/30 shadow-[0_0_28px_rgba(56,189,248,0.14)]">
+                    <AvatarImage src={session.user.image ?? undefined} alt={session.user.name ?? "Avatar"} />
+                    <AvatarFallback>{(session.user.name ?? "U").slice(0, 1)}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-bold text-white">{session.user.name ?? "Игрок"}</div>
+                    <div className="mt-0.5 text-xs font-medium text-sky-100/60">Профиль eFootball Nexon</div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-300/25 bg-amber-400/10 text-amber-100 shadow-[0_0_28px_rgba(245,158,11,0.14)]">
+                    <User2 className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-bold text-white">eFootball Nexon</div>
+                    <div className="mt-0.5 text-xs font-medium text-zinc-400">Войдите, чтобы играть в турнирах</div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
 
           <nav className="relative flex-1 overflow-y-auto px-2 py-4">
             <div className="flex flex-col gap-1.5">
@@ -222,6 +260,60 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
               })}
             </div>
           </nav>
+
+          <div className="border-t border-white/10 p-3">
+            {session?.user ? (
+              <div className="grid grid-cols-2 gap-2">
+                <Link
+                  href="/dashboard"
+                  onClick={() => setOpen(false)}
+                  className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] px-3 text-sm font-bold text-white transition hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+                >
+                  <User2 className="h-4 w-4 text-sky-200" />
+                  Профиль
+                </Link>
+                <Link
+                  href="/dashboard/security"
+                  onClick={() => setOpen(false)}
+                  className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] px-3 text-sm font-bold text-white transition hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+                >
+                  <ShieldCheck className="h-4 w-4 text-emerald-200" />
+                  Защита
+                </Link>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setOpen(false);
+                    await signOut({ redirect: false });
+                    router.refresh();
+                    router.push("/");
+                  }}
+                  className="col-span-2 flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-rose-300/15 bg-rose-500/10 px-3 text-sm font-bold text-rose-100 transition hover:bg-rose-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300/60"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Выйти
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <Link
+                  href="/login"
+                  onClick={() => setOpen(false)}
+                  className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] px-3 text-sm font-bold text-white transition hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+                >
+                  <LogIn className="h-4 w-4 text-sky-200" />
+                  Войти
+                </Link>
+                <Link
+                  href="/register"
+                  onClick={() => setOpen(false)}
+                  className="registration-cta flex min-h-12 items-center justify-center rounded-2xl border border-amber-300/30 bg-amber-400/10 px-3 text-sm font-black text-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/70"
+                >
+                  Регистрация
+                </Link>
+              </div>
+            )}
+          </div>
 
         </div>
       </div>
