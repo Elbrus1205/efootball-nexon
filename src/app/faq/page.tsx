@@ -1,7 +1,8 @@
 import { Download, ExternalLink, FileText, ImageIcon, LifeBuoy, PlayCircle } from "lucide-react";
-import { FaqAttachmentKind } from "@prisma/client";
+import { FaqAttachmentKind, ProfileStatusTone } from "@prisma/client";
 import { Card } from "@/components/ui/card";
 import { db } from "@/lib/db";
+import { profileStatusClassName } from "@/lib/profile-status-style";
 
 function attachmentIcon(kind: FaqAttachmentKind) {
   if (kind === FaqAttachmentKind.IMAGE) return ImageIcon;
@@ -16,6 +17,17 @@ function answerParagraphs(answer: string) {
     .map((part) => part.trim())
     .filter(Boolean);
 }
+
+const PROFILE_STATUSES_FAQ_ID = "seed-75-profile-statuses";
+
+const profileStatusFaqBadges = [
+  { title: "Чемпион сезона", tone: ProfileStatusTone.GOLD },
+  { title: "Вице-чемпион сезона", tone: ProfileStatusTone.PURPLE },
+  { title: "Бронзовый призёр", tone: ProfileStatusTone.BLUE },
+  { title: "Легенда", tone: ProfileStatusTone.PURPLE },
+  { title: "Активный", tone: ProfileStatusTone.BLUE },
+  { title: "Надёжный", tone: ProfileStatusTone.BLUE },
+] as const;
 
 export default async function FaqPage() {
   const items = await db.faqItem.findMany({
@@ -69,6 +81,16 @@ export default async function FaqPage() {
                       <p key={paragraph}>{paragraph}</p>
                     ))}
                   </div>
+
+                  {item.id === PROFILE_STATUSES_FAQ_ID ? (
+                    <div className="mt-5 flex flex-wrap gap-2">
+                      {profileStatusFaqBadges.map((status) => (
+                        <span key={status.title} className={profileStatusClassName(status.tone, "min-h-7 px-2.5 py-1 text-xs sm:min-h-10 sm:px-4 sm:py-1.5 sm:text-[19px]")}>
+                          {status.title}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
 
                   {item.attachments.length ? (
                     <div className="mt-5 grid gap-3 sm:grid-cols-2">
