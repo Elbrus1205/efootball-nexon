@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getCurrentSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { SiteLogoMark } from "@/components/brand/site-logo-mark";
 import { MobileMenu } from "@/components/layout/mobile-menu";
 import { AuthNav } from "@/components/layout/auth-nav";
 import { DesktopNav } from "@/components/layout/desktop-nav";
@@ -28,13 +27,9 @@ export async function Navbar() {
       <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-3 sm:h-[72px] sm:gap-3 sm:px-6 lg:h-20 lg:px-8">
         <div className="min-w-0 flex flex-1 items-center gap-2 sm:gap-3 lg:flex-none">
           <MobileMenu links={links} />
-          <Link href="/" aria-label="eFootball Nexon" className="brand-link group absolute left-1/2 top-1/2 min-w-0 -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-2xl px-1.5 py-1 outline-none transition duration-300 hover:opacity-95 focus-visible:ring-2 focus-visible:ring-primary/70 sm:gap-2.5 lg:static lg:flex-none lg:translate-x-0 lg:translate-y-0 lg:gap-3 lg:pr-2">
-            <span className="relative">
-              <span className="absolute inset-0 rounded-2xl bg-sky-400/20 blur-xl opacity-70 transition duration-300 group-hover:opacity-100" />
-              <SiteLogoMark className="h-8 w-[52px] sm:h-9 sm:w-[60px] lg:h-12 lg:w-[80px]" />
-            </span>
-            <div className="min-w-0 max-w-[112px] min-[390px]:max-w-[138px] sm:max-w-none">
-              <div className="brand-wordmark truncate text-[11px] font-semibold uppercase leading-none tracking-[0.14em] text-white min-[390px]:text-xs sm:text-sm lg:font-display lg:text-xl lg:font-thin lg:normal-case lg:tracking-normal">
+          <Link href="/" aria-label="eFootball Nexon" className="brand-link group min-w-0 items-center rounded-xl px-1.5 py-1 outline-none transition duration-300 hover:opacity-95 focus-visible:ring-2 focus-visible:ring-primary/70 lg:flex-none lg:pr-2">
+            <div className="min-w-0 max-w-[142px] min-[390px]:max-w-[168px] sm:max-w-none">
+              <div className="brand-wordmark truncate text-[11px] font-semibold uppercase leading-none tracking-[0.14em] text-white transition duration-300 group-hover:text-sky-50 min-[390px]:text-xs sm:text-sm lg:font-display lg:text-xl lg:font-thin lg:normal-case lg:tracking-normal">
                 <span className="lg:hidden">EFOOTBALL NEXON</span>
                 <span className="hidden lg:inline">eFootball Nexon</span>
               </div>
