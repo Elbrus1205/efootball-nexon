@@ -80,6 +80,10 @@ textarea,
     animation: brand-logo-breathe 4.8s ease-in-out infinite;
   }
 
+  .mobile-premium-header {
+    animation: mobile-header-drop 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
   .brand-logo-scan {
     transform-origin: center;
     stroke-dasharray: 18 72;
@@ -106,6 +110,19 @@ textarea,
     transform: translateX(-16%) scaleX(0.65);
     transform-origin: left;
     animation: brand-wordmark-line 4.2s ease-in-out infinite;
+  }
+
+  .brand-link::before {
+    content: "";
+    position: absolute;
+    inset: -6px -8px;
+    z-index: -1;
+    border-radius: 18px;
+    background: linear-gradient(115deg, transparent 28%, rgba(125, 211, 252, 0.14) 48%, transparent 68%);
+    opacity: 0;
+    transform: translateX(-24%) skewX(-10deg);
+    animation: brand-link-sheen 5.8s ease-in-out infinite;
+    pointer-events: none;
   }
 
   .hero-label,
@@ -321,6 +338,38 @@ textarea,
   100% {
     opacity: 0;
     transform: translateX(28%) scaleX(0.95);
+  }
+}
+
+@keyframes mobile-header-drop {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -12px, 0);
+    filter: blur(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    filter: blur(0);
+  }
+}
+
+@keyframes brand-link-sheen {
+  0%,
+  46% {
+    opacity: 0;
+    transform: translateX(-28%) skewX(-10deg);
+  }
+
+  58% {
+    opacity: 1;
+  }
+
+  78%,
+  100% {
+    opacity: 0;
+    transform: translateX(28%) skewX(-10deg);
   }
 }
 
@@ -549,7 +598,9 @@ textarea,
   .registration-cta::before,
   .brand-logo-mark,
   .brand-logo-scan,
+  .brand-link::before,
   .brand-wordmark::after,
+  .mobile-premium-header,
   .animate-mobile-menu-item,
   .coins-partner-banner::before,
   .coins-partner-logo,

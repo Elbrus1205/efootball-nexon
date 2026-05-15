@@ -22,20 +22,23 @@ export async function Navbar() {
   const unread = session?.user ? await db.notification.count({ where: { userId: session.user.id, isRead: false } }) : 0;
 
   return (
-    <header className="sticky top-0 z-40 overflow-visible border-b border-white/10 bg-[radial-gradient(circle_at_16%_35%,rgba(56,189,248,0.18),transparent_32%),radial-gradient(circle_at_84%_28%,rgba(245,158,11,0.1),transparent_30%),linear-gradient(180deg,rgba(4,8,16,0.94),rgba(6,10,18,0.86))] shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-sky-300/60 to-transparent" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(14,165,233,0.1),transparent_28%,transparent_70%,rgba(245,158,11,0.06))]" />
-      <div className="relative mx-auto flex h-[72px] max-w-7xl items-center justify-between gap-2 px-3 sm:h-20 sm:gap-3 sm:px-6 lg:px-8">
+    <header className="mobile-premium-header sticky top-0 z-40 overflow-visible border-b border-sky-200/10 bg-[radial-gradient(circle_at_50%_-18%,rgba(56,189,248,0.2),transparent_42%),linear-gradient(180deg,rgba(3,7,18,0.94),rgba(7,12,23,0.88))] shadow-[0_18px_54px_rgba(0,0,0,0.3)] backdrop-blur-2xl lg:bg-[radial-gradient(circle_at_16%_35%,rgba(56,189,248,0.18),transparent_32%),radial-gradient(circle_at_84%_28%,rgba(245,158,11,0.1),transparent_30%),linear-gradient(180deg,rgba(4,8,16,0.94),rgba(6,10,18,0.86))]">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-sky-300/55 to-transparent" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(14,165,233,0.08),transparent_32%,transparent_68%,rgba(56,189,248,0.06))]" />
+      <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-3 sm:h-[72px] sm:gap-3 sm:px-6 lg:h-20 lg:px-8">
         <div className="min-w-0 flex flex-1 items-center gap-2 sm:gap-3 lg:flex-none">
           <MobileMenu links={links} />
-          <Link href="/" aria-label="eFootball Nexon" className="brand-link group min-w-0 flex-1 items-center gap-2 rounded-2xl py-1 pr-2 outline-none transition duration-300 hover:opacity-95 focus-visible:ring-2 focus-visible:ring-primary/70 sm:flex-none sm:gap-3">
+          <Link href="/" aria-label="eFootball Nexon" className="brand-link group absolute left-1/2 top-1/2 min-w-0 -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-2xl px-1.5 py-1 outline-none transition duration-300 hover:opacity-95 focus-visible:ring-2 focus-visible:ring-primary/70 sm:gap-2.5 lg:static lg:flex-none lg:translate-x-0 lg:translate-y-0 lg:gap-3 lg:pr-2">
             <span className="relative">
-              <span className="absolute inset-0 rounded-2xl bg-sky-400/10 blur-xl opacity-0 transition duration-300 group-hover:opacity-100" />
-              <SiteLogoMark />
+              <span className="absolute inset-0 rounded-2xl bg-sky-400/20 blur-xl opacity-70 transition duration-300 group-hover:opacity-100" />
+              <SiteLogoMark className="h-8 w-[52px] sm:h-9 sm:w-[60px] lg:h-12 lg:w-[80px]" />
             </span>
-            <div className="min-w-0 max-w-[152px] sm:max-w-none">
-              <div className="brand-wordmark truncate font-display text-base font-thin leading-none text-white min-[390px]:text-lg sm:text-xl">eFootball Nexon</div>
-              <div className="mt-1 hidden items-center gap-1.5 text-[10px] font-bold uppercase leading-tight tracking-[0.22em] text-sky-100/70 sm:flex">
+            <div className="min-w-0 max-w-[112px] min-[390px]:max-w-[138px] sm:max-w-none">
+              <div className="brand-wordmark truncate text-[11px] font-semibold uppercase leading-none tracking-[0.14em] text-white min-[390px]:text-xs sm:text-sm lg:font-display lg:text-xl lg:font-thin lg:normal-case lg:tracking-normal">
+                <span className="lg:hidden">EFOOTBALL NEXON</span>
+                <span className="hidden lg:inline">eFootball Nexon</span>
+              </div>
+              <div className="mt-1 hidden items-center gap-1.5 text-[10px] font-bold uppercase leading-tight tracking-[0.22em] text-sky-100/70 lg:flex">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,0.75)]" />
                 Mobile Tournaments
               </div>
