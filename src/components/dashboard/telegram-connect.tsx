@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
-import { formatTelegramLoginSdkError, openTelegramLoginPopup } from "@/lib/telegram-login-sdk";
+import { formatTelegramLoginSdkError, loadTelegramLoginSdk, openTelegramLoginPopup } from "@/lib/telegram-login-sdk";
 
 export function TelegramConnect({
   enabled,
@@ -17,58 +17,70 @@ export function TelegramConnect({
   linked: boolean;
   telegramHandle?: string | null;
 }) {
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const [widgetError, setWidgetError] = useState<string | null>(null);
   const router = useRouter();
 
-  const startTelegramConnect = () => {
+  useEffect(() => {
+    if (!enabled || !clientId || linked) return;
+
+    loadTelegramLoginSdk().catch(() => null);
+  }, [clientId, enabled, linked]);
+
+  const startTelegramConnect = async () => {
+    if (pending) return;
+
     if (!enabled || !clientId) {
       setWidgetError("Telegram Login не настроен. Добавьте TELEGRAM_CLIENT_ID.");
       return;
     }
 
+    setPending(true);
     setWidgetError(null);
 
-    startTransition(async () => {
-      try {
-        const authResult = await openTelegramLoginPopup({
-          clientId,
-          lang: "ru",
-          requestAccess: ["write"],
-        });
+    try {
+      const authResult = await openTelegramLoginPopup({
+        clientId,
+        lang: "ru",
+        requestAccess: ["write"],
+      });
 
-        if (authResult.error) {
-          setWidgetError("Telegram не завершил авторизацию. Попробуйте ещё раз.");
-          return;
-        }
+      if (authResult.error) {
+        setWidgetError("Telegram не завершил авторизацию. Попробуйте ещё раз.");
+        setPending(false);
+        return;
+      }
 
-        const idToken = authResult.id_token?.trim();
-        if (!idToken) {
-          setWidgetError("Telegram не вернул ID token. Попробуйте ещё раз.");
-          return;
-        }
+      const idToken = authResult.id_token?.trim();
+      if (!idToken) {
+        setWidgetError("Telegram не вернул ID token. Попробуйте ещё раз.");
+        setPending(false);
+        return;
+      }
 
-        const response = await fetch("/api/security/connections/telegram/finalize", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken }),
-        });
+      const response = await fetch("/api/security/connections/telegram/finalize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
 
-        const payload = await response.json().catch(() => null);
-        if (!response.ok) {
-          setWidgetError(payload?.error || "Не удалось привязать Telegram.");
-          toast.error(payload?.error || "Не удалось привязать Telegram.");
-          return;
-        }
-
-        toast.success(payload?.message || "Telegram успешно привязан.");
-        router.refresh();
-      } catch (cause) {
-        const message = formatTelegramLoginSdkError(cause);
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        const message = payload?.error || "Не удалось привязать Telegram.";
         setWidgetError(message);
         toast.error(message);
+        setPending(false);
+        return;
       }
-    });
+
+      toast.success(payload?.message || "Telegram успешно привязан.");
+      router.refresh();
+    } catch (cause) {
+      const message = formatTelegramLoginSdkError(cause);
+      setWidgetError(message);
+      toast.error(message);
+      setPending(false);
+    }
   };
 
   if (linked) {

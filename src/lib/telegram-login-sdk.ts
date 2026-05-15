@@ -37,6 +37,7 @@ const TELEGRAM_LOGIN_SDK_URL = "https://oauth.telegram.org/js/telegram-login.js"
 const TELEGRAM_LOGIN_TIMEOUT_MS = 90_000;
 
 let telegramLoginSdkPromise: Promise<void> | null = null;
+let telegramLoginSdkLoaded = false;
 
 function normalizeTelegramClientId(value?: string) {
   if (!value) return null;
@@ -55,6 +56,7 @@ export function loadTelegramLoginSdk() {
   }
 
   if (window.Telegram?.Login?.auth || (window.Telegram?.Login?.init && window.Telegram?.Login?.open)) {
+    telegramLoginSdkLoaded = true;
     return Promise.resolve();
   }
 
@@ -65,7 +67,20 @@ export function loadTelegramLoginSdk() {
   telegramLoginSdkPromise = new Promise<void>((resolve, reject) => {
     const existingScript = document.querySelector<HTMLScriptElement>(`script[src="${TELEGRAM_LOGIN_SDK_URL}"]`);
     if (existingScript) {
-      existingScript.addEventListener("load", () => resolve(), { once: true });
+      if (telegramLoginSdkLoaded || existingScript.dataset.loaded === "true") {
+        resolve();
+        return;
+      }
+
+      existingScript.addEventListener(
+        "load",
+        () => {
+          existingScript.dataset.loaded = "true";
+          telegramLoginSdkLoaded = true;
+          resolve();
+        },
+        { once: true },
+      );
       existingScript.addEventListener("error", () => reject(new Error("telegram-sdk-load-failed")), { once: true });
       return;
     }
@@ -73,7 +88,11 @@ export function loadTelegramLoginSdk() {
     const script = document.createElement("script");
     script.src = TELEGRAM_LOGIN_SDK_URL;
     script.async = true;
-    script.onload = () => resolve();
+    script.onload = () => {
+      script.dataset.loaded = "true";
+      telegramLoginSdkLoaded = true;
+      resolve();
+    };
     script.onerror = () => reject(new Error("telegram-sdk-load-failed"));
     document.head.appendChild(script);
   }).catch((error) => {

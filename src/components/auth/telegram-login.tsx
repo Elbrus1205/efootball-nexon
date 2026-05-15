@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { AlertCircle, Loader2, Send } from "lucide-react";
 import { signIn } from "next-auth/react";
-import { formatTelegramLoginSdkError, openTelegramLoginPopup } from "@/lib/telegram-login-sdk";
+import { formatTelegramLoginSdkError, loadTelegramLoginSdk, openTelegramLoginPopup } from "@/lib/telegram-login-sdk";
 
 export function TelegramLogin({
   mode,
@@ -18,59 +18,66 @@ export function TelegramLogin({
   legalAccepted?: boolean;
   requireLegalAcceptance?: boolean;
 }) {
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isBlockedByLegal = requireLegalAcceptance && !legalAccepted;
   const effectiveLegalAccepted = requireLegalAcceptance ? legalAccepted : true;
 
-  const startTelegramLogin = () => {
-    if (isBlockedByLegal) {
-      return;
-    }
+  useEffect(() => {
+    if (!enabled || !clientId) return;
+
+    loadTelegramLoginSdk().catch(() => null);
+  }, [clientId, enabled]);
+
+  const startTelegramLogin = async () => {
+    if (isBlockedByLegal || pending) return;
 
     if (!enabled || !clientId) {
       setError("Telegram Login не настроен. Добавьте TELEGRAM_CLIENT_ID.");
       return;
     }
 
+    setPending(true);
     setError(null);
 
-    startTransition(async () => {
-      try {
-        const authResult = await openTelegramLoginPopup({
-          clientId,
-          lang: "ru",
-          requestAccess: ["write"],
-        });
+    try {
+      const authResult = await openTelegramLoginPopup({
+        clientId,
+        lang: "ru",
+        requestAccess: ["write"],
+      });
 
-        if (authResult.error) {
-          setError("Telegram не завершил авторизацию. Попробуйте ещё раз.");
-          return;
-        }
-
-        const idToken = authResult.id_token?.trim();
-        if (!idToken) {
-          setError("Telegram не вернул ID token. Попробуйте ещё раз.");
-          return;
-        }
-
-        const result = await signIn("telegram", {
-          idToken,
-          legalAccepted: effectiveLegalAccepted ? "true" : "false",
-          callbackUrl: "/dashboard",
-          redirect: false,
-        });
-
-        if (!result || result.error) {
-          setError("Не удалось завершить вход через Telegram. Попробуйте ещё раз.");
-          return;
-        }
-
-        window.location.replace(result.url || "/dashboard");
-      } catch (cause) {
-        setError(formatTelegramLoginSdkError(cause));
+      if (authResult.error) {
+        setError("Telegram не завершил авторизацию. Попробуйте ещё раз.");
+        setPending(false);
+        return;
       }
-    });
+
+      const idToken = authResult.id_token?.trim();
+      if (!idToken) {
+        setError("Telegram не вернул ID token. Попробуйте ещё раз.");
+        setPending(false);
+        return;
+      }
+
+      const result = await signIn("telegram", {
+        idToken,
+        legalAccepted: effectiveLegalAccepted ? "true" : "false",
+        callbackUrl: "/dashboard",
+        redirect: false,
+      });
+
+      if (!result || result.error) {
+        setError("Не удалось завершить вход через Telegram. Попробуйте ещё раз.");
+        setPending(false);
+        return;
+      }
+
+      window.location.replace(result.url || "/dashboard");
+    } catch (cause) {
+      setError(formatTelegramLoginSdkError(cause));
+      setPending(false);
+    }
   };
 
   return (
@@ -97,7 +104,7 @@ export function TelegramLogin({
       ) : (
         <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>Добавьте `TELEGRAM_CLIENT_ID`, чтобы включить новый Telegram Login.</span>
+          <span>Добавьте `TELEGRAM_CLIENT_ID`, чтобы включить Telegram Login.</span>
         </div>
       )}
     </div>
