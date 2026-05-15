@@ -1,10 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { AlertCircle, ArrowUpRight, Clock3, Headphones, MessageCircle, Send, ShieldCheck, Trophy, Wrench } from "lucide-react";
+import { AlertCircle, ArrowUpRight, Headphones, MessageCircle, Send, ShieldCheck, Trophy, Wrench } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Contact Us | eFootball Nexon",
-  description: "Contact eFootball Nexon support for tournament questions, match issues, registration help, and technical problems.",
+  title: "Контакты | eFootball Nexon",
+  description: "Связь с поддержкой eFootball Nexon по турнирам, матчам, регистрации, аккаунтам и техническим вопросам.",
 };
 
 const adminTelegramHref = "https://t.me/Kumyk007";
@@ -12,39 +12,20 @@ const telegramChannelHref = "https://t.me/efootball_nexon";
 const vkHref = "https://vk.com/efootball_nexon";
 
 const supportItems = [
-  { label: "Admin", value: "@Kumyk007" },
-  { label: "Response time", value: "Usually within 1-3 hours" },
-  { label: "Tournament support", value: "Registration, matches, scores, disputes" },
+  { label: "Администратор", value: "@Kumyk007" },
+  { label: "Время ответа", value: "Обычно 1-3 часа" },
+  { label: "Помощь по турнирам", value: "Регистрация, матчи, счёт, споры" },
 ];
 
 const technicalItems = [
-  "Login or account access problems",
-  "Missing matches or wrong schedule",
-  "Result upload and screenshot issues",
-];
-
-const faqItems = [
-  {
-    question: "What should I include when contacting support?",
-    answer: "Send your player nickname, tournament name, match link if available, and a short description of the issue.",
-  },
-  {
-    question: "Where do I report a match dispute?",
-    answer: "Message the admin in Telegram with the score, screenshots, and what happened. Keep the message compact and factual.",
-  },
-  {
-    question: "Can support change my Telegram account?",
-    answer: "Yes, but only through admin review. This protects tournament accounts from accidental or unwanted changes.",
-  },
-  {
-    question: "How fast are technical issues fixed?",
-    answer: "Small account or match issues are usually handled the same day. Larger platform issues may take longer.",
-  },
+  "Проблемы со входом или доступом к аккаунту",
+  "Матч не появился или расписание указано неверно",
+  "Не загружается результат, счёт или скриншот",
 ];
 
 const socialLinks = [
-  { label: "Telegram Channel", href: telegramChannelHref },
-  { label: "VK Community", href: vkHref },
+  { label: "Telegram-канал", href: telegramChannelHref },
+  { label: "VK-сообщество", href: vkHref },
 ];
 
 export default function ContactsPage() {
@@ -58,9 +39,9 @@ export default function ContactsPage() {
                 <Trophy className="h-3.5 w-3.5" />
                 eFootball Nexon
               </div>
-              <h1 className="text-2xl font-semibold tracking-normal text-white sm:text-3xl">Contact Us</h1>
+              <h1 className="text-2xl font-semibold tracking-normal text-white sm:text-3xl">Контакты</h1>
               <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">
-                Need help with a tournament, match result, account, or platform issue? Send a clear message and the support team will help you sort it out.
+                Нужна помощь по турниру, результату матча, аккаунту или работе сайта? Напишите администратору в Telegram и кратко опишите проблему.
               </p>
             </div>
             <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-sky-300/20 bg-sky-400/10 text-sky-200 sm:flex">
@@ -75,7 +56,7 @@ export default function ContactsPage() {
             className="mt-4 inline-flex h-10 items-center gap-2 rounded-lg bg-sky-500 px-3.5 text-sm font-semibold text-white transition hover:bg-sky-400"
           >
             <MessageCircle className="h-4 w-4" />
-            Telegram Support
+            Написать в Telegram
             <ArrowUpRight className="h-3.5 w-3.5" />
           </Link>
         </section>
@@ -84,7 +65,7 @@ export default function ContactsPage() {
           <div className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-white">
               <ShieldCheck className="h-4 w-4 text-emerald-300" />
-              Admin Contact
+              Контакт администратора
             </div>
             <div className="mt-3 divide-y divide-white/10">
               {supportItems.map((item) => (
@@ -99,9 +80,9 @@ export default function ContactsPage() {
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-white">
               <Wrench className="h-4 w-4 text-sky-300" />
-              Technical Support
+              Техническая поддержка
             </div>
-            <p className="mt-2 text-sm leading-6 text-zinc-400">For site problems, include your device, browser, and a screenshot if possible.</p>
+            <p className="mt-2 text-sm leading-6 text-zinc-400">Если проблема связана с сайтом, укажите устройство, браузер и приложите скриншот, если он есть.</p>
             <ul className="mt-3 space-y-2">
               {technicalItems.map((item) => (
                 <li key={item} className="flex gap-2 text-sm text-zinc-300">
@@ -113,32 +94,8 @@ export default function ContactsPage() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-white/10 bg-zinc-950/55 p-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-base font-semibold text-white">FAQ</h2>
-              <p className="mt-1 text-xs text-zinc-500">Quick answers before you message support.</p>
-            </div>
-            <Clock3 className="h-4 w-4 text-zinc-500" />
-          </div>
-
-          <div className="space-y-2">
-            {faqItems.map((item, index) => (
-              <details key={item.question} className="group rounded-lg border border-white/10 bg-white/[0.025] px-3 py-2.5" open={index === 0}>
-                <summary className="cursor-pointer list-none text-sm font-medium text-zinc-100 outline-none transition group-open:text-white">
-                  <span className="inline-flex w-full items-center justify-between gap-3">
-                    {item.question}
-                    <span className="text-lg leading-none text-zinc-500 transition group-open:rotate-45">+</span>
-                  </span>
-                </summary>
-                <p className="mt-2 text-sm leading-6 text-zinc-400">{item.answer}</p>
-              </details>
-            ))}
-          </div>
-        </section>
-
         <footer className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.025] px-4 py-3 text-sm text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
-          <div className="font-medium text-zinc-300">eFootball Nexon Support</div>
+          <div className="font-medium text-zinc-300">Поддержка eFootball Nexon</div>
           <div className="flex flex-wrap gap-2">
             {socialLinks.map((link) => (
               <Link
