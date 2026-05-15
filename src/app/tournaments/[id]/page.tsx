@@ -21,7 +21,7 @@ import {
 import { db } from "@/lib/db";
 import { normalizeFormatBlueprint } from "@/lib/format-blueprint";
 import { getPlayerDisplayName } from "@/lib/player-name";
-import { syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
+import { syncTournamentLifecycleStatus, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
 import { formatDate } from "@/lib/utils";
 
 type LeagueRow = {
@@ -45,6 +45,11 @@ type StandingHighlight = {
   label: string;
   rowClass: string;
   badgeClass: string;
+};
+
+type EmptyGroupSlot = {
+  id: string;
+  position: number;
 };
 
 const CUSTOM_STANDING_HIGHLIGHT_STYLES = [
@@ -542,6 +547,23 @@ function StandingsTable({ rows, highlights = [] }: { rows: LeagueRow[]; highligh
   );
 }
 
+function EmptyGroupSlots({ slots }: { slots: EmptyGroupSlot[] }) {
+  if (!slots.length) return null;
+
+  return (
+    <div className="border-t border-white/10 bg-black/10 px-4 py-3">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {slots.map((slot) => (
+          <div key={slot.id} className="flex items-center gap-3 rounded-lg border border-dashed border-white/10 bg-white/[0.02] px-3 py-2 text-sm text-zinc-500">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/5 text-xs font-semibold text-zinc-400">{slot.position}</span>
+            <span>Свободное место</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export async function generateMetadata({ params }: { params: { id: string } }) {
   const tournament = await db.tournament.findUnique({ where: { id: params.id } });
   return tournament ? { title: tournament.title } : { title: "Турнир не найден" };
@@ -551,6 +573,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   noStore();
   const session = await getCurrentSession();
   await syncTournamentLifecycleStatus(params.id).catch(() => null);
+  await syncTournamentPreviewGroups(params.id).catch(() => null);
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
     include: {
@@ -578,6 +601,11 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
         include: {
           groups: {
             include: {
+              members: {
+                where: { status: ParticipantStatus.CONFIRMED },
+                include: { user: true },
+                orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
+              },
               standings: {
                 include: {
                   participant: {
@@ -725,6 +753,11 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                   const activeStandings = group.standings.filter(
                     (row) => row.participant.status !== ParticipantStatus.REMOVED && row.participant.status !== ParticipantStatus.REJECTED,
                   );
+                  const groupCapacity = group.capacity ?? groupStage.participantsPerGroup ?? 0;
+                  const emptySlots = Array.from({ length: Math.max(groupCapacity - activeStandings.length, 0) }, (_, index) => ({
+                    id: `${group.id}-slot-${index + 1}`,
+                    position: activeStandings.length + index + 1,
+                  }));
 
                   return (
                     <Card key={group.id} className="w-full min-w-0 max-w-full overflow-hidden p-0">
@@ -750,8 +783,9 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                           highlights={customStandingHighlights.get(group.orderIndex) ?? []}
                         />
                       ) : (
-                        <div className="px-4 py-4 text-sm text-zinc-500">Таблица лиги заполнится после первых сыгранных матчей.</div>
+                        <div className="px-4 py-4 text-sm text-zinc-500">Участники группы появятся здесь после регистрации или распределения.</div>
                       )}
+                      <EmptyGroupSlots slots={emptySlots} />
                     </Card>
                   );
                 })}

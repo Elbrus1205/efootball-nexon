@@ -7,7 +7,7 @@ import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
 import { hasAcceptedCurrentRegulations } from "@/lib/regulations";
 import { createNotification } from "@/lib/services/notifications";
-import { syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
+import { syncTournamentLifecycleStatus, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
 import { formatTournamentBanMessage } from "@/lib/user-ban";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
@@ -98,6 +98,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       clubBadgePath,
     },
   });
+
+  await syncTournamentPreviewGroups(params.id).catch(() => null);
 
   await createNotification({
     userId: session.user.id,

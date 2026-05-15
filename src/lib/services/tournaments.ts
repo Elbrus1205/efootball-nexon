@@ -1430,6 +1430,80 @@ export async function assignParticipantsToGroups(
   });
 }
 
+export async function syncTournamentPreviewGroups(tournamentId: string) {
+  const existingStages = await db.tournamentStage.findMany({
+    where: { tournamentId },
+    select: { id: true },
+    take: 1,
+  });
+
+  if (!existingStages.length) {
+    await generateTournamentStages(tournamentId);
+  }
+
+  const tournament = await db.tournament.findUnique({
+    where: { id: tournamentId },
+    include: {
+      participants: {
+        where: { status: ParticipantStatus.CONFIRMED },
+        orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
+      },
+      stages: {
+        where: { type: StageType.GROUP_STAGE },
+        include: {
+          groups: {
+            include: {
+              members: { where: { status: ParticipantStatus.CONFIRMED } },
+              standings: true,
+            },
+            orderBy: { orderIndex: "asc" },
+          },
+        },
+        orderBy: { orderIndex: "asc" },
+      },
+    },
+  });
+
+  if (!tournament) throw new Error("Tournament not found");
+  const groupStage = tournament.stages[0];
+  if (!groupStage) return null;
+
+  const expectedGroupsCount = groupStage.groupsCount ?? 1;
+  if (groupStage.groups.length < expectedGroupsCount) {
+    for (let index = groupStage.groups.length; index < expectedGroupsCount; index += 1) {
+      await db.tournamentGroup.create({
+        data: {
+          stageId: groupStage.id,
+          name: `Группа ${String.fromCharCode(65 + index)}`,
+          orderIndex: index + 1,
+          capacity: groupStage.participantsPerGroup ?? undefined,
+        },
+      });
+    }
+  }
+
+  const groupIds = new Set(groupStage.groups.map((group) => group.id));
+  const hasUnassignedMembers = tournament.participants.some((participant) => !participant.groupId || !groupIds.has(participant.groupId));
+  const hasMissingStandings = groupStage.groups.some((group) => group.members.length !== group.standings.length);
+
+  if (hasUnassignedMembers) {
+    return assignParticipantsToGroups(tournamentId, { mode: "auto" });
+  }
+
+  if (hasMissingStandings) {
+    await Promise.all(groupStage.groups.map((group) => ensureGroupStandings(group.id, group.members.map((member) => member.id))));
+  }
+
+  return db.tournamentGroup.findMany({
+    where: { stageId: groupStage.id },
+    include: {
+      members: { include: { user: true }, orderBy: [{ seed: "asc" }, { createdAt: "asc" }] },
+      standings: { include: { participant: { include: { user: true } } } },
+    },
+    orderBy: { orderIndex: "asc" },
+  });
+}
+
 export async function generateTournamentMatches(tournamentId: string) {
   const tournament = await db.tournament.findUnique({
     where: { id: tournamentId },
