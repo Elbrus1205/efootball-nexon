@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Navbar } from "@/components/layout/navbar";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { TopMailRuPixel } from "@/components/analytics/top-mail-ru-pixel";
 import { AppProviders } from "@/components/providers/app-providers";
 
 const eFootballSans = localFont({
@@ -63,6 +64,12 @@ export default function RootLayout({
   return (
     <html lang="ru" className="dark">
       <body className={`${eFootballSans.variable} ${eFootballStencil.variable} bg-background font-sans text-foreground antialiased`}>
+        <TopMailRuPixel />
+        <noscript>
+          <div>
+            <img src="https://top-fwz1.mail.ru/counter?id=3765921;js=na" style={{ position: "absolute", left: "-9999px" }} alt="Top.Mail.Ru" />
+          </div>
+        </noscript>
         <AppProviders>
           <div className="min-h-screen bg-hero">
             <Navbar />
