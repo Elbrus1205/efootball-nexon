@@ -1,129 +1,160 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { AlertTriangle, Clock3, MessageCircle, Send, ShieldCheck, Trophy, Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { AlertCircle, ArrowUpRight, Clock3, Headphones, MessageCircle, Send, ShieldCheck, Trophy, Wrench } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Контакты | eFootball Nexon",
-  description: "Связь с администрацией eFootball Nexon по турнирам, матчам, аккаунтам и спорным результатам.",
+  title: "Contact Us | eFootball Nexon",
+  description: "Contact eFootball Nexon support for tournament questions, match issues, registration help, and technical problems.",
 };
 
 const adminTelegramHref = "https://t.me/Kumyk007";
 const telegramChannelHref = "https://t.me/efootball_nexon";
 const vkHref = "https://vk.com/efootball_nexon";
 
-const contactMethods = [
+const supportItems = [
+  { label: "Admin", value: "@Kumyk007" },
+  { label: "Response time", value: "Usually within 1-3 hours" },
+  { label: "Tournament support", value: "Registration, matches, scores, disputes" },
+];
+
+const technicalItems = [
+  "Login or account access problems",
+  "Missing matches or wrong schedule",
+  "Result upload and screenshot issues",
+];
+
+const faqItems = [
   {
-    title: "Администратор",
-    value: "@Kumyk007",
-    description: "Пишите по спорным матчам, регистрации, аккаунту и срочным вопросам.",
-    href: adminTelegramHref,
-    icon: MessageCircle,
+    question: "What should I include when contacting support?",
+    answer: "Send your player nickname, tournament name, match link if available, and a short description of the issue.",
   },
   {
-    title: "Telegram-канал",
-    value: "t.me/efootball_nexon",
-    description: "Новости турниров, объявления, сезоны и важные обновления.",
-    href: telegramChannelHref,
-    icon: Send,
+    question: "Where do I report a match dispute?",
+    answer: "Message the admin in Telegram with the score, screenshots, and what happened. Keep the message compact and factual.",
   },
   {
-    title: "VK-канал",
-    value: "vk.com/efootball_nexon",
-    description: "Сообщество проекта, публикации и связь с игроками.",
-    href: vkHref,
-    icon: Users,
+    question: "Can support change my Telegram account?",
+    answer: "Yes, but only through admin review. This protects tournament accounts from accidental or unwanted changes.",
+  },
+  {
+    question: "How fast are technical issues fixed?",
+    answer: "Small account or match issues are usually handled the same day. Larger platform issues may take longer.",
   },
 ];
 
-const helpTopics = [
-  {
-    title: "Спор по матчу",
-    text: "Отправьте ссылку на матч, счёт и скриншоты результата.",
-    icon: AlertTriangle,
-  },
-  {
-    title: "Регистрация",
-    text: "Поможем с заявкой, клубом, именем игрока или ошибкой входа.",
-    icon: ShieldCheck,
-  },
-  {
-    title: "Расписание",
-    text: "Пишите, если матч не появился или время указано неверно.",
-    icon: Clock3,
-  },
+const socialLinks = [
+  { label: "Telegram Channel", href: telegramChannelHref },
+  { label: "VK Community", href: vkHref },
 ];
 
 export default function ContactsPage() {
   return (
-    <main className="page-shell space-y-4 py-4 sm:space-y-6 sm:py-6">
-      <section className="overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(8,14,24,0.97),rgba(8,18,30,0.92))] shadow-[0_22px_64px_rgba(0,0,0,0.28)]">
-        <div className="p-4 sm:p-6 lg:p-8">
-          <div className="max-w-2xl space-y-4">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary sm:text-xs">
-              <Trophy className="h-3.5 w-3.5" />
-              Контакты
-            </div>
-
-            <div className="space-y-2.5">
-              <h1 className="font-display text-2xl font-thin leading-tight text-white sm:text-4xl">Связь с eFootball Nexon</h1>
-              <p className="text-sm leading-6 text-zinc-300 sm:text-base sm:leading-7">
-                Для помощи по турнирам и матчам пишите администратору в Telegram. Если у вас есть предложения по улучшению сайта или вы нашли технические неполадки, сразу сообщите администратору.
+    <main className="page-shell py-4 sm:py-6">
+      <div className="mx-auto max-w-3xl space-y-4">
+        <section className="rounded-xl border border-white/10 bg-zinc-950/70 px-4 py-4 shadow-[0_18px_48px_rgba(0,0,0,0.18)] sm:px-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="mb-2 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-300">
+                <Trophy className="h-3.5 w-3.5" />
+                eFootball Nexon
+              </div>
+              <h1 className="text-2xl font-semibold tracking-normal text-white sm:text-3xl">Contact Us</h1>
+              <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">
+                Need help with a tournament, match result, account, or platform issue? Send a clear message and the support team will help you sort it out.
               </p>
             </div>
-
-            <Button asChild className="h-10 rounded-lg sm:h-11">
-              <Link href={adminTelegramHref} target="_blank" rel="noreferrer">
-                <MessageCircle className="mr-2 h-4 w-4" />
-                Написать администратору
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-3 md:grid-cols-3">
-        {contactMethods.map((method) => {
-          const Icon = method.icon;
-
-          return (
-            <Link
-              key={method.title}
-              href={method.href}
-              target="_blank"
-              rel="noreferrer"
-              className="group flex h-full flex-col rounded-2xl border border-white/10 bg-white/[0.035] p-4 transition hover:border-primary/35 hover:bg-white/[0.06] sm:p-5"
-            >
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-white sm:h-11 sm:w-11">
-                <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
-              <div className="text-base font-black text-white sm:text-lg">{method.title}</div>
-              <div className="mt-1 break-words text-xs font-semibold text-primary sm:text-sm">{method.value}</div>
-              <p className="mt-2 text-xs leading-5 text-zinc-400 sm:mt-3 sm:text-sm sm:leading-6">{method.description}</p>
-            </Link>
-          );
-        })}
-      </section>
-
-      <section className="grid gap-3 md:grid-cols-3">
-        {helpTopics.map((topic) => {
-          const Icon = topic.icon;
-
-          return (
-            <div key={topic.title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
-              <div className="flex gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-primary">
-                  <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-                </div>
-                <div>
-                  <div className="text-sm font-black text-white sm:text-base">{topic.title}</div>
-                  <p className="mt-1.5 text-xs leading-5 text-zinc-400 sm:text-sm sm:leading-6">{topic.text}</p>
-                </div>
-              </div>
+            <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-sky-300/20 bg-sky-400/10 text-sky-200 sm:flex">
+              <Headphones className="h-4 w-4" />
             </div>
-          );
-        })}
-      </section>
+          </div>
+
+          <Link
+            href={adminTelegramHref}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-4 inline-flex h-10 items-center gap-2 rounded-lg bg-sky-500 px-3.5 text-sm font-semibold text-white transition hover:bg-sky-400"
+          >
+            <MessageCircle className="h-4 w-4" />
+            Telegram Support
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          </Link>
+        </section>
+
+        <section className="grid gap-3 md:grid-cols-[1.05fr_0.95fr]">
+          <div className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-white">
+              <ShieldCheck className="h-4 w-4 text-emerald-300" />
+              Admin Contact
+            </div>
+            <div className="mt-3 divide-y divide-white/10">
+              {supportItems.map((item) => (
+                <div key={item.label} className="flex items-start justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
+                  <span className="text-xs text-zinc-500">{item.label}</span>
+                  <span className="max-w-[62%] text-right text-sm font-medium leading-5 text-zinc-200">{item.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-white">
+              <Wrench className="h-4 w-4 text-sky-300" />
+              Technical Support
+            </div>
+            <p className="mt-2 text-sm leading-6 text-zinc-400">For site problems, include your device, browser, and a screenshot if possible.</p>
+            <ul className="mt-3 space-y-2">
+              {technicalItems.map((item) => (
+                <li key={item} className="flex gap-2 text-sm text-zinc-300">
+                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-500" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-white/10 bg-zinc-950/55 p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-white">FAQ</h2>
+              <p className="mt-1 text-xs text-zinc-500">Quick answers before you message support.</p>
+            </div>
+            <Clock3 className="h-4 w-4 text-zinc-500" />
+          </div>
+
+          <div className="space-y-2">
+            {faqItems.map((item, index) => (
+              <details key={item.question} className="group rounded-lg border border-white/10 bg-white/[0.025] px-3 py-2.5" open={index === 0}>
+                <summary className="cursor-pointer list-none text-sm font-medium text-zinc-100 outline-none transition group-open:text-white">
+                  <span className="inline-flex w-full items-center justify-between gap-3">
+                    {item.question}
+                    <span className="text-lg leading-none text-zinc-500 transition group-open:rotate-45">+</span>
+                  </span>
+                </summary>
+                <p className="mt-2 text-sm leading-6 text-zinc-400">{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+
+        <footer className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.025] px-4 py-3 text-sm text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
+          <div className="font-medium text-zinc-300">eFootball Nexon Support</div>
+          <div className="flex flex-wrap gap-2">
+            {socialLinks.map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs font-semibold text-zinc-300 transition hover:border-sky-300/30 hover:text-white"
+              >
+                <Send className="h-3.5 w-3.5" />
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </footer>
+      </div>
     </main>
   );
 }
