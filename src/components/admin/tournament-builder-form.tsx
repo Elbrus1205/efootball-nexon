@@ -58,6 +58,7 @@ type BuilderValues = {
   pointsForLoss?: number;
   autoCreateMatches?: boolean;
   autoCreateSchedule?: boolean;
+  autoOpenRegistration?: boolean;
   autoAdvanceFromGroups?: boolean;
   manualBracketControl?: boolean;
   manualPlayoffSelection?: boolean;
@@ -153,6 +154,14 @@ export function TournamentBuilderForm({
           <div className="space-y-2">
             <Label htmlFor="startsAt">Дата старта</Label>
             <Input id="startsAt" name="startsAt" type="datetime-local" defaultValue={initialValues?.startsAt ?? ""} required />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Регистрация</Label>
+            <label className="flex min-h-11 items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-300">
+              <input type="checkbox" name="autoOpenRegistration" value="true" defaultChecked={initialValues?.autoOpenRegistration ?? false} />
+              Открывать автоматически по дате старта
+            </label>
           </div>
 
           <div className="space-y-2">

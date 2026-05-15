@@ -49,6 +49,7 @@ export default async function AdminTournamentEditPage({ params }: { params: { id
           pointsForLoss: tournament.pointsForLoss,
           autoCreateMatches: tournament.autoCreateMatches,
           autoCreateSchedule: tournament.autoCreateSchedule,
+          autoOpenRegistration: tournament.autoOpenRegistration,
           autoAdvanceFromGroups: tournament.autoAdvanceFromGroups,
           manualBracketControl: tournament.manualBracketControl,
           manualPlayoffSelection: tournament.manualPlayoffSelection,

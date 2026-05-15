@@ -154,6 +154,7 @@ export const tournamentBuilderSchema = z.object({
   autoCreateMatches: z.coerce.boolean().default(true),
   autoCreateStages: z.coerce.boolean().default(true),
   autoCreateSchedule: z.coerce.boolean().default(false),
+  autoOpenRegistration: z.coerce.boolean().default(false),
   autoAdvanceFromGroups: z.coerce.boolean().default(false),
   manualBracketControl: z.coerce.boolean().default(false),
   manualPlayoffSelection: z.coerce.boolean().default(false),

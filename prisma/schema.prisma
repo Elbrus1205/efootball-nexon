@@ -30,6 +30,7 @@ enum TournamentStatus {
   DRAFT
   REGISTRATION_OPEN
   REGISTRATION_CLOSED
+  AWAITING_START
   IN_PROGRESS
   COMPLETED
 }
@@ -389,6 +390,7 @@ model Tournament {
   autoCreateMatches      Boolean                  @default(true)
   autoCreateStages       Boolean                  @default(true)
   autoCreateSchedule     Boolean                  @default(false)
+  autoOpenRegistration   Boolean                  @default(false)
   autoAdvanceFromGroups  Boolean                  @default(false)
   manualBracketControl   Boolean                  @default(false)
   manualPlayoffSelection Boolean                  @default(false)

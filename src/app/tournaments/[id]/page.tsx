@@ -21,6 +21,7 @@ import {
 import { db } from "@/lib/db";
 import { normalizeFormatBlueprint } from "@/lib/format-blueprint";
 import { getPlayerDisplayName } from "@/lib/player-name";
+import { syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { formatDate } from "@/lib/utils";
 
 type LeagueRow = {
@@ -549,6 +550,7 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
 export default async function TournamentDetailsPage({ params }: { params: { id: string } }) {
   noStore();
   const session = await getCurrentSession();
+  await syncTournamentLifecycleStatus(params.id).catch(() => null);
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
     include: {
@@ -677,7 +679,6 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           <h1 className="font-display text-4xl font-thin text-white">{tournament.title}</h1>
           <div className="flex flex-wrap gap-6 text-sm text-zinc-400">
             <span>Старт: {formatDate(tournament.startsAt)}</span>
-            <span>Регистрация до: {formatDate(tournament.registrationEndsAt)}</span>
             <span>Участники: {activeParticipants.length}/{tournament.maxParticipants}</span>
           </div>
         </div>

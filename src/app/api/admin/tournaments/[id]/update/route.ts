@@ -11,6 +11,11 @@ function checkboxValue(value: FormDataEntryValue | null) {
   return value === "true" || value === "on";
 }
 
+function resolveUpdatedStatus(status: TournamentStatus, startsAt: Date, autoOpenRegistration: boolean) {
+  if (!autoOpenRegistration) return status;
+  return startsAt > new Date() ? TournamentStatus.REGISTRATION_OPEN : TournamentStatus.AWAITING_START;
+}
+
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   await requirePermission("tournaments.createEdit");
 
@@ -41,6 +46,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     autoCreateMatches: checkboxValue(formData.get("autoCreateMatches")),
     autoCreateStages: true,
     autoCreateSchedule: checkboxValue(formData.get("autoCreateSchedule")),
+    autoOpenRegistration: checkboxValue(formData.get("autoOpenRegistration")),
     autoAdvanceFromGroups: checkboxValue(formData.get("autoAdvanceFromGroups")),
     manualBracketControl: checkboxValue(formData.get("manualBracketControl")),
     manualPlayoffSelection: checkboxValue(formData.get("manualPlayoffSelection")),
@@ -51,6 +57,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   const formatBlueprint = parseFormatBlueprintJson(typeof body.formatBlueprintJson === "string" ? body.formatBlueprintJson : "");
   const startsAt = new Date(body.startsAt);
+  const status = resolveUpdatedStatus(body.status, startsAt, body.autoOpenRegistration);
 
   const before = await db.tournament.findUnique({
     where: { id: params.id },
@@ -66,11 +73,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
       startsAt,
       endsAt: null,
       registrationEndsAt: startsAt,
+      registrationStartsAt: body.autoOpenRegistration ? new Date() : null,
       maxParticipants: body.maxParticipants,
       prizePool: body.prizePool || null,
       format: TournamentFormat.CUSTOM,
       formatBlueprintJson: formatBlueprint ?? Prisma.DbNull,
-      status: body.status,
+      status,
       coverImage: body.coverImage || null,
       playoffType: null,
       playoffLegs: 1,
@@ -86,6 +94,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       autoCreateMatches: body.autoCreateMatches,
       autoCreateStages: true,
       autoCreateSchedule: body.autoCreateSchedule,
+      autoOpenRegistration: body.autoOpenRegistration,
       autoAdvanceFromGroups: body.autoAdvanceFromGroups,
       manualBracketControl: body.manualBracketControl,
       manualPlayoffSelection: body.manualPlayoffSelection,

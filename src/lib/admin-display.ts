@@ -46,6 +46,7 @@ export const tournamentStatusLabel: Record<TournamentStatus, string> = {
   DRAFT: "Черновик",
   REGISTRATION_OPEN: "Регистрация открыта",
   REGISTRATION_CLOSED: "Регистрация закрыта",
+  AWAITING_START: "Ожидает начала",
   IN_PROGRESS: "Идёт",
   COMPLETED: "Завершён",
 };
@@ -144,6 +145,7 @@ export const tournamentStatusVariant: Record<TournamentStatus, "primary" | "acce
   DRAFT: "neutral",
   REGISTRATION_OPEN: "primary",
   REGISTRATION_CLOSED: "accent",
+  AWAITING_START: "accent",
   IN_PROGRESS: "success",
   COMPLETED: "neutral",
 };

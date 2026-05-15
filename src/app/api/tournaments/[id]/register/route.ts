@@ -33,6 +33,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
     );
   }
 
+  await syncTournamentLifecycleStatus(params.id).catch(() => null);
+
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
     include: { participants: true },
@@ -156,7 +158,10 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
     dedupeWithinHours: 6,
   });
 
-  if (tournament.status === TournamentStatus.REGISTRATION_CLOSED && tournament.registrationEndsAt > new Date()) {
+  if (
+    (tournament.status === TournamentStatus.REGISTRATION_CLOSED || tournament.status === TournamentStatus.AWAITING_START) &&
+    tournament.registrationEndsAt > new Date()
+  ) {
     await db.tournament.update({
       where: { id: params.id },
       data: { status: TournamentStatus.REGISTRATION_OPEN, registrationClosedAt: null },

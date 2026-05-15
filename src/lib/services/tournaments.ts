@@ -1507,7 +1507,7 @@ export async function generateTournamentMatches(tournamentId: string) {
     }
   }
 
-  if (tournament.status === TournamentStatus.REGISTRATION_CLOSED) {
+  if (tournament.status === TournamentStatus.REGISTRATION_CLOSED || tournament.status === TournamentStatus.AWAITING_START) {
     await db.tournament.update({
       where: { id: tournamentId },
       data: {
@@ -2152,7 +2152,7 @@ export async function closeTournamentRegistration(tournamentId: string) {
   await db.tournament.update({
     where: { id: tournamentId },
     data: {
-      status: TournamentStatus.REGISTRATION_CLOSED,
+      status: TournamentStatus.AWAITING_START,
       registrationClosedAt: new Date(),
     },
   });
@@ -2189,7 +2189,7 @@ export async function startTournament(tournamentId: string) {
   });
 
   if (!tournament) throw new Error("Tournament not found");
-  if (tournament.status !== TournamentStatus.REGISTRATION_CLOSED) {
+  if (tournament.status !== TournamentStatus.REGISTRATION_CLOSED && tournament.status !== TournamentStatus.AWAITING_START) {
     throw new Error("Турнир можно запустить только после закрытия регистрации.");
   }
 
@@ -2351,6 +2351,26 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
   const hasMatches = tournament.matches.length > 0;
   const allMatchesCompleted =
     hasMatches && tournament.matches.every((match) => TERMINAL_MATCH_STATUSES.has(match.status));
+  const now = new Date();
+  const nextDateStatus =
+    tournament.autoOpenRegistration && tournament.status === TournamentStatus.DRAFT
+      ? tournament.startsAt > now
+        ? TournamentStatus.REGISTRATION_OPEN
+        : TournamentStatus.AWAITING_START
+      : tournament.status === TournamentStatus.REGISTRATION_OPEN && (tournament.startsAt <= now || confirmedParticipants >= tournament.maxParticipants)
+        ? TournamentStatus.AWAITING_START
+        : null;
+
+  if (nextDateStatus) {
+    return db.tournament.update({
+      where: { id: tournamentId },
+      data: {
+        status: nextDateStatus,
+        registrationClosedAt:
+          nextDateStatus === TournamentStatus.AWAITING_START && !tournament.registrationClosedAt ? now : tournament.registrationClosedAt,
+      },
+    });
+  }
 
   if (tournament.format === TournamentFormat.CUSTOM) {
     const leagueStage = tournament.stages.find((stage) => stage.type === StageType.GROUP_STAGE);
@@ -2402,7 +2422,7 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
     allMatchesCompleted
       ? TournamentStatus.COMPLETED
       : confirmedParticipants >= tournament.maxParticipants && tournament.status === TournamentStatus.REGISTRATION_OPEN
-        ? TournamentStatus.REGISTRATION_CLOSED
+        ? TournamentStatus.AWAITING_START
         : null;
 
   if (!nextStatus) {
@@ -2414,11 +2434,11 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
     data: {
       status: nextStatus,
       registrationClosedAt:
-        nextStatus === TournamentStatus.REGISTRATION_CLOSED && !tournament.registrationClosedAt ? new Date() : tournament.registrationClosedAt,
+        nextStatus === TournamentStatus.AWAITING_START && !tournament.registrationClosedAt ? new Date() : tournament.registrationClosedAt,
     },
   });
 
-  if (nextStatus === TournamentStatus.REGISTRATION_CLOSED) {
+  if (nextStatus === TournamentStatus.AWAITING_START) {
     await createNotificationsForUsers({
       userIds: tournament.participants.map((participant) => participant.userId),
       title: "Регистрация закрыта",

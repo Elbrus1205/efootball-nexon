@@ -11,6 +11,7 @@ import {
 } from "@/lib/admin-display";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { formatDate } from "@/lib/utils";
 
 export default async function AdminTournamentsPage({
@@ -19,6 +20,12 @@ export default async function AdminTournamentsPage({
   searchParams?: { created?: string; warning?: string };
 }) {
   await requireAnyPermission(["tournaments.createEdit", "tournaments.manageParticipants", "tournaments.manageStructure", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
+
+  const syncCandidates = await db.tournament.findMany({
+    where: { status: { in: [TournamentStatus.DRAFT, TournamentStatus.REGISTRATION_OPEN] } },
+    select: { id: true },
+  });
+  await Promise.all(syncCandidates.map((tournament) => syncTournamentLifecycleStatus(tournament.id).catch(() => null)));
 
   const tournaments = await db.tournament.findMany({
     include: {
@@ -73,8 +80,8 @@ export default async function AdminTournamentsPage({
       <div className="grid gap-4">
         {tournaments.map((tournament) => {
           const canCloseRegistration = tournament.status === TournamentStatus.REGISTRATION_OPEN;
-          const canStartTournament = tournament.status === TournamentStatus.REGISTRATION_CLOSED;
-          const canAssignClubs = tournament.status === TournamentStatus.REGISTRATION_CLOSED;
+          const canStartTournament = tournament.status === TournamentStatus.REGISTRATION_CLOSED || tournament.status === TournamentStatus.AWAITING_START;
+          const canAssignClubs = tournament.status === TournamentStatus.REGISTRATION_CLOSED || tournament.status === TournamentStatus.AWAITING_START;
           const canRegenerateMatches =
             tournament.status === TournamentStatus.IN_PROGRESS || tournament.status === TournamentStatus.COMPLETED;
 
@@ -92,7 +99,6 @@ export default async function AdminTournamentsPage({
 
                   <div className="flex flex-wrap gap-4 text-sm text-zinc-500">
                     <span>Старт: {formatDate(tournament.startsAt)}</span>
-                    <span>Регистрация до: {formatDate(tournament.registrationEndsAt)}</span>
                     <span>
                       Участники: {tournament._count.participants}/{tournament.maxParticipants}
                     </span>

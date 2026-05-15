@@ -9,6 +9,7 @@ const statusMap: Record<TournamentStatus, { label: string; variant: "primary" | 
   DRAFT: { label: "Черновик", variant: "neutral" },
   REGISTRATION_OPEN: { label: "Регистрация", variant: "primary" },
   REGISTRATION_CLOSED: { label: "Закрыт набор", variant: "accent" },
+  AWAITING_START: { label: "Ожидает старта", variant: "accent" },
   IN_PROGRESS: { label: "Идёт турнир", variant: "success" },
   COMPLETED: { label: "Завершён", variant: "neutral" },
 };

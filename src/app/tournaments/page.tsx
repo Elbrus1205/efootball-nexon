@@ -1,9 +1,17 @@
+import { TournamentStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { TournamentCard } from "@/components/tournaments/tournament-card";
+import { syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 
 export const dynamic = "force-dynamic";
 
 export default async function TournamentsPage() {
+  const syncCandidates = await db.tournament.findMany({
+    where: { status: { in: [TournamentStatus.DRAFT, TournamentStatus.REGISTRATION_OPEN] } },
+    select: { id: true },
+  });
+  await Promise.all(syncCandidates.map((tournament) => syncTournamentLifecycleStatus(tournament.id).catch(() => null)));
+
   const tournaments = await db.tournament.findMany({
     include: {
       _count: { select: { participants: true } },

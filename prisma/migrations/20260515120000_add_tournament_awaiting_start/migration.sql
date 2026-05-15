@@ -1,0 +1,3 @@
+ALTER TYPE "TournamentStatus" ADD VALUE IF NOT EXISTS 'AWAITING_START';
+
+ALTER TABLE "Tournament" ADD COLUMN "autoOpenRegistration" BOOLEAN NOT NULL DEFAULT false;

@@ -14,6 +14,11 @@ function checkboxValue(value: FormDataEntryValue | null) {
   return value === "true" || value === "on";
 }
 
+function resolveInitialStatus(status: TournamentStatus, startsAt: Date, autoOpenRegistration: boolean) {
+  if (!autoOpenRegistration) return status;
+  return startsAt > new Date() ? TournamentStatus.REGISTRATION_OPEN : TournamentStatus.AWAITING_START;
+}
+
 export async function POST(request: Request) {
   const session = await requirePermission("tournaments.createEdit");
   const origin = getRequestBaseUrl(request);
@@ -47,6 +52,7 @@ export async function POST(request: Request) {
       autoCreateMatches: checkboxValue(formData.get("autoCreateMatches")),
       autoCreateStages: true,
       autoCreateSchedule: checkboxValue(formData.get("autoCreateSchedule")),
+      autoOpenRegistration: checkboxValue(formData.get("autoOpenRegistration")),
       autoAdvanceFromGroups: checkboxValue(formData.get("autoAdvanceFromGroups")),
       manualBracketControl: checkboxValue(formData.get("manualBracketControl")),
       manualPlayoffSelection: checkboxValue(formData.get("manualPlayoffSelection")),
@@ -64,6 +70,7 @@ export async function POST(request: Request) {
     const formatBlueprint = parseFormatBlueprintJson(typeof body.formatBlueprintJson === "string" ? body.formatBlueprintJson : "");
     const startsAt = new Date(body.startsAt);
     const activeSeason = await getActiveSeason();
+    const status = resolveInitialStatus(body.status, startsAt, body.autoOpenRegistration);
 
     const tournament = await db.tournament.create({
       data: {
@@ -75,11 +82,12 @@ export async function POST(request: Request) {
         startsAt,
         endsAt: null,
         registrationEndsAt: startsAt,
+        registrationStartsAt: body.autoOpenRegistration ? new Date() : null,
         maxParticipants: body.maxParticipants,
         prizePool: body.prizePool || null,
         format: TournamentFormat.CUSTOM,
         formatBlueprintJson: formatBlueprint ?? Prisma.DbNull,
-        status: body.status,
+        status,
         coverImage: body.coverImage || null,
         playoffType: null,
         playoffLegs: 1,
@@ -95,6 +103,7 @@ export async function POST(request: Request) {
         autoCreateMatches: body.autoCreateMatches,
         autoCreateStages: true,
         autoCreateSchedule: body.autoCreateSchedule,
+        autoOpenRegistration: body.autoOpenRegistration,
         autoAdvanceFromGroups: body.autoAdvanceFromGroups,
         manualBracketControl: body.manualBracketControl,
         manualPlayoffSelection: body.manualPlayoffSelection,
@@ -123,7 +132,7 @@ export async function POST(request: Request) {
       return NextResponse.redirect(new URL(`/admin/tournaments?created=1&warning=${warning}`, origin), 303);
     }
 
-    if (body.status === TournamentStatus.REGISTRATION_OPEN) {
+    if (status === TournamentStatus.REGISTRATION_OPEN) {
       await createNotificationForAllUsers({
         title: "Открыта регистрация на турнир",
         body: `${tournament.title}: новый турнир уже доступен для регистрации.`,
