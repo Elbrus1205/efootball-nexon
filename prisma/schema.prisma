@@ -387,6 +387,7 @@ model Tournament {
   registrationEndsAt     DateTime
   registrationClosedAt   DateTime?
   checkInRequired        Boolean                  @default(false)
+  requireTelegramForRegistration Boolean          @default(false)
   autoCreateMatches      Boolean                  @default(true)
   autoCreateStages       Boolean                  @default(true)
   autoCreateSchedule     Boolean                  @default(false)

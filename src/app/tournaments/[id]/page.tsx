@@ -639,6 +639,13 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
 
   if (!tournament) notFound();
 
+  const currentUser = session?.user
+    ? await db.user.findUnique({
+        where: { id: session.user.id },
+        select: { telegramId: true },
+      })
+    : null;
+
   const activeParticipants = tournament.participants.filter(
     (entry) => entry.status !== ParticipantStatus.REMOVED && entry.status !== ParticipantStatus.REJECTED,
   );
@@ -646,7 +653,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   const isRegistrationOpen = tournament.status === TournamentStatus.REGISTRATION_OPEN;
   const isLoggedIn = Boolean(session?.user);
   const alreadyRegistered = !!session?.user && activeParticipants.some((entry) => entry.userId === session.user.id);
-  const canRegister = isLoggedIn && isRegistrationOpen && hasFreeSlots && !alreadyRegistered;
+  const needsTelegram = Boolean(tournament.requireTelegramForRegistration && !currentUser?.telegramId);
+  const canRegister = isLoggedIn && isRegistrationOpen && hasFreeSlots && !alreadyRegistered && !needsTelegram;
   const canCancelRegistration =
     isLoggedIn &&
     alreadyRegistered &&
@@ -724,6 +732,10 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           !isLoggedIn ? (
             <Button size="lg" asChild>
               <a href={`/login?callbackUrl=/tournaments/${tournament.id}`}>Войти, чтобы зарегистрироваться</a>
+            </Button>
+          ) : needsTelegram ? (
+            <Button size="lg" asChild>
+              <a href="/dashboard/security">Привязать Telegram для регистрации</a>
             </Button>
           ) : (
             <Button size="lg" disabled>

@@ -14,7 +14,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const session = await requireAuth();
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { isBanned: true, banReason: true, bannedUntil: true },
+    select: { isBanned: true, banReason: true, bannedUntil: true, telegramId: true },
   });
   const banMessage = formatTournamentBanMessage(user);
 
@@ -46,6 +46,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   if (tournament.status !== TournamentStatus.REGISTRATION_OPEN) {
     return NextResponse.json({ error: "Регистрация уже закрыта." }, { status: 400 });
+  }
+
+  if (tournament.requireTelegramForRegistration && !user?.telegramId) {
+    return NextResponse.json({ error: "Для регистрации на этот турнир нужно привязать Telegram в настройках профиля." }, { status: 403 });
   }
 
   if (tournament.participants.length >= tournament.maxParticipants) {

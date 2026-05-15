@@ -63,6 +63,7 @@ type BuilderValues = {
   manualBracketControl?: boolean;
   manualPlayoffSelection?: boolean;
   checkInRequired?: boolean;
+  requireTelegramForRegistration?: boolean;
   clubSelectionMode?: ClubSelectionMode;
   sortRules?: SortRule[];
 };
@@ -291,6 +292,7 @@ export function TournamentBuilderForm({
           {[
             ["manualBracketControl", "Ручное управление сеткой", initialValues?.manualBracketControl ?? false],
             ["manualPlayoffSelection", "Ручной выбор в плей-офф", initialValues?.manualPlayoffSelection ?? false],
+            ["requireTelegramForRegistration", "Требовать привязанный Telegram для регистрации", initialValues?.requireTelegramForRegistration ?? false],
           ].map(([name, label, checked]) => (
             <label key={String(name)} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-sm text-zinc-300">
               <input type="checkbox" name={String(name)} value="true" defaultChecked={Boolean(checked)} />

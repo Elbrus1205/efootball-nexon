@@ -7,10 +7,7 @@ Tournament platform for eFootball Mobile on `Next.js 14`, `Prisma`, `PostgreSQL`
 - Frontend: `Next.js 14 App Router`
 - Backend: `Route Handlers`
 - Database: `PostgreSQL`
-- Recommended DB host: `Neon`
-- Hosting: `Vercel`
 
-## Local Run with PostgreSQL
 
 ### 1. Install dependencies
 
@@ -24,13 +21,6 @@ npm install
 Copy-Item .env.example .env
 ```
 
-Fill `.env` with real values:
-
-```env
-DATABASE_URL="postgresql://USER:PASSWORD@HOST/DBNAME?sslmode=require"
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your-long-random-secret"
-```
 
 ### 3. Generate Prisma client
 
@@ -56,7 +46,6 @@ npm run prisma:seed
 npm run dev
 ```
 
-### 2. Add Environment Variables
 
 Required:
 

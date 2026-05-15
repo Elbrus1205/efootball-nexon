@@ -26,8 +26,7 @@ export function AuthNav({ unread = 0 }: { unread?: number }) {
           className="group relative inline-flex h-10 items-center justify-center overflow-hidden rounded-xl border border-sky-300/25 bg-sky-400/10 px-3 text-xs font-bold text-sky-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_24px_rgba(56,189,248,0.12)] transition duration-300 hover:-translate-y-0.5 hover:border-sky-200/45 hover:bg-sky-400/16 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 sm:hidden"
         >
           <span className="absolute inset-x-2 bottom-0 h-px scale-x-0 bg-gradient-to-r from-transparent via-sky-200/80 to-transparent transition duration-300 group-hover:scale-x-100" />
-          <span className="min-[390px]:hidden">Рег.</span>
-          <span className="hidden min-[390px]:inline">Регистрация</span>
+          Регистрация
         </Link>
 
         <div className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/[0.035] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_14px_34px_rgba(2,6,23,0.18)] backdrop-blur sm:flex">

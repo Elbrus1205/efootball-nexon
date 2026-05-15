@@ -57,6 +57,7 @@ export async function POST(request: Request) {
       manualBracketControl: checkboxValue(formData.get("manualBracketControl")),
       manualPlayoffSelection: checkboxValue(formData.get("manualPlayoffSelection")),
       checkInRequired: checkboxValue(formData.get("checkInRequired")),
+      requireTelegramForRegistration: checkboxValue(formData.get("requireTelegramForRegistration")),
       clubSelectionMode: formData.get("clubSelectionMode"),
       sortRules: formData.getAll("sortRules"),
     });
@@ -108,6 +109,7 @@ export async function POST(request: Request) {
         manualBracketControl: body.manualBracketControl,
         manualPlayoffSelection: body.manualPlayoffSelection,
         checkInRequired: body.checkInRequired,
+        requireTelegramForRegistration: body.requireTelegramForRegistration,
         clubSelectionMode: body.clubSelectionMode,
         sortRules: body.sortRules,
         createdById: session.user.id,

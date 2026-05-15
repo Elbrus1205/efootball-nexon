@@ -54,6 +54,7 @@ export default async function AdminTournamentEditPage({ params }: { params: { id
           manualBracketControl: tournament.manualBracketControl,
           manualPlayoffSelection: tournament.manualPlayoffSelection,
           checkInRequired: tournament.checkInRequired,
+          requireTelegramForRegistration: tournament.requireTelegramForRegistration,
           clubSelectionMode: tournament.clubSelectionMode,
           sortRules: tournament.sortRules,
         }}
