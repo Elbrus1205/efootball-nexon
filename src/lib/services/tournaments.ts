@@ -36,6 +36,21 @@ function isCustomTourCountStage(stage: { settingsJson?: unknown }) {
   return mode === "custom-groups" || mode === "custom-league";
 }
 
+function getCustomMatchesPerOpponent(stage: { settingsJson?: unknown }) {
+  const settings = stage.settingsJson;
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
+    return null;
+  }
+
+  const matchesPerOpponent = Number((settings as { matchesPerOpponent?: unknown }).matchesPerOpponent);
+  return Number.isFinite(matchesPerOpponent) ? Math.max(1, Math.min(6, matchesPerOpponent)) : null;
+}
+
+function getRoundRobinToursCount(participantsCount: number) {
+  const normalizedSlotsCount = participantsCount % 2 === 0 ? participantsCount : participantsCount + 1;
+  return Math.max(normalizedSlotsCount - 1, 1);
+}
+
 const TERMINAL_MATCH_STATUSES = new Set<MatchStatus>([
   MatchStatus.CONFIRMED,
   MatchStatus.FINISHED,
@@ -594,7 +609,7 @@ async function createRoundRobinMatchesForEntries({
   groupId?: string;
   entries: { id: string; userId: string }[];
   roundsCount?: number | null;
-  roundsMode?: "cycles" | "tours";
+  roundsMode?: "cycles" | "series";
 }) {
   const data: {
     tournamentId: string;
@@ -613,7 +628,8 @@ async function createRoundRobinMatchesForEntries({
   let slots: ({ id: string; userId: string } | null)[] = entries.length % 2 === 0 ? [...entries] : [...entries, null];
   const roundsPerCycle = Math.max(slots.length - 1, 1);
   const requestedCount = Math.max(roundsCount ?? 1, 1);
-  const totalTours = roundsMode === "tours" ? requestedCount : requestedCount * roundsPerCycle;
+  const matchesPerPair = roundsMode === "series" ? Math.min(requestedCount, 6) : 1;
+  const totalTours = roundsMode === "series" ? roundsPerCycle : requestedCount * roundsPerCycle;
 
   for (let tourIndex = 0; tourIndex < totalTours; tourIndex += 1) {
     const cycle = Math.floor(tourIndex / roundsPerCycle);
@@ -624,22 +640,25 @@ async function createRoundRobinMatchesForEntries({
       const second = slots[slots.length - 1 - pairIndex];
       if (!first || !second) continue;
 
-      const shouldSwapHomeAway = (cycle + roundIndex + pairIndex) % 2 === 1;
-      const participant1 = shouldSwapHomeAway ? second : first;
-      const participant2 = shouldSwapHomeAway ? first : second;
+      for (let legIndex = 0; legIndex < matchesPerPair; legIndex += 1) {
+        const shouldSwapHomeAway =
+          roundsMode === "series" ? legIndex % 2 === 1 : (cycle + roundIndex + pairIndex) % 2 === 1;
+        const participant1 = shouldSwapHomeAway ? second : first;
+        const participant2 = shouldSwapHomeAway ? first : second;
 
-      data.push({
-        tournamentId,
-        stageId,
-        groupId,
-        round: tourIndex + 1,
-        matchNumber: matchNumber++,
-        participant1EntryId: participant1.id,
-        participant2EntryId: participant2.id,
-        player1Id: participant1.userId,
-        player2Id: participant2.userId,
-        status: MatchStatus.READY,
-      });
+        data.push({
+          tournamentId,
+          stageId,
+          groupId,
+          round: tourIndex + 1,
+          matchNumber: matchNumber++,
+          participant1EntryId: participant1.id,
+          participant2EntryId: participant2.id,
+          player1Id: participant1.userId,
+          player2Id: participant2.userId,
+          status: MatchStatus.READY,
+        });
+      }
     }
 
     slots = [slots[0] ?? null, slots[slots.length - 1] ?? null, ...slots.slice(1, -1)];
@@ -936,6 +955,10 @@ async function createCustomFormatStages(params: {
   const hasOpeningStage = params.blueprint.openingStageMode !== "NONE";
 
   if (hasOpeningStage) {
+    const participantsPerDivision =
+      params.blueprint.participantsPerGroup ?? Math.max(2, Math.ceil(params.tournament.maxParticipants / params.blueprint.divisionsCount));
+    const openingToursCount = getRoundRobinToursCount(participantsPerDivision);
+
     const leagueStage = await db.tournamentStage.create({
       data: {
         tournamentId: params.tournamentId,
@@ -945,7 +968,7 @@ async function createCustomFormatStages(params: {
         orderIndex: 1,
         groupsCount: params.blueprint.divisionsCount,
         participantsPerGroup: params.blueprint.participantsPerGroup ?? undefined,
-        roundsCount: params.blueprint.roundsCount,
+        roundsCount: openingToursCount,
         pointsForWin: params.tournament.pointsForWin,
         pointsForDraw: params.tournament.pointsForDraw,
         pointsForLoss: params.tournament.pointsForLoss,
@@ -953,7 +976,8 @@ async function createCustomFormatStages(params: {
         settingsJson: {
           mode: params.blueprint.openingStageMode === "LEAGUE" ? "custom-league" : "custom-groups",
           divisionsCount: params.blueprint.divisionsCount,
-          roundsCount: params.blueprint.roundsCount,
+          roundsCount: openingToursCount,
+          matchesPerOpponent: params.blueprint.roundsCount,
           participantsPerGroup: params.blueprint.participantsPerGroup,
         },
       },
@@ -1438,8 +1462,8 @@ export async function generateTournamentMatches(tournamentId: string) {
         tournamentId,
         stageId: stage.id,
         entries: tournament.participants.map((entry) => ({ id: entry.id, userId: entry.userId })),
-        roundsCount: stage.roundsCount,
-        roundsMode: isCustomTourCountStage(stage) ? "tours" : "cycles",
+        roundsCount: getCustomMatchesPerOpponent(stage) ?? stage.roundsCount,
+        roundsMode: isCustomTourCountStage(stage) ? "series" : "cycles",
       });
     }
 
@@ -1452,8 +1476,8 @@ export async function generateTournamentMatches(tournamentId: string) {
             stageId: stage.id,
             groupId: group.id,
             entries: members,
-            roundsCount: stage.roundsCount,
-            roundsMode: isCustomTourCountStage(stage) ? "tours" : "cycles",
+            roundsCount: getCustomMatchesPerOpponent(stage) ?? stage.roundsCount,
+            roundsMode: isCustomTourCountStage(stage) ? "series" : "cycles",
           });
         }
       }

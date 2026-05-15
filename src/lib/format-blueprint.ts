@@ -100,7 +100,7 @@ export function normalizeFormatBlueprint(input: unknown): FormatBlueprint {
   const openingStageMode: OpeningStageMode =
     value.openingStageMode === "LEAGUE" || value.openingStageMode === "NONE" ? value.openingStageMode : "GROUPS";
   const divisionsCount = Math.max(1, Math.min(16, Number(value.divisionsCount ?? 1) || 1));
-  const roundsCount = Math.max(1, Math.min(4, Number(value.roundsCount ?? 1) || 1));
+  const roundsCount = Math.max(1, Math.min(6, Number(value.roundsCount ?? 1) || 1));
   const participantsPerGroup =
     value.participantsPerGroup === null || value.participantsPerGroup === undefined || value.participantsPerGroup === 0
       ? null

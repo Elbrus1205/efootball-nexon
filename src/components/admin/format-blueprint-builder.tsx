@@ -44,7 +44,7 @@ function createOpeningStageSelections(mode: OpeningStageMode, playoffType: Playo
     return [...upperSelections, ...lowerSelections];
   }
 
-  const groupsCount = Math.max(1, Math.min(4, divisionsCount));
+  const groupsCount = Math.max(1, Math.min(16, divisionsCount));
   const upperSelections = Array.from({ length: groupsCount }, (_, index) =>
     createDefaultPlayoffSelection({ divisionIndex: index + 1, fromRank: 1, toRank: 2, targetBracket: "upper" }),
   );
@@ -58,6 +58,66 @@ function createOpeningStageSelections(mode: OpeningStageMode, playoffType: Playo
   );
 
   return [...upperSelections, ...lowerSelections];
+}
+
+function clampNumber(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function formatDivisionName(mode: OpeningStageMode, index: number) {
+  const letter = String.fromCharCode(65 + index);
+  return mode === "LEAGUE" ? `Лига ${index + 1}` : `Группа ${letter}`;
+}
+
+function NumberInput({
+  value,
+  min,
+  max,
+  placeholder,
+  onValueChange,
+}: {
+  value: number | null;
+  min: number;
+  max: number;
+  placeholder?: string;
+  onValueChange: (value: number | null) => void;
+}) {
+  const [draft, setDraft] = useState(value === null ? "" : String(value));
+
+  useEffect(() => {
+    setDraft(value === null ? "" : String(value));
+  }, [value]);
+
+  return (
+    <Input
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      value={draft}
+      placeholder={placeholder}
+      onChange={(event) => {
+        const nextDraft = event.target.value.replace(/\D/g, "");
+        setDraft(nextDraft);
+
+        if (!nextDraft) {
+          onValueChange(null);
+          return;
+        }
+
+        onValueChange(clampNumber(Number(nextDraft), min, max));
+      }}
+      onBlur={() => {
+        if (!draft) {
+          setDraft(value === null ? "" : String(value));
+          return;
+        }
+
+        const nextValue = clampNumber(Number(draft), min, max);
+        setDraft(String(nextValue));
+        onValueChange(nextValue);
+      }}
+    />
+  );
 }
 
 export function FormatBlueprintBuilder({
@@ -150,42 +210,41 @@ export function FormatBlueprintBuilder({
         {hasOpeningStage ? (
           <div className="space-y-2">
             <Label htmlFor="divisionsCount">{blueprint.openingStageMode === "LEAGUE" ? "Количество лиг" : "Количество групп"}</Label>
-            <Input
-              id="divisionsCount"
-              type="number"
+            <NumberInput
+              value={blueprint.divisionsCount}
               min={1}
               max={16}
-              value={blueprint.divisionsCount}
-              onChange={(event) =>
+              onValueChange={(value) => {
+                if (value === null) return;
                 setBlueprint((current) =>
                   normalizeFormatBlueprint({
                     ...current,
-                    divisionsCount: Math.max(1, Math.min(16, Number(event.target.value || 1))),
+                    divisionsCount: value,
                   }),
-                )
-              }
+                );
+              }}
             />
           </div>
         ) : null}
 
         {hasOpeningStage ? (
           <div className="space-y-2">
-            <Label htmlFor="roundsCount">Количество туров</Label>
-            <Input
-              id="roundsCount"
-              type="number"
-              min={1}
-              max={4}
+            <Label htmlFor="roundsCount">Матчей с одним соперником</Label>
+            <NumberInput
               value={blueprint.roundsCount}
-              onChange={(event) =>
+              min={1}
+              max={6}
+              onValueChange={(value) => {
+                if (value === null) return;
                 setBlueprint((current) =>
                   normalizeFormatBlueprint({
                     ...current,
-                    roundsCount: Math.max(1, Math.min(4, Number(event.target.value || 1))),
+                    roundsCount: value,
                   }),
-                )
-              }
+                );
+              }}
             />
+            <div className="text-xs leading-5 text-zinc-500">От 1 до 6 матчей с каждым соперником. Все матчи пары попадут в один тур.</div>
           </div>
         ) : null}
 
@@ -368,55 +427,61 @@ export function FormatBlueprintBuilder({
                       >
                         <div className="space-y-2">
                           <Label>{selectionSourceLabel}</Label>
-                          <Input
-                            type="number"
-                            min={1}
-                            max={blueprint.divisionsCount}
+                          <select
                             value={selection.divisionIndex}
                             onChange={(event) =>
                               updatePlayoff(playoff.id, (current) => ({
                                 ...current,
                                 selections: current.selections.map((item) =>
-                                  item.id === selection.id
-                                    ? { ...item, divisionIndex: Math.max(1, Math.min(blueprint.divisionsCount, Number(event.target.value || 1))) }
-                                    : item,
+                                  item.id === selection.id ? { ...item, divisionIndex: Number(event.target.value) } : item,
                                 ),
                               }))
                             }
-                          />
+                            className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white"
+                          >
+                            {Array.from({ length: blueprint.divisionsCount }, (_, index) => (
+                              <option key={index + 1} value={index + 1}>
+                                {formatDivisionName(blueprint.openingStageMode, index)}
+                              </option>
+                            ))}
+                          </select>
                         </div>
 
                         <div className="space-y-2">
                           <Label>С места</Label>
-                          <Input
-                            type="number"
-                            min={1}
+                          <NumberInput
                             value={selection.fromRank}
-                            onChange={(event) =>
+                            min={1}
+                            max={32}
+                            onValueChange={(value) => {
+                              if (value === null) return;
                               updatePlayoff(playoff.id, (current) => ({
                                 ...current,
                                 selections: current.selections.map((item) =>
-                                  item.id === selection.id ? { ...item, fromRank: Math.max(1, Number(event.target.value || 1)) } : item,
+                                  item.id === selection.id
+                                    ? { ...item, fromRank: value, toRank: Math.max(value, item.toRank) }
+                                    : item,
                                 ),
-                              }))
-                            }
+                              }));
+                            }}
                           />
                         </div>
 
                         <div className="space-y-2">
                           <Label>По место</Label>
-                          <Input
-                            type="number"
-                            min={selection.fromRank}
+                          <NumberInput
                             value={selection.toRank}
-                            onChange={(event) =>
+                            min={selection.fromRank}
+                            max={32}
+                            onValueChange={(value) => {
+                              if (value === null) return;
                               updatePlayoff(playoff.id, (current) => ({
                                 ...current,
                                 selections: current.selections.map((item) =>
-                                  item.id === selection.id ? { ...item, toRank: Math.max(item.fromRank, Number(event.target.value || item.fromRank)) } : item,
+                                  item.id === selection.id ? { ...item, toRank: Math.max(item.fromRank, value) } : item,
                                 ),
-                              }))
-                            }
+                              }));
+                            }}
                           />
                         </div>
 
