@@ -19,29 +19,41 @@ export function AuthNav({ unread = 0 }: { unread?: number }) {
 
   if (!session?.user) {
     return (
-      <div className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/[0.035] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_14px_34px_rgba(2,6,23,0.18)] backdrop-blur sm:flex">
-        <Button
-          asChild
-          variant="ghost"
-          aria-label="Войти"
-          className="h-9 rounded-full px-3 text-sm font-bold text-zinc-200 transition hover:bg-white/[0.07] hover:text-white"
-        >
-          <Link href="/login">
-            <LogIn className="mr-1.5 h-4 w-4" />
-            Войти
-          </Link>
-        </Button>
-        <Button
-          asChild
-          variant="ghost"
+      <>
+        <Link
+          href="/register"
           aria-label="Регистрация"
-          className="registration-cta h-9 rounded-full border border-amber-300/35 bg-[linear-gradient(135deg,rgba(18,27,42,0.98),rgba(15,19,28,0.98)_48%,rgba(70,47,10,0.94)_100%)] px-2.5 font-black text-amber-100 shadow-[0_12px_32px_rgba(245,158,11,0.18),inset_0_1px_0_rgba(255,255,255,0.14)] hover:bg-[linear-gradient(135deg,rgba(28,41,62,0.98),rgba(20,26,38,0.98)_48%,rgba(92,61,12,0.96)_100%)] hover:text-white sm:px-3"
+          className="group relative inline-flex h-10 items-center justify-center overflow-hidden rounded-xl border border-sky-300/25 bg-sky-400/10 px-3 text-xs font-bold text-sky-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_24px_rgba(56,189,248,0.12)] transition duration-300 hover:-translate-y-0.5 hover:border-sky-200/45 hover:bg-sky-400/16 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 sm:hidden"
         >
-          <Link href="/register">
-            <span className="hidden min-[390px]:inline">Регистрация</span>
-          </Link>
-        </Button>
-      </div>
+          <span className="absolute inset-x-2 bottom-0 h-px scale-x-0 bg-gradient-to-r from-transparent via-sky-200/80 to-transparent transition duration-300 group-hover:scale-x-100" />
+          Регистрация
+        </Link>
+
+        <div className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/[0.035] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_14px_34px_rgba(2,6,23,0.18)] backdrop-blur sm:flex">
+          <Button
+            asChild
+            variant="ghost"
+            aria-label="Войти"
+            className="h-9 rounded-full px-3 text-sm font-bold text-zinc-200 transition duration-300 hover:bg-white/[0.07] hover:text-white"
+          >
+            <Link href="/login">
+              <LogIn className="mr-1.5 h-4 w-4" />
+              Войти
+            </Link>
+          </Button>
+          <Button
+            asChild
+            variant="ghost"
+            aria-label="Регистрация"
+            className="group h-9 rounded-full border border-sky-300/25 bg-sky-400/10 px-3 text-sm font-bold text-sky-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_24px_rgba(56,189,248,0.1)] transition duration-300 hover:-translate-y-0.5 hover:border-sky-200/45 hover:bg-sky-400/16 hover:text-white"
+          >
+            <Link href="/register">
+              Регистрация
+              <span className="ml-1 inline-block transition duration-300 group-hover:translate-x-0.5">→</span>
+            </Link>
+          </Button>
+        </div>
+      </>
     );
   }
 
