@@ -31,6 +31,8 @@ export function AuthForm({
   const [twoFactorStep, setTwoFactorStep] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [challengeToken, setChallengeToken] = useState("");
+  const [registrationVerificationStep, setRegistrationVerificationStep] = useState(false);
+  const [emailCode, setEmailCode] = useState("");
   const [legalAccepted, setLegalAccepted] = useState(false);
   const router = useRouter();
   const requiresLegalAcceptance = type === "register";
@@ -72,12 +74,25 @@ export function AuthForm({
           const res = await fetch("/api/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: normalizedEmail, password, name, legalAccepted }),
+            body: JSON.stringify({
+              email: normalizedEmail,
+              password,
+              name,
+              legalAccepted,
+              emailCode: registrationVerificationStep ? emailCode : undefined,
+            }),
           });
+          const registerPayload = await res.clone().json().catch(() => null);
 
           if (!res.ok) {
             const payload = await res.json().catch(() => null);
             toast.error(payload?.error || "Не удалось создать аккаунт");
+            return;
+          }
+          if (registerPayload?.verificationRequired) {
+            setRegistrationVerificationStep(true);
+            setEmailCode("");
+            toast.success("Код подтверждения отправлен на вашу почту.");
             return;
           }
         }
@@ -125,8 +140,10 @@ export function AuthForm({
         }
 
         setTwoFactorStep(false);
+        setRegistrationVerificationStep(false);
         setTwoFactorCode("");
         setChallengeToken("");
+        setEmailCode("");
         toast.success(type === "register" ? "Аккаунт создан" : "Вход выполнен");
         router.push("/dashboard");
         router.refresh();
@@ -155,14 +172,29 @@ export function AuthForm({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        {type === "register" ? (
+        {type === "register" && !registrationVerificationStep ? (
           <div className="space-y-2">
             <Label htmlFor="name" className="text-xs">Имя</Label>
             <Input id="name" className="h-10 rounded-lg px-3" value={name} onChange={(event) => setName(event.target.value)} />
           </div>
         ) : null}
 
-        {!twoFactorStep ? (
+        {registrationVerificationStep ? (
+          <div className="space-y-2">
+            <p className="text-xs leading-5 text-zinc-400">
+              Введите код, отправленный на вашу почту. Без подтверждения аккаунт не будет создан.
+            </p>
+            <Label htmlFor="emailCode" className="text-xs">Код из письма</Label>
+            <Input
+              id="emailCode"
+              className="h-10 rounded-lg px-3"
+              inputMode="numeric"
+              placeholder="Введите 6-значный код"
+              value={emailCode}
+              onChange={(event) => setEmailCode(event.target.value)}
+            />
+          </div>
+        ) : !twoFactorStep ? (
           <>
             <div className="space-y-2">
               <Label htmlFor="email" className="text-xs">Email</Label>
@@ -188,7 +220,7 @@ export function AuthForm({
           </div>
         )}
 
-        {requiresLegalAcceptance && !twoFactorStep ? (
+        {requiresLegalAcceptance && !twoFactorStep && !registrationVerificationStep ? (
           <label
             htmlFor="legalAccepted"
             className={`group flex cursor-pointer gap-2.5 rounded-lg border p-2.5 transition ${
@@ -239,9 +271,15 @@ export function AuthForm({
           </label>
         ) : null}
 
-        <Button className="h-10 w-full rounded-lg" onClick={submit} disabled={pending || (requiresLegalAcceptance && !legalAccepted)}>
+        <Button className={`h-10 w-full rounded-lg ${registrationVerificationStep ? "hidden" : ""}`} onClick={submit} disabled={pending || (requiresLegalAcceptance && !legalAccepted)}>
           {pending ? "Подождите..." : type === "login" ? (twoFactorStep ? "Подтвердить вход" : "Войти") : "Создать аккаунт"}
         </Button>
+
+        {registrationVerificationStep ? (
+          <Button className="h-10 w-full rounded-lg" onClick={submit} disabled={pending || !emailCode.trim()}>
+            {pending ? "Подождите..." : "Подтвердить email"}
+          </Button>
+        ) : null}
 
         {type === "login" && twoFactorStep ? (
           <Button
@@ -257,7 +295,20 @@ export function AuthForm({
           </Button>
         ) : null}
 
-        {!twoFactorStep ? (
+        {type === "register" && registrationVerificationStep ? (
+          <Button
+            variant="outline"
+            className="h-10 w-full rounded-lg"
+            onClick={() => {
+              setRegistrationVerificationStep(false);
+              setEmailCode("");
+            }}
+          >
+            Назад
+          </Button>
+        ) : null}
+
+        {!twoFactorStep && !registrationVerificationStep ? (
           <>
             <div className="grid gap-2.5">
               <button

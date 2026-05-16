@@ -3,13 +3,21 @@ import { NextResponse } from "next/server";
 import { ProfileStatusApprovalStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth/session";
+import { generateVerificationCode, hashVerificationCode, sendEmailVerificationCode } from "@/lib/email";
 import { getLegalAcceptanceData, LEGAL_ACCEPTANCE_REQUIRED_MESSAGE } from "@/lib/legal-acceptance";
 import { generateUniquePublicPlayerId } from "@/lib/public-player-id";
 import { resolveRequestTimeZone } from "@/lib/time-zone";
 import { profileSchema, registerSchema } from "@/lib/validators";
 
+const REGISTER_CODE_TTL_MS = 10 * 60 * 1000;
+
+function getRegisterCodeIdentifier(email: string) {
+  return `register-email:${email}`;
+}
+
 export async function POST(request: Request) {
-  const parsedBody = registerSchema.safeParse(await request.json());
+  const rawBody = await request.json();
+  const parsedBody = registerSchema.safeParse(rawBody);
 
   if (!parsedBody.success) {
     const fieldErrors = parsedBody.error.flatten().fieldErrors;
@@ -25,6 +33,7 @@ export async function POST(request: Request) {
 
   const body = parsedBody.data;
   const normalizedEmail = body.email.trim().toLowerCase();
+  const emailCode = String((rawBody as { emailCode?: unknown }).emailCode ?? "").trim();
   const requestTimeZone = resolveRequestTimeZone(request.headers);
   const existing = await db.user.findFirst({
     where: {
@@ -39,18 +48,89 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Email already exists" }, { status: 409 });
   }
 
+  const identifier = getRegisterCodeIdentifier(normalizedEmail);
+
+  if (!emailCode) {
+    const code = generateVerificationCode();
+    const token = hashVerificationCode(`${normalizedEmail}:${code}`);
+
+    await db.verificationToken.deleteMany({
+      where: {
+        identifier,
+      },
+    });
+
+    await db.verificationToken.create({
+      data: {
+        identifier,
+        token,
+        expires: new Date(Date.now() + REGISTER_CODE_TTL_MS),
+      },
+    });
+
+    try {
+      await sendEmailVerificationCode({
+        email: normalizedEmail,
+        code,
+      });
+    } catch {
+      await db.verificationToken.deleteMany({
+        where: {
+          identifier,
+          token,
+        },
+      });
+
+      return NextResponse.json(
+        { error: "Не удалось отправить код. Проверьте настройки email-провайдера." },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({ ok: true, verificationRequired: true });
+  }
+
+  if (!/^\d{6}$/.test(emailCode)) {
+    return NextResponse.json({ error: "Введите 6-значный код из письма." }, { status: 400 });
+  }
+
+  const token = hashVerificationCode(`${normalizedEmail}:${emailCode}`);
+  const verification = await db.verificationToken.findUnique({
+    where: {
+      identifier_token: {
+        identifier,
+        token,
+      },
+    },
+  });
+
+  if (!verification || verification.expires < new Date()) {
+    return NextResponse.json({ error: "Код неверный или уже истёк." }, { status: 400 });
+  }
+
   const passwordHash = await hash(body.password, 10);
 
-  const user = await db.user.create({
-    data: {
-      publicId: await generateUniquePublicPlayerId(),
-      email: normalizedEmail,
-      passwordHash,
-      name: body.name,
-      timeZone: requestTimeZone,
-      timeZoneUpdatedAt: requestTimeZone ? new Date() : null,
-      ...getLegalAcceptanceData(request.headers),
-    },
+  const user = await db.$transaction(async (tx) => {
+    const created = await tx.user.create({
+      data: {
+        publicId: await generateUniquePublicPlayerId(),
+        email: normalizedEmail,
+        emailVerified: new Date(),
+        passwordHash,
+        name: body.name,
+        timeZone: requestTimeZone,
+        timeZoneUpdatedAt: requestTimeZone ? new Date() : null,
+        ...getLegalAcceptanceData(request.headers),
+      },
+    });
+
+    await tx.verificationToken.deleteMany({
+      where: {
+        identifier,
+      },
+    });
+
+    return created;
   });
 
   return NextResponse.json({ userId: user.id });

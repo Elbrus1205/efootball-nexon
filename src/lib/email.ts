@@ -62,6 +62,49 @@ export async function sendEmailVerificationCode(params: {
   }
 }
 
+export async function sendPasswordResetLink(params: {
+  email: string;
+  resetUrl: string;
+}) {
+  const { apiKey, from } = getEmailConfig();
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;background:#0b1020;color:#fff;padding:24px">
+      <div style="max-width:560px;margin:0 auto;background:#121827;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:28px">
+        <div style="font-size:24px;font-weight:700;margin-bottom:8px">Сброс пароля</div>
+        <div style="font-size:14px;line-height:1.6;color:#b7c0d1;margin-bottom:20px">
+          Нажмите на кнопку ниже, чтобы задать новый пароль для аккаунта eFootball Nexon.
+        </div>
+        <a href="${params.resetUrl}" style="display:inline-block;background:#f6c84c;color:#111827;text-decoration:none;font-weight:700;border-radius:12px;padding:14px 18px;margin-bottom:18px">
+          Сменить пароль
+        </a>
+        <div style="font-size:13px;line-height:1.7;color:#8c96aa">
+          Ссылка действует 1 час. Если вы не запрашивали сброс пароля, просто проигнорируйте это письмо.
+        </div>
+      </div>
+    </div>
+  `;
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: params.email,
+      subject: "Сброс пароля — eFootball Nexon",
+      html,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(text || "Failed to send email");
+  }
+}
+
 export async function sendPasswordChangeCode(params: {
   email: string;
   code: string;
