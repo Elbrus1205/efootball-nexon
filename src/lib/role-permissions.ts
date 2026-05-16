@@ -41,6 +41,7 @@ export const rolePermissions = [
   { id: "broadcasts.manage", label: "Делать рассылки" },
   { id: "content.manage", label: "Управлять FAQ и регламентами" },
   { id: "coins.manage", label: "Управлять магазином Coins, заказами, товарами, картами и партнёрами" },
+  { id: "divisions.manage", label: "Управлять режимом Дивизион" },
 ] as const satisfies readonly RolePermission[];
 
 export type RolePermissionId = (typeof rolePermissions)[number]["id"];
@@ -89,6 +90,7 @@ export const defaultRolePermissions: Record<ManagedRole, RolePermissionId[]> = {
     "broadcasts.manage",
     "content.manage",
     "coins.manage",
+    "divisions.manage",
   ],
 };
 
@@ -154,6 +156,7 @@ export const adminNavPermissions: Record<string, RolePermissionId[]> = {
   "/admin/matches": ["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"],
   "/admin/moderation": ["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"],
   "/admin/broadcasts": ["broadcasts.manage"],
+  "/admin/divisions": ["divisions.manage"],
 };
 
 export async function getAllowedAdminNavHrefs(role: UserRole) {

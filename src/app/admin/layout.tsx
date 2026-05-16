@@ -22,6 +22,7 @@ export default async function AdminLayout({
     "broadcasts.manage",
     "content.manage",
     "coins.manage",
+    "divisions.manage",
     "schedule.manage",
   ]);
   const allowedHrefs = await getAllowedAdminNavHrefs(session.user.role);

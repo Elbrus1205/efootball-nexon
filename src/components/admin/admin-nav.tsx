@@ -11,6 +11,7 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  Layers3,
   Megaphone,
   SlidersHorizontal,
   ShieldCheck,
@@ -31,6 +32,7 @@ const items = [
   { href: "/admin/role-permissions", label: "Права ролей", icon: SlidersHorizontal },
   { href: "/admin/matches", label: "Матчи", icon: Swords },
   { href: "/admin/moderation", label: "Споры", icon: ShieldCheck },
+  { href: "/admin/divisions", label: "Дивизион", icon: Layers3 },
   { href: "/admin/broadcasts", label: "Рассылки", icon: Megaphone },
 ];
 

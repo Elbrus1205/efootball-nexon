@@ -195,6 +195,20 @@ enum FaqAttachmentKind {
   LINK
 }
 
+enum DivisionMatchStatus {
+  WAITING_GAME
+  WAITING_CONFIRMATION
+  DISPUTED
+  FINISHED
+  CANCELLED
+}
+
+enum DivisionMatchResult {
+  WIN
+  DRAW
+  LOSS
+}
+
 model User {
   id                  String                   @id @default(cuid())
   publicId            String                   @unique
@@ -249,6 +263,111 @@ model User {
   coinServiceExecutorProfile CoinServiceExecutor?
   profileStatuses      UserProfileStatus[]         @relation("profileStatusOwner")
   reviewedProfileStatuses UserProfileStatus[]      @relation("profileStatusReviewer")
+  divisionProfile      DivisionPlayer?
+  divisionQueueEntries DivisionQueueEntry[]
+  divisionMatchesAsOne DivisionMatch[]             @relation("divisionPlayerOne")
+  divisionMatchesAsTwo DivisionMatch[]             @relation("divisionPlayerTwo")
+  divisionScoreSubmissions DivisionScoreSubmission[]
+}
+
+model DivisionSettings {
+  id          String   @id @default("default")
+  betaEnabled Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model DivisionPlayer {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  division      Int      @default(5)
+  points        Int      @default(0)
+  rating        Int?
+  wins          Int      @default(0)
+  draws         Int      @default(0)
+  losses        Int      @default(0)
+  winStreak     Int      @default(0)
+  bestWinStreak Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  history       DivisionMatchHistory[]
+
+  @@index([division, points])
+  @@index([division, rating])
+  @@index([wins, losses])
+}
+
+model DivisionQueueEntry {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  group     Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([group, createdAt])
+}
+
+model DivisionMatch {
+  id               String              @id @default(cuid())
+  playerOneId      String
+  playerTwoId      String
+  playerOneScore   Int?
+  playerTwoScore   Int?
+  status           DivisionMatchStatus @default(WAITING_GAME)
+  deadlineAt       DateTime
+  finishedAt       DateTime?
+  autoResolved     Boolean             @default(false)
+  adminNote        String?             @db.Text
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  playerOne        User                @relation("divisionPlayerOne", fields: [playerOneId], references: [id], onDelete: Cascade)
+  playerTwo        User                @relation("divisionPlayerTwo", fields: [playerTwoId], references: [id], onDelete: Cascade)
+  submissions      DivisionScoreSubmission[]
+  history          DivisionMatchHistory[]
+
+  @@index([status, deadlineAt])
+  @@index([playerOneId, createdAt])
+  @@index([playerTwoId, createdAt])
+}
+
+model DivisionScoreSubmission {
+  id             String   @id @default(cuid())
+  matchId        String
+  submittedById  String
+  playerOneScore Int
+  playerTwoScore Int
+  screenshotUrl  String?  @db.Text
+  createdAt      DateTime @default(now())
+  match          DivisionMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  submittedBy    User     @relation(fields: [submittedById], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, submittedById])
+  @@index([matchId, createdAt])
+}
+
+model DivisionMatchHistory {
+  id             String              @id @default(cuid())
+  matchId        String
+  playerId       String
+  opponentId     String
+  result         DivisionMatchResult
+  playerScore    Int
+  opponentScore  Int
+  divisionBefore Int
+  divisionAfter  Int
+  pointsBefore   Int?
+  pointsAfter    Int?
+  ratingBefore   Int?
+  ratingAfter    Int?
+  delta          Int
+  createdAt      DateTime            @default(now())
+  match          DivisionMatch       @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player         DivisionPlayer      @relation(fields: [playerId], references: [userId], onDelete: Cascade)
+
+  @@unique([matchId, playerId])
+  @@index([playerId, createdAt])
+  @@index([createdAt])
 }
 
 model RolePermission {
