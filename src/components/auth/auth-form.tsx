@@ -175,7 +175,15 @@ export function AuthForm({
         {type === "register" && !registrationVerificationStep ? (
           <div className="space-y-2">
             <Label htmlFor="name" className="text-xs">Имя</Label>
-            <Input id="name" className="h-10 rounded-lg px-3" value={name} onChange={(event) => setName(event.target.value)} />
+            <Input
+              id="name"
+              className="h-10 rounded-lg px-3"
+              minLength={3}
+              maxLength={16}
+              pattern="(?!.*__)[A-Za-z0-9][A-Za-z0-9_]{1,14}[A-Za-z0-9]"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
           </div>
         ) : null}
 

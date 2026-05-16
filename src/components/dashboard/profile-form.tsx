@@ -227,9 +227,12 @@ export function ProfileForm({
                 <Input
                   value={draft.name}
                   className="h-10 border-white/10 bg-white/[0.04]"
+                  minLength={3}
+                  maxLength={16}
+                  pattern="(?!.*__)[A-Za-z0-9][A-Za-z0-9_]{1,14}[A-Za-z0-9]"
                   onChange={(e) => setDraft((v) => ({ ...v, name: e.target.value }))}
                 />
-                <div className="text-xs text-zinc-500">Только английские буквы, цифры и `_`. Изменить можно раз в 6 месяцев.</div>
+                <div className="text-xs text-zinc-500">3-16 символов: английские буквы, цифры и `_`. Нельзя начинать или заканчивать `_`, а также ставить `__` подряд.</div>
               </div>
 
               <div className="space-y-2">

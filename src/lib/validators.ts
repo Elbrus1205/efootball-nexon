@@ -25,14 +25,21 @@ const optionalIntField = (minimum: number, maximum: number, message?: string) =>
       .optional(),
   );
 
+const playerNameSchema = z
+  .string()
+  .min(3, "Имя должно быть не короче 3 символов.")
+  .max(16, "Имя должно быть не длиннее 16 символов.")
+  .regex(/^[A-Za-z0-9_]+$/, "Имя может содержать только английские буквы, цифры и нижнее подчёркивание.")
+  .regex(/^[A-Za-z0-9]/, "Нижнее подчёркивание нельзя ставить в начало имени.")
+  .regex(/[A-Za-z0-9]$/, "Нижнее подчёркивание нельзя ставить в конец имени.")
+  .refine((value) => !value.includes("__"), {
+    message: "Нижнее подчёркивание нельзя ставить два и более раз подряд.",
+  });
+
 export const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
-  name: z
-    .string()
-    .min(2, "Имя должно быть не короче 2 символов.")
-    .max(32, "Имя должно быть не длиннее 32 символов.")
-    .regex(/^[A-Za-z_]+$/, "Имя может содержать только английские буквы и нижнее подчёркивание."),
+  name: playerNameSchema,
   legalAccepted: z.boolean().refine(Boolean, {
     message: "Необходимо принять документы сайта.",
   }),
@@ -44,11 +51,7 @@ export const loginSchema = z.object({
 });
 
 export const profileSchema = z.object({
-  name: z
-    .string()
-    .min(2, "Имя должно быть не короче 2 символов.")
-    .max(32, "Имя должно быть не длиннее 32 символов.")
-    .regex(/^[A-Za-z_]+$/, "Имя может содержать только английские буквы и нижнее подчёркивание."),
+  name: playerNameSchema,
   favoriteTeam: z.string().optional().or(z.literal("")),
   bio: z
     .string()
