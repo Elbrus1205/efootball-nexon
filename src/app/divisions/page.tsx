@@ -46,8 +46,8 @@ export default async function DivisionsPage({ searchParams }: { searchParams?: {
   const opponentById = new Map(opponents.map((opponent) => [opponent.id, opponent]));
   const history = rawHistory.map((item) => ({ ...item, opponent: opponentById.get(item.opponentId) ?? null }));
   const page = Math.max(1, Number(searchParams?.page ?? 1) || 1);
-  const leaderboard = await getDivisionLeaderboard({ page });
-  const myLeaderboard = await getDivisionLeaderboard({ aroundUserId: session.user.id });
+  const leaderboard = await getDivisionLeaderboard({ page, division: profile.division });
+  const myLeaderboard = await getDivisionLeaderboard({ aroundUserId: session.user.id, division: profile.division });
 
   return (
     <DivisionModeClient
@@ -60,6 +60,11 @@ export default async function DivisionsPage({ searchParams }: { searchParams?: {
       myLeaderboard={myLeaderboard}
       leaderboardPage={page}
       betaEnabled={settings.betaEnabled}
+      settings={{
+        phaseStartsAt: settings.phaseStartsAt?.toISOString() ?? null,
+        phaseEndsAt: settings.phaseEndsAt?.toISOString() ?? null,
+        rulesText: settings.rulesText,
+      }}
     />
   );
 }

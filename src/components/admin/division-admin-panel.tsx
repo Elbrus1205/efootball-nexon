@@ -11,9 +11,7 @@ type AdminMatch = {
   status: string;
   playerOneScore: number | null;
   playerTwoScore: number | null;
-  createdAt: Date | string;
   deadlineAt: Date | string;
-  autoResolved: boolean;
   playerOne: { name: string | null; email: string | null };
   playerTwo: { name: string | null; email: string | null };
 };
@@ -26,6 +24,13 @@ type AdminPlayer = {
   wins: number;
   losses: number;
   user: { name: string | null; email: string | null };
+};
+
+type DivisionSettings = {
+  betaEnabled: boolean;
+  phaseStartsAt: Date | string | null;
+  phaseEndsAt: Date | string | null;
+  rulesText: string | null;
 };
 
 function name(user: { name: string | null; email: string | null }) {
@@ -41,13 +46,21 @@ function statusLabel(status: string) {
   return status;
 }
 
+function toDateTimeLocal(value: Date | string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
 export function DivisionAdminPanel({
-  betaEnabled,
+  settings,
   matches,
   players,
   currentStatus,
 }: {
-  betaEnabled: boolean;
+  settings: DivisionSettings;
   matches: AdminMatch[];
   players: AdminPlayer[];
   currentStatus: string;
@@ -75,29 +88,61 @@ export function DivisionAdminPanel({
   return (
     <div className="space-y-6">
       <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="text-sm font-bold text-white">Beta-режим</div>
-            <div className="text-sm text-zinc-400">Включает или выключает доступ к режиму Дивизион.</div>
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const form = new FormData(event.currentTarget);
+            startTransition(async () => {
+              await fetch("/api/admin/divisions/settings", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  betaEnabled: form.get("betaEnabled") === "on",
+                  phaseStartsAt: form.get("phaseStartsAt"),
+                  phaseEndsAt: form.get("phaseEndsAt"),
+                  rulesText: form.get("rulesText"),
+                }),
+              });
+              toast.success("Настройки дивизиона сохранены.");
+              router.refresh();
+            });
+          }}
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-sm font-bold text-white">Настройки режима</div>
+              <div className="text-sm text-zinc-400">Beta, даты фазы и правила, которые видят игроки.</div>
+            </div>
+            <label className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-white">
+              <input name="betaEnabled" type="checkbox" defaultChecked={settings.betaEnabled} />
+              Beta включена
+            </label>
           </div>
-          <Button
-            disabled={pending}
-            variant={betaEnabled ? "outline" : "default"}
-            onClick={() =>
-              startTransition(async () => {
-                await fetch("/api/admin/divisions/settings", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ betaEnabled: !betaEnabled }),
-                });
-                toast.success(betaEnabled ? "Beta выключена." : "Beta включена.");
-                router.refresh();
-              })
-            }
-          >
-            {betaEnabled ? "Выключить beta" : "Включить beta"}
-          </Button>
-        </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="space-y-2 text-sm text-zinc-400">
+              Начало фазы
+              <Input name="phaseStartsAt" type="datetime-local" defaultValue={toDateTimeLocal(settings.phaseStartsAt)} className="bg-black/30" />
+            </label>
+            <label className="space-y-2 text-sm text-zinc-400">
+              Конец фазы
+              <Input name="phaseEndsAt" type="datetime-local" defaultValue={toDateTimeLocal(settings.phaseEndsAt)} className="bg-black/30" />
+            </label>
+          </div>
+
+          <label className="block space-y-2 text-sm text-zinc-400">
+            Правила
+            <textarea
+              name="rulesText"
+              defaultValue={settings.rulesText ?? ""}
+              className="min-h-32 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none transition focus:border-primary"
+              placeholder="Введите правила режима Дивизион"
+            />
+          </label>
+
+          <Button disabled={pending} type="submit">Сохранить настройки</Button>
+        </form>
       </section>
 
       <section className="space-y-4">
@@ -136,7 +181,10 @@ export function DivisionAdminPanel({
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <div className="font-bold text-white">{name(match.playerOne)} vs {name(match.playerTwo)}</div>
-                  <div className="mt-1 text-xs text-zinc-500">{statusLabel(match.status)} · дедлайн {new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(match.deadlineAt))}</div>
+                  <div className="mt-1 text-xs text-zinc-500">
+                    {statusLabel(match.status)} · дедлайн{" "}
+                    {new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(match.deadlineAt))}
+                  </div>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-[80px_80px_1fr_auto_auto]">
                   <Input name="playerOneScore" type="number" min={0} max={99} defaultValue={match.playerOneScore ?? 0} className="h-10 bg-black/30" />

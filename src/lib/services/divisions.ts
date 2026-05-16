@@ -378,13 +378,15 @@ export async function cancelDivisionMatch(matchId: string, adminNote?: string | 
   });
 }
 
-export async function getDivisionLeaderboard(params?: { page?: number; aroundUserId?: string }) {
+export async function getDivisionLeaderboard(params?: { page?: number; aroundUserId?: string; division?: number }) {
   const pageSize = 10;
-  const total = await db.divisionPlayer.count();
+  const where = params?.division ? { division: params.division } : {};
+  const total = await db.divisionPlayer.count({ where });
   let page = Math.max(1, params?.page ?? 1);
 
   if (params?.aroundUserId) {
     const all = await db.divisionPlayer.findMany({
+      where,
       orderBy: [{ division: "asc" }, { rating: "desc" }, { points: "desc" }, { wins: "desc" }, { losses: "asc" }, { updatedAt: "asc" }],
       select: { userId: true },
     });
@@ -393,6 +395,7 @@ export async function getDivisionLeaderboard(params?: { page?: number; aroundUse
   }
 
   const players = await db.divisionPlayer.findMany({
+    where,
     orderBy: [{ division: "asc" }, { rating: "desc" }, { points: "desc" }, { wins: "desc" }, { losses: "asc" }, { updatedAt: "asc" }],
     skip: (page - 1) * pageSize,
     take: pageSize,

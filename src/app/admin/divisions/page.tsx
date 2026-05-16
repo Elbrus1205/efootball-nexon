@@ -30,5 +30,17 @@ export default async function AdminDivisionsPage({ searchParams }: { searchParam
     },
   });
 
-  return <DivisionAdminPanel betaEnabled={settings.betaEnabled} matches={matches} players={players} currentStatus={status} />;
+  return (
+    <DivisionAdminPanel
+      settings={{
+        betaEnabled: settings.betaEnabled,
+        phaseStartsAt: settings.phaseStartsAt?.toISOString() ?? null,
+        phaseEndsAt: settings.phaseEndsAt?.toISOString() ?? null,
+        rulesText: settings.rulesText,
+      }}
+      matches={matches}
+      players={players}
+      currentStatus={status}
+    />
+  );
 }
