@@ -1,4 +1,4 @@
-﻿-- CreateEnum
+-- CreateEnum
 CREATE TYPE "DivisionMatchStatus" AS ENUM ('WAITING_GAME', 'WAITING_CONFIRMATION', 'DISPUTED', 'FINISHED', 'CANCELLED');
 
 -- CreateEnum
