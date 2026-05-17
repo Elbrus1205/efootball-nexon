@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Club badge placeholder">
+  <rect width="128" height="128" rx="28" fill="#101827"/>
+  <path d="M64 18 100 32v29c0 24-14 40-36 49-22-9-36-25-36-49V32l36-14Z" fill="#1f3b8f" stroke="#f6e36b" stroke-width="6"/>
+  <path d="M47 51h34M47 66h34M54 81h20" stroke="#f6e36b" stroke-width="8" stroke-linecap="round"/>
+</svg>

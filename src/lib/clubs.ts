@@ -9,8 +9,12 @@ export type ClubOption = {
 
 const CLUBS_DIR = path.join(process.cwd(), "public", "club-badges");
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".svg"]);
+const PLACEHOLDER_BADGE_PATH = "/club-badges/_placeholder-club.svg";
 
 const CLUB_NAME_BY_FILE: Record<string, string> = {
+  "ajax.png": "Аякс",
+  "al-hilal.png": "Аль-Хиляль",
+  "al-nassr.png": "Аль-Наср",
   "arsenal.png": "\u0410\u0440\u0441\u0435\u043d\u0430\u043b",
   "aston-villa.png": "\u0410\u0441\u0442\u043e\u043d \u0412\u0438\u043b\u043b\u0430",
   "atalanta.png": "\u0410\u0442\u0430\u043b\u0430\u043d\u0442\u0430",
@@ -21,23 +25,29 @@ const CLUB_NAME_BY_FILE: Record<string, string> = {
   "bayern-munich-big-768x768.png": "\u0411\u0430\u0432\u0430\u0440\u0438\u044f",
   "benfica.png": "\u0411\u0435\u043d\u0444\u0438\u043a\u0430",
   "bologna-big.png": "\u0411\u043e\u043b\u043e\u043d\u044c\u044f",
+  "boca-juniors.png": "Бока Хуниорс",
   "borussia-dortmund.png": "\u0411\u043e\u0440\u0443\u0441\u0441\u0438\u044f \u0414\u043e\u0440\u0442\u043c\u0443\u043d\u0434",
   "bournemouth-big.png": "\u0411\u043e\u0440\u043d\u043c\u0443\u0442",
   "brentford-big-768x768.png": "\u0411\u0440\u0435\u043d\u0442\u0444\u043e\u0440\u0434",
   "brighton-hove-albion-big-768x773.png": "\u0411\u0440\u0430\u0439\u0442\u043e\u043d",
   "burnley-big-2023 (1).png": "\u0411\u0435\u0440\u043d\u043b\u0438",
+  "celtic.png": "Селтик",
   "chelsea.png": "\u0427\u0435\u043b\u0441\u0438",
   "como-1907-big-768x794.png": "\u041a\u043e\u043c\u043e",
   "crystal-palace-big-2022.png": "\u041a\u0440\u0438\u0441\u0442\u0430\u043b \u041f\u044d\u043b\u0430\u0441",
   "eintracht-frankfurt-big-768x768.png": "\u0410\u0439\u043d\u0442\u0440\u0430\u0445\u0442 \u0424\u0440\u0430\u043d\u043a\u0444\u0443\u0440\u0442",
   "everton-big-768x786.png": "\u042d\u0432\u0435\u0440\u0442\u043e\u043d",
   "fenerbahce.png": "\u0424\u0435\u043d\u0435\u0440\u0431\u0430\u0445\u0447\u0435",
+  "fiorentina.png": "Фиорентина",
+  "flamengo.png": "Фламенго",
   "fulham-big.png": "\u0424\u0443\u043b\u0445\u044d\u043c",
   "galatasaray-big.png": "\u0413\u0430\u043b\u0430\u0442\u0430\u0441\u0430\u0440\u0430\u0439",
   "inter-milan.png": "\u0418\u043d\u0442\u0435\u0440",
   "juventus.png": "\u042e\u0432\u0435\u043d\u0442\u0443\u0441",
+  "lazio.png": "Лацио",
   "leeds-united-big (1).png": "\u041b\u0438\u0434\u0441 \u042e\u043d\u0430\u0439\u0442\u0435\u0434",
   "liverpool.png": "\u041b\u0438\u0432\u0435\u0440\u043f\u0443\u043b\u044c",
+  "lyon.png": "Лион",
   "manchester-city.png": "\u041c\u0430\u043d\u0447\u0435\u0441\u0442\u0435\u0440 \u0421\u0438\u0442\u0438",
   "manchester-united.png": "\u041c\u0430\u043d\u0447\u0435\u0441\u0442\u0435\u0440 \u042e\u043d\u0430\u0439\u0442\u0435\u0434",
   "marseille.png": "\u041c\u0430\u0440\u0441\u0435\u043b\u044c",
@@ -51,7 +61,14 @@ const CLUB_NAME_BY_FILE: Record<string, string> = {
   "psv-eindhoven-big-768x630.png": "\u041f\u0421\u0412",
   "real-betis.png": "\u0420\u0435\u0430\u043b \u0411\u0435\u0442\u0438\u0441",
   "real-madrid.png": "\u0420\u0435\u0430\u043b \u041c\u0430\u0434\u0440\u0438\u0434",
+  "rangers.png": "Рейнджерс",
+  "real-sociedad.png": "Реал Сосьедад",
+  "river-plate.png": "Ривер Плейт",
+  "rb-leipzig.png": "РБ Лейпциг",
+  "rb-salzburg.png": "РБ Зальцбург",
   "roma-big (1).png": "\u0420\u043e\u043c\u0430",
+  "sevilla.png": "Севилья",
+  "shakhtar-donetsk.png": "Шахтёр Донецк",
   "sporting.png": "\u0421\u043f\u043e\u0440\u0442\u0438\u043d\u0433",
   "strasbourg-big-768x768.png": "\u0421\u0442\u0440\u0430\u0441\u0431\u0443\u0440",
   "sunderland-big-768x640 (1).png": "\u0421\u0430\u043d\u0434\u0435\u0440\u043b\u0435\u043d\u0434",
@@ -60,6 +77,25 @@ const CLUB_NAME_BY_FILE: Record<string, string> = {
   "west-ham-united.png": "\u0412\u0435\u0441\u0442 \u0425\u044d\u043c",
   "wolverhampton-wanderers-big-768x666.png": "\u0412\u0443\u043b\u0432\u0435\u0440\u0445\u044d\u043c\u043f\u0442\u043e\u043d",
 };
+
+const EXTRA_CLUBS: ClubOption[] = [
+  { slug: "ajax", name: "Аякс", imagePath: PLACEHOLDER_BADGE_PATH },
+  { slug: "al-hilal", name: "Аль-Хиляль", imagePath: PLACEHOLDER_BADGE_PATH },
+  { slug: "al-nassr", name: "Аль-Наср", imagePath: PLACEHOLDER_BADGE_PATH },
+  { slug: "boca-juniors", name: "Бока Хуниорс", imagePath: PLACEHOLDER_BADGE_PATH },
+  { slug: "fiorentina", name: "Фиорентина", imagePath: PLACEHOLDER_BADGE_PATH },
+  { slug: "flamengo", name: "Фламенго", imagePath: PLACEHOLDER_BADGE_PATH },
+  { slug: "lazio", name: "Лацио", imagePath: PLACEHOLDER_BADGE_PATH },
+  { slug: "lyon", name: "Лион", imagePath: PLACEHOLDER_BADGE_PATH },
+  { slug: "rb-leipzig", name: "РБ Лейпциг", imagePath: PLACEHOLDER_BADGE_PATH },
+  { slug: "rb-salzburg", name: "РБ Зальцбург", imagePath: PLACEHOLDER_BADGE_PATH },
+  { slug: "real-sociedad", name: "Реал Сосьедад", imagePath: PLACEHOLDER_BADGE_PATH },
+  { slug: "river-plate", name: "Ривер Плейт", imagePath: PLACEHOLDER_BADGE_PATH },
+  { slug: "sevilla", name: "Севилья", imagePath: PLACEHOLDER_BADGE_PATH },
+  { slug: "shakhtar-donetsk", name: "Шахтёр Донецк", imagePath: PLACEHOLDER_BADGE_PATH },
+  { slug: "celtic", name: "Селтик", imagePath: PLACEHOLDER_BADGE_PATH },
+  { slug: "rangers", name: "Рейнджерс", imagePath: PLACEHOLDER_BADGE_PATH },
+];
 
 function prettifyClubName(fileName: string) {
   const extension = path.extname(fileName);
@@ -83,8 +119,9 @@ export async function getAvailableClubs() {
   try {
     const entries = await fs.readdir(CLUBS_DIR, { withFileTypes: true });
 
-    return entries
+    const clubs = entries
       .filter((entry) => entry.isFile())
+      .filter((entry) => !entry.name.startsWith("_"))
       .filter((entry) => IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase()))
       .map((entry) => {
         const extension = path.extname(entry.name);
@@ -95,9 +132,13 @@ export async function getAvailableClubs() {
           name: CLUB_NAME_BY_FILE[entry.name] ?? prettifyClubName(entry.name),
           imagePath: `/club-badges/${entry.name}`,
         } satisfies ClubOption;
-      })
-      .sort((a, b) => a.name.localeCompare(b.name, "ru"));
+      });
+
+    const usedSlugs = new Set(clubs.map((club) => club.slug));
+    const missingExtraClubs = EXTRA_CLUBS.filter((club) => !usedSlugs.has(club.slug));
+
+    return [...clubs, ...missingExtraClubs].sort((a, b) => a.name.localeCompare(b.name, "ru"));
   } catch {
-    return [] as ClubOption[];
+    return EXTRA_CLUBS.sort((a, b) => a.name.localeCompare(b.name, "ru"));
   }
 }
