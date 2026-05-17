@@ -653,7 +653,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   const isRegistrationOpen = tournament.status === TournamentStatus.REGISTRATION_OPEN;
   const isLoggedIn = Boolean(session?.user);
   const alreadyRegistered = !!session?.user && activeParticipants.some((entry) => entry.userId === session.user.id);
-  const needsTelegram = Boolean(tournament.requireTelegramForRegistration && !currentUser?.telegramId);
+  const needsTelegram = Boolean(isLoggedIn && !currentUser?.telegramId);
   const canRegister = isLoggedIn && isRegistrationOpen && hasFreeSlots && !alreadyRegistered && !needsTelegram;
   const canCancelRegistration =
     isLoggedIn &&

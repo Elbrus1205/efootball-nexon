@@ -7,138 +7,99 @@ export type ClubOption = {
   imagePath: string;
 };
 
-const CLUBS_DIR = path.join(process.cwd(), "public", "club-badges");
-const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".svg"]);
-const PLACEHOLDER_BADGE_PATH = "/club-badges/_placeholder-club.svg";
-
-const CLUB_NAME_BY_FILE: Record<string, string> = {
-  "ajax.png": "Аякс",
-  "al-hilal.png": "Аль-Хиляль",
-  "al-nassr.png": "Аль-Наср",
-  "arsenal.png": "\u0410\u0440\u0441\u0435\u043d\u0430\u043b",
-  "aston-villa.png": "\u0410\u0441\u0442\u043e\u043d \u0412\u0438\u043b\u043b\u0430",
-  "atalanta.png": "\u0410\u0442\u0430\u043b\u0430\u043d\u0442\u0430",
-  "athletic-club-big-2013 (1).png": "\u0410\u0442\u043b\u0435\u0442\u0438\u043a \u0411\u0438\u043b\u044c\u0431\u0430\u043e",
-  "atletico-madrid.png": "\u0410\u0442\u043b\u0435\u0442\u0438\u043a\u043e \u041c\u0430\u0434\u0440\u0438\u0434",
-  "barcelona.png": "\u0411\u0430\u0440\u0441\u0435\u043b\u043e\u043d\u0430",
-  "bayer-04-leverkusen.png": "\u0411\u0430\u0439\u0435\u0440 04",
-  "bayern-munich-big-768x768.png": "\u0411\u0430\u0432\u0430\u0440\u0438\u044f",
-  "benfica.png": "\u0411\u0435\u043d\u0444\u0438\u043a\u0430",
-  "bologna-big.png": "\u0411\u043e\u043b\u043e\u043d\u044c\u044f",
-  "boca-juniors.png": "Бока Хуниорс",
-  "borussia-dortmund.png": "\u0411\u043e\u0440\u0443\u0441\u0441\u0438\u044f \u0414\u043e\u0440\u0442\u043c\u0443\u043d\u0434",
-  "bournemouth-big.png": "\u0411\u043e\u0440\u043d\u043c\u0443\u0442",
-  "brentford-big-768x768.png": "\u0411\u0440\u0435\u043d\u0442\u0444\u043e\u0440\u0434",
-  "brighton-hove-albion-big-768x773.png": "\u0411\u0440\u0430\u0439\u0442\u043e\u043d",
-  "burnley-big-2023 (1).png": "\u0411\u0435\u0440\u043d\u043b\u0438",
-  "celtic.png": "Селтик",
-  "chelsea.png": "\u0427\u0435\u043b\u0441\u0438",
-  "como-1907-big-768x794.png": "\u041a\u043e\u043c\u043e",
-  "crystal-palace-big-2022.png": "\u041a\u0440\u0438\u0441\u0442\u0430\u043b \u041f\u044d\u043b\u0430\u0441",
-  "eintracht-frankfurt-big-768x768.png": "\u0410\u0439\u043d\u0442\u0440\u0430\u0445\u0442 \u0424\u0440\u0430\u043d\u043a\u0444\u0443\u0440\u0442",
-  "everton-big-768x786.png": "\u042d\u0432\u0435\u0440\u0442\u043e\u043d",
-  "fenerbahce.png": "\u0424\u0435\u043d\u0435\u0440\u0431\u0430\u0445\u0447\u0435",
-  "fiorentina.png": "Фиорентина",
-  "flamengo.png": "Фламенго",
-  "fulham-big.png": "\u0424\u0443\u043b\u0445\u044d\u043c",
-  "galatasaray-big.png": "\u0413\u0430\u043b\u0430\u0442\u0430\u0441\u0430\u0440\u0430\u0439",
-  "inter-milan.png": "\u0418\u043d\u0442\u0435\u0440",
-  "juventus.png": "\u042e\u0432\u0435\u043d\u0442\u0443\u0441",
-  "lazio.png": "Лацио",
-  "leeds-united-big (1).png": "\u041b\u0438\u0434\u0441 \u042e\u043d\u0430\u0439\u0442\u0435\u0434",
-  "liverpool.png": "\u041b\u0438\u0432\u0435\u0440\u043f\u0443\u043b\u044c",
-  "lyon.png": "Лион",
-  "manchester-city.png": "\u041c\u0430\u043d\u0447\u0435\u0441\u0442\u0435\u0440 \u0421\u0438\u0442\u0438",
-  "manchester-united.png": "\u041c\u0430\u043d\u0447\u0435\u0441\u0442\u0435\u0440 \u042e\u043d\u0430\u0439\u0442\u0435\u0434",
-  "marseille.png": "\u041c\u0430\u0440\u0441\u0435\u043b\u044c",
-  "milan.png": "\u041c\u0438\u043b\u0430\u043d",
-  "monaco.png": "\u041c\u043e\u043d\u0430\u043a\u043e",
-  "napoli-big-2024-768x768.png": "\u041d\u0430\u043f\u043e\u043b\u0438",
-  "newcastle-united-big-768x774.png": "\u041d\u044c\u044e\u043a\u0430\u0441\u043b \u042e\u043d\u0430\u0439\u0442\u0435\u0434",
-  "nottingham-forest-big.png": "\u041d\u043e\u0442\u0442\u0438\u043d\u0433\u0435\u043c \u0424\u043e\u0440\u0435\u0441\u0442",
-  "porto.png": "\u041f\u043e\u0440\u0442\u0443",
-  "psg-big-768x768.png": "\u041f\u0421\u0416",
-  "psv-eindhoven-big-768x630.png": "\u041f\u0421\u0412",
-  "real-betis.png": "\u0420\u0435\u0430\u043b \u0411\u0435\u0442\u0438\u0441",
-  "real-madrid.png": "\u0420\u0435\u0430\u043b \u041c\u0430\u0434\u0440\u0438\u0434",
-  "rangers.png": "Рейнджерс",
-  "real-sociedad.png": "Реал Сосьедад",
-  "river-plate.png": "Ривер Плейт",
-  "rb-leipzig.png": "РБ Лейпциг",
-  "rb-salzburg.png": "РБ Зальцбург",
-  "roma-big (1).png": "\u0420\u043e\u043c\u0430",
-  "sevilla.png": "Севилья",
-  "shakhtar-donetsk.png": "Шахтёр Донецк",
-  "sporting.png": "\u0421\u043f\u043e\u0440\u0442\u0438\u043d\u0433",
-  "strasbourg-big-768x768.png": "\u0421\u0442\u0440\u0430\u0441\u0431\u0443\u0440",
-  "sunderland-big-768x640 (1).png": "\u0421\u0430\u043d\u0434\u0435\u0440\u043b\u0435\u043d\u0434",
-  "tottenham-hotspur.png": "\u0422\u043e\u0442\u0442\u0435\u043d\u0445\u044d\u043c",
-  "villarreal-big.png": "\u0412\u0438\u043b\u044c\u044f\u0440\u0440\u0435\u0430\u043b",
-  "west-ham-united.png": "\u0412\u0435\u0441\u0442 \u0425\u044d\u043c",
-  "wolverhampton-wanderers-big-768x666.png": "\u0412\u0443\u043b\u0432\u0435\u0440\u0445\u044d\u043c\u043f\u0442\u043e\u043d",
+type ClubDefinition = {
+  fileName: string;
+  name: string;
 };
 
-const EXTRA_CLUBS: ClubOption[] = [
-  { slug: "ajax", name: "Аякс", imagePath: PLACEHOLDER_BADGE_PATH },
-  { slug: "al-hilal", name: "Аль-Хиляль", imagePath: PLACEHOLDER_BADGE_PATH },
-  { slug: "al-nassr", name: "Аль-Наср", imagePath: PLACEHOLDER_BADGE_PATH },
-  { slug: "boca-juniors", name: "Бока Хуниорс", imagePath: PLACEHOLDER_BADGE_PATH },
-  { slug: "fiorentina", name: "Фиорентина", imagePath: PLACEHOLDER_BADGE_PATH },
-  { slug: "flamengo", name: "Фламенго", imagePath: PLACEHOLDER_BADGE_PATH },
-  { slug: "lazio", name: "Лацио", imagePath: PLACEHOLDER_BADGE_PATH },
-  { slug: "lyon", name: "Лион", imagePath: PLACEHOLDER_BADGE_PATH },
-  { slug: "rb-leipzig", name: "РБ Лейпциг", imagePath: PLACEHOLDER_BADGE_PATH },
-  { slug: "rb-salzburg", name: "РБ Зальцбург", imagePath: PLACEHOLDER_BADGE_PATH },
-  { slug: "real-sociedad", name: "Реал Сосьедад", imagePath: PLACEHOLDER_BADGE_PATH },
-  { slug: "river-plate", name: "Ривер Плейт", imagePath: PLACEHOLDER_BADGE_PATH },
-  { slug: "sevilla", name: "Севилья", imagePath: PLACEHOLDER_BADGE_PATH },
-  { slug: "shakhtar-donetsk", name: "Шахтёр Донецк", imagePath: PLACEHOLDER_BADGE_PATH },
-  { slug: "celtic", name: "Селтик", imagePath: PLACEHOLDER_BADGE_PATH },
-  { slug: "rangers", name: "Рейнджерс", imagePath: PLACEHOLDER_BADGE_PATH },
+const CLUBS_DIR = path.join(process.cwd(), "public", "club-badges");
+
+const CLUBS: ClubDefinition[] = [
+  { fileName: "ajax-amsterdam-big-768x773.png", name: "Аякс" },
+  { fileName: "al-hilal-saudi-big.png", name: "Аль-Хиляль" },
+  { fileName: "al-nassr-big-2025-768x768.png", name: "Аль-Наср" },
+  { fileName: "arsenal.png", name: "Арсенал" },
+  { fileName: "aston-villa.png", name: "Астон Вилла" },
+  { fileName: "atalanta.png", name: "Аталанта" },
+  { fileName: "athletic-club-big-2013 (1).png", name: "Атлетик Бильбао" },
+  { fileName: "atletico-madrid.png", name: "Атлетико Мадрид" },
+  { fileName: "barcelona.png", name: "Барселона" },
+  { fileName: "bayer-04-leverkusen.png", name: "Байер 04" },
+  { fileName: "bayern-munich-big-768x768.png", name: "Бавария" },
+  { fileName: "benfica.png", name: "Бенфика" },
+  { fileName: "bologna-big.png", name: "Болонья" },
+  { fileName: "borussia-dortmund.png", name: "Боруссия Дортмунд" },
+  { fileName: "bournemouth-big.png", name: "Борнмут" },
+  { fileName: "brentford-big-768x768.png", name: "Брентфорд" },
+  { fileName: "brighton-hove-albion-big-768x773.png", name: "Брайтон" },
+  { fileName: "burnley-big-2023 (1).png", name: "Бернли" },
+  { fileName: "celtic-big-768x768.png", name: "Селтик" },
+  { fileName: "chelsea.png", name: "Челси" },
+  { fileName: "como-1907-big-768x794.png", name: "Комо" },
+  { fileName: "crystal-palace-big-2022.png", name: "Кристал Пэлас" },
+  { fileName: "eintracht-frankfurt-big-768x768.png", name: "Айнтрахт Франкфурт" },
+  { fileName: "everton-big-768x786.png", name: "Эвертон" },
+  { fileName: "fenerbahce.png", name: "Фенербахче" },
+  { fileName: "fiorentina-big-2022-768x768.png", name: "Фиорентина" },
+  { fileName: "flamengo-big.png", name: "Фламенго" },
+  { fileName: "fulham-big.png", name: "Фулхэм" },
+  { fileName: "galatasaray-big.png", name: "Галатасарай" },
+  { fileName: "girona-big-768x768.png", name: "Жирона" },
+  { fileName: "inter-milan.png", name: "Интер" },
+  { fileName: "juventus.png", name: "Ювентус" },
+  { fileName: "lazio-big-443x300.png", name: "Лацио" },
+  { fileName: "leeds-united-big (1).png", name: "Лидс Юнайтед" },
+  { fileName: "lille-big-768x731.png", name: "Лилль" },
+  { fileName: "liverpool.png", name: "Ливерпуль" },
+  { fileName: "lyon-big-2022.png", name: "Лион" },
+  { fileName: "manchester-city.png", name: "Манчестер Сити" },
+  { fileName: "manchester-united.png", name: "Манчестер Юнайтед" },
+  { fileName: "marseille.png", name: "Марсель" },
+  { fileName: "milan.png", name: "Милан" },
+  { fileName: "monaco.png", name: "Монако" },
+  { fileName: "napoli-big-2024-768x768.png", name: "Наполи" },
+  { fileName: "newcastle-united-big-768x774.png", name: "Ньюкасл Юнайтед" },
+  { fileName: "nottingham-forest-big.png", name: "Ноттингем Форест" },
+  { fileName: "porto.png", name: "Порту" },
+  { fileName: "psg-big-768x768.png", name: "ПСЖ" },
+  { fileName: "psv-eindhoven-big-768x630.png", name: "ПСВ" },
+  { fileName: "rangers-big-2020-768x768.png", name: "Рейнджерс" },
+  { fileName: "rb-leipzig-big-587x300.png", name: "РБ Лейпциг" },
+  { fileName: "real-betis.png", name: "Реал Бетис" },
+  { fileName: "real-madrid.png", name: "Реал Мадрид" },
+  { fileName: "real-sociedad-big.png", name: "Реал Сосьедад" },
+  { fileName: "river-plate-big.png", name: "Ривер Плейт" },
+  { fileName: "roma-big (1).png", name: "Рома" },
+  { fileName: "sevilla-big.png", name: "Севилья" },
+  { fileName: "sporting.png", name: "Спортинг" },
+  { fileName: "strasbourg-big-768x768.png", name: "Страсбург" },
+  { fileName: "sunderland-big-768x640 (1).png", name: "Сандерленд" },
+  { fileName: "tottenham-hotspur.png", name: "Тоттенхэм" },
+  { fileName: "valencia-big.png", name: "Валенсия" },
+  { fileName: "villarreal-big.png", name: "Вильярреал" },
+  { fileName: "west-ham-united.png", name: "Вест Хэм" },
+  { fileName: "wolverhampton-wanderers-big-768x666.png", name: "Вулверхэмптон" },
 ];
 
-function prettifyClubName(fileName: string) {
-  const extension = path.extname(fileName);
-  const slug = path.basename(fileName, extension);
-
-  return slug
-    .replace(/\([^)]*\)/g, "")
-    .replace(/\b\d+x\d+\b/gi, "")
-    .replace(/\b\d{4}\b/g, "")
-    .replace(/\b(big)\b/gi, "")
-    .replace(/[-_]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .split(" ")
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+function sortClubs(clubs: ClubOption[]) {
+  return clubs.sort((a, b) => a.name.localeCompare(b.name, "ru"));
 }
 
 export async function getAvailableClubs() {
   try {
     const entries = await fs.readdir(CLUBS_DIR, { withFileTypes: true });
+    const existingFileNames = new Set(
+      entries.filter((entry) => entry.isFile()).map((entry) => entry.name),
+    );
 
-    const clubs = entries
-      .filter((entry) => entry.isFile())
-      .filter((entry) => !entry.name.startsWith("_"))
-      .filter((entry) => IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase()))
-      .map((entry) => {
-        const extension = path.extname(entry.name);
-        const slug = path.basename(entry.name, extension);
+    const clubs = CLUBS.filter((club) => existingFileNames.has(club.fileName)).map((club) => ({
+      slug: path.basename(club.fileName, path.extname(club.fileName)),
+      name: club.name,
+      imagePath: `/club-badges/${club.fileName}`,
+    }));
 
-        return {
-          slug,
-          name: CLUB_NAME_BY_FILE[entry.name] ?? prettifyClubName(entry.name),
-          imagePath: `/club-badges/${entry.name}`,
-        } satisfies ClubOption;
-      });
-
-    const usedSlugs = new Set(clubs.map((club) => club.slug));
-    const missingExtraClubs = EXTRA_CLUBS.filter((club) => !usedSlugs.has(club.slug));
-
-    return [...clubs, ...missingExtraClubs].sort((a, b) => a.name.localeCompare(b.name, "ru"));
+    return sortClubs(clubs);
   } catch {
-    return EXTRA_CLUBS.sort((a, b) => a.name.localeCompare(b.name, "ru"));
+    return [];
   }
 }

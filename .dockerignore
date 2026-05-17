@@ -1,6 +1,8 @@
 .git
 .next
 node_modules
+db-backups
+db_backups
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

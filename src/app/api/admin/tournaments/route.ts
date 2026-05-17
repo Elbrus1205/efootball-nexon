@@ -16,7 +16,7 @@ function checkboxValue(value: FormDataEntryValue | null) {
 
 function resolveInitialStatus(status: TournamentStatus, startsAt: Date, autoOpenRegistration: boolean) {
   if (!autoOpenRegistration) return status;
-  return startsAt > new Date() ? TournamentStatus.REGISTRATION_OPEN : TournamentStatus.AWAITING_START;
+  return startsAt <= new Date() ? TournamentStatus.REGISTRATION_OPEN : TournamentStatus.DRAFT;
 }
 
 export async function POST(request: Request) {
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
         startsAt,
         endsAt: null,
         registrationEndsAt: startsAt,
-        registrationStartsAt: body.autoOpenRegistration ? new Date() : null,
+        registrationStartsAt: body.autoOpenRegistration ? startsAt : null,
         maxParticipants: body.maxParticipants,
         prizePool: body.prizePool || null,
         format: TournamentFormat.CUSTOM,

@@ -7,7 +7,7 @@ import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
 import { hasAcceptedCurrentRegulations } from "@/lib/regulations";
 import { createNotification } from "@/lib/services/notifications";
-import { syncTournamentLifecycleStatus, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
+import { getTournamentGroupCapacityLimit, syncTournamentLifecycleStatus, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
 import { formatTournamentBanMessage } from "@/lib/user-ban";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
@@ -48,11 +48,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.json({ error: "Регистрация уже закрыта." }, { status: 400 });
   }
 
-  if (tournament.requireTelegramForRegistration && !user?.telegramId) {
+  if (!user?.telegramId) {
     return NextResponse.json({ error: "Для регистрации на этот турнир нужно привязать Telegram в настройках профиля." }, { status: 403 });
   }
 
-  if (tournament.participants.length >= tournament.maxParticipants) {
+  const groupCapacityLimit = getTournamentGroupCapacityLimit(tournament);
+  const registrationLimit = Math.min(tournament.maxParticipants, groupCapacityLimit ?? tournament.maxParticipants);
+
+  if (tournament.participants.length >= registrationLimit) {
     return NextResponse.json({ error: "Лимит участников уже достигнут." }, { status: 400 });
   }
 

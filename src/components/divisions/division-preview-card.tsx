@@ -22,9 +22,6 @@ export function DivisionPreviewCard({ canOpen, coverImage }: { canOpen: boolean;
 
       <div className="relative z-20 flex h-full flex-col justify-between p-4 sm:p-6 md:p-8">
         <div className="flex items-start justify-between gap-3">
-          <div className="max-w-[72%] text-[10px] font-bold leading-tight text-white/85 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] sm:max-w-sm sm:text-sm">
-            *Рейтинг отражает максимальный уровень игроков.
-          </div>
           <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-black/35 text-amber-100 backdrop-blur sm:h-12 sm:w-12">
             {canOpen ? <Swords className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
           </div>

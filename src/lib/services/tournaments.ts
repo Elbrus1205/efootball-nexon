@@ -585,15 +585,45 @@ async function notifyTournamentCompleted(tournamentId: string) {
 }
 
 async function ensureGroupStandings(groupId: string, participantIds: string[]) {
-  await Promise.all(
-    participantIds.map((participantId) =>
+  await db.$transaction([
+    db.groupStanding.deleteMany({
+      where: {
+        groupId,
+        participantId: { notIn: participantIds },
+      },
+    }),
+    ...participantIds.map((participantId) =>
       db.groupStanding.upsert({
         where: { groupId_participantId: { groupId, participantId } },
         update: {},
         create: { groupId, participantId },
       }),
     ),
-  );
+  ]);
+}
+
+export function getTournamentGroupCapacityLimit(tournament: {
+  format: TournamentFormat;
+  groupsCount?: number | null;
+  participantsPerGroup?: number | null;
+  formatBlueprintJson?: unknown;
+}) {
+  if (tournament.format === TournamentFormat.GROUPS || tournament.format === TournamentFormat.GROUPS_PLAYOFF) {
+    return tournament.groupsCount && tournament.participantsPerGroup
+      ? tournament.groupsCount * tournament.participantsPerGroup
+      : null;
+  }
+
+  if (tournament.format !== TournamentFormat.CUSTOM) {
+    return null;
+  }
+
+  const blueprint = normalizeFormatBlueprint(tournament.formatBlueprintJson);
+  if (blueprint.openingStageMode === "NONE" || !blueprint.participantsPerGroup) {
+    return null;
+  }
+
+  return blueprint.divisionsCount * blueprint.participantsPerGroup;
 }
 
 async function createRoundRobinMatchesForEntries({
@@ -1386,6 +1416,11 @@ export async function assignParticipantsToGroups(
   const groups = groupStage.groups;
   if (!groups.length) throw new Error("No groups configured");
 
+  const capacityLimit = groups.reduce((total, group) => total + (group.capacity ?? groupStage.participantsPerGroup ?? 0), 0);
+  if (capacityLimit > 0 && tournament.participants.length > capacityLimit) {
+    throw new Error(`В группах есть место только для ${capacityLimit} участников.`);
+  }
+
   if (input.mode === "manual") {
     const assignments = input.assignments ?? [];
     await Promise.all(
@@ -1469,6 +1504,7 @@ export async function syncTournamentPreviewGroups(tournamentId: string) {
   if (!groupStage) return null;
 
   const expectedGroupsCount = groupStage.groupsCount ?? 1;
+  let createdMissingGroups = false;
   if (groupStage.groups.length < expectedGroupsCount) {
     for (let index = groupStage.groups.length; index < expectedGroupsCount; index += 1) {
       await db.tournamentGroup.create({
@@ -1480,19 +1516,21 @@ export async function syncTournamentPreviewGroups(tournamentId: string) {
         },
       });
     }
+    createdMissingGroups = true;
   }
 
   const groupIds = new Set(groupStage.groups.map((group) => group.id));
   const hasUnassignedMembers = tournament.participants.some((participant) => !participant.groupId || !groupIds.has(participant.groupId));
-  const hasMissingStandings = groupStage.groups.some((group) => group.members.length !== group.standings.length);
+  const hasOverflowingGroups = groupStage.groups.some((group) => {
+    const capacity = group.capacity ?? groupStage.participantsPerGroup ?? 0;
+    return capacity > 0 && group.members.length > capacity;
+  });
 
-  if (hasUnassignedMembers) {
+  if (createdMissingGroups || hasUnassignedMembers || hasOverflowingGroups) {
     return assignParticipantsToGroups(tournamentId, { mode: "auto" });
   }
 
-  if (hasMissingStandings) {
-    await Promise.all(groupStage.groups.map((group) => ensureGroupStandings(group.id, group.members.map((member) => member.id))));
-  }
+  await Promise.all(groupStage.groups.map((group) => ensureGroupStandings(group.id, group.members.map((member) => member.id))));
 
   return db.tournamentGroup.findMany({
     where: { stageId: groupStage.id },
@@ -2426,12 +2464,12 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
   const allMatchesCompleted =
     hasMatches && tournament.matches.every((match) => TERMINAL_MATCH_STATUSES.has(match.status));
   const now = new Date();
+  const registrationStartsAt = tournament.registrationStartsAt ?? tournament.startsAt;
+  const shouldAutoCloseRegistrationByTime = !tournament.autoOpenRegistration && tournament.startsAt <= now;
   const nextDateStatus =
-    tournament.autoOpenRegistration && tournament.status === TournamentStatus.DRAFT
-      ? tournament.startsAt > now
-        ? TournamentStatus.REGISTRATION_OPEN
-        : TournamentStatus.AWAITING_START
-      : tournament.status === TournamentStatus.REGISTRATION_OPEN && (tournament.startsAt <= now || confirmedParticipants >= tournament.maxParticipants)
+    tournament.autoOpenRegistration && tournament.status === TournamentStatus.DRAFT && registrationStartsAt <= now
+      ? TournamentStatus.REGISTRATION_OPEN
+      : tournament.status === TournamentStatus.REGISTRATION_OPEN && (shouldAutoCloseRegistrationByTime || confirmedParticipants >= tournament.maxParticipants)
         ? TournamentStatus.AWAITING_START
         : null;
 
