@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function DivisionsPage({ searchParams }: { searchParams?: { page?: string } }) {
   const session = await requireAuth();
   const settings = await getDivisionSettings();
-  if (!settings.betaEnabled && !isDivisionAdminRole(session.user.role)) {
+  if (!isDivisionAdminRole(session.user.role)) {
     redirect("/tournaments");
   }
 
