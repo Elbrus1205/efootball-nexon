@@ -100,6 +100,10 @@ function promotionTarget(division: number) {
   return null;
 }
 
+function divisionMatchLimit(division: number) {
+  return division === 5 ? 15 : 10;
+}
+
 function scoreValue(player: PlayerRow) {
   return player.division <= 2 ? player.rating ?? 1000 : player.points;
 }
@@ -119,21 +123,23 @@ function DivisionSummary({ profile, settings, place }: { profile: PlayerRow; set
   const maxForBar = target ?? Math.max(value, 1);
   const progress = Math.max(0, Math.min(100, (value / maxForBar) * 100));
   const totalGames = profile.wins + profile.draws + profile.losses;
+  const matchLimit = divisionMatchLimit(profile.division);
+  const pointsToPromotion = target ? Math.max(0, target - profile.points) : 0;
   const winPercent = totalGames ? Math.round((profile.wins / totalGames) * 100) : 0;
 
   return (
-    <section className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(28,28,34,0.96),rgba(18,18,24,0.96))] p-4 shadow-[0_24px_70px_rgba(2,6,23,0.34)] sm:p-6">
-      <div className="flex flex-col gap-5">
-        <div className="flex items-start gap-4">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-yellow-300/30 bg-blue-700/50 text-yellow-200 shadow-[0_0_26px_rgba(250,204,21,0.12)]">
-            <Trophy className="h-8 w-8" />
+    <section className="overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(28,28,34,0.96),rgba(18,18,24,0.96))] p-3 shadow-[0_16px_44px_rgba(2,6,23,0.3)] sm:rounded-[1.75rem] sm:p-6 sm:shadow-[0_24px_70px_rgba(2,6,23,0.34)]">
+      <div className="flex flex-col gap-3 sm:gap-5">
+        <div className="flex items-start gap-3 sm:gap-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-yellow-300/30 bg-blue-700/50 text-yellow-200 shadow-[0_0_18px_rgba(250,204,21,0.12)] sm:h-16 sm:w-16 sm:rounded-2xl">
+            <Trophy className="h-5 w-5 sm:h-8 sm:w-8" />
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-display text-3xl font-black uppercase leading-none text-yellow-300 sm:text-5xl">Дивизион {profile.division}</h1>
-              <span className="rounded-full border border-amber-300/25 bg-amber-400/10 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-amber-100">Beta</span>
+              <h1 className="font-display text-xl font-black uppercase leading-none text-yellow-300 sm:text-5xl">Дивизион {profile.division}</h1>
+              <span className="rounded-full border border-amber-300/25 bg-amber-400/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.14em] text-amber-100 sm:px-3 sm:py-1 sm:text-xs sm:tracking-[0.18em]">Beta</span>
             </div>
-            <div className="mt-2 text-sm font-bold text-yellow-200 sm:text-xl">
+            <div className="mt-1 text-xs font-bold text-yellow-200 sm:mt-2 sm:text-xl">
               Фаза: {formatPhaseDate(settings.phaseStartsAt)} - {formatPhaseDate(settings.phaseEndsAt)}
             </div>
           </div>
@@ -178,23 +184,25 @@ function DivisionSummary({ profile, settings, place }: { profile: PlayerRow; set
           </>
         ) : (
           <>
-            <div className="text-3xl font-black text-white">Текущие очки: {profile.points}</div>
+            <div className="text-2xl font-black text-white sm:text-3xl">Текущие очки: {profile.points}</div>
             <div>
-              <div className="h-11 overflow-hidden rounded-sm bg-zinc-600">
+              <div className="relative h-6 overflow-hidden rounded-sm bg-zinc-600 sm:h-11">
                 <div className="h-full bg-emerald-500" style={{ width: `${progress}%` }} />
+                <div className="absolute left-1/3 top-0 h-full w-px bg-white/40" />
+                <div className="absolute left-2/3 top-0 h-full w-px bg-white/40" />
               </div>
-              <div className="mt-2 grid grid-cols-3 text-center text-sm font-black">
-                <span className="text-red-500">Rel.</span>
-                <span className="text-emerald-400">Remain</span>
-                <span className="text-emerald-400">Promo.</span>
+              <div className="mt-2 grid grid-cols-3 text-center text-xs font-black sm:text-sm">
+                <span className="text-red-500">Вылет</span>
+                <span className="text-emerald-400">Остаться</span>
+                <span className="text-emerald-400">Повышение</span>
               </div>
             </div>
-            <div className="flex items-center justify-between border-t border-white/10 pt-4">
-              <div className="flex items-center gap-3 text-2xl font-black text-white"><Trophy className="h-7 w-7 text-yellow-300" />Матчи</div>
-              <div className="text-2xl font-black text-zinc-400">{totalGames}/10</div>
+            <div className="flex items-center justify-between border-t border-white/10 pt-3 sm:pt-4">
+              <div className="flex items-center gap-2 text-xl font-black text-white sm:gap-3 sm:text-2xl"><Trophy className="h-6 w-6 text-yellow-300 sm:h-7 sm:w-7" />Матчи</div>
+              <div className="text-xl font-black text-zinc-400 sm:text-2xl">{totalGames}/{matchLimit}</div>
             </div>
-            <p className="text-lg font-bold text-zinc-400">
-              {target && profile.points >= target ? "Вы уже набрали очки для повышения." : `Для повышения нужно ${target ?? 0} очков.`}
+            <p className="text-sm font-bold text-zinc-400 sm:text-lg">
+              {target && profile.points >= target ? "Вы уже набрали очки для повышения." : `До повышения осталось ${pointsToPromotion} очков из ${target ?? 0}.`}
             </p>
           </>
         )}
