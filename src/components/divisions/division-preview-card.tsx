@@ -16,19 +16,14 @@ export function DivisionPreviewCard({ canOpen, coverImage }: { canOpen: boolean;
       ) : (
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_62%_18%,rgba(255,255,255,0.95),transparent_15%),radial-gradient(circle_at_72%_46%,rgba(14,165,233,0.95),transparent_24%),radial-gradient(circle_at_34%_24%,rgba(168,85,247,0.7),transparent_22%),radial-gradient(circle_at_40%_78%,rgba(34,211,238,0.75),transparent_22%),linear-gradient(135deg,#050716_0%,#10104f_42%,#05040d_100%)]" />
       )}
-      <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(0,0,0,0.2),rgba(0,0,0,0.02)_45%,rgba(0,0,0,0.42)),linear-gradient(180deg,rgba(0,0,0,0.04),rgba(0,0,0,0.72))]" />
-      <div className="absolute inset-x-0 top-[38%] h-[21%] -skew-y-6 bg-white/80 blur-2xl" />
-      <div className="absolute left-[8%] top-[8%] h-[70%] w-[84%] rounded-full border border-cyan-200/25 shadow-[0_0_42px_rgba(34,211,238,0.32)]" />
-      <div className="absolute left-[18%] top-[18%] h-px w-[70%] rotate-[28deg] bg-cyan-200/70 shadow-[0_0_22px_4px_rgba(34,211,238,0.55)]" />
-      <div className="absolute left-[8%] top-[54%] h-px w-[75%] -rotate-[14deg] bg-fuchsia-300/60 shadow-[0_0_18px_3px_rgba(217,70,239,0.45)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.06),rgba(0,0,0,0.46)),linear-gradient(90deg,rgba(0,0,0,0.28),rgba(0,0,0,0.04)_52%,rgba(0,0,0,0.34))]" />
       <div className={cn("absolute inset-0 transition", !canOpen && "backdrop-blur-[5px]")} />
       {!canOpen ? <div className="absolute inset-0 z-10 bg-black/28" /> : null}
 
       <div className="relative z-20 flex h-full flex-col justify-between p-4 sm:p-6 md:p-8">
         <div className="flex items-start justify-between gap-3">
-          <div className="overflow-hidden rounded-sm border border-cyan-300 bg-[#171138]/95 shadow-[0_0_14px_rgba(34,211,238,0.55)]">
-            <div className="bg-white/10 px-5 py-0.5 text-center text-[10px] font-black leading-none text-white sm:text-xs">Rank</div>
-            <div className="px-3 pb-1 text-xl font-black leading-none text-yellow-300 sm:text-3xl">1-1,000,000</div>
+          <div className="max-w-[72%] text-[10px] font-bold leading-tight text-white/85 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] sm:max-w-sm sm:text-sm">
+            *Рейтинг отражает максимальный уровень игроков.
           </div>
           <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-black/35 text-amber-100 backdrop-blur sm:h-12 sm:w-12">
             {canOpen ? <Swords className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
@@ -51,12 +46,11 @@ export function DivisionPreviewCard({ canOpen, coverImage }: { canOpen: boolean;
           </div>
         </div>
 
-        <div className="max-w-[72%] space-y-2 sm:max-w-[58%]">
-          <div className="text-[11px] font-bold leading-tight text-white/80 sm:text-sm">*Рейтинг отражает максимальный уровень игроков.</div>
-          <h2 className="font-display text-3xl font-black leading-none text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.9)] sm:text-5xl md:text-6xl">
-            Лига eFootball™
+        <div className="max-w-[72%] space-y-1.5 sm:max-w-[58%] sm:space-y-2">
+          <h2 className="font-display text-2xl font-black leading-none text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.9)] sm:text-4xl md:text-5xl">
+            Лига eFootball
           </h2>
-          <p className="max-w-xl text-lg font-black leading-tight text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.9)] sm:text-3xl md:text-4xl">
+          <p className="max-w-xl text-sm font-black leading-tight text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.9)] sm:text-2xl md:text-3xl">
             Стремитесь перейти в более высокий дивизион!
           </p>
         </div>
