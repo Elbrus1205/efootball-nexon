@@ -273,6 +273,7 @@ model User {
 model DivisionSettings {
   id            String   @id @default("default")
   betaEnabled   Boolean  @default(true)
+  coverImage    String?
   phaseStartsAt DateTime?
   phaseEndsAt   DateTime?
   rulesText     String?  @db.Text

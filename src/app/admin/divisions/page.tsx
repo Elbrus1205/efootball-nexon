@@ -34,6 +34,7 @@ export default async function AdminDivisionsPage({ searchParams }: { searchParam
     <DivisionAdminPanel
       settings={{
         betaEnabled: settings.betaEnabled,
+        coverImage: settings.coverImage,
         phaseStartsAt: settings.phaseStartsAt?.toISOString() ?? null,
         phaseEndsAt: settings.phaseEndsAt?.toISOString() ?? null,
         rulesText: settings.rulesText,

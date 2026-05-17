@@ -1,10 +1,31 @@
 "use client";
 
-import { useTransition } from "react";
+import { ChangeEvent, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { genUploader } from "uploadthing/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import type { OurFileRouter } from "@/lib/uploadthing/core";
+
+const { uploadFiles } = genUploader<OurFileRouter>();
+
+const readFileAsDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onerror = () => reject(new Error("Failed to read image"));
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+
+      reject(new Error("Failed to read image"));
+    };
+
+    reader.readAsDataURL(file);
+  });
 
 type AdminMatch = {
   id: string;
@@ -28,6 +49,7 @@ type AdminPlayer = {
 
 type DivisionSettings = {
   betaEnabled: boolean;
+  coverImage: string | null;
   phaseStartsAt: Date | string | null;
   phaseEndsAt: Date | string | null;
   rulesText: string | null;
@@ -66,7 +88,31 @@ export function DivisionAdminPanel({
   currentStatus: string;
 }) {
   const [pending, startTransition] = useTransition();
+  const [coverImage, setCoverImage] = useState(settings.coverImage ?? "");
+  const [coverUploading, setCoverUploading] = useState(false);
   const router = useRouter();
+
+  const onCoverChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+
+    setCoverUploading(true);
+
+    try {
+      const [uploaded] = await uploadFiles("coverUploader", { files: [file] });
+      setCoverImage(uploaded.serverData?.url || uploaded.ufsUrl || uploaded.url);
+    } catch {
+      try {
+        setCoverImage(await readFileAsDataUrl(file));
+        toast.info("Обложка показана локально. Для постоянной ссылки проверьте UploadThing.");
+      } catch {
+        toast.error("Не удалось загрузить обложку дивизиона.");
+      }
+    } finally {
+      setCoverUploading(false);
+      event.target.value = "";
+    }
+  };
 
   function patchMatch(matchId: string, body: unknown) {
     startTransition(async () => {
@@ -99,6 +145,7 @@ export function DivisionAdminPanel({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   betaEnabled: form.get("betaEnabled") === "on",
+                  coverImage,
                   phaseStartsAt: form.get("phaseStartsAt"),
                   phaseEndsAt: form.get("phaseEndsAt"),
                   rulesText: form.get("rulesText"),
@@ -121,6 +168,25 @@ export function DivisionAdminPanel({
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
+            <label className="space-y-2 text-sm text-zinc-400 md:col-span-2">
+              Фон карточки дивизиона 16:9
+              <input type="hidden" name="coverImage" value={coverImage} />
+              <Input type="file" accept="image/*" onChange={onCoverChange} disabled={coverUploading} className="bg-black/30" />
+            </label>
+            {coverImage ? (
+              <div className="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-3 md:col-span-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={coverImage} alt="Фон карточки дивизиона" className="aspect-video w-full rounded-xl object-cover" />
+                <Button type="button" variant="outline" className="w-full" onClick={() => setCoverImage("")}>
+                  Убрать фон
+                </Button>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-400 md:col-span-2">
+                Загрузите горизонтальную картинку. Она будет фоном верхней карточки в меню турниров.
+              </div>
+            )}
+
             <label className="space-y-2 text-sm text-zinc-400">
               Начало фазы
               <Input name="phaseStartsAt" type="datetime-local" defaultValue={toDateTimeLocal(settings.phaseStartsAt)} className="bg-black/30" />

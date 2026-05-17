@@ -3,7 +3,7 @@ import { DivisionPreviewCard } from "@/components/divisions/division-preview-car
 import { TournamentCard } from "@/components/tournaments/tournament-card";
 import { getCurrentSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { isDivisionAdminRole } from "@/lib/services/divisions";
+import { getDivisionSettings, isDivisionAdminRole } from "@/lib/services/divisions";
 import { syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 
 export const dynamic = "force-dynamic";
@@ -22,12 +22,13 @@ export default async function TournamentsPage() {
     },
     orderBy: [{ status: "asc" }, { startsAt: "asc" }],
   });
+  const divisionSettings = await getDivisionSettings();
 
   return (
     <div className="page-shell space-y-8">
       <div className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Турниры</div>
 
-      <DivisionPreviewCard canOpen={isDivisionAdminRole(session?.user?.role)} />
+      <DivisionPreviewCard canOpen={isDivisionAdminRole(session?.user?.role)} coverImage={divisionSettings.coverImage} />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {tournaments.map((tournament) => (
