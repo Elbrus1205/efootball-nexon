@@ -95,6 +95,10 @@ export function RegisterTournamentButton({
         return;
       }
 
+      if (response.status === 409 && clubSlug) {
+        setSelectedClubSlug("");
+        router.refresh();
+      }
       setMessage(result.error ?? "Не удалось зарегистрироваться.");
       return;
     }

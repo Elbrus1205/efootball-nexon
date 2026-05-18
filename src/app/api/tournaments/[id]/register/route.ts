@@ -1,4 +1,5 @@
 import { ClubSelectionMode, NotificationType, TournamentStatus } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { getRequestBaseUrl } from "@/lib/affiliate";
@@ -96,15 +97,22 @@ export async function POST(request: Request, { params }: { params: { id: string 
     clubBadgePath = selectedClub.imagePath;
   }
 
-  await db.tournamentRegistration.create({
-    data: {
-      tournamentId: params.id,
-      userId: session.user.id,
-      clubSlug,
-      clubName,
-      clubBadgePath,
-    },
-  });
+  try {
+    await db.tournamentRegistration.create({
+      data: {
+        tournamentId: params.id,
+        userId: session.user.id,
+        clubSlug,
+        clubName,
+        clubBadgePath,
+      },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return NextResponse.json({ error: "Этот клуб уже выбран другим участником." }, { status: 409 });
+    }
+    throw error;
+  }
 
   await syncTournamentPreviewGroups(params.id).catch(() => null);
 
