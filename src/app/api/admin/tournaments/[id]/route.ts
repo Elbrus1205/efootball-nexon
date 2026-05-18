@@ -67,7 +67,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
       if (confirmedCount > 0) {
         throw new Error("Нельзя сбросить матчи: есть подтверждённые результаты.");
       }
+      await db.matchResultSubmission.deleteMany({ where: { match: { tournamentId: params.id } } });
+      await db.matchSchedule.deleteMany({ where: { match: { tournamentId: params.id } } });
       await db.match.deleteMany({ where: { tournamentId: params.id } });
+      await db.bracketSlot.deleteMany({ where: { bracket: { tournamentId: params.id } } });
       await generateTournamentMatches(params.id);
       await generateTournamentSchedule(params.id, { overwrite: true });
       redirectUrl.searchParams.set("warning", "Матчи успешно пересозданы.");
