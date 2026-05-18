@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useSession } from "next-auth/react";
 import {
   ArrowRight,
@@ -46,8 +46,19 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
   const [open, setOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<CSSProperties>({});
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const { data: session } = useSession();
+
+  const closeMenu = useCallback(() => {
+    const activeElement = document.activeElement;
+
+    if (activeElement instanceof HTMLElement && menuRef.current?.contains(activeElement)) {
+      buttonRef.current?.focus({ preventScroll: true });
+    }
+
+    setOpen(false);
+  }, []);
 
   function updateMenuPosition() {
     const button = buttonRef.current;
@@ -78,8 +89,8 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
   }
 
   useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
+    closeMenu();
+  }, [closeMenu, pathname]);
 
   useEffect(() => {
     if (!open) return;
@@ -90,10 +101,10 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
     updateMenuPosition();
 
     const handleViewportChange = () => updateMenuPosition();
-    const handleScroll = () => setOpen(false);
+    const handleScroll = () => closeMenu();
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setOpen(false);
+        closeMenu();
       }
     };
 
@@ -111,7 +122,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
       window.visualViewport?.removeEventListener("scroll", handleViewportChange);
       window.removeEventListener("scroll", handleScroll);
     };
-  }, [open]);
+  }, [closeMenu, open]);
 
   return (
     <div className="lg:hidden">
@@ -156,12 +167,13 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
       </button>
 
       <div
+        ref={menuRef}
         className={cn("fixed inset-0 z-[200] lg:hidden", open ? "pointer-events-auto" : "pointer-events-none")}
         aria-hidden={!open}
       >
         <div
           className={cn("absolute inset-0 bg-black/0 backdrop-blur-0 transition duration-300", open && "bg-black/35 backdrop-blur-[2px]")}
-          onClick={() => setOpen(false)}
+          onClick={closeMenu}
         />
 
         <div
@@ -210,7 +222,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
                         "bg-sky-400/[0.08] text-white shadow-[inset_0_0_0_1px_rgba(96,165,250,0.24),0_10px_24px_rgba(2,6,23,0.16)]",
                     )}
                     style={{ animationDelay: `${100 + index * 46}ms` }}
-                    onClick={() => setOpen(false)}
+                    onClick={closeMenu}
                   >
                     <span
                       className={cn(
