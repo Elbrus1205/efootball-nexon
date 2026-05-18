@@ -39,7 +39,7 @@ export function ClubPlayerLine({
       ) : null}
 
       <div className={`min-w-0 flex-1 ${wrapperClass}`}>
-        <div className="max-w-full truncate text-sm font-medium leading-tight text-white">{clubName ?? "Клуб не назначен"}</div>
+        <div className="max-w-full break-words text-sm font-medium leading-[1.25] text-white line-clamp-2">{clubName ?? "Клуб не назначен"}</div>
         {playerId ? (
           <Link
             href={`/players/${playerId}`}

@@ -872,14 +872,17 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                   </div>
 
                   <div className="divide-y divide-white/10">
-                    {section.matches.map((match) => (
+                    {section.matches.map((match, matchIndex) => {
+                      const prevGroupName = matchIndex > 0 ? section.matches[matchIndex - 1].group?.name : null;
+                      const showGroupLabel = match.group?.name && match.group.name !== prevGroupName;
+                      return (
                       <div key={match.id} className="py-4 first:pt-0 last:pb-0">
-                        {match.group?.name ? (
+                        {showGroupLabel ? (
                           <div className="mb-3 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                            {match.group.name}
+                            {match.group!.name}
                           </div>
                         ) : null}
-                        <div className="mx-auto grid max-w-[760px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[minmax(180px,220px)_auto_minmax(180px,220px)] sm:gap-4">
+                        <div className="mx-auto grid max-w-[760px] grid-cols-[minmax(100px,1fr)_auto_minmax(100px,1fr)] items-center gap-3 sm:grid-cols-[minmax(180px,220px)_auto_minmax(180px,220px)] sm:gap-4">
                           <div className="min-w-0 justify-self-end">
                             <ClubPlayerLine
                               playerId={match.player1?.id}
@@ -908,7 +911,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                           </div>
                         </div>
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                 </section>
               ))}
