@@ -1577,7 +1577,7 @@ export async function generateTournamentMatches(tournamentId: string) {
         stageId: stage.id,
         entries: tournament.participants.map((entry) => ({ id: entry.id, userId: entry.userId })),
         roundsCount: getCustomMatchesPerOpponent(stage) ?? stage.roundsCount,
-        roundsMode: "cycles",
+        roundsMode: isCustomTourCountStage(stage) ? "series" : "cycles",
       });
     }
 
@@ -1593,7 +1593,7 @@ export async function generateTournamentMatches(tournamentId: string) {
           groupId: group.id,
           entries: members,
           roundsCount: getCustomMatchesPerOpponent(stage) ?? stage.roundsCount,
-          roundsMode: "cycles",
+          roundsMode: isCustomTourCountStage(stage) ? "series" : "cycles",
         });
       }
     }
