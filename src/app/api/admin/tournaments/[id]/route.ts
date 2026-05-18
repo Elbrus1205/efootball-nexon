@@ -67,12 +67,30 @@ export async function POST(request: Request, { params }: { params: { id: string 
       if (confirmedCount > 0) {
         throw new Error("Нельзя сбросить матчи: есть подтверждённые результаты.");
       }
-      await db.matchResultSubmission.deleteMany({ where: { match: { tournamentId: params.id } } });
-      await db.matchSchedule.deleteMany({ where: { match: { tournamentId: params.id } } });
+
+      const existingMatchIds = await db.match
+        .findMany({ where: { tournamentId: params.id }, select: { id: true } })
+        .then((rows) => rows.map((r) => r.id));
+
+      if (existingMatchIds.length > 0) {
+        await db.matchResultSubmission.deleteMany({ where: { matchId: { in: existingMatchIds } } });
+        await db.matchSchedule.deleteMany({ where: { matchId: { in: existingMatchIds } } });
+      }
       await db.match.deleteMany({ where: { tournamentId: params.id } });
-      await db.bracketSlot.deleteMany({ where: { bracket: { tournamentId: params.id } } });
-      await generateTournamentMatches(params.id);
-      await generateTournamentSchedule(params.id, { overwrite: true });
+
+      const bracketIds = await db.playoffBracket
+        .findMany({ where: { tournamentId: params.id }, select: { id: true } })
+        .then((rows) => rows.map((r) => r.id));
+      if (bracketIds.length > 0) {
+        await db.bracketSlot.deleteMany({ where: { bracketId: { in: bracketIds } } });
+      }
+
+      const createdMatches = await generateTournamentMatches(params.id);
+      if (!createdMatches.length) {
+        throw new Error("Матчи удалены, но пересоздать не удалось — проверьте распределение участников по группам.");
+      }
+
+      await generateTournamentSchedule(params.id, { overwrite: true }).catch(() => null);
       redirectUrl.searchParams.set("warning", "Матчи успешно пересозданы.");
     }
 
