@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, Clock3 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock3, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 type SubmissionState = {
@@ -43,7 +42,7 @@ function submissionToneClass(tone: SubmissionState["tone"]) {
   if (tone === "success") return "border-emerald-400/20 bg-emerald-400/10 text-emerald-300";
   if (tone === "danger") return "border-red-400/20 bg-red-400/10 text-red-300";
   if (tone === "retry") return "border-amber-400/20 bg-amber-400/10 text-amber-300";
-  return "border-white/10 bg-white/5 text-zinc-300";
+  return "border-white/10 bg-white/5 text-zinc-400";
 }
 
 export function MyMatchCard({
@@ -84,7 +83,6 @@ export function MyMatchCard({
   const onSubmit = () => {
     startTransition(async () => {
       setMessage("Сохранение результата...");
-
       const response = await fetch(`/api/matches/${id}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -93,13 +91,8 @@ export function MyMatchCard({
           player2Score: Number(player2ScoreInput),
         }),
       });
-
-      const result = await response.json().catch(() => ({
-        error: "Не удалось обработать ответ сервера.",
-      }));
-
+      const result = await response.json().catch(() => ({ error: "Не удалось обработать ответ сервера." }));
       setMessage(result.message ?? result.error ?? "Не удалось сохранить результат.");
-
       if (response.ok) {
         setPlayer1ScoreInput("");
         setPlayer2ScoreInput("");
@@ -111,20 +104,24 @@ export function MyMatchCard({
   return (
     <Card
       className={cn(
-        "space-y-3 p-4 transition sm:space-y-4 sm:p-5",
-        isConfirmed && "border-emerald-400/55 bg-emerald-400/[0.045] shadow-[0_0_28px_rgba(52,211,153,0.14)]",
+        "overflow-hidden p-0 transition",
+        isConfirmed && "border-emerald-400/40 shadow-[0_0_32px_rgba(52,211,153,0.12)]",
+        isDisputed && "border-red-400/30",
       )}
     >
+      {/* Header strip */}
       {meta ? (
-        <div className="inline-flex items-center gap-2 text-sm text-zinc-400">
-          <Clock3 className="h-4 w-4 shrink-0 text-zinc-500" />
+        <div className="flex items-center gap-2 border-b border-white/[0.07] bg-white/[0.02] px-4 py-2.5 text-xs text-zinc-500">
+          <Clock3 className="h-3.5 w-3.5 shrink-0" />
           <span>{meta}</span>
         </div>
       ) : null}
 
-      <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-3 sm:p-5">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[190px_auto_190px] sm:justify-center sm:gap-2">
-          <div className="min-w-0 sm:justify-self-end">
+      <div className="p-4 sm:p-5">
+        {/* Match grid */}
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2 sm:gap-4">
+          {/* Player 1 */}
+          <div className="min-w-0">
             <ClubPlayerLine
               playerId={player1Id}
               playerName={player1Name}
@@ -134,22 +131,37 @@ export function MyMatchCard({
               compact
               reverse
             />
-            {player1SubmissionState.tone === "success" && isConfirmed ? null : (
-              <div
-                className={`mt-2 rounded-xl border px-2 py-1.5 text-center text-[11px] leading-4 sm:mt-3 sm:px-3 sm:py-2 sm:text-xs ${submissionToneClass(player1SubmissionState.tone)}`}
-              >
+            {!(player1SubmissionState.tone === "success" && isConfirmed) ? (
+              <div className={cn("mt-2 rounded-lg border px-2 py-1 text-center text-[10px] leading-[1.4]", submissionToneClass(player1SubmissionState.tone))}>
                 {player1SubmissionState.label}
               </div>
+            ) : null}
+          </div>
+
+          {/* Score */}
+          <div className="flex flex-col items-center justify-start gap-1 pt-0.5 self-start">
+            {hasConfirmedScore ? (
+              <div className="flex items-center gap-1">
+                <span className="min-w-[1.75rem] rounded-lg bg-white/[0.06] px-2 py-1 text-center text-base font-bold text-white sm:text-lg">
+                  {confirmedPlayer1Score}
+                </span>
+                <span className="text-xs font-semibold text-zinc-500">:</span>
+                <span className="min-w-[1.75rem] rounded-lg bg-white/[0.06] px-2 py-1 text-center text-base font-bold text-white sm:text-lg">
+                  {confirmedPlayer2Score}
+                </span>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-semibold tracking-[0.2em] text-zinc-400">
+                VS
+              </div>
             )}
+            {isConfirmed ? (
+              <div className="text-[10px] font-medium uppercase tracking-[0.12em] text-emerald-400">Подтверждён</div>
+            ) : null}
           </div>
 
-          <div className="flex shrink-0 items-center justify-center self-center">
-            <div className="flex min-w-[56px] items-center justify-center text-center text-xs font-semibold tracking-[0.24em] text-zinc-300 sm:min-w-[72px] sm:text-sm">
-              {hasConfirmedScore ? `${confirmedPlayer1Score} - ${confirmedPlayer2Score}` : "VS"}
-            </div>
-          </div>
-
-          <div className="min-w-0 sm:justify-self-start">
+          {/* Player 2 */}
+          <div className="min-w-0">
             <ClubPlayerLine
               playerId={player2Id}
               playerName={player2Name}
@@ -158,87 +170,86 @@ export function MyMatchCard({
               align="center"
               compact
             />
-            {player2SubmissionState.tone === "success" && isConfirmed ? null : (
-              <div
-                className={`mt-2 rounded-xl border px-2 py-1.5 text-center text-[11px] leading-4 sm:mt-3 sm:px-3 sm:py-2 sm:text-xs ${submissionToneClass(player2SubmissionState.tone)}`}
-              >
+            {!(player2SubmissionState.tone === "success" && isConfirmed) ? (
+              <div className={cn("mt-2 rounded-lg border px-2 py-1 text-center text-[10px] leading-[1.4]", submissionToneClass(player2SubmissionState.tone))}>
                 {player2SubmissionState.label}
               </div>
-            )}
+            ) : null}
           </div>
         </div>
-      </div>
 
-      {isDisputed ? (
-        <div className="rounded-2xl border border-red-400/25 bg-red-500/10 p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-500/15 text-red-300">
-              <AlertTriangle className="h-5 w-5" />
-            </div>
-            <div className="space-y-3">
-              <div>
-                <div className="font-medium text-red-200">Спорный матч</div>
-                <div className="mt-1 text-sm text-red-100/80">
-                  Игроки трижды не совпали по счёту. Матч передан на проверку администрации, ручной ввод результата
-                  отключён.
-                </div>
+        {/* Score input */}
+        {canSubmit ? (
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center gap-2.5">
+              {/* Compact scoreboard-style inputs */}
+              <div className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-black/25 px-4 py-2.5">
+                <input
+                  type="number"
+                  min={0}
+                  max={99}
+                  placeholder="0"
+                  value={player1ScoreInput}
+                  onChange={(e) => setPlayer1ScoreInput(e.target.value)}
+                  className="w-10 bg-transparent text-center text-xl font-bold text-white outline-none placeholder:text-zinc-600 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                <span className="text-lg font-semibold text-zinc-500">:</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={99}
+                  placeholder="0"
+                  value={player2ScoreInput}
+                  onChange={(e) => setPlayer2ScoreInput(e.target.value)}
+                  className="w-10 bg-transparent text-center text-xl font-bold text-white outline-none placeholder:text-zinc-600 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
               </div>
-              <Button asChild variant="outline" className="border-red-300/20 bg-red-500/10 text-red-100 hover:bg-red-500/20">
+              <Button
+                onClick={onSubmit}
+                disabled={isPending || player1ScoreInput === "" || player2ScoreInput === ""}
+                className="shrink-0 gap-2"
+              >
+                <Send className="h-4 w-4" />
+                <span className="hidden sm:inline">{isPending ? "Отправка..." : "Отправить"}</span>
+              </Button>
+            </div>
+
+            {/* Helper info */}
+            <div className="flex items-start gap-2.5 rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2.5">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs leading-relaxed text-zinc-400">{message}</p>
+                {attemptsLeft > 0 && !waitingForOpponent ? (
+                  <div className="mt-1.5 inline-flex items-center rounded-full border border-white/10 bg-black/20 px-2.5 py-0.5 text-[10px] font-medium text-zinc-500">
+                    Осталось попыток: {attemptsLeft}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ) : waitingForOpponent ? (
+          <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2.5">
+            <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" />
+            <div>
+              <p className="text-xs font-medium text-zinc-300">Ожидание соперника</p>
+              <p className="mt-0.5 text-xs text-zinc-500">Ваш результат отправлен. Ждём подтверждения от оппонента.</p>
+            </div>
+          </div>
+        ) : isDisputed ? (
+          <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-red-400/20 bg-red-500/[0.07] px-3 py-2.5">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
+            <div className="flex-1">
+              <p className="text-xs font-medium text-red-300">Спорный матч</p>
+              <p className="mt-0.5 text-xs text-red-200/70">
+                Игроки трижды не совпали по счёту. Результат выставляет администрация.
+              </p>
+              <Button asChild variant="outline" size="sm" className="mt-2.5 border-red-300/20 bg-red-500/10 text-red-100 hover:bg-red-500/20">
                 <Link href={disputeHref}>Открыть спор</Link>
               </Button>
             </div>
           </div>
-        </div>
-      ) : canSubmit || waitingForOpponent ? (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white/5 text-zinc-300 sm:h-10 sm:w-10">
-              {waitingForOpponent ? <Clock3 className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium leading-5 text-zinc-200">{message}</div>
-              {waitingForOpponent ? (
-                <div className="mt-1.5 text-xs leading-5 text-zinc-500 sm:text-sm">
-                  Свой результат уже отправлен. Ожидается ответ соперника.
-                </div>
-              ) : null}
-              {attemptsLeft > 0 && canSubmit ? (
-                <div className="mt-1.5 inline-flex items-center rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] font-medium text-zinc-400 sm:text-xs">
-                  Осталось попыток: {attemptsLeft}
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {canSubmit ? (
-        <div className="grid gap-2 sm:gap-3 sm:grid-cols-[1fr_1fr_auto]">
-          <Input
-            type="number"
-            min={0}
-            max={99}
-            placeholder="Голы первой команды"
-            value={player1ScoreInput}
-            onChange={(event) => setPlayer1ScoreInput(event.target.value)}
-          />
-          <Input
-            type="number"
-            min={0}
-            max={99}
-            placeholder="Голы второй команды"
-            value={player2ScoreInput}
-            onChange={(event) => setPlayer2ScoreInput(event.target.value)}
-          />
-          <Button
-            onClick={onSubmit}
-            disabled={isPending || player1ScoreInput === "" || player2ScoreInput === ""}
-            className="sm:min-w-[180px]"
-          >
-            {isPending ? "Сохранение..." : "Отправить счёт"}
-          </Button>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </Card>
   );
 }
