@@ -3,6 +3,7 @@ import { getRequestBaseUrl } from "@/lib/affiliate";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { addArchivedTournamentStats } from "@/lib/home-stats";
+import { MatchStatus } from "@prisma/client";
 import {
   assignRandomClubsToTournament,
   closeTournamentRegistration,
@@ -54,6 +55,22 @@ export async function POST(request: Request, { params }: { params: { id: string 
     if (method === "generate-matches") {
       await generateTournamentMatches(params.id);
       await generateTournamentSchedule(params.id, { overwrite: true });
+    }
+
+    if (method === "reset-matches") {
+      const confirmedCount = await db.match.count({
+        where: {
+          tournamentId: params.id,
+          status: { in: [MatchStatus.CONFIRMED, MatchStatus.FINISHED, MatchStatus.FORFEIT] },
+        },
+      });
+      if (confirmedCount > 0) {
+        throw new Error("Нельзя сбросить матчи: есть подтверждённые результаты.");
+      }
+      await db.match.deleteMany({ where: { tournamentId: params.id } });
+      await generateTournamentMatches(params.id);
+      await generateTournamentSchedule(params.id, { overwrite: true });
+      redirectUrl.searchParams.set("warning", "Матчи успешно пересозданы.");
     }
 
     if (method === "assign-random-clubs") {

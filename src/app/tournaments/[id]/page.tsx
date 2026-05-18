@@ -571,9 +571,11 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
 
 export default async function TournamentDetailsPage({ params }: { params: { id: string } }) {
   noStore();
-  const session = await getCurrentSession();
-  await syncTournamentLifecycleStatus(params.id).catch(() => null);
-  await syncTournamentPreviewGroups(params.id).catch(() => null);
+  const [session] = await Promise.all([
+    getCurrentSession(),
+    syncTournamentLifecycleStatus(params.id).catch(() => null),
+    syncTournamentPreviewGroups(params.id).catch(() => null),
+  ]);
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
     include: {
@@ -593,7 +595,6 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           },
           group: true,
           schedules: true,
-          submissions: { orderBy: { createdAt: "desc" } },
         },
         orderBy: [{ round: "asc" }, { matchNumber: "asc" }],
       },
@@ -639,12 +640,34 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
 
   if (!tournament) notFound();
 
-  const currentUser = session?.user
-    ? await db.user.findUnique({
-        where: { id: session.user.id },
-        select: { telegramId: true },
-      })
-    : null;
+  const myMatchIds = session?.user
+    ? tournament.matches
+        .filter((m) => m.player1Id === session.user.id || m.player2Id === session.user.id)
+        .map((m) => m.id)
+    : [];
+
+  const [currentUser, rawSubmissions, availableClubs] = await Promise.all([
+    session?.user
+      ? db.user.findUnique({ where: { id: session.user.id }, select: { telegramId: true } })
+      : Promise.resolve(null),
+    myMatchIds.length
+      ? db.matchResultSubmission.findMany({
+          where: { matchId: { in: myMatchIds } },
+          orderBy: { createdAt: "desc" },
+          select: { id: true, matchId: true, submittedById: true, status: true, moderatorComment: true },
+        })
+      : Promise.resolve([]),
+    getAvailableClubs(),
+  ]);
+
+  const submissionsByMatchId = new Map<string, typeof rawSubmissions>();
+  for (const sub of rawSubmissions) {
+    const arr = submissionsByMatchId.get(sub.matchId) ?? [];
+    arr.push(sub);
+    submissionsByMatchId.set(sub.matchId, arr);
+  }
+
+  const clubsBySlug = new Map(availableClubs.map((club) => [club.slug, club]));
 
   const activeParticipants = tournament.participants.filter(
     (entry) => entry.status !== ParticipantStatus.REMOVED && entry.status !== ParticipantStatus.REJECTED,
@@ -679,8 +702,10 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
     ? visibleMatches.filter((match) => match.player1Id === session.user.id || match.player2Id === session.user.id)
     : [];
 
-  const availableClubs = await getAvailableClubs();
-  const clubsBySlug = new Map(availableClubs.map((club) => [club.slug, club]));
+  const myMatchesWithSubmissions = myMatches.map((match) => ({
+    ...match,
+    submissions: submissionsByMatchId.get(match.id) ?? [],
+  }));
 
   const leagueMatches = leagueStage
     ? tournament.matches.filter((match) => match.stageId === leagueStage.id)
@@ -897,8 +922,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           <div className="grid gap-4">
             {!session?.user ? (
               <Card className="p-6 text-zinc-500">Здесь появятся матчи текущего участника после публикации расписания.</Card>
-            ) : myMatches.length ? (
-              myMatches.map((match) => {
+            ) : myMatchesWithSubmissions.length ? (
+              myMatchesWithSubmissions.map((match) => {
                 const player1LatestSubmission = match.submissions.find((submission) => submission.submittedById === match.player1Id);
                 const player2LatestSubmission = match.submissions.find((submission) => submission.submittedById === match.player2Id);
                 const matchDeadline = match.stage?.deadlines.find((item) => item.round === match.round)?.deadlineAt ?? null;

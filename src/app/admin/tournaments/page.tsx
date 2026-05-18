@@ -84,6 +84,8 @@ export default async function AdminTournamentsPage({
           const canAssignClubs = tournament.status === TournamentStatus.REGISTRATION_CLOSED || tournament.status === TournamentStatus.AWAITING_START;
           const canRegenerateMatches =
             tournament.status === TournamentStatus.IN_PROGRESS || tournament.status === TournamentStatus.COMPLETED;
+          const canResetMatches =
+            tournament._count.matches > 0 && tournament.status !== TournamentStatus.COMPLETED;
 
           return (
             <Card key={tournament.id} className="p-5">
@@ -141,6 +143,13 @@ export default async function AdminTournamentsPage({
                     <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
                       <input type="hidden" name="_method" value="generate-matches" />
                       <Button variant="outline">Пересоздать матчи и расписание</Button>
+                    </form>
+                  ) : null}
+
+                  {canResetMatches ? (
+                    <form action={`/api/admin/tournaments/${tournament.id}`} method="post">
+                      <input type="hidden" name="_method" value="reset-matches" />
+                      <Button variant="outline">Сбросить и пересоздать матчи</Button>
                     </form>
                   ) : null}
 

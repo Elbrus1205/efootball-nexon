@@ -1271,6 +1271,8 @@ export async function generateTournamentStages(tournamentId: string, options?: {
     await db.playoffBracket.deleteMany({ where: { tournamentId } });
     await db.tournamentGroup.deleteMany({ where: { stage: { tournamentId } } });
     await db.tournamentStage.deleteMany({ where: { tournamentId } });
+    // After stages/groups deleted, their matches are orphaned (stageId=null). Remove them.
+    await db.match.deleteMany({ where: { tournamentId, stageId: null } });
   } else if (tournament.stages.length) {
     return tournament.stages;
   }
@@ -1546,7 +1548,6 @@ export async function generateTournamentMatches(tournamentId: string) {
   const tournament = await db.tournament.findUnique({
     where: { id: tournamentId },
     include: {
-      matches: true,
       participants: {
         where: { status: ParticipantStatus.CONFIRMED },
         include: { user: true },
@@ -1566,10 +1567,11 @@ export async function generateTournamentMatches(tournamentId: string) {
   });
 
   if (!tournament) throw new Error("Tournament not found");
-  if (tournament.matches.length) return tournament.matches;
 
   for (const stage of tournament.stages) {
     if (stage.type === StageType.LEAGUE) {
+      const existingCount = await db.match.count({ where: { stageId: stage.id } });
+      if (existingCount > 0) continue;
       await createRoundRobinMatchesForEntries({
         tournamentId,
         stageId: stage.id,
@@ -1582,16 +1584,17 @@ export async function generateTournamentMatches(tournamentId: string) {
     if (stage.type === StageType.GROUP_STAGE) {
       for (const group of stage.groups) {
         const members = group.members.map((entry) => ({ id: entry.id, userId: entry.userId }));
-        if (members.length >= 2) {
-          await createRoundRobinMatchesForEntries({
-            tournamentId,
-            stageId: stage.id,
-            groupId: group.id,
-            entries: members,
-            roundsCount: getCustomMatchesPerOpponent(stage) ?? stage.roundsCount,
-            roundsMode: isCustomTourCountStage(stage) ? "series" : "cycles",
-          });
-        }
+        if (members.length < 2) continue;
+        const existingCount = await db.match.count({ where: { groupId: group.id } });
+        if (existingCount > 0) continue;
+        await createRoundRobinMatchesForEntries({
+          tournamentId,
+          stageId: stage.id,
+          groupId: group.id,
+          entries: members,
+          roundsCount: getCustomMatchesPerOpponent(stage) ?? stage.roundsCount,
+          roundsMode: isCustomTourCountStage(stage) ? "series" : "cycles",
+        });
       }
     }
 
@@ -1601,6 +1604,8 @@ export async function generateTournamentMatches(tournamentId: string) {
       if (customSettings) {
         continue;
       } else {
+        const existingCount = await db.match.count({ where: { bracketId: stage.bracket.id } });
+        if (existingCount > 0) continue;
         const playoffEntries =
           tournament.format === TournamentFormat.GROUPS_PLAYOFF
             ? []

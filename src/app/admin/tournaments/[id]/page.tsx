@@ -23,23 +23,28 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
     include: {
-      participants: {
-        include: { user: true, group: true },
-        orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
-      },
       matches: {
-        include: {
-          player1: true,
-          player2: true,
-          stage: true,
-          group: true,
+        select: {
+          id: true,
+          round: true,
+          matchNumber: true,
+          player1Id: true,
+          player2Id: true,
+          participant1EntryId: true,
+          participant2EntryId: true,
+          status: true,
+          player1Score: true,
+          player2Score: true,
+          stageId: true,
+          bracketId: true,
+          winnerId: true,
         },
         orderBy: [{ round: "asc" }, { matchNumber: "asc" }],
       },
       stages: {
         include: {
-          groups: true,
-          bracket: true,
+          groups: { select: { id: true } },
+          bracket: { select: { id: true } },
         },
         orderBy: { orderIndex: "asc" },
       },
