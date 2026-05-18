@@ -181,37 +181,40 @@ export function MyMatchCard({
         {/* Score input */}
         {canSubmit ? (
           <div className="mt-4 space-y-3">
-            <div className="flex items-center gap-2.5">
-              {/* Compact scoreboard-style inputs */}
-              <div className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-black/25 px-4 py-2.5">
-                <input
-                  type="number"
-                  min={0}
-                  max={99}
-                  placeholder="0"
-                  value={player1ScoreInput}
-                  onChange={(e) => setPlayer1ScoreInput(e.target.value)}
-                  className="w-10 bg-transparent text-center text-xl font-bold text-white outline-none placeholder:text-zinc-600 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                />
-                <span className="text-lg font-semibold text-zinc-500">:</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={99}
-                  placeholder="0"
-                  value={player2ScoreInput}
-                  onChange={(e) => setPlayer2ScoreInput(e.target.value)}
-                  className="w-10 bg-transparent text-center text-xl font-bold text-white outline-none placeholder:text-zinc-600 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                />
+            <div className="space-y-2.5">
+              {/* Score inputs centered */}
+              <div className="flex items-center justify-center">
+                <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-6 py-3">
+                  <input
+                    type="number"
+                    min={0}
+                    max={99}
+                    placeholder="0"
+                    value={player1ScoreInput}
+                    onChange={(e) => setPlayer1ScoreInput(e.target.value)}
+                    className="w-12 bg-transparent text-center text-2xl font-bold text-white outline-none placeholder:text-zinc-600 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                  <span className="text-xl font-semibold text-zinc-500">:</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={99}
+                    placeholder="0"
+                    value={player2ScoreInput}
+                    onChange={(e) => setPlayer2ScoreInput(e.target.value)}
+                    className="w-12 bg-transparent text-center text-2xl font-bold text-white outline-none placeholder:text-zinc-600 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                </div>
               </div>
-              <Button
+              {/* Submit button full width */}
+              <button
                 onClick={onSubmit}
                 disabled={isPending || player1ScoreInput === "" || player2ScoreInput === ""}
-                className="shrink-0 gap-2"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-[0_4px_18px_rgba(59,130,246,0.25)] transition-all hover:bg-primary/90 hover:shadow-[0_4px_24px_rgba(59,130,246,0.35)] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40"
               >
                 <Send className="h-4 w-4" />
-                <span className="hidden sm:inline">{isPending ? "Отправка..." : "Отправить"}</span>
-              </Button>
+                {isPending ? "Отправка..." : "Отправить результат"}
+              </button>
             </div>
 
             {/* Helper info */}
