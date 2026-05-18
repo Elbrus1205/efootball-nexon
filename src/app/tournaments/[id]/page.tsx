@@ -475,13 +475,13 @@ function StandingsTable({ rows, highlights = [] }: { rows: LeagueRow[]; highligh
           </thead>
           <tbody>
             {rows.map((row, index) => {
-              const rowRank = row.rank ?? index + 1;
-              const highlight = orderedHighlights.find((item) => rowRank >= item.fromRank && rowRank <= item.toRank);
+              const displayRank = index + 1;
+              const highlight = orderedHighlights.find((item) => displayRank >= item.fromRank && displayRank <= item.toRank);
 
               return (
                 <tr key={row.id} className={highlight?.rowClass ?? defaultRowHighlight(index)} title={highlight?.label}>
                   <td className="w-4 px-0 py-2 text-zinc-300 sm:w-5 sm:py-3">
-                    <span className={highlight?.badgeClass ?? defaultRankBadge(index)}>{rowRank}</span>
+                    <span className={highlight?.badgeClass ?? defaultRankBadge(index)}>{displayRank}</span>
                   </td>
                   <td className="px-2 py-2 sm:px-3 sm:py-3">
                     <ClubPlayerLine
