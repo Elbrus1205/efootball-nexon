@@ -8,13 +8,43 @@ import { syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 
 export const dynamic = "force-dynamic";
 
+function shouldSyncTournamentForList(tournament: {
+  status: TournamentStatus;
+  autoOpenRegistration: boolean;
+  registrationStartsAt: Date | null;
+  startsAt: Date;
+}) {
+  const now = new Date();
+  const registrationOpenAt = tournament.registrationStartsAt ?? tournament.startsAt;
+
+  if (tournament.status === TournamentStatus.DRAFT && tournament.autoOpenRegistration) {
+    return registrationOpenAt <= now;
+  }
+
+  if (tournament.status === TournamentStatus.REGISTRATION_OPEN && !tournament.autoOpenRegistration) {
+    return tournament.startsAt <= now;
+  }
+
+  return false;
+}
+
 export default async function TournamentsPage() {
   const session = await getCurrentSession();
   const syncCandidates = await db.tournament.findMany({
     where: { status: { in: [TournamentStatus.DRAFT, TournamentStatus.REGISTRATION_OPEN] } },
-    select: { id: true },
+    select: {
+      id: true,
+      status: true,
+      autoOpenRegistration: true,
+      registrationStartsAt: true,
+      startsAt: true,
+    },
   });
-  await Promise.all(syncCandidates.map((tournament) => syncTournamentLifecycleStatus(tournament.id).catch(() => null)));
+  await Promise.all(
+    syncCandidates
+      .filter(shouldSyncTournamentForList)
+      .map((tournament) => syncTournamentLifecycleStatus(tournament.id).catch(() => null)),
+  );
 
   const tournaments = await db.tournament.findMany({
     include: {

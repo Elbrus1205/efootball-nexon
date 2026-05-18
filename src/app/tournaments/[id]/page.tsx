@@ -21,7 +21,7 @@ import {
 import { db } from "@/lib/db";
 import { normalizeFormatBlueprint } from "@/lib/format-blueprint";
 import { getPlayerDisplayName } from "@/lib/player-name";
-import { syncTournamentLifecycleStatus, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
+import { syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { formatDate } from "@/lib/utils";
 
 type LeagueRow = {
@@ -569,13 +569,45 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   return tournament ? { title: tournament.title } : { title: "Турнир не найден" };
 }
 
+function shouldSyncTournamentBeforeView(tournament: {
+  status: TournamentStatus;
+  autoOpenRegistration: boolean;
+  registrationStartsAt: Date | null;
+  startsAt: Date;
+}) {
+  const now = new Date();
+  const registrationOpenAt = tournament.registrationStartsAt ?? tournament.startsAt;
+
+  if (tournament.status === TournamentStatus.DRAFT && tournament.autoOpenRegistration) {
+    return registrationOpenAt <= now;
+  }
+
+  if (tournament.status === TournamentStatus.REGISTRATION_OPEN && !tournament.autoOpenRegistration) {
+    return tournament.startsAt <= now;
+  }
+
+  return false;
+}
+
 export default async function TournamentDetailsPage({ params }: { params: { id: string } }) {
   noStore();
-  const [session] = await Promise.all([
+  const [session, lifecycleCandidate] = await Promise.all([
     getCurrentSession(),
-    syncTournamentLifecycleStatus(params.id).catch(() => null),
-    syncTournamentPreviewGroups(params.id).catch(() => null),
+    db.tournament.findUnique({
+      where: { id: params.id },
+      select: {
+        status: true,
+        autoOpenRegistration: true,
+        registrationStartsAt: true,
+        startsAt: true,
+      },
+    }),
   ]);
+
+  if (lifecycleCandidate && shouldSyncTournamentBeforeView(lifecycleCandidate)) {
+    await syncTournamentLifecycleStatus(params.id).catch(() => null);
+  }
+
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
     include: {
