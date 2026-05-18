@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { TournamentStatus } from "@prisma/client";
+import { ParticipantStatus, TournamentStatus } from "@prisma/client";
 import { Eye, Layers3, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ export default async function AdminTournamentsPage({
 
   const tournaments = await db.tournament.findMany({
     include: {
-      _count: { select: { participants: true, stages: true, matches: true } },
+      _count: { select: { participants: { where: { status: { not: ParticipantStatus.REMOVED } } }, stages: true, matches: true } },
       season: true,
     },
     orderBy: { createdAt: "desc" },

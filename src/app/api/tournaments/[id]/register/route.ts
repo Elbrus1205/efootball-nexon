@@ -38,7 +38,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
-    include: { participants: true },
+    include: { participants: { where: { status: { not: "REMOVED" } } } },
   });
 
   if (!tournament) {

@@ -1,4 +1,4 @@
-import { TournamentStatus } from "@prisma/client";
+import { ParticipantStatus, TournamentStatus } from "@prisma/client";
 import { DivisionPreviewCard } from "@/components/divisions/division-preview-card";
 import { TournamentCard } from "@/components/tournaments/tournament-card";
 import { getCurrentSession } from "@/lib/auth/session";
@@ -18,7 +18,7 @@ export default async function TournamentsPage() {
 
   const tournaments = await db.tournament.findMany({
     include: {
-      _count: { select: { participants: true } },
+      _count: { select: { participants: { where: { status: { not: ParticipantStatus.REMOVED } } } } },
     },
     orderBy: [{ status: "asc" }, { startsAt: "asc" }],
   });
