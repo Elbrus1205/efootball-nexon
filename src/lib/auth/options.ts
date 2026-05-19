@@ -11,7 +11,6 @@ import { db } from "@/lib/db";
 import { getLegalAcceptanceData, isLegalAccepted } from "@/lib/legal-acceptance";
 import { generateFallbackName } from "@/lib/player-name";
 import { generateUniquePublicPlayerId } from "@/lib/public-player-id";
-import { finalizeTelegramBotLogin, logTelegramBotAuth } from "@/lib/telegram-bot-auth";
 import { describeTelegramOidcError, verifyAndConsumeTelegramIdToken } from "@/lib/telegram-oidc-server";
 import { verifyTwoFactorChallenge } from "@/lib/two-factor";
 
@@ -386,56 +385,6 @@ export const authOptions: NextAuthOptions = {
           isBanned: user.isBanned,
           authSessionId,
         };
-      },
-    }),
-    CredentialsProvider({
-      id: "telegram-bot",
-      name: "Telegram Bot",
-      credentials: {
-        token: { label: "Login Token", type: "text" },
-        legalAccepted: { label: "Legal Accepted", type: "text" },
-      },
-      async authorize(credentials, req) {
-        const loginToken = credentials?.token?.trim();
-        if (!loginToken) return null;
-        const context = await resolveSecurityContext(req?.headers);
-        const legalAcceptanceData = getLegalAcceptanceData(req?.headers);
-
-        try {
-          const user = await finalizeTelegramBotLogin(
-            {
-              db,
-              createLoginHistory,
-              createSecuritySession,
-              generateUniquePublicPlayerId,
-              getLegalAcceptanceData: () => legalAcceptanceData,
-            },
-            {
-              loginToken,
-              legalAcceptedFallback: isLegalAccepted(credentials?.legalAccepted),
-              context,
-            },
-          );
-
-          if (user) {
-            await notifySuccessfulLogin({
-              userId: user.id,
-              provider: "telegram-bot",
-              context,
-            }).catch((error) => {
-              console.error("Failed to send auth security notifications", error);
-            });
-          }
-
-          return user;
-        } catch (error) {
-          logTelegramBotAuth("login-failure", {
-            token: loginToken,
-            reason: "authorize-telegram-bot-exception",
-            error: error instanceof Error ? error.message : "unknown-error",
-          });
-          return null;
-        }
       },
     }),
   ],

@@ -6,7 +6,7 @@ import { createNotification } from "@/lib/services/notifications";
 import { sendTelegramMessage } from "@/lib/telegram-bot";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
 
-type AuthNotificationProvider = "email" | "vkid" | "telegram" | "telegram-bot";
+type AuthNotificationProvider = "email" | "vkid" | "telegram";
 
 type UserForSecurityNotification = {
   id: string;
@@ -195,8 +195,6 @@ function getProviderLabel(provider: AuthNotificationProvider) {
       return "VK ID";
     case "telegram":
       return "Telegram";
-    case "telegram-bot":
-      return "Telegram Bot";
   }
 }
 
