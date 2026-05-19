@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { createNotification } from "@/lib/services/notifications";
-import { resolveConfirmedMatch } from "@/lib/services/tournaments";
+import { recalculateGroupStandings, resolveConfirmedMatch } from "@/lib/services/tournaments";
 import { resultSubmissionSchema } from "@/lib/validators";
 
 const AUTO_MISMATCH_COMMENT = "AUTO_MISMATCH";
@@ -166,6 +166,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       },
     });
 
+    await recalculateGroupStandings(match.tournamentId);
     await resolveConfirmedMatch(match.id);
 
     await createMatchOutcomeNotifications(

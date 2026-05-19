@@ -4,7 +4,7 @@ import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { logAdminAction } from "@/lib/services/admin-actions";
-import { resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
+import { recalculateGroupStandings, resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { createNotification } from "@/lib/services/notifications";
 import { reviewSchema } from "@/lib/validators";
 
@@ -94,6 +94,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       },
     });
 
+    await recalculateGroupStandings(match.tournamentId);
     await resolveConfirmedMatch(match.id);
     await createMatchOutcomeNotifications({ ...match, winnerId }, player1Score, player2Score);
   } else if (body.action === "reject") {

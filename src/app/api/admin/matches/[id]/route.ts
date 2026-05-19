@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
+import { recalculateGroupStandings } from "@/lib/services/tournaments";
 import { matchUpdateSchema } from "@/lib/validators";
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
@@ -31,6 +32,19 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       notes: body.notes || null,
     },
   });
+
+  const standingsRelevantChange =
+    before.groupId ||
+    updated.groupId ||
+    before.status !== updated.status ||
+    before.player1Score !== updated.player1Score ||
+    before.player2Score !== updated.player2Score ||
+    before.participant1EntryId !== updated.participant1EntryId ||
+    before.participant2EntryId !== updated.participant2EntryId;
+
+  if (standingsRelevantChange) {
+    await recalculateGroupStandings(before.tournamentId);
+  }
 
   await logAdminAction({
     adminId: session.user.id,

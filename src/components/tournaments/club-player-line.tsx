@@ -24,12 +24,12 @@ export function ClubPlayerLine({
   const wrapperClass = centered ? "items-center text-center" : reverse ? "items-end text-right" : "items-start text-left";
 
   return (
-    <div className={`flex ${directionClass} gap-3 ${centered ? "items-center justify-center" : "items-start"}`}>
+    <div className={`flex ${directionClass} ${compact ? "gap-2 sm:gap-3" : "gap-3"} ${centered ? "items-center justify-center" : "items-start"}`}>
       {badgePath ? (
         <div
           className={
             compact
-              ? "flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-black/20"
+              ? "flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-black/20 sm:h-8 sm:w-8"
               : "flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/20"
           }
         >
@@ -54,4 +54,3 @@ export function ClubPlayerLine({
     </div>
   );
 }
-

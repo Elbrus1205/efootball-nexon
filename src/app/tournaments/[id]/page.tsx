@@ -1,4 +1,4 @@
-import { ClubSelectionMode, ParticipantStatus, StageType, TournamentFormat, TournamentStatus } from "@prisma/client";
+import { ClubSelectionMode, MatchStatus, ParticipantStatus, StageType, TournamentFormat, TournamentStatus } from "@prisma/client";
 import { Clock3, Send } from "lucide-react";
 import { unstable_noStore as noStore } from "next/cache";
 import { notFound } from "next/navigation";
@@ -251,14 +251,19 @@ function buildLeagueTable(
     user: { id: string; name: string | null };
   }>,
   matches: Array<{
+    status?: MatchStatus;
     player1Id: string | null;
     player2Id: string | null;
     player1Score: number | null;
     player2Score: number | null;
   }>,
   clubsBySlug: Map<string, { name: string; imagePath: string }>,
+  scoring: { pointsForWin?: number | null; pointsForDraw?: number | null; pointsForLoss?: number | null } = {},
 ) {
   const table = new Map<string, LeagueRow>();
+  const pointsForWin = scoring.pointsForWin ?? 3;
+  const pointsForDraw = scoring.pointsForDraw ?? 1;
+  const pointsForLoss = scoring.pointsForLoss ?? 0;
 
   for (const entry of participants) {
     const playerName = getPlayerDisplayName(entry.user);
@@ -278,6 +283,7 @@ function buildLeagueTable(
   }
 
   for (const match of matches) {
+    if (match.status && match.status !== MatchStatus.CONFIRMED && match.status !== MatchStatus.FINISHED) continue;
     if (!match.player1Id || !match.player2Id) continue;
     if (match.player1Score === null || match.player2Score === null) continue;
 
@@ -293,16 +299,18 @@ function buildLeagueTable(
     if (match.player1Score > match.player2Score) {
       player1.wins += 1;
       player2.losses += 1;
-      player1.points += 3;
+      player1.points += pointsForWin;
+      player2.points += pointsForLoss;
     } else if (match.player1Score < match.player2Score) {
       player2.wins += 1;
       player1.losses += 1;
-      player2.points += 3;
+      player2.points += pointsForWin;
+      player1.points += pointsForLoss;
     } else {
       player1.draws += 1;
       player2.draws += 1;
-      player1.points += 1;
-      player2.points += 1;
+      player1.points += pointsForDraw;
+      player2.points += pointsForDraw;
     }
   }
 
@@ -445,8 +453,18 @@ function StandingsTable({ rows, highlights = [] }: { rows: LeagueRow[]; highligh
 
   return (
     <div className="min-w-0 max-w-full space-y-3">
-      <div className="max-w-full overflow-x-auto border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:w-4 [&_td:nth-child(1)]:px-0 [&_td:nth-child(1)]:text-center [&_td:nth-child(2)]:w-[1%] [&_td:nth-child(2)]:whitespace-nowrap [&_td:nth-child(2)]:pl-1.5 [&_td:nth-child(2)]:pr-2 [&_td:nth-child(n+3)]:w-6 [&_td:nth-child(n+3)]:px-0.5 [&_th:nth-child(1)]:w-4 [&_th:nth-child(1)]:px-0 [&_th:nth-child(2)]:w-[1%] [&_th:nth-child(2)]:whitespace-nowrap [&_th:nth-child(2)]:pl-1.5 [&_th:nth-child(2)]:pr-2 [&_th:nth-child(n+3)]:w-6 [&_th:nth-child(n+3)]:px-0.5 sm:[&_td:nth-child(1)]:w-5 sm:[&_td:nth-child(2)]:pl-2 sm:[&_td:nth-child(2)]:pr-[15px] sm:[&_td:nth-child(n+3)]:w-7 sm:[&_td:nth-child(n+3)]:px-1 sm:[&_th:nth-child(1)]:w-5 sm:[&_th:nth-child(2)]:pl-2 sm:[&_th:nth-child(2)]:pr-[15px] sm:[&_th:nth-child(n+3)]:w-7 sm:[&_th:nth-child(n+3)]:px-1">
-        <table className="w-full min-w-[430px] table-auto text-left text-xs sm:min-w-[560px] sm:text-sm">
+      <div className="max-w-full overflow-hidden border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:px-0 [&_td:nth-child(1)]:text-center [&_td:nth-child(2)]:min-w-0 [&_td:nth-child(2)]:px-1.5 [&_td:nth-child(n+3)]:px-0 [&_th:nth-child(1)]:px-0 [&_th:nth-child(2)]:min-w-0 [&_th:nth-child(2)]:px-1.5 [&_th:nth-child(n+3)]:px-0 sm:[&_td:nth-child(2)]:px-3 sm:[&_td:nth-child(n+3)]:px-1 sm:[&_th:nth-child(2)]:px-3 sm:[&_th:nth-child(n+3)]:px-1">
+        <table className="w-full table-fixed text-left text-[11px] sm:text-sm">
+          <colgroup>
+            <col className="w-[30px] sm:w-10" />
+            <col />
+            <col className="w-[28px] sm:w-10" />
+            <col className="w-[28px] sm:w-10" />
+            <col className="w-[28px] sm:w-10" />
+            <col className="w-[28px] sm:w-10" />
+            <col className="w-[34px] sm:w-12" />
+            <col className="w-[34px] sm:w-14" />
+          </colgroup>
           <thead>
             <tr>
               <StickyHeader>
@@ -469,7 +487,7 @@ function StandingsTable({ rows, highlights = [] }: { rows: LeagueRow[]; highligh
                 <div className="text-center">+/-</div>
               </StickyHeader>
               <StickyHeader>
-                <div className="text-center">Очки</div>
+                <div className="text-center"><span className="sm:hidden">О</span><span className="hidden sm:inline">Очки</span></div>
               </StickyHeader>
             </tr>
           </thead>
@@ -819,13 +837,19 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
               <div className="text-sm uppercase tracking-[0.24em] text-zinc-500">{structureSectionTitle}</div>
               <div className="grid min-w-0 gap-4">
                 {groupStage.groups.map((group) => {
-                  const activeStandings = group.standings.filter(
-                    (row) => row.participant.status !== ParticipantStatus.REMOVED && row.participant.status !== ParticipantStatus.REJECTED,
+                  const activeMembers = group.members.filter(
+                    (member) => member.status !== ParticipantStatus.REMOVED && member.status !== ParticipantStatus.REJECTED,
+                  );
+                  const groupRows = buildLeagueTable(
+                    activeMembers,
+                    tournament.matches.filter((match) => match.groupId === group.id),
+                    clubsBySlug,
+                    groupStage,
                   );
                   const groupCapacity = group.capacity ?? groupStage.participantsPerGroup ?? 0;
-                  const emptySlots = Array.from({ length: Math.max(groupCapacity - activeStandings.length, 0) }, (_, index) => ({
+                  const emptySlots = Array.from({ length: Math.max(groupCapacity - activeMembers.length, 0) }, (_, index) => ({
                     id: `${group.id}-slot-${index + 1}`,
-                    position: activeStandings.length + index + 1,
+                    position: activeMembers.length + index + 1,
                   }));
 
                   return (
@@ -833,22 +857,9 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                       <div className="border-b border-white/10 px-5 py-4 font-medium text-white">
                         {tournament.format === TournamentFormat.CUSTOM && groupStage.groups.length > 1 ? group.name : "Таблица лиги"}
                       </div>
-                      {activeStandings.length ? (
+                      {groupRows.length ? (
                         <StandingsTable
-                          rows={activeStandings.map((row) => ({
-                            id: row.id,
-                            rank: row.rank,
-                            clubName: resolveClubName(row.participant, clubsBySlug, getPlayerDisplayName(row.participant.user)),
-                            clubBadgePath: resolveClubBadgePath(row.participant, clubsBySlug),
-                            playerId: row.participant.user.id,
-                            playerName: getPlayerDisplayName(row.participant.user),
-                            played: row.played,
-                            wins: row.wins,
-                            draws: row.draws,
-                            losses: row.losses,
-                            goalDifference: row.goalDifference,
-                            points: row.points,
-                          }))}
+                          rows={groupRows}
                           highlights={customStandingHighlights.get(group.orderIndex) ?? []}
                         />
                       ) : (
