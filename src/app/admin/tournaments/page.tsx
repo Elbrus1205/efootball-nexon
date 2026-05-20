@@ -11,7 +11,7 @@ import {
 } from "@/lib/admin-display";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
+import { shouldSyncTournamentRegistrationLifecycle, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { formatDate } from "@/lib/utils";
 
 export default async function AdminTournamentsPage({
@@ -23,9 +23,19 @@ export default async function AdminTournamentsPage({
 
   const syncCandidates = await db.tournament.findMany({
     where: { status: { in: [TournamentStatus.DRAFT, TournamentStatus.REGISTRATION_OPEN] } },
-    select: { id: true },
+    select: {
+      id: true,
+      status: true,
+      autoOpenRegistration: true,
+      registrationStartsAt: true,
+      startsAt: true,
+    },
   });
-  await Promise.all(syncCandidates.map((tournament) => syncTournamentLifecycleStatus(tournament.id).catch(() => null)));
+  await Promise.all(
+    syncCandidates
+      .filter(shouldSyncTournamentRegistrationLifecycle)
+      .map((tournament) => syncTournamentLifecycleStatus(tournament.id).catch(() => null)),
+  );
 
   const tournaments = await db.tournament.findMany({
     include: {

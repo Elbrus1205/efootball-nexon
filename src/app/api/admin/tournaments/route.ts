@@ -6,7 +6,12 @@ import { db } from "@/lib/db";
 import { parseFormatBlueprintJson } from "@/lib/format-blueprint";
 import { createNotificationForAllUsers } from "@/lib/services/notifications";
 import { getActiveSeason } from "@/lib/services/seasons";
-import { generateTournamentMatches, generateTournamentSchedule, generateTournamentStages } from "@/lib/services/tournaments";
+import {
+  generateTournamentMatches,
+  generateTournamentSchedule,
+  generateTournamentStages,
+  resolveAutoRegistrationStatus,
+} from "@/lib/services/tournaments";
 import { tournamentBuilderSchema } from "@/lib/validators";
 import { slugify } from "@/lib/utils";
 
@@ -15,8 +20,7 @@ function checkboxValue(value: FormDataEntryValue | null) {
 }
 
 function resolveInitialStatus(status: TournamentStatus, startsAt: Date, autoOpenRegistration: boolean) {
-  if (!autoOpenRegistration) return status;
-  return startsAt <= new Date() ? TournamentStatus.REGISTRATION_OPEN : TournamentStatus.DRAFT;
+  return resolveAutoRegistrationStatus(status, autoOpenRegistration, startsAt);
 }
 
 export async function POST(request: Request) {

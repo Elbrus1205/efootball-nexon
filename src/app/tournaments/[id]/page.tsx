@@ -21,7 +21,7 @@ import {
 import { db } from "@/lib/db";
 import { normalizeFormatBlueprint } from "@/lib/format-blueprint";
 import { getPlayerDisplayName } from "@/lib/player-name";
-import { syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
+import { shouldSyncTournamentRegistrationLifecycle, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { formatDate } from "@/lib/utils";
 
 type LeagueRow = {
@@ -593,18 +593,7 @@ function shouldSyncTournamentBeforeView(tournament: {
   registrationStartsAt: Date | null;
   startsAt: Date;
 }) {
-  const now = new Date();
-  const registrationOpenAt = tournament.registrationStartsAt ?? tournament.startsAt;
-
-  if (tournament.status === TournamentStatus.DRAFT && tournament.autoOpenRegistration) {
-    return registrationOpenAt <= now;
-  }
-
-  if (tournament.status === TournamentStatus.REGISTRATION_OPEN && !tournament.autoOpenRegistration) {
-    return tournament.startsAt <= now;
-  }
-
-  return false;
+  return shouldSyncTournamentRegistrationLifecycle(tournament);
 }
 
 export default async function TournamentDetailsPage({ params }: { params: { id: string } }) {

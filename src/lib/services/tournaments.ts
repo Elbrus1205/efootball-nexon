@@ -58,6 +58,35 @@ const TERMINAL_MATCH_STATUSES = new Set<MatchStatus>([
 ]);
 const AUTO_BYE_NOTE = "AUTO_BYE";
 
+export function getTournamentRegistrationOpenAt(tournament: { registrationStartsAt: Date | null; startsAt: Date }) {
+  return tournament.registrationStartsAt ?? tournament.startsAt;
+}
+
+export function resolveAutoRegistrationStatus(
+  status: TournamentStatus,
+  autoOpenRegistration: boolean,
+  registrationOpenAt: Date,
+  now = new Date(),
+) {
+  if (!autoOpenRegistration) return status;
+  if (status !== TournamentStatus.DRAFT && status !== TournamentStatus.REGISTRATION_OPEN) return status;
+  if (status === TournamentStatus.REGISTRATION_OPEN) return status;
+  return registrationOpenAt <= now ? TournamentStatus.REGISTRATION_OPEN : TournamentStatus.DRAFT;
+}
+
+export function shouldSyncTournamentRegistrationLifecycle(tournament: {
+  status: TournamentStatus;
+  autoOpenRegistration: boolean;
+  registrationStartsAt: Date | null;
+  startsAt: Date;
+}) {
+  return (
+    tournament.status === TournamentStatus.DRAFT &&
+    tournament.autoOpenRegistration &&
+    getTournamentRegistrationOpenAt(tournament) <= new Date()
+  );
+}
+
 function nextPowerOfTwo(value: number) {
   return Math.pow(2, Math.ceil(Math.log2(Math.max(value, 2))));
 }
@@ -2469,12 +2498,11 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
   const allMatchesCompleted =
     hasMatches && tournament.matches.every((match) => TERMINAL_MATCH_STATUSES.has(match.status));
   const now = new Date();
-  const registrationStartsAt = tournament.registrationStartsAt ?? tournament.startsAt;
-  const shouldAutoCloseRegistrationByTime = !tournament.autoOpenRegistration && tournament.startsAt <= now;
+  const registrationStartsAt = getTournamentRegistrationOpenAt(tournament);
   const nextDateStatus =
     tournament.autoOpenRegistration && tournament.status === TournamentStatus.DRAFT && registrationStartsAt <= now
       ? TournamentStatus.REGISTRATION_OPEN
-      : tournament.status === TournamentStatus.REGISTRATION_OPEN && (shouldAutoCloseRegistrationByTime || confirmedParticipants >= tournament.maxParticipants)
+      : tournament.status === TournamentStatus.REGISTRATION_OPEN && confirmedParticipants >= tournament.maxParticipants
         ? TournamentStatus.AWAITING_START
         : null;
 
@@ -2484,7 +2512,11 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
       data: {
         status: nextDateStatus,
         registrationClosedAt:
-          nextDateStatus === TournamentStatus.AWAITING_START && !tournament.registrationClosedAt ? now : tournament.registrationClosedAt,
+          nextDateStatus === TournamentStatus.AWAITING_START && !tournament.registrationClosedAt
+            ? now
+            : nextDateStatus === TournamentStatus.REGISTRATION_OPEN
+              ? null
+              : tournament.registrationClosedAt,
       },
     });
   }
@@ -2740,5 +2772,3 @@ export async function advanceMatch(matchId: string, winnerId: string, loserId?: 
 
   await advanceResolvedWinnerForMatch(matchId, winnerId, loserId, winnerEntryId, loserEntryId);
 }
-
-

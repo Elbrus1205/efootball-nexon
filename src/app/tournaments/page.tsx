@@ -4,7 +4,7 @@ import { TournamentCard } from "@/components/tournaments/tournament-card";
 import { getCurrentSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getDivisionSettings, isDivisionAdminRole } from "@/lib/services/divisions";
-import { syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
+import { shouldSyncTournamentRegistrationLifecycle, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 
 export const dynamic = "force-dynamic";
 
@@ -14,18 +14,7 @@ function shouldSyncTournamentForList(tournament: {
   registrationStartsAt: Date | null;
   startsAt: Date;
 }) {
-  const now = new Date();
-  const registrationOpenAt = tournament.registrationStartsAt ?? tournament.startsAt;
-
-  if (tournament.status === TournamentStatus.DRAFT && tournament.autoOpenRegistration) {
-    return registrationOpenAt <= now;
-  }
-
-  if (tournament.status === TournamentStatus.REGISTRATION_OPEN && !tournament.autoOpenRegistration) {
-    return tournament.startsAt <= now;
-  }
-
-  return false;
+  return shouldSyncTournamentRegistrationLifecycle(tournament);
 }
 
 export default async function TournamentsPage() {

@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { parseFormatBlueprintJson } from "@/lib/format-blueprint";
 import { createNotificationForAllUsers } from "@/lib/services/notifications";
+import { resolveAutoRegistrationStatus } from "@/lib/services/tournaments";
 import { tournamentBuilderSchema } from "@/lib/validators";
 
 function checkboxValue(value: FormDataEntryValue | null) {
@@ -12,8 +13,7 @@ function checkboxValue(value: FormDataEntryValue | null) {
 }
 
 function resolveUpdatedStatus(status: TournamentStatus, startsAt: Date, autoOpenRegistration: boolean) {
-  if (!autoOpenRegistration) return status;
-  return startsAt <= new Date() ? TournamentStatus.REGISTRATION_OPEN : TournamentStatus.DRAFT;
+  return resolveAutoRegistrationStatus(status, autoOpenRegistration, startsAt);
 }
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
@@ -80,6 +80,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       format: TournamentFormat.CUSTOM,
       formatBlueprintJson: formatBlueprint ?? Prisma.DbNull,
       status,
+      registrationClosedAt:
+        status === TournamentStatus.DRAFT || status === TournamentStatus.REGISTRATION_OPEN ? null : undefined,
       coverImage: body.coverImage || null,
       playoffType: null,
       playoffLegs: 1,
