@@ -679,15 +679,17 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
 
   if (!tournament) notFound();
 
-  const myMatchIds = session?.user
+  const currentUserId = session?.user?.id;
+
+  const myMatchIds = currentUserId
     ? tournament.matches
-        .filter((m) => m.player1Id === session.user.id || m.player2Id === session.user.id)
+        .filter((m) => m.player1Id === currentUserId || m.player2Id === currentUserId)
         .map((m) => m.id)
     : [];
 
   const [currentUser, rawSubmissions, availableClubs] = await Promise.all([
-    session?.user
-      ? db.user.findUnique({ where: { id: session.user.id }, select: { telegramId: true } })
+    currentUserId
+      ? db.user.findUnique({ where: { id: currentUserId }, select: { telegramId: true } })
       : Promise.resolve(null),
     myMatchIds.length
       ? db.matchResultSubmission.findMany({
@@ -713,8 +715,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   );
   const hasFreeSlots = activeParticipants.length < tournament.maxParticipants;
   const isRegistrationOpen = tournament.status === TournamentStatus.REGISTRATION_OPEN;
-  const isLoggedIn = Boolean(session?.user);
-  const alreadyRegistered = !!session?.user && activeParticipants.some((entry) => entry.userId === session.user.id);
+  const isLoggedIn = Boolean(currentUserId);
+  const alreadyRegistered = !!currentUserId && activeParticipants.some((entry) => entry.userId === currentUserId);
   const needsTelegram = Boolean(isLoggedIn && !currentUser?.telegramId);
   const canRegister = isLoggedIn && isRegistrationOpen && hasFreeSlots && !alreadyRegistered && !needsTelegram;
   const canCancelRegistration =
@@ -737,8 +739,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   );
   const scheduleSections = buildScheduleSections(visibleMatches);
 
-  const myMatches = session?.user
-    ? visibleMatches.filter((match) => match.player1Id === session.user.id || match.player2Id === session.user.id)
+  const myMatches = currentUserId
+    ? visibleMatches.filter((match) => match.player1Id === currentUserId || match.player2Id === currentUserId)
     : [];
 
   const myMatchesWithSubmissions = myMatches.map((match) => ({
@@ -956,7 +958,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
 
         <TabsContent value="my-matches">
           <div className="grid gap-4">
-            {!session?.user ? (
+            {!currentUserId ? (
               <Card className="p-6 text-zinc-500">Здесь появятся матчи текущего участника после публикации расписания.</Card>
             ) : myMatchesWithSubmissions.length ? (
               myMatchesWithSubmissions.map((match) => {
@@ -973,7 +975,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                     confirmedPlayer1Score={match.player1Score}
                     confirmedPlayer2Score={match.player2Score}
                     canSubmit={match.status !== "CONFIRMED" && match.status !== "DISPUTED"}
-                    waitingForOpponent={match.submissions.some((submission) => submission.submittedById === session.user.id && submission.status === "PENDING")}
+                    waitingForOpponent={match.submissions.some((submission) => submission.submittedById === currentUserId && submission.status === "PENDING")}
                     attemptsLeft={Math.max(
                       0,
                       3 -

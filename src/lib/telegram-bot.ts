@@ -4,6 +4,26 @@ export type TelegramInlineKeyboardMarkup = {
   inline_keyboard: Array<Array<{ text: string; url: string }>>;
 };
 
+type TelegramErrorPayload = {
+  ok?: boolean;
+  error_code?: number;
+  description?: string;
+};
+
+export class TelegramApiError extends Error {
+  readonly status: number;
+  readonly errorCode?: number;
+  readonly description?: string;
+
+  constructor(message: string, params: { status: number; errorCode?: number; description?: string }) {
+    super(message);
+    this.name = "TelegramApiError";
+    this.status = params.status;
+    this.errorCode = params.errorCode;
+    this.description = params.description;
+  }
+}
+
 function getTelegramBotToken() {
   const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
   if (!token) {
@@ -17,13 +37,62 @@ function normalizeTelegramUsername(value?: string | null) {
   return value?.trim().replace(/^@/, "") || null;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+async function readTelegramError(response: Response, fallback: string) {
+  const text = await response.text().catch(() => "");
+  let payload: TelegramErrorPayload | null = null;
+
+  if (text) {
+    try {
+      const parsed = JSON.parse(text) as unknown;
+      if (isRecord(parsed)) {
+        payload = {
+          ok: typeof parsed.ok === "boolean" ? parsed.ok : undefined,
+          error_code: typeof parsed.error_code === "number" ? parsed.error_code : undefined,
+          description: typeof parsed.description === "string" ? parsed.description : undefined,
+        };
+      }
+    } catch {
+      // Telegram normally returns JSON errors; keep the raw text as the fallback message.
+    }
+  }
+
+  const description = payload?.description || text || fallback;
+  return new TelegramApiError(description, {
+    status: response.status,
+    errorCode: payload?.error_code,
+    description,
+  });
+}
+
+export function isTelegramRecipientUnavailableError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const description = error instanceof TelegramApiError ? error.description ?? error.message : error.message;
+  const normalized = description.toLowerCase();
+
+  return (
+    normalized.includes("chat not found") ||
+    normalized.includes("bot was blocked by the user") ||
+    normalized.includes("user is deactivated")
+  );
+}
+
 async function callTelegramApi<T>(method: string, init?: RequestInit) {
   const botToken = getTelegramBotToken();
   const response = await fetch(`https://api.telegram.org/bot${botToken}/${method}`, init);
   const payload = (await response.json().catch(() => null)) as { ok?: boolean; result?: T; description?: string } | null;
 
   if (!response.ok || !payload?.ok) {
-    throw new Error(payload?.description || `Telegram API ${method} failed`);
+    throw new TelegramApiError(payload?.description || `Telegram API ${method} failed`, {
+      status: response.status,
+      description: payload?.description,
+    });
   }
 
   return payload.result as T;
@@ -169,8 +238,7 @@ export async function sendTelegramMessage(params: {
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(text || "Failed to send Telegram message");
+    throw await readTelegramError(res, "Failed to send Telegram message");
   }
 }
 
@@ -224,7 +292,6 @@ export async function sendTelegramMedia(params: {
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(text || "Failed to send Telegram media");
+    throw await readTelegramError(res, "Failed to send Telegram media");
   }
 }

@@ -3,7 +3,7 @@ import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import type { SecurityContext } from "@/lib/auth/security";
 import { db } from "@/lib/db";
 import { createNotification } from "@/lib/services/notifications";
-import { sendTelegramMessage } from "@/lib/telegram-bot";
+import { isTelegramRecipientUnavailableError, sendTelegramMessage } from "@/lib/telegram-bot";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
 
 type AuthNotificationProvider = "email" | "vkid" | "telegram";
@@ -134,6 +134,14 @@ async function sendLoginTelegramNotification(params: {
     disableWebPagePreview: true,
     replyMarkup: buildTelegramButton("Открыть безопасность", "/dashboard/security"),
   }).catch((error) => {
+    if (isTelegramRecipientUnavailableError(error)) {
+      console.warn("Login Telegram notification skipped: recipient is unavailable", {
+        userId: params.user.id,
+        telegramId: params.user.telegramId,
+      });
+      return;
+    }
+
     console.error("Failed to send login Telegram notification", error);
   });
 }
@@ -169,6 +177,14 @@ export async function sendEmailVerificationReminder(user: UserForSecurityNotific
     disableWebPagePreview: true,
     replyMarkup: buildTelegramButton("Подтвердить email", "/dashboard/security"),
   }).catch((error) => {
+    if (isTelegramRecipientUnavailableError(error)) {
+      console.warn("Email verification Telegram reminder skipped: recipient is unavailable", {
+        userId: user.id,
+        telegramId: user.telegramId,
+      });
+      return;
+    }
+
     console.error("Failed to send email verification Telegram reminder", error);
   });
 

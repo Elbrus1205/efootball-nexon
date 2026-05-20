@@ -2,7 +2,7 @@ import Pusher from "pusher";
 import { NotificationType } from "@prisma/client";
 import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
-import { sendTelegramMessage } from "@/lib/telegram-bot";
+import { isTelegramRecipientUnavailableError, sendTelegramMessage } from "@/lib/telegram-bot";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
 import { repairMojibake } from "@/lib/text-encoding";
 
@@ -100,6 +100,14 @@ export async function createNotification({
           ])
         : undefined,
     }).catch((error) => {
+      if (isTelegramRecipientUnavailableError(error)) {
+        console.warn("Telegram notification skipped: recipient is unavailable", {
+          userId,
+          telegramId: notification.user.telegramId,
+        });
+        return;
+      }
+
       console.error("Failed to send Telegram notification", error);
     });
   }
