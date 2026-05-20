@@ -29,6 +29,49 @@ const profileStatusFaqBadges = [
   { title: "Надёжный", tone: ProfileStatusTone.BLUE },
 ] as const;
 
+const accountSecurityFaqItems = [
+  {
+    title: "Как обезопасить свой аккаунт?",
+    paragraphs: [
+      "Привяжите к профилю несколько способов входа: Telegram, почту, VK и пароль. Если один способ временно недоступен, вы сможете зайти другим и не потеряете доступ к турнирам, матчам и заказам.",
+      "Используйте уникальный пароль, который не повторяется на других сайтах. Не отправляйте пароль, коды входа и ссылки подтверждения другим людям, даже если они представляются администрацией.",
+      "После настройки способов входа периодически проверяйте раздел безопасности в профиле. Если увидели незнакомый вход, сразу смените пароль и завершите лишние сессии.",
+    ],
+  },
+  {
+    title: "Как привязать Telegram?",
+    paragraphs: [
+      "Откройте профиль и перейдите в настройки безопасности. В блоке Telegram нажмите кнопку привязки и следуйте подсказке сайта.",
+      "После перехода в Telegram нажмите Start или подтвердите привязку через кнопку бота. Возвращайтесь на сайт только после того, как Telegram покажет, что бот запущен.",
+      "Telegram нужен для быстрого входа, важных уведомлений, кодов безопасности и восстановления доступа. Если бот заблокирован или чат с ним не начат, уведомления в Telegram приходить не будут.",
+    ],
+  },
+  {
+    title: "Как привязать почту?",
+    paragraphs: [
+      "В профиле откройте настройки безопасности, укажите актуальный email и сохраните изменения. Лучше использовать почту, к которой у вас точно есть постоянный доступ.",
+      "После сохранения откройте письмо от сайта и перейдите по ссылке подтверждения. Если письма нет, проверьте Спам, Промоакции и правильность введенного адреса.",
+      "Подтвержденная почта помогает восстановить аккаунт, получать важные сообщения и доказывает, что адрес действительно принадлежит вам.",
+    ],
+  },
+  {
+    title: "Как привязать VK?",
+    paragraphs: [
+      "Откройте настройки безопасности в профиле и выберите привязку VK. Сайт перенаправит вас на авторизацию VK ID.",
+      "Войдите в нужный VK-аккаунт и разрешите привязку. После возврата на сайт проверьте, что VK появился среди способов входа.",
+      "Привязывайте только свой личный VK. Не используйте чужой аккаунт, потому что через него можно будет входить в ваш профиль.",
+    ],
+  },
+  {
+    title: "Как создать или сменить пароль?",
+    paragraphs: [
+      "Перейдите в профиль, откройте настройки безопасности и найдите блок пароля. Если пароля еще нет, выберите создание пароля; если пароль уже есть, используйте смену пароля.",
+      "Хороший пароль должен быть длинным, уникальным и не состоять только из имени, даты рождения, ника или названия клуба. Лучше использовать сочетание букв, цифр и символов.",
+      "После смены пароля сохраните его в надежном менеджере паролей. Если подозреваете, что кто-то узнал пароль, сразу смените его и проверьте активные сессии.",
+    ],
+  },
+] as const;
+
 export default async function FaqPage() {
   const items = await db.faqItem.findMany({
     where: { isPublished: true },
@@ -57,6 +100,34 @@ export default async function FaqPage() {
       </section>
 
       <div className="grid gap-6">
+        <section className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+              <LifeBuoy className="h-4 w-4" />
+            </div>
+            <h2 className="text-xl font-semibold text-white">Безопасность аккаунта</h2>
+          </div>
+
+          <div className="grid gap-3">
+            {accountSecurityFaqItems.map((item) => (
+              <details key={item.title} className="group rounded-3xl border border-white/10 bg-white/[0.04] p-5 shadow-glow open:bg-white/[0.06]">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-semibold text-white">
+                  <span>{item.title}</span>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/20 text-lg leading-none text-primary transition group-open:rotate-45">
+                    +
+                  </span>
+                </summary>
+
+                <div className="mt-4 space-y-3 text-sm leading-6 text-zinc-300">
+                  {item.paragraphs.map((paragraph) => (
+                    <p key={paragraph}>{paragraph}</p>
+                  ))}
+                </div>
+              </details>
+            ))}
+          </div>
+        </section>
+
         {Object.entries(groupedItems).map(([category, categoryItems]) => (
           <section key={category} className="space-y-3">
             <div className="flex items-center gap-3">
@@ -67,8 +138,8 @@ export default async function FaqPage() {
             </div>
 
             <div className="grid gap-3">
-              {categoryItems.map((item, index) => (
-                <details key={item.id} className="group rounded-3xl border border-white/10 bg-white/[0.04] p-5 shadow-glow open:bg-white/[0.06]" open={index === 0}>
+              {categoryItems.map((item) => (
+                <details key={item.id} className="group rounded-3xl border border-white/10 bg-white/[0.04] p-5 shadow-glow open:bg-white/[0.06]">
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-semibold text-white">
                     <span>{item.title}</span>
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/20 text-lg leading-none text-primary transition group-open:rotate-45">
