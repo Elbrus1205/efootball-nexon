@@ -140,7 +140,7 @@ function DivisionSummary({ profile, settings, place }: { profile: PlayerRow; set
               <span className="rounded-full border border-amber-300/25 bg-amber-400/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.14em] text-amber-100 sm:px-3 sm:py-1 sm:text-xs sm:tracking-[0.18em]">Beta</span>
             </div>
             <div className="mt-1 text-xs font-bold text-yellow-200 sm:mt-2 sm:text-xl">
-              Фаза: {formatPhaseDate(settings.phaseStartsAt)} - {formatPhaseDate(settings.phaseEndsAt)}
+              Дата: {formatPhaseDate(settings.phaseStartsAt)} - {formatPhaseDate(settings.phaseEndsAt)}
             </div>
           </div>
         </div>

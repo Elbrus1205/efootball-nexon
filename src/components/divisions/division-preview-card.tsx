@@ -36,22 +36,6 @@ export function DivisionPreviewCard({ canOpen, coverImage }: { canOpen: boolean;
           </div>
         </div>
 
-        <div className="absolute left-1/2 top-[22%] hidden w-[18%] min-w-[116px] max-w-[170px] -translate-x-1/2 rotate-[8deg] sm:block">
-          <div className="aspect-[5/7] rounded-lg border-2 border-cyan-200 bg-[linear-gradient(145deg,#23104d,#6d28d9_42%,#111827)] p-2 shadow-[0_0_28px_rgba(34,211,238,0.9)]">
-            <div className="flex items-start justify-between text-yellow-300">
-              <div className="text-2xl font-black leading-none">98</div>
-              <div className="rounded bg-white/10 px-1 text-[10px] font-black text-white">DIV</div>
-            </div>
-            <div className="mt-2 h-[48%] rounded bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.85),transparent_18%),linear-gradient(180deg,rgba(239,68,68,0.95),rgba(15,23,42,0.8))]" />
-            <div className="mt-2 rounded bg-yellow-700/90 px-2 py-1 text-center text-[10px] font-black leading-tight text-white">eFootball Nexon</div>
-            <div className="mt-2 flex justify-center gap-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-yellow-300" />
-              <span className="h-1.5 w-1.5 rounded-full bg-yellow-300" />
-              <span className="h-1.5 w-1.5 rounded-full bg-yellow-300" />
-            </div>
-          </div>
-        </div>
-
         <div className="max-w-[72%] space-y-1.5 sm:max-w-[58%] sm:space-y-2">
           <h2 className="font-display text-2xl font-black leading-none text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.9)] sm:text-4xl md:text-5xl">
             Лига eFootball
