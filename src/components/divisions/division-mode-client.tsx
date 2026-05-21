@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, Clock, Crown, History, ListChecks, Percent, Search, Swords, Trophy } from "lucide-react";
+import { Archive, ArrowUpCircle, BarChart3, Clock, Crown, History, ListChecks, Percent, Search, Swords, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +50,19 @@ type Leaderboard = {
   pageSize: number;
   from: number;
   to: number;
+};
+
+type ArchiveRow = {
+  id: string;
+  division: number;
+  points: number;
+  rating: number | null;
+  wins: number;
+  draws: number;
+  losses: number;
+  place: number | null;
+  season: { name: string };
+  user: { name: string | null; email: string | null; telegramUsername: string | null };
 };
 
 type DivisionSettings = {
@@ -226,6 +239,45 @@ function DivisionSummary({ profile, settings, place }: { profile: PlayerRow; set
   );
 }
 
+function DivisionCycleAction({ profile }: { profile: PlayerRow }) {
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+  const target = promotionTarget(profile.division);
+  const totalGames = profile.wins + profile.draws + profile.losses;
+  const matchLimit = divisionMatchLimit(profile.division);
+  const canPromote = Boolean(profile.division > 2 && target && profile.points >= target);
+  const cycleFinished = profile.division > 2 && totalGames >= matchLimit;
+  const canSettle = canPromote || cycleFinished;
+
+  if (profile.division <= 2 || !canSettle) return null;
+
+  const label = canPromote ? "Перейти в следующий дивизион" : profile.division >= 5 ? "Начать заново в 5 дивизионе" : "Завершить цикл";
+
+  return (
+    <Button
+      disabled={pending}
+      className="h-12 w-full rounded-2xl bg-emerald-500 text-black hover:bg-emerald-400"
+      onClick={() =>
+        startTransition(async () => {
+          const res = await fetch("/api/divisions/cycle", { method: "POST" });
+          const payload = await res.json().catch(() => null);
+          if (!res.ok) {
+            toast.error(payload?.error || "Не удалось завершить цикл дивизиона.");
+            return;
+          }
+          if (payload?.promoted) toast.success("Вы перешли в следующий дивизион.");
+          else if (payload?.relegated) toast.success(profile.division >= 5 ? "Ниже 5 дивизиона нельзя. Цикл начат заново." : "Цикл завершен, дивизион понижен.");
+          else toast.success("Цикл начат заново.");
+          router.refresh();
+        })
+      }
+    >
+      <ArrowUpCircle className="mr-2 h-5 w-5" />
+      {label}
+    </Button>
+  );
+}
+
 function ScoreForm({ match }: { match: DivisionMatch }) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -300,6 +352,7 @@ export function DivisionModeClient({
   history,
   leaderboard,
   myLeaderboard,
+  archivedRows,
   leaderboardPage,
   betaEnabled,
   settings,
@@ -311,11 +364,12 @@ export function DivisionModeClient({
   history: HistoryRow[];
   leaderboard: Leaderboard;
   myLeaderboard: Leaderboard;
+  archivedRows: ArchiveRow[];
   leaderboardPage: number;
   betaEnabled: boolean;
   settings: DivisionSettings;
 }) {
-  const [tab, setTab] = useState<"matches" | "rating" | "history" | "rules">("matches");
+  const [tab, setTab] = useState<"matches" | "rating" | "history" | "archive" | "rules">("matches");
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const finished = history.slice(0, 8);
@@ -331,6 +385,7 @@ export function DivisionModeClient({
       { id: "matches", label: "Мои матчи", icon: Swords },
       { id: "rating", label: "Рейтинг", icon: Trophy },
       { id: "history", label: "История матчей", icon: History },
+      { id: "archive", label: "Архив", icon: Archive },
       { id: "rules", label: "Правила", icon: ListChecks },
     ] as const,
     [],
@@ -339,6 +394,7 @@ export function DivisionModeClient({
   return (
     <div className="page-shell space-y-6">
       <DivisionSummary profile={profile} settings={settings} place={myPlace} />
+      <DivisionCycleAction profile={profile} />
 
       <div className="grid grid-cols-2 gap-2">
         <Button
@@ -457,6 +513,36 @@ export function DivisionModeClient({
               </div>
             </div>
           ))}
+        </div>
+      ) : null}
+
+      {tab === "archive" ? (
+        <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.04]">
+          <table className="min-w-[680px] w-full text-left text-sm">
+            <thead className="border-b border-white/10 text-xs uppercase tracking-[0.14em] text-zinc-500">
+              <tr>
+                <th className="px-4 py-3">Сезон</th>
+                <th className="px-4 py-3">Место</th>
+                <th className="px-4 py-3">Игрок</th>
+                <th className="px-4 py-3">Див</th>
+                <th className="px-4 py-3">Очки/рейтинг</th>
+                <th className="px-4 py-3">Статистика</th>
+              </tr>
+            </thead>
+            <tbody>
+              {archivedRows.map((row) => (
+                <tr key={row.id} className="border-b border-white/5 last:border-0">
+                  <td className="px-4 py-3 text-zinc-300">{row.season.name}</td>
+                  <td className="px-4 py-3 font-black text-white">{row.place ?? "-"}</td>
+                  <td className="px-4 py-3">{displayName(row.user)}</td>
+                  <td className="px-4 py-3">Див {row.division}</td>
+                  <td className="px-4 py-3 font-bold text-yellow-200">{row.division <= 2 ? row.rating ?? 1000 : row.points}</td>
+                  <td className="px-4 py-3 text-zinc-400">{row.wins}-{row.draws}-{row.losses}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!archivedRows.length ? <div className="p-6 text-center text-sm text-zinc-400">Архив появится после завершения сезона.</div> : null}
         </div>
       ) : null}
 

@@ -13,8 +13,12 @@ export async function POST() {
     return NextResponse.json({ error: "Режим временно выключен." }, { status: 403 });
   }
 
-  const result = await enterDivisionQueue(session.user.id);
-  return NextResponse.json(result);
+  try {
+    const result = await enterDivisionQueue(session.user.id);
+    return NextResponse.json(result);
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Не удалось начать поиск." }, { status: 400 });
+  }
 }
 
 export async function DELETE() {

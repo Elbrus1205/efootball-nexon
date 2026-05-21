@@ -209,6 +209,13 @@ enum DivisionMatchResult {
   LOSS
 }
 
+enum DivisionSeasonStatus {
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  FINISHED
+}
+
 model User {
   id                  String                   @id @default(cuid())
   publicId            String                   @unique
@@ -268,6 +275,7 @@ model User {
   divisionMatchesAsOne DivisionMatch[]             @relation("divisionPlayerOne")
   divisionMatchesAsTwo DivisionMatch[]             @relation("divisionPlayerTwo")
   divisionScoreSubmissions DivisionScoreSubmission[]
+  divisionSeasonArchives DivisionSeasonArchive[]
 }
 
 model DivisionSettings {
@@ -279,6 +287,45 @@ model DivisionSettings {
   rulesText     String?  @db.Text
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+model DivisionSeason {
+  id         String               @id @default(cuid())
+  name       String
+  status     DivisionSeasonStatus @default(SCHEDULED)
+  startsAt   DateTime
+  endsAt     DateTime
+  startedAt  DateTime?
+  finishedAt DateTime?
+  pausedAt   DateTime?
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+  archives   DivisionSeasonArchive[]
+
+  @@index([status, startsAt, endsAt])
+  @@index([createdAt])
+}
+
+model DivisionSeasonArchive {
+  id            String         @id @default(cuid())
+  seasonId      String
+  userId        String
+  division      Int
+  points        Int
+  rating        Int?
+  wins          Int
+  draws         Int
+  losses        Int
+  winStreak     Int
+  bestWinStreak Int
+  place         Int?
+  createdAt     DateTime       @default(now())
+  season        DivisionSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([seasonId, userId])
+  @@index([seasonId, division, place])
+  @@index([userId])
 }
 
 model DivisionPlayer {

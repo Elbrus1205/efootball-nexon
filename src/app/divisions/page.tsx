@@ -3,12 +3,13 @@ import { DivisionMatchStatus } from "@prisma/client";
 import { DivisionModeClient } from "@/components/divisions/division-mode-client";
 import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { autoResolveExpiredDivisionMatches, getDivisionLeaderboard, getDivisionPlayerForDisplay, getDivisionSettings, isDivisionAdminRole } from "@/lib/services/divisions";
+import { autoResolveExpiredDivisionMatches, getDivisionLeaderboard, getDivisionPlayerForDisplay, getDivisionSettings, isDivisionAdminRole, syncDivisionSeasons } from "@/lib/services/divisions";
 
 export const dynamic = "force-dynamic";
 
 export default async function DivisionsPage({ searchParams }: { searchParams?: { page?: string } }) {
   const session = await requireAuth();
+  await syncDivisionSeasons();
   const settings = await getDivisionSettings();
   if (!isDivisionAdminRole(session.user.role)) {
     redirect("/tournaments");
@@ -48,6 +49,14 @@ export default async function DivisionsPage({ searchParams }: { searchParams?: {
   const page = Math.max(1, Number(searchParams?.page ?? 1) || 1);
   const leaderboard = await getDivisionLeaderboard({ page, division: profile.division });
   const myLeaderboard = await getDivisionLeaderboard({ aroundUserId: session.user.id, division: profile.division });
+  const archivedRows = await db.divisionSeasonArchive.findMany({
+    orderBy: [{ createdAt: "desc" }, { place: "asc" }],
+    take: 20,
+    include: {
+      season: { select: { name: true } },
+      user: { select: { name: true, email: true, telegramUsername: true } },
+    },
+  });
 
   return (
     <DivisionModeClient
@@ -58,6 +67,7 @@ export default async function DivisionsPage({ searchParams }: { searchParams?: {
       history={history}
       leaderboard={leaderboard}
       myLeaderboard={myLeaderboard}
+      archivedRows={archivedRows}
       leaderboardPage={page}
       betaEnabled={settings.betaEnabled}
       settings={{

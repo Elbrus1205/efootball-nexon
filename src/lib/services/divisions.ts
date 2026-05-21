@@ -1,4 +1,4 @@
-import { DivisionMatchResult, DivisionMatchStatus } from "@prisma/client";
+import { DivisionMatchResult, DivisionMatchStatus, DivisionSeasonStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 
 export const DIVISION_MATCH_DEADLINE_HOURS = 24;
@@ -19,16 +19,30 @@ export function getPromotionTarget(division: number) {
   return null;
 }
 
+export function getDivisionMatchLimit(division: number) {
+  if (division === 5) return 15;
+  if (division === 4) return 18;
+  if (division === 3) return 22;
+  return 10;
+}
+
 export function isDivisionAdminRole(role?: string | null) {
   return role === "FOUNDER" || role === "ADMIN" || role === "ORGANIZER";
 }
 
 export async function getDivisionSettings() {
+  await syncDivisionSeasons();
   return db.divisionSettings.upsert({
     where: { id: "default" },
     update: {},
     create: { id: "default", betaEnabled: true },
   });
+}
+
+function divisionSeasonStatusForDates(startsAt: Date, endsAt: Date, now = new Date()) {
+  if (now < startsAt) return DivisionSeasonStatus.SCHEDULED;
+  if (now > endsAt) return DivisionSeasonStatus.FINISHED;
+  return DivisionSeasonStatus.ACTIVE;
 }
 
 export async function ensureDivisionPlayer(userId: string) {
@@ -112,6 +126,204 @@ export async function getDivisionPlayerForDisplay(userId: string) {
   return profileForDisplay;
 }
 
+async function updateDivisionSettingsFromSeason(season: { startsAt: Date; endsAt: Date } | null, betaEnabled?: boolean) {
+  await db.divisionSettings.upsert({
+    where: { id: "default" },
+    update: {
+      ...(betaEnabled === undefined ? {} : { betaEnabled }),
+      phaseStartsAt: season?.startsAt ?? null,
+      phaseEndsAt: season?.endsAt ?? null,
+    },
+    create: {
+      id: "default",
+      betaEnabled: betaEnabled ?? true,
+      phaseStartsAt: season?.startsAt ?? null,
+      phaseEndsAt: season?.endsAt ?? null,
+    },
+  });
+}
+
+async function archiveDivisionSeason(seasonId: string) {
+  const players = await db.divisionPlayer.findMany({
+    orderBy: [{ division: "asc" }, { rating: "desc" }, { points: "desc" }, { wins: "desc" }, { losses: "asc" }, { updatedAt: "asc" }],
+  });
+
+  await db.divisionSeasonArchive.createMany({
+    data: players.map((player, index) => ({
+      seasonId,
+      userId: player.userId,
+      division: player.division,
+      points: player.points,
+      rating: player.rating,
+      wins: player.wins,
+      draws: player.draws,
+      losses: player.losses,
+      winStreak: player.winStreak,
+      bestWinStreak: player.bestWinStreak,
+      place: index + 1,
+    })),
+    skipDuplicates: true,
+  });
+}
+
+async function finishOtherActiveSeasons(exceptSeasonId: string, finishedAt = new Date()) {
+  const activeSeasons = await db.divisionSeason.findMany({
+    where: { status: DivisionSeasonStatus.ACTIVE, id: { not: exceptSeasonId } },
+    select: { id: true },
+  });
+
+  for (const season of activeSeasons) {
+    await archiveDivisionSeason(season.id);
+    await db.divisionSeason.update({
+      where: { id: season.id },
+      data: { status: DivisionSeasonStatus.FINISHED, finishedAt },
+    });
+  }
+}
+
+export async function syncDivisionSeasons(now = new Date()) {
+  const seasons = await db.divisionSeason.findMany({
+    where: { status: { in: [DivisionSeasonStatus.SCHEDULED, DivisionSeasonStatus.ACTIVE] } },
+    orderBy: { startsAt: "asc" },
+  });
+
+  for (const season of seasons) {
+    if (season.status === DivisionSeasonStatus.SCHEDULED && now >= season.startsAt && now <= season.endsAt) {
+      await finishOtherActiveSeasons(season.id, now);
+      await db.$transaction(async (tx) => {
+        await tx.divisionSeason.update({
+          where: { id: season.id },
+          data: { status: DivisionSeasonStatus.ACTIVE, startedAt: season.startedAt ?? now, pausedAt: null },
+        });
+        await tx.divisionSettings.upsert({
+          where: { id: "default" },
+          update: { betaEnabled: true, phaseStartsAt: season.startsAt, phaseEndsAt: season.endsAt },
+          create: { id: "default", betaEnabled: true, phaseStartsAt: season.startsAt, phaseEndsAt: season.endsAt },
+        });
+      });
+    }
+
+    if (season.status === DivisionSeasonStatus.ACTIVE && now > season.endsAt) {
+      await archiveDivisionSeason(season.id);
+      await db.divisionSeason.update({
+        where: { id: season.id },
+        data: { status: DivisionSeasonStatus.FINISHED, finishedAt: now },
+      });
+      const next = await db.divisionSeason.findFirst({
+        where: { status: DivisionSeasonStatus.SCHEDULED, startsAt: { lte: now }, endsAt: { gte: now } },
+        orderBy: { startsAt: "asc" },
+      });
+      await updateDivisionSettingsFromSeason(next, Boolean(next));
+    }
+  }
+}
+
+export async function getActiveDivisionSeason() {
+  await syncDivisionSeasons();
+  return db.divisionSeason.findFirst({
+    where: { status: DivisionSeasonStatus.ACTIVE, startsAt: { lte: new Date() }, endsAt: { gte: new Date() } },
+    orderBy: { startsAt: "desc" },
+  });
+}
+
+export async function createDivisionSeason(params: { name: string; startsAt: Date; endsAt: Date }) {
+  const status = divisionSeasonStatusForDates(params.startsAt, params.endsAt);
+  const season = await db.divisionSeason.create({
+    data: {
+      name: params.name,
+      startsAt: params.startsAt,
+      endsAt: params.endsAt,
+      status,
+      startedAt: status === DivisionSeasonStatus.ACTIVE ? new Date() : null,
+      finishedAt: status === DivisionSeasonStatus.FINISHED ? new Date() : null,
+    },
+  });
+
+  if (status === DivisionSeasonStatus.ACTIVE) {
+    await finishOtherActiveSeasons(season.id);
+    await updateDivisionSettingsFromSeason(season, true);
+  }
+
+  return season;
+}
+
+export async function updateDivisionSeasonAction(seasonId: string, action: string) {
+  const now = new Date();
+  const season = await db.divisionSeason.findUnique({ where: { id: seasonId } });
+  if (!season) throw new Error("Сезон не найден.");
+
+  if (action === "start" || action === "resume") {
+    await finishOtherActiveSeasons(season.id, now);
+    const updated = await db.divisionSeason.update({
+      where: { id: season.id },
+      data: { status: DivisionSeasonStatus.ACTIVE, startedAt: season.startedAt ?? now, pausedAt: null },
+    });
+    await updateDivisionSettingsFromSeason(updated, true);
+    return updated;
+  }
+
+  if (action === "pause") {
+    const updated = await db.divisionSeason.update({
+      where: { id: season.id },
+      data: { status: DivisionSeasonStatus.PAUSED, pausedAt: now },
+    });
+    await updateDivisionSettingsFromSeason(updated, false);
+    return updated;
+  }
+
+  if (action === "finish") {
+    await archiveDivisionSeason(season.id);
+    const updated = await db.divisionSeason.update({
+      where: { id: season.id },
+      data: { status: DivisionSeasonStatus.FINISHED, finishedAt: now },
+    });
+    await updateDivisionSettingsFromSeason(null, false);
+    return updated;
+  }
+
+  throw new Error("Неизвестное действие сезона.");
+}
+
+export async function clearDivisionSeasons() {
+  await db.divisionSeason.deleteMany();
+  await updateDivisionSettingsFromSeason(null, false);
+}
+
+export async function settleDivisionCycle(userId: string) {
+  const profile = await ensureDivisionPlayer(userId);
+  if (profile.division <= 2) {
+    throw new Error("В рейтинговых дивизионах переход считается по рейтингу.");
+  }
+
+  const target = getPromotionTarget(profile.division);
+  const totalGames = profile.wins + profile.draws + profile.losses;
+  const matchLimit = getDivisionMatchLimit(profile.division);
+  const promoted = Boolean(target && profile.points >= target);
+  const relegated = !promoted && totalGames >= matchLimit;
+
+  if (!promoted && !relegated) {
+    throw new Error("Сначала доиграйте матчи или наберите очки для повышения.");
+  }
+
+  const nextDivision = promoted ? profile.division - 1 : Math.min(5, profile.division + 1);
+  const nextRating = nextDivision <= 2 ? 1000 : null;
+  const updated = await db.divisionPlayer.update({
+    where: { userId },
+    data: {
+      division: nextDivision,
+      points: 0,
+      rating: nextRating,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      winStreak: 0,
+      bestWinStreak: 0,
+    },
+  });
+
+  return { player: updated, promoted, relegated, stayed: !promoted && nextDivision === profile.division };
+}
+
 export function getDivisionScore(scoreFor: number, scoreAgainst: number): DivisionMatchResult {
   if (scoreFor > scoreAgainst) return DivisionMatchResult.WIN;
   if (scoreFor < scoreAgainst) return DivisionMatchResult.LOSS;
@@ -138,20 +350,6 @@ function applyPromotionRules(params: {
   let division = params.division;
   let points = params.points;
   let rating = params.rating;
-
-  if (division === 5 && points >= 30) {
-    division = 4;
-    points = 0;
-  }
-  if (division === 4 && points >= 45) {
-    division = 3;
-    points = 0;
-  }
-  if (division === 3 && points >= 60) {
-    division = 2;
-    points = 0;
-    rating = 1000;
-  }
 
   if (division === 2 && (rating ?? 1000) > 1500) {
     division = 1;
@@ -191,7 +389,16 @@ export async function autoResolveExpiredDivisionMatches() {
 
 export async function enterDivisionQueue(userId: string) {
   await autoResolveExpiredDivisionMatches();
+  const activeSeason = await getActiveDivisionSeason();
+  if (!activeSeason) {
+    throw new Error("Сезон дивизионов сейчас не активен.");
+  }
   const profile = await ensureDivisionPlayer(userId);
+  const target = getPromotionTarget(profile.division);
+  const totalGames = profile.wins + profile.draws + profile.losses;
+  if (profile.division > 2 && ((target && profile.points >= target) || totalGames >= getDivisionMatchLimit(profile.division))) {
+    throw new Error("Сначала завершите цикл дивизиона.");
+  }
   const group = getDivisionGroup(profile.division);
 
   const activeMatch = await db.divisionMatch.findFirst({
