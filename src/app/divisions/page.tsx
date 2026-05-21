@@ -3,7 +3,7 @@ import { DivisionMatchStatus } from "@prisma/client";
 import { DivisionModeClient } from "@/components/divisions/division-mode-client";
 import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { autoResolveExpiredDivisionMatches, ensureDivisionPlayer, getDivisionLeaderboard, getDivisionSettings, isDivisionAdminRole } from "@/lib/services/divisions";
+import { autoResolveExpiredDivisionMatches, getDivisionLeaderboard, getDivisionPlayerForDisplay, getDivisionSettings, isDivisionAdminRole } from "@/lib/services/divisions";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +15,7 @@ export default async function DivisionsPage({ searchParams }: { searchParams?: {
   }
 
   await autoResolveExpiredDivisionMatches();
-  const profile = await ensureDivisionPlayer(session.user.id);
+  const profile = await getDivisionPlayerForDisplay(session.user.id);
   const queued = Boolean(await db.divisionQueueEntry.findUnique({ where: { userId: session.user.id } }));
   const activeMatches = await db.divisionMatch.findMany({
     where: {

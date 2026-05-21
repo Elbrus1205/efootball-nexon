@@ -54,6 +54,64 @@ export async function ensureDivisionPlayer(userId: string) {
   });
 }
 
+type DivisionStatsPlayer = {
+  userId: string;
+  division: number;
+  wins: number;
+  draws: number;
+  losses: number;
+};
+
+async function getRatingDivisionStats(userIds: string[]) {
+  const uniqueUserIds = Array.from(new Set(userIds));
+  const stats = new Map<string, { wins: number; draws: number; losses: number }>();
+  uniqueUserIds.forEach((userId) => stats.set(userId, { wins: 0, draws: 0, losses: 0 }));
+
+  if (!uniqueUserIds.length) return stats;
+
+  const rows = await db.divisionMatchHistory.groupBy({
+    by: ["playerId", "result"],
+    where: {
+      playerId: { in: uniqueUserIds },
+      divisionBefore: { in: [1, 2] },
+    },
+    _count: { _all: true },
+  });
+
+  rows.forEach((row) => {
+    const current = stats.get(row.playerId) ?? { wins: 0, draws: 0, losses: 0 };
+    if (row.result === DivisionMatchResult.WIN) current.wins = row._count._all;
+    if (row.result === DivisionMatchResult.DRAW) current.draws = row._count._all;
+    if (row.result === DivisionMatchResult.LOSS) current.losses = row._count._all;
+    stats.set(row.playerId, current);
+  });
+
+  return stats;
+}
+
+async function applyDivisionDisplayStats<T extends DivisionStatsPlayer>(players: T[]) {
+  const ratingDivisionPlayers = players.filter((player) => player.division <= 2);
+  if (!ratingDivisionPlayers.length) return players;
+
+  const statsByUserId = await getRatingDivisionStats(ratingDivisionPlayers.map((player) => player.userId));
+  return players.map((player) => {
+    if (player.division > 2) return player;
+    const stats = statsByUserId.get(player.userId) ?? { wins: 0, draws: 0, losses: 0 };
+    return {
+      ...player,
+      wins: stats.wins,
+      draws: stats.draws,
+      losses: stats.losses,
+    };
+  });
+}
+
+export async function getDivisionPlayerForDisplay(userId: string) {
+  const profile = await ensureDivisionPlayer(userId);
+  const [profileForDisplay] = await applyDivisionDisplayStats([profile]);
+  return profileForDisplay;
+}
+
 export function getDivisionScore(scoreFor: number, scoreAgainst: number): DivisionMatchResult {
   if (scoreFor > scoreAgainst) return DivisionMatchResult.WIN;
   if (scoreFor < scoreAgainst) return DivisionMatchResult.LOSS;
@@ -412,7 +470,7 @@ export async function getDivisionLeaderboard(params?: { page?: number; aroundUse
   });
 
   return {
-    players,
+    players: await applyDivisionDisplayStats(players),
     page,
     total,
     pageSize,
