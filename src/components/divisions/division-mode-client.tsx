@@ -131,57 +131,69 @@ function DivisionSummary({ profile, settings, place }: { profile: PlayerRow; set
   const winPercent = totalGames ? Math.round((profile.wins / totalGames) * 100) : 0;
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(28,28,34,0.96),rgba(18,18,24,0.96))] p-3 shadow-[0_16px_44px_rgba(2,6,23,0.3)] sm:rounded-[1.75rem] sm:p-6 sm:shadow-[0_24px_70px_rgba(2,6,23,0.34)]">
+    <section className="overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(28,28,34,0.96),rgba(18,18,24,0.96))] p-3.5 shadow-[0_16px_44px_rgba(2,6,23,0.3)] sm:rounded-[1.75rem] sm:p-6 sm:shadow-[0_24px_70px_rgba(2,6,23,0.34)]">
       <div className="flex flex-col gap-3 sm:gap-5">
         <div className="flex items-start gap-3 sm:gap-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-yellow-300/30 bg-blue-700/50 text-yellow-200 shadow-[0_0_18px_rgba(250,204,21,0.12)] sm:h-16 sm:w-16 sm:rounded-2xl">
-            <Trophy className="h-5 w-5 sm:h-8 sm:w-8" />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-yellow-300/30 bg-blue-700/50 text-yellow-200 shadow-[0_0_18px_rgba(250,204,21,0.12)] sm:h-16 sm:w-16 sm:rounded-2xl">
+            <Trophy className="h-4 w-4 sm:h-8 sm:w-8" />
           </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-display text-xl font-black uppercase leading-none text-yellow-300 sm:text-5xl">Дивизион {profile.division}</h1>
-              <span className="rounded-full border border-amber-300/25 bg-amber-400/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.14em] text-amber-100 sm:px-3 sm:py-1 sm:text-xs sm:tracking-[0.18em]">Beta</span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <h1 className="font-display text-lg font-black uppercase leading-none text-yellow-300 sm:text-5xl">Дивизион {profile.division}</h1>
+              <span className="rounded-full border border-amber-300/25 bg-amber-400/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-amber-100 sm:px-3 sm:py-1 sm:text-xs sm:tracking-[0.18em]">Beta</span>
             </div>
-            <div className="mt-1 text-xs font-bold text-yellow-200 sm:mt-2 sm:text-xl">
-              Дата: {formatPhaseDate(settings.phaseStartsAt)} - {formatPhaseDate(settings.phaseEndsAt)}
+            <div className="mt-0.5 truncate text-[10px] font-bold text-yellow-200/70 sm:mt-2 sm:text-xl sm:text-yellow-200">
+              {formatPhaseDate(settings.phaseStartsAt)} — {formatPhaseDate(settings.phaseEndsAt)}
             </div>
           </div>
         </div>
 
         {isRatingDivision ? (
           <>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex items-center gap-4">
-                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-zinc-950">
-                  <BarChart3 className="h-9 w-9" />
+            <div className="grid grid-cols-2 gap-2 sm:gap-4">
+              <div className="flex items-center gap-2.5 sm:gap-4">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-zinc-950 sm:h-16 sm:w-16">
+                  <BarChart3 className="h-5 w-5 sm:h-9 sm:w-9" />
                 </span>
                 <div>
-                  <div className="text-lg font-bold text-zinc-500">Рейтинг</div>
-                  <div className="text-4xl font-black text-white">{profile.rating ?? 1000}</div>
+                  <div className="text-xs font-bold text-zinc-500 sm:text-lg">Рейтинг</div>
+                  <div className="text-2xl font-black leading-tight text-white sm:text-4xl">{profile.rating ?? 1000}</div>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-zinc-950">
-                  <Crown className="h-9 w-9" />
+              <div className="flex items-center gap-2.5 sm:gap-4">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-zinc-950 sm:h-16 sm:w-16">
+                  <Crown className="h-5 w-5 sm:h-9 sm:w-9" />
                 </span>
                 <div>
-                  <div className="text-lg font-bold text-zinc-500">Место</div>
-                  <div className="text-4xl font-black text-white">{place ?? "-"}</div>
+                  <div className="text-xs font-bold text-zinc-500 sm:text-lg">Место</div>
+                  <div className="text-2xl font-black leading-tight text-white sm:text-4xl">{place ?? "-"}</div>
                 </div>
               </div>
             </div>
-            <p className="text-sm font-semibold text-zinc-400 sm:text-lg">
+            <p className="text-xs font-semibold text-zinc-400 sm:text-lg">
               {profile.division === 2 ? "Достигнув рейтинга 1500, вы перейдете в дивизион выше: 1." : "Держите рейтинг выше 900, чтобы сохранить место в первом дивизионе."}
             </p>
-            <div className="border-t border-white/10 pt-4">
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div><div className="bg-emerald-400 py-2 text-lg font-black text-black">Победы</div><div className="mt-2 text-3xl font-black text-white">{profile.wins}</div></div>
-                <div><div className="bg-zinc-400 py-2 text-lg font-black text-black">Ничьи</div><div className="mt-2 text-3xl font-black text-white">{profile.draws}</div></div>
-                <div><div className="bg-red-500 py-2 text-lg font-black text-black">Поражения</div><div className="mt-2 text-3xl font-black text-white">{profile.losses}</div></div>
+            <div className="border-t border-white/10 pt-3">
+              <div className="grid grid-cols-3 gap-1.5 text-center sm:gap-3">
+                <div className="overflow-hidden rounded-xl">
+                  <div className="bg-emerald-400 py-1.5 text-xs font-black text-black sm:py-2 sm:text-lg">Победы</div>
+                  <div className="mt-1.5 text-2xl font-black text-white sm:mt-2 sm:text-3xl">{profile.wins}</div>
+                </div>
+                <div className="overflow-hidden rounded-xl">
+                  <div className="bg-zinc-400 py-1.5 text-xs font-black text-black sm:py-2 sm:text-lg">Ничьи</div>
+                  <div className="mt-1.5 text-2xl font-black text-white sm:mt-2 sm:text-3xl">{profile.draws}</div>
+                </div>
+                <div className="overflow-hidden rounded-xl">
+                  <div className="bg-red-500 py-1.5 text-xs font-black text-black sm:py-2 sm:text-lg">Поражения</div>
+                  <div className="mt-1.5 text-2xl font-black text-white sm:mt-2 sm:text-3xl">{profile.losses}</div>
+                </div>
               </div>
-              <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-4">
-                <div className="flex items-center gap-3 text-2xl font-black text-white"><Percent className="h-8 w-8 rounded-full bg-emerald-400 p-1.5 text-black" />Процент побед</div>
-                <div className="text-3xl font-black text-zinc-500">{winPercent}%</div>
+              <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3 sm:mt-5 sm:pt-4">
+                <div className="flex items-center gap-2 text-base font-black text-white sm:gap-3 sm:text-2xl">
+                  <Percent className="h-6 w-6 rounded-full bg-emerald-400 p-1 text-black sm:h-8 sm:w-8 sm:p-1.5" />
+                  Процент побед
+                </div>
+                <div className="text-xl font-black text-zinc-500 sm:text-3xl">{winPercent}%</div>
               </div>
             </div>
           </>
@@ -222,10 +234,10 @@ function ScoreForm({ match }: { match: DivisionMatch }) {
   const [screenshotUrl, setScreenshotUrl] = useState("");
 
   return (
-    <div className="grid gap-2 sm:grid-cols-[80px_80px_1fr_auto]">
-      <Input className="h-10 bg-black/30" type="number" min={0} max={99} value={playerOneScore} onChange={(event) => setPlayerOneScore(Number(event.target.value))} />
-      <Input className="h-10 bg-black/30" type="number" min={0} max={99} value={playerTwoScore} onChange={(event) => setPlayerTwoScore(Number(event.target.value))} />
-      <Input className="h-10 bg-black/30" placeholder="Ссылка на скриншот" value={screenshotUrl} onChange={(event) => setScreenshotUrl(event.target.value)} />
+    <div className="grid gap-2 sm:grid-cols-[72px_72px_1fr_auto]">
+      <Input className="h-9 bg-black/30 text-sm sm:h-10" type="number" min={0} max={99} value={playerOneScore} onChange={(event) => setPlayerOneScore(Number(event.target.value))} />
+      <Input className="h-9 bg-black/30 text-sm sm:h-10" type="number" min={0} max={99} value={playerTwoScore} onChange={(event) => setPlayerTwoScore(Number(event.target.value))} />
+      <Input className="h-9 bg-black/30 text-sm sm:h-10" placeholder="Ссылка на скриншот" value={screenshotUrl} onChange={(event) => setScreenshotUrl(event.target.value)} />
       <Button
         disabled={pending}
         onClick={() =>
@@ -328,9 +340,9 @@ export function DivisionModeClient({
     <div className="page-shell space-y-6">
       <DivisionSummary profile={profile} settings={settings} place={myPlace} />
 
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-2">
         <Button
-          className="h-12 rounded-2xl"
+          className="h-10 rounded-2xl text-sm sm:h-12 sm:text-base"
           disabled={pending || queued || !betaEnabled}
           onClick={() =>
             startTransition(async () => {
@@ -345,12 +357,12 @@ export function DivisionModeClient({
             })
           }
         >
-          <Search className="mr-2 h-4 w-4" />
+          <Search className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
           {queued ? "Поиск идет" : "Найти игрока"}
         </Button>
         <Button
           variant="outline"
-          className="h-12 rounded-2xl"
+          className="h-10 rounded-2xl text-sm sm:h-12 sm:text-base"
           disabled={pending || !queued}
           onClick={() =>
             startTransition(async () => {
@@ -364,16 +376,16 @@ export function DivisionModeClient({
         </Button>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-1.5 overflow-x-auto pb-1 sm:gap-2">
         {tabs.map((item) => {
           const Icon = item.icon;
           return (
             <button
               key={item.id}
               onClick={() => setTab(item.id)}
-              className={cn("inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-sm font-bold transition", tab === item.id ? "border-primary/30 bg-primary/10 text-white" : "border-white/10 bg-white/[0.04] text-zinc-400 hover:text-white")}
+              className={cn("inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-bold transition sm:min-h-11 sm:gap-2 sm:px-4 sm:text-sm", tab === item.id ? "border-primary/30 bg-primary/10 text-white" : "border-white/10 bg-white/[0.04] text-zinc-400 hover:text-white")}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               {item.label}
             </button>
           );
@@ -385,25 +397,25 @@ export function DivisionModeClient({
           {activeMatches.length ? activeMatches.map((match) => {
             const opponent = match.playerOneId === currentUserId ? match.playerTwo : match.playerOne;
             return (
-              <article key={match.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:border-primary/25 hover:bg-white/[0.06] sm:p-5">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
+              <article key={match.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 transition hover:border-primary/25 hover:bg-white/[0.06] sm:p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <DivisionBadge division={opponent.divisionProfile?.division ?? 5} />
-                      <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-xs text-zinc-300">{statusLabel(match.status)}</span>
+                      <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] text-zinc-300 sm:px-2.5 sm:py-1 sm:text-xs">{statusLabel(match.status)}</span>
                     </div>
-                    <div className="text-xl font-bold text-white">{displayName(opponent)}</div>
-                    <div className="flex items-center gap-2 text-sm text-zinc-400">
-                      <Clock className="h-4 w-4 text-primary" />
+                    <div className="truncate text-base font-bold text-white sm:text-xl">{displayName(opponent)}</div>
+                    <div className="flex items-center gap-1.5 text-xs text-zinc-400 sm:text-sm">
+                      <Clock className="h-3.5 w-3.5 shrink-0 text-primary sm:h-4 sm:w-4" />
                       До авто-завершения: {timeLeft(match.deadlineAt)}
                     </div>
                   </div>
-                  <div className="rounded-2xl border border-white/10 bg-black/20 px-5 py-3 text-center">
-                    <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">Счет</div>
-                    <div className="mt-1 text-3xl font-black text-white">{match.playerOneScore ?? "-"} : {match.playerTwoScore ?? "-"}</div>
+                  <div className="shrink-0 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-center sm:rounded-2xl sm:px-5 sm:py-3">
+                    <div className="text-[9px] uppercase tracking-[0.18em] text-zinc-500 sm:text-xs">Счет</div>
+                    <div className="mt-0.5 text-xl font-black text-white sm:mt-1 sm:text-3xl">{match.playerOneScore ?? "-"} : {match.playerTwoScore ?? "-"}</div>
                   </div>
                 </div>
-                {match.status !== "FINISHED" && match.status !== "CANCELLED" ? <div className="mt-4"><ScoreForm match={match} /></div> : null}
+                {match.status !== "FINISHED" && match.status !== "CANCELLED" ? <div className="mt-3 sm:mt-4"><ScoreForm match={match} /></div> : null}
               </article>
             );
           }) : (
