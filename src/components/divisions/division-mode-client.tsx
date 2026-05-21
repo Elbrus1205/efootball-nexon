@@ -101,7 +101,10 @@ function promotionTarget(division: number) {
 }
 
 function divisionMatchLimit(division: number) {
-  return division === 5 ? 15 : 10;
+  if (division === 5) return 15;
+  if (division === 4) return 18;
+  if (division === 3) return 22;
+  return 10;
 }
 
 function scoreValue(player: PlayerRow) {
