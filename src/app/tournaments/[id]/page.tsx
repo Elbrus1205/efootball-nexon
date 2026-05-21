@@ -965,16 +965,17 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                 const player1LatestSubmission = match.submissions.find((submission) => submission.submittedById === match.player1Id);
                 const player2LatestSubmission = match.submissions.find((submission) => submission.submittedById === match.player2Id);
                 const matchDeadline = match.stage?.deadlines.find((item) => item.round === match.round)?.deadlineAt ?? null;
+                const canSubmitScore = Boolean(matchDeadline) && match.status !== "CONFIRMED" && match.status !== "DISPUTED";
 
                 return (
                   <MyMatchCard
                     key={match.id}
                     id={match.id}
-                    meta={matchDeadline ? `Дедлайн: ${formatDate(matchDeadline)}` : undefined}
+                    meta={matchDeadline ? `Дедлайн: ${formatDate(matchDeadline)}` : "Дедлайн не задан"}
                     isConfirmed={match.status === "CONFIRMED"}
                     confirmedPlayer1Score={match.player1Score}
                     confirmedPlayer2Score={match.player2Score}
-                    canSubmit={match.status !== "CONFIRMED" && match.status !== "DISPUTED"}
+                    canSubmit={canSubmitScore}
                     waitingForOpponent={match.submissions.some((submission) => submission.submittedById === currentUserId && submission.status === "PENDING")}
                     attemptsLeft={Math.max(
                       0,
@@ -987,7 +988,10 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                     )}
                     helperText={
                       match.status === "DISPUTED"
-                        ? "Матч переведён в спор. Теперь результат выставляет администрация." : "Оба игрока должны ввести один и тот же счёт. Если результаты не совпадут три раза, матч уйдёт в спор."
+                        ? "Матч переведён в спор. Теперь результат выставляет администрация."
+                        : !matchDeadline
+                          ? "Дедлайн для этого тура не задан. Счёт можно отправить только после назначения дедлайна."
+                          : "Оба игрока должны ввести один и тот же счёт. Если результаты не совпадут три раза, матч уйдёт в спор."
                     }
                     player1Id={match.player1?.id}
                     player2Id={match.player2?.id}

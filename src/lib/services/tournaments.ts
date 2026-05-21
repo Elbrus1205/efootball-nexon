@@ -46,9 +46,31 @@ function getCustomMatchesPerOpponent(stage: { settingsJson?: unknown }) {
   return Number.isFinite(matchesPerOpponent) ? Math.max(1, Math.min(6, matchesPerOpponent)) : null;
 }
 
+function getCustomStageMatchesPerOpponent(stage: { settingsJson?: unknown }, formatBlueprintJson?: unknown) {
+  const stageValue = getCustomMatchesPerOpponent(stage);
+  if (stageValue) {
+    return stageValue;
+  }
+
+  if (!isCustomTourCountStage(stage)) {
+    return null;
+  }
+
+  if (formatBlueprintJson == null) {
+    return null;
+  }
+
+  const blueprint = normalizeFormatBlueprint(formatBlueprintJson);
+  return Math.max(1, Math.min(6, blueprint.roundsCount));
+}
+
 function getRoundRobinToursCount(participantsCount: number) {
   const normalizedSlotsCount = participantsCount % 2 === 0 ? participantsCount : participantsCount + 1;
   return Math.max(normalizedSlotsCount - 1, 1);
+}
+
+function createEntryPairKey(firstEntryId: string, secondEntryId: string) {
+  return [firstEntryId, secondEntryId].sort().join(":");
 }
 
 const TERMINAL_MATCH_STATUSES = new Set<MatchStatus>([
@@ -689,6 +711,8 @@ async function createRoundRobinMatchesForEntries({
   const requestedCount = Math.max(roundsCount ?? 1, 1);
   const matchesPerPair = roundsMode === "series" ? Math.min(requestedCount, 6) : 1;
   const totalTours = roundsMode === "series" ? roundsPerCycle : requestedCount * roundsPerCycle;
+  const maxMatchesPerPair = roundsMode === "series" ? matchesPerPair : requestedCount;
+  const pairMatchesCount = new Map<string, number>();
 
   for (let tourIndex = 0; tourIndex < totalTours; tourIndex += 1) {
     const cycle = Math.floor(tourIndex / roundsPerCycle);
@@ -704,6 +728,14 @@ async function createRoundRobinMatchesForEntries({
           roundsMode === "series" ? legIndex % 2 === 1 : (cycle + roundIndex + pairIndex) % 2 === 1;
         const participant1 = shouldSwapHomeAway ? second : first;
         const participant2 = shouldSwapHomeAway ? first : second;
+        const pairKey = createEntryPairKey(participant1.id, participant2.id);
+        const currentPairMatchesCount = pairMatchesCount.get(pairKey) ?? 0;
+
+        if (currentPairMatchesCount >= maxMatchesPerPair) {
+          continue;
+        }
+
+        pairMatchesCount.set(pairKey, currentPairMatchesCount + 1);
 
         data.push({
           tournamentId,
@@ -1605,7 +1637,7 @@ export async function generateTournamentMatches(tournamentId: string) {
         tournamentId,
         stageId: stage.id,
         entries: tournament.participants.map((entry) => ({ id: entry.id, userId: entry.userId })),
-        roundsCount: getCustomMatchesPerOpponent(stage) ?? stage.roundsCount,
+        roundsCount: getCustomStageMatchesPerOpponent(stage, tournament.formatBlueprintJson) ?? stage.roundsCount,
         roundsMode: isCustomTourCountStage(stage) ? "series" : "cycles",
       });
     }
@@ -1621,7 +1653,7 @@ export async function generateTournamentMatches(tournamentId: string) {
           stageId: stage.id,
           groupId: group.id,
           entries: members,
-          roundsCount: getCustomMatchesPerOpponent(stage) ?? stage.roundsCount,
+          roundsCount: getCustomStageMatchesPerOpponent(stage, tournament.formatBlueprintJson) ?? stage.roundsCount,
           roundsMode: isCustomTourCountStage(stage) ? "series" : "cycles",
         });
       }

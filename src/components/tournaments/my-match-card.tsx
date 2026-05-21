@@ -251,6 +251,11 @@ export function MyMatchCard({
               </Button>
             </div>
           </div>
+        ) : !isConfirmed && helperText ? (
+          <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2.5">
+            <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" />
+            <p className="text-xs leading-relaxed text-zinc-400">{helperText}</p>
+          </div>
         ) : null}
       </div>
     </Card>

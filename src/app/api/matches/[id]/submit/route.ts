@@ -66,6 +66,24 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.json({ error: "Результат этого матча уже подтверждён." }, { status: 409 });
   }
 
+  const roundDeadline = match.stageId
+    ? await db.roundDeadline.findUnique({
+        where: {
+          stageId_round: {
+            stageId: match.stageId,
+            round: match.round,
+          },
+        },
+      })
+    : null;
+
+  if (!roundDeadline) {
+    return NextResponse.json(
+      { error: "Дедлайн для этого тура не задан. Счёт можно отправить только после назначения дедлайна." },
+      { status: 409 },
+    );
+  }
+
   if (match.isPenaltyTiebreak && body.player1Score === body.player2Score) {
     return NextResponse.json({ error: "В серии пенальти не может быть ничьей." }, { status: 400 });
   }
