@@ -19,11 +19,10 @@ export async function POST(request: Request) {
 
   await saveRegulationsText(parsed.data.body);
   await createNotificationForAllUsers({
-    title: "Регламент обновлён",
-    body: "На сайте опубликована новая версия регламента. Проверьте правила перед матчами и регистрацией.",
+    title: "Регламент обновлен",
+    body: "На сайте опубликована новая версия регламента. Откройте сайт: во всплывающем окне будут выделены изменения, которые нужно принять.",
     type: NotificationType.SYSTEM,
     link: "/regulations",
-    dedupeWithinHours: 6,
   });
 
   return NextResponse.json({ ok: true });

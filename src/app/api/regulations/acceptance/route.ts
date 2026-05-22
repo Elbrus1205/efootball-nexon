@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
-import { acceptCurrentRegulations, getRegulationsAcceptance } from "@/lib/regulations";
+import { acceptCurrentRegulations, getRegulationsAcceptance, getRegulationsChangeHighlights } from "@/lib/regulations";
 
 export async function GET() {
   const session = await requireAuth();
   const acceptance = await getRegulationsAcceptance(session.user.id);
+  const highlights = acceptance.accepted ? [] : await getRegulationsChangeHighlights();
 
   return NextResponse.json({
     accepted: acceptance.accepted,
@@ -14,6 +15,7 @@ export async function GET() {
       body: acceptance.document.body,
       version: acceptance.document.version,
       updatedAt: acceptance.document.updatedAt?.toISOString() ?? null,
+      highlights,
     },
   });
 }

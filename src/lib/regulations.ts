@@ -4,6 +4,7 @@ export const DEFAULT_REGULATIONS_TEXT =
   "Заполните здесь официальный регламент турниров: сроки, подтверждение матчей, правила переигровок, технические поражения и требования к скриншотам.";
 const DEFAULT_REGULATIONS_VERSION = "default-2026-04-19";
 const REGULATIONS_ACCEPTANCE_PREFIX = "regulations_acceptance:";
+const REGULATIONS_PREVIOUS_KEY = "regulations_previous";
 
 async function ensureSiteContentTable() {
   await db.$executeRaw`
@@ -37,8 +38,29 @@ export async function getRegulationsDocument() {
   };
 }
 
+export async function getRegulationsChangeHighlights() {
+  await ensureSiteContentTable();
+
+  const document = await getRegulationsDocument();
+  const rows = await db.$queryRaw<Array<{ body: string }>>`
+    SELECT "body" FROM "SiteContent" WHERE "key" = ${REGULATIONS_PREVIOUS_KEY} LIMIT 1
+  `;
+
+  return buildRegulationsHighlights(rows[0]?.body ?? "", document.body);
+}
+
 export async function saveRegulationsText(body: string) {
   await ensureSiteContentTable();
+  const current = await getRegulationsDocument();
+
+  if (current.body !== body) {
+    await db.$executeRaw`
+      INSERT INTO "SiteContent" ("key", "body", "updatedAt")
+      VALUES (${REGULATIONS_PREVIOUS_KEY}, ${current.body}, CURRENT_TIMESTAMP)
+      ON CONFLICT ("key")
+      DO UPDATE SET "body" = EXCLUDED."body", "updatedAt" = CURRENT_TIMESTAMP
+    `;
+  }
 
   await db.$executeRaw`
     INSERT INTO "SiteContent" ("key", "body", "updatedAt")
@@ -115,6 +137,28 @@ function parseRegulationsAcceptance(value?: string | null) {
   } catch {
     return null;
   }
+}
+
+function buildRegulationsHighlights(previousBody: string, currentBody: string) {
+  if (!previousBody || previousBody === currentBody) {
+    return currentBody.split("\n").map((text) => ({ text, changed: false }));
+  }
+
+  const previousLines = new Set(
+    previousBody
+      .split("\n")
+      .map((line) => normalizeRegulationsLine(line))
+      .filter(Boolean),
+  );
+
+  return currentBody.split("\n").map((text) => ({
+    text,
+    changed: Boolean(normalizeRegulationsLine(text) && !previousLines.has(normalizeRegulationsLine(text))),
+  }));
+}
+
+function normalizeRegulationsLine(value: string) {
+  return value.replace(/\s+/g, " ").trim().toLowerCase();
 }
 
 function readHeader(headers: Headers | undefined, key: string) {
