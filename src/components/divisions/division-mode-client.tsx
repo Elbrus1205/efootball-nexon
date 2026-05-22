@@ -310,23 +310,26 @@ function MatchScoreEditor({ match, currentUserId }: { match: DivisionMatch; curr
     });
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="flex items-center justify-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+      <span className="text-[11px] font-bold text-zinc-500 sm:text-xs">Результат:</span>
+      <div className="flex items-center gap-1.5">
+        <span className="text-[10px] text-zinc-600">Вы</span>
         <Input
-          className="h-9 w-16 bg-black/30 text-center text-sm font-bold sm:h-10 sm:w-[72px]"
+          className="h-8 w-12 bg-black/40 text-center text-sm font-bold sm:h-9 sm:w-14"
           type="number" min={0} max={99}
           value={myScore}
           onChange={(e) => setMyScore(Number(e.target.value))}
         />
-        <span className="text-base font-black text-zinc-500">:</span>
+        <span className="text-sm font-black text-zinc-500">:</span>
         <Input
-          className="h-9 w-16 bg-black/30 text-center text-sm font-bold sm:h-10 sm:w-[72px]"
+          className="h-8 w-12 bg-black/40 text-center text-sm font-bold sm:h-9 sm:w-14"
           type="number" min={0} max={99}
           value={opponentScore}
           onChange={(e) => setOpponentScore(Number(e.target.value))}
         />
+        <span className="text-[10px] text-zinc-600">Сопер.</span>
       </div>
-      <Button disabled={pending} size="sm" className="h-8 rounded-lg px-3 text-xs" onClick={submit}>
+      <Button disabled={pending} size="sm" className="ml-auto h-8 rounded-xl px-4 text-xs sm:h-9 sm:px-5 sm:text-sm" onClick={submit}>
         Сохранить
       </Button>
     </div>
@@ -484,47 +487,64 @@ export function DivisionModeClient({
       </div>
 
       {tab === "matches" ? (
-        <div className="grid gap-4">
+        <div className="grid gap-3">
           {activeMatches.length ? activeMatches.map((match) => {
             const isPlayerOne = match.playerOneId === currentUserId;
             const me = isPlayerOne ? match.playerOne : match.playerTwo;
             const opponent = isPlayerOne ? match.playerTwo : match.playerOne;
             const myScore = isPlayerOne ? match.playerOneScore : match.playerTwoScore;
             const oppScore = isPlayerOne ? match.playerTwoScore : match.playerOneScore;
+            const myWinning = myScore !== null && oppScore !== null && myScore > oppScore;
+            const oppWinning = myScore !== null && oppScore !== null && oppScore > myScore;
+            const active = match.status !== "FINISHED" && match.status !== "CANCELLED";
             return (
-              <article key={match.id} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] transition hover:border-primary/25 hover:bg-white/[0.06]">
-                <div className="flex flex-wrap items-center gap-2 px-3.5 pt-3 sm:px-5 sm:pt-4">
+              <article key={match.id} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] transition hover:border-primary/20">
+                {/* Header */}
+                <div className="flex items-center gap-2 border-b border-white/[0.06] bg-black/20 px-4 py-2 sm:px-5">
                   <DivisionBadge division={opponent.divisionProfile?.division ?? 5} />
-                  <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] text-zinc-300 sm:px-2.5 sm:text-xs">{statusLabel(match.status)}</span>
-                  <div className="ml-auto flex items-center gap-1 text-[11px] text-zinc-500 sm:text-xs">
-                    <Clock className="h-3 w-3 shrink-0 text-primary sm:h-3.5 sm:w-3.5" />
+                  <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[10px] text-zinc-400 sm:text-xs">{statusLabel(match.status)}</span>
+                  <div className="ml-auto flex items-center gap-1 text-[11px] text-zinc-500">
+                    <Clock className="h-3 w-3 shrink-0 text-primary" />
                     {timeLeft(match.deadlineAt)}
                   </div>
                 </div>
-                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3.5 py-3 sm:gap-4 sm:px-5 sm:py-4">
-                  <div className="min-w-0">
-                    <div className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">Вы</div>
+
+                {/* Players vs Score */}
+                <div className="flex items-center gap-3 px-4 py-4 sm:gap-5 sm:px-6 sm:py-5">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.18em] text-primary">Вы</div>
                     <Link href={`/players/${me.id}`} className="block truncate text-sm font-bold text-white transition hover:text-primary sm:text-base">
                       {displayName(me)}
                     </Link>
                   </div>
-                  <div className="shrink-0 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-center sm:px-5 sm:py-3">
-                    <div className="text-[9px] uppercase tracking-[0.18em] text-zinc-500 sm:text-[10px]">Счёт</div>
-                    {match.status !== "FINISHED" && match.status !== "CANCELLED" ? (
-                      <div className="mt-2">
-                        <MatchScoreEditor match={match} currentUserId={currentUserId} />
-                      </div>
-                    ) : (
-                      <div className="mt-0.5 text-xl font-black tabular-nums text-white sm:text-2xl">{myScore ?? "–"} : {oppScore ?? "–"}</div>
-                    )}
+
+                  <div className="shrink-0 text-center">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <span className={cn("text-3xl font-black tabular-nums leading-none sm:text-4xl", myWinning ? "text-emerald-400" : myScore !== null ? "text-white" : "text-zinc-500")}>
+                        {myScore ?? "–"}
+                      </span>
+                      <span className="text-lg font-bold text-zinc-600 sm:text-xl">:</span>
+                      <span className={cn("text-3xl font-black tabular-nums leading-none sm:text-4xl", oppWinning ? "text-red-400" : oppScore !== null ? "text-white" : "text-zinc-500")}>
+                        {oppScore ?? "–"}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-[9px] uppercase tracking-[0.2em] text-zinc-600">Счёт</div>
                   </div>
-                  <div className="min-w-0 text-right">
-                    <div className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Соперник</div>
+
+                  <div className="min-w-0 flex-1 text-right">
+                    <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-500">Соперник</div>
                     <Link href={`/players/${opponent.id}`} className="block truncate text-sm font-bold text-white transition hover:text-zinc-300 sm:text-base">
                       {displayName(opponent)}
                     </Link>
                   </div>
                 </div>
+
+                {/* Score form */}
+                {active ? (
+                  <div className="border-t border-white/[0.06] bg-black/20 px-4 py-3 sm:px-5 sm:py-3.5">
+                    <MatchScoreEditor match={match} currentUserId={currentUserId} />
+                  </div>
+                ) : null}
               </article>
             );
           }) : (
