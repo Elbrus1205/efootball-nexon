@@ -310,9 +310,9 @@ function MatchScoreEditor({ match, currentUserId }: { match: DivisionMatch; curr
     });
 
   return (
-    <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
-      <span className="text-[11px] font-bold text-zinc-500 sm:text-xs">Результат:</span>
+    <div className="flex flex-col gap-2">
       <div className="flex items-center gap-1.5">
+        <span className="text-[11px] font-bold text-zinc-500">Результат:</span>
         <span className="text-[10px] text-zinc-600">Вы</span>
         <Input
           className="h-8 w-12 bg-black/40 text-center text-sm font-bold sm:h-9 sm:w-14"
@@ -329,8 +329,8 @@ function MatchScoreEditor({ match, currentUserId }: { match: DivisionMatch; curr
         />
         <span className="text-[10px] text-zinc-600">Сопер.</span>
       </div>
-      <Button disabled={pending} size="sm" className="ml-auto h-8 rounded-xl px-4 text-xs sm:h-9 sm:px-5 sm:text-sm" onClick={submit}>
-        Сохранить
+      <Button disabled={pending} className="h-9 w-full rounded-xl text-sm sm:h-10" onClick={submit}>
+        Отправить результат
       </Button>
     </div>
   );
