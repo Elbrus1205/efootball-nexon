@@ -138,12 +138,12 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
           setOpen((value) => !value);
         }}
         className={cn(
-          "group relative z-[80] flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white/[0.035] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_26px_rgba(2,6,23,0.24)] backdrop-blur-xl transition-[background-color,border-color,box-shadow,transform] duration-300 ease-out hover:-translate-y-0.5 hover:border-sky-200/25 hover:bg-sky-400/[0.075] hover:shadow-[0_0_28px_rgba(56,189,248,0.14),inset_0_1px_0_rgba(255,255,255,0.1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 sm:h-11 sm:w-11 sm:rounded-2xl",
+          "group relative z-[80] flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white/[0.035] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_26px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-[background-color,border-color,box-shadow,transform] duration-300 ease-out hover:-translate-y-0.5 hover:border-[#b9944f]/25 hover:bg-[#b9944f]/[0.075] hover:shadow-[0_0_28px_rgba(185,148,79,0.1),inset_0_1px_0_rgba(255,255,255,0.1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9944f]/60 sm:h-11 sm:w-11 sm:rounded-2xl",
           open &&
-            "border-primary/35 bg-primary/12 shadow-[0_0_0_1px_rgba(59,130,246,0.14),0_18px_44px_rgba(15,23,42,0.34),inset_0_1px_0_rgba(255,255,255,0.14)]",
+            "border-[#b9944f]/35 bg-[#b9944f]/12 shadow-[0_0_0_1px_rgba(185,148,79,0.14),0_18px_44px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.14)]",
         )}
       >
-        <span className="pointer-events-none absolute inset-[1px] rounded-[11px] bg-[radial-gradient(circle_at_top,rgba(125,211,252,0.13),transparent_58%),linear-gradient(180deg,rgba(255,255,255,0.045),transparent)] opacity-80 sm:rounded-[15px]" />
+        <span className="pointer-events-none absolute inset-[1px] rounded-[11px] bg-[radial-gradient(circle_at_top,rgba(185,148,79,0.1),transparent_58%),linear-gradient(180deg,rgba(255,255,255,0.045),transparent)] opacity-80 sm:rounded-[15px]" />
         <span className="relative h-5 w-5">
           <span
             className={cn(

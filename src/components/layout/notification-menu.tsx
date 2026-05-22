@@ -132,7 +132,7 @@ export function NotificationMenu({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:h-11 sm:w-11"
+          className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9944f]/60 sm:h-11 sm:w-11"
         >
           {children}
           {unread > 0 ? (

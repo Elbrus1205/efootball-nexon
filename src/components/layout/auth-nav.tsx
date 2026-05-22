@@ -23,9 +23,9 @@ export function AuthNav({ unread = 0 }: { unread?: number }) {
         <Link
           href="/register"
           aria-label="Регистрация"
-          className="group relative inline-flex h-10 items-center justify-center overflow-hidden rounded-xl border border-sky-300/25 bg-sky-400/10 px-3 text-xs font-bold text-sky-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_24px_rgba(56,189,248,0.12)] transition duration-300 hover:-translate-y-0.5 hover:border-sky-200/45 hover:bg-sky-400/16 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 sm:hidden"
+          className="group relative inline-flex h-10 items-center justify-center overflow-hidden rounded-xl border border-[#b9944f]/25 bg-white/[0.035] px-3 text-xs font-bold text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_24px_rgba(0,0,0,0.28)] transition duration-300 hover:-translate-y-0.5 hover:border-[#b9944f]/45 hover:bg-[#b9944f]/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9944f]/60 sm:hidden"
         >
-          <span className="absolute inset-x-2 bottom-0 h-px scale-x-0 bg-gradient-to-r from-transparent via-sky-200/80 to-transparent transition duration-300 group-hover:scale-x-100" />
+          <span className="absolute inset-x-2 bottom-0 h-px scale-x-0 bg-gradient-to-r from-transparent via-[#b9944f]/80 to-transparent transition duration-300 group-hover:scale-x-100" />
           Регистрация
         </Link>
 
@@ -45,7 +45,7 @@ export function AuthNav({ unread = 0 }: { unread?: number }) {
             asChild
             variant="ghost"
             aria-label="Регистрация"
-            className="group h-9 rounded-full border border-sky-300/25 bg-sky-400/10 px-3 text-sm font-bold text-sky-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_24px_rgba(56,189,248,0.1)] transition duration-300 hover:-translate-y-0.5 hover:border-sky-200/45 hover:bg-sky-400/16 hover:text-white"
+            className="group h-9 rounded-full border border-[#b9944f]/25 bg-[#b9944f]/10 px-3 text-sm font-bold text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_24px_rgba(0,0,0,0.22)] transition duration-300 hover:-translate-y-0.5 hover:border-[#b9944f]/45 hover:bg-[#b9944f]/16 hover:text-white"
           >
             <Link href="/register">
               Регистрация
@@ -65,8 +65,8 @@ export function AuthNav({ unread = 0 }: { unread?: number }) {
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="group relative flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.035] p-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_30px_rgba(2,6,23,0.2)] transition duration-300 hover:-translate-y-0.5 hover:border-sky-300/25 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 sm:h-12 sm:w-12">
-            <span className="absolute inset-0 rounded-2xl bg-sky-400/10 opacity-0 blur-md transition duration-300 group-hover:opacity-100" />
+          <button className="group relative flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.035] p-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_30px_rgba(0,0,0,0.26)] transition duration-300 hover:-translate-y-0.5 hover:border-[#b9944f]/30 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9944f]/60 sm:h-12 sm:w-12">
+            <span className="absolute inset-0 rounded-2xl bg-[#b9944f]/10 opacity-0 blur-md transition duration-300 group-hover:opacity-100" />
             <Avatar className="relative h-9 w-9 rounded-xl border border-white/10 sm:h-10 sm:w-10">
               <AvatarImage src={session.user.image ?? undefined} alt={session.user.name ?? "Avatar"} />
               <AvatarFallback>{(session.user.name ?? "U").slice(0, 1)}</AvatarFallback>
