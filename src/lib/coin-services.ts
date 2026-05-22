@@ -40,13 +40,13 @@ export function coinPaymentBankLabel(bank?: CoinPaymentBank | null) {
 export function coinPaymentBankTone(bank?: CoinPaymentBank | null) {
   switch (bank) {
     case "OZON":
-      return "border-blue-300/25 bg-[#005bff] text-white";
+      return "border-primary/35 bg-transparent text-primary";
     case "TBANK":
-      return "border-yellow-300/35 bg-[#ffdd2d] text-black";
+      return "border-primary/35 bg-transparent text-primary";
     case "SBER":
-      return "border-emerald-300/25 bg-[#21a038] text-white";
+      return "border-primary/35 bg-transparent text-primary";
     case "VTB":
-      return "border-sky-300/25 bg-[#0a5cff] text-white";
+      return "border-primary/35 bg-transparent text-primary";
     default:
       return "border-white/10 bg-white/[0.06] text-white";
   }
@@ -89,19 +89,19 @@ export function serviceOrderStatusLabel(status: CoinServiceOrderStatus) {
 export function serviceOrderStatusTone(status: CoinServiceOrderStatus) {
   switch (status) {
     case "PENDING_REVIEW":
-      return "border-amber-300/25 bg-amber-300/10 text-amber-100";
+      return "border-[#9A6A1A]/55 bg-[#9A6A1A]/12 text-[#E5C982]";
     case "AWAITING_EXECUTOR":
-      return "border-orange-300/25 bg-orange-400/10 text-orange-100";
+      return "border-[#9A6A1A]/55 bg-[#9A6A1A]/12 text-[#E5C982]";
     case "ASSIGNED":
-      return "border-cyan-300/25 bg-cyan-400/10 text-cyan-100";
+      return "border-primary/35 bg-transparent text-primary";
     case "ACCEPTED":
-      return "border-sky-300/25 bg-sky-400/10 text-sky-100";
+      return "border-primary/35 bg-transparent text-primary";
     case "EXECUTOR_DONE":
-      return "border-violet-300/25 bg-violet-400/10 text-violet-100";
+      return "border-primary/35 bg-transparent text-primary";
     case "COMPLETED":
-      return "border-emerald-300/25 bg-emerald-400/10 text-emerald-100";
+      return "border-[#2F6B47]/55 bg-[#2F6B47]/15 text-[#BFE6CC]";
     case "REJECTED":
-      return "border-rose-300/25 bg-rose-400/10 text-rose-100";
+      return "border-[#8B3A3A]/60 bg-[#8B3A3A]/15 text-[#E7B9B9]";
     default:
       return "border-white/10 bg-white/[0.04] text-zinc-300";
   }

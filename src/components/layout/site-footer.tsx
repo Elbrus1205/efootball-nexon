@@ -26,15 +26,15 @@ const socialLinks = [
     href: telegramHref,
     label: "Telegram",
     icon: <TelegramIcon className="h-4 w-4" />,
-    iconTone: "bg-[#229ED9] text-white",
-    borderTone: "hover:border-sky-300/30 hover:bg-sky-400/[0.08]",
+    iconTone: "border border-primary/40 bg-transparent text-primary",
+    borderTone: "hover:border-primary/60",
   },
   {
     href: vkHref,
     label: "ВКонтакте",
     icon: <VkIcon className="h-4 w-4" />,
-    iconTone: "bg-[#0077FF] text-white",
-    borderTone: "hover:border-blue-300/30 hover:bg-blue-400/[0.08]",
+    iconTone: "border border-primary/40 bg-transparent text-primary",
+    borderTone: "hover:border-primary/60",
   },
 ];
 
@@ -57,9 +57,9 @@ const legalLinks = [
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-white/10 bg-gradient-to-b from-transparent to-white/[0.02]">
+    <footer className="border-t border-white/10 bg-[#0A0A0A]">
       <div className="page-shell py-4 sm:py-12">
-        <div className="grid gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-2xl sm:gap-6 sm:rounded-[2rem] sm:p-8 lg:grid-cols-[1.2fr_0.8fr_0.9fr]">
+        <div className="grid gap-4 rounded-md border border-white/10 bg-[#111111] p-4 sm:gap-6 sm:p-8 lg:grid-cols-[1.2fr_0.8fr_0.9fr]">
           <div className="space-y-3 sm:space-y-5">
             <div className="flex items-center gap-3">
               <SiteLogoMark className="h-9 w-9 sm:h-12 sm:w-12" />
@@ -80,9 +80,9 @@ export function SiteFooter() {
                   href={link.href}
                   target="_blank"
                   rel="noreferrer"
-                  className={`group inline-flex w-fit items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-semibold text-zinc-200 transition duration-200 ${link.borderTone}`}
+                  className={`group inline-flex w-fit items-center gap-2 rounded-md border border-white/10 bg-transparent px-3 py-2 text-sm font-semibold text-zinc-200 transition duration-200 ${link.borderTone}`}
                 >
-                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${link.iconTone}`}>{link.icon}</span>
+                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${link.iconTone}`}>{link.icon}</span>
                   <span className="text-white">{link.label}</span>
                 </Link>
               ))}

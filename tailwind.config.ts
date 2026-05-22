@@ -11,23 +11,23 @@ const config: Config = {
     extend: {
       colors: {
         background: "#0A0A0A",
-        foreground: "#F5F7FA",
-        primary: "#3B82F6",
-        accent: "#F59E0B",
+        foreground: "#F5F5F5",
+        primary: "#D4AF37",
+        accent: "#C5A028",
         surface: "#111111",
-        card: "#1F1F1F",
-        border: "rgba(255,255,255,0.08)",
-        muted: "#A1A1AA",
+        card: "#111111",
+        border: "rgba(212,175,55,0.24)",
+        muted: "#CCCCCC",
       },
       fontFamily: {
-        sans: ["var(--font-efootball-sans)", "sans-serif"],
-        display: ["var(--font-efootball-stencil)", "var(--font-efootball-sans)", "sans-serif"],
+        sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "\"Segoe UI\"", "Roboto", "\"Helvetica Neue\"", "Arial", "sans-serif"],
+        display: ["Inter", "-apple-system", "BlinkMacSystemFont", "\"Segoe UI\"", "Roboto", "\"Helvetica Neue\"", "Arial", "sans-serif"],
       },
       boxShadow: {
-        glow: "0 0 0 1px rgba(59,130,246,0.18), 0 20px 60px rgba(59,130,246,0.12)",
+        glow: "none",
       },
       backgroundImage: {
-        hero: "radial-gradient(circle at top, rgba(59,130,246,0.22), transparent 40%), radial-gradient(circle at bottom right, rgba(245,158,11,0.14), transparent 30%)",
+        hero: "linear-gradient(180deg, #0A0A0A 0%, #000000 100%)",
       },
     },
   },

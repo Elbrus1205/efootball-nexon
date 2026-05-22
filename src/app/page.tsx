@@ -122,10 +122,10 @@ export default async function HomePage() {
                   <stat.icon className="mt-1 h-4 w-4 text-[#b9944f]" strokeWidth={1.7} />
                   <div className="stat-card-index">0{index + 1}</div>
                 </div>
-                <div className="mt-5 text-[1.7rem] font-bold leading-none tracking-[0.01em] text-white">
+                <div className="cinematic-stat-value mt-5 text-[1.7rem] font-bold leading-none tracking-[0.01em]">
                   {stat.value !== null ? <AnimatedCounter value={stat.value} /> : stat.text}
                 </div>
-                <div className="mt-2 text-[0.58rem] font-bold uppercase tracking-[0.24em] text-zinc-500">
+                <div className="cinematic-stat-label mt-2 text-[0.58rem] font-bold uppercase tracking-[0.24em]">
                   {stat.label}
                 </div>
               </div>
