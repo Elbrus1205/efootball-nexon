@@ -172,7 +172,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
         aria-hidden={!open}
       >
         <div
-          className={cn("absolute inset-0 z-0 bg-black/0 transition duration-300", open && "bg-black/75")}
+          className={cn("mobile-menu-backdrop absolute inset-0 z-0 transition duration-300", open ? "opacity-100" : "opacity-0")}
           onClick={closeMenu}
         />
 
@@ -183,7 +183,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
           aria-label="Мобильная навигация"
           style={menuPosition}
           className={cn(
-            "fixed left-3 right-3 z-10 flex origin-top flex-col overflow-hidden rounded-md border border-primary/35 bg-[#0A0A0A] transition-[transform,opacity,filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] sm:left-4 sm:right-4",
+            "mobile-menu-panel fixed left-3 right-3 z-10 flex origin-top flex-col overflow-hidden rounded-md border border-primary/35 transition-[transform,opacity,filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] sm:left-4 sm:right-4",
             open ? "translate-y-0 scale-100 opacity-100" : "-translate-y-3 scale-[0.985] opacity-0",
           )}
           onClick={(event) => event.stopPropagation()}

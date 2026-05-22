@@ -165,7 +165,7 @@ export function ProfileForm({
       <CardContent className="space-y-6 p-0">
         <div className="relative overflow-hidden border-b border-white/10">
           <div
-            className="h-40 bg-[linear-gradient(180deg,rgba(22,33,54,1),rgba(12,18,30,1))] sm:h-52"
+            className="profile-banner-surface h-40 sm:h-52"
             style={
               bannerPreview
                 ? {
@@ -176,7 +176,7 @@ export function ProfileForm({
                 : undefined
             }
           />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:36px_36px] opacity-20" />
+          <div className="profile-banner-grid absolute inset-0 opacity-20" />
 
           <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-white/10 bg-black/30 px-4 py-2 text-sm text-white backdrop-blur-md hover:bg-black/40">

@@ -1201,6 +1201,29 @@ body a[role="button"]:not(:disabled):hover {
   color: var(--classic-muted) !important;
 }
 
+.mobile-menu-backdrop {
+  background: rgba(0, 0, 0, 0.75) !important;
+}
+
+.mobile-menu-panel {
+  background: var(--classic-black) !important;
+  border-color: var(--classic-border) !important;
+}
+
+.profile-banner-surface {
+  background-color: var(--classic-panel-soft) !important;
+  background-image: linear-gradient(180deg, rgba(17, 17, 17, 1), rgba(10, 10, 10, 1));
+  background-size: cover;
+  background-position: center;
+}
+
+.profile-banner-grid {
+  background-image:
+    linear-gradient(90deg, rgba(212, 175, 55, 0.08) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(212, 175, 55, 0.08) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
 @keyframes float-orb {
   0%,
   100% {

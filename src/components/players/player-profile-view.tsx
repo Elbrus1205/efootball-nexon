@@ -85,7 +85,7 @@ export function PlayerProfileView({
       <Card className="overflow-hidden border-white/10 bg-white/[0.03]">
         <div className="relative overflow-hidden border-b border-white/10">
           <div
-            className="h-40 rounded-t-[inherit] bg-[linear-gradient(180deg,rgba(22,33,54,1),rgba(12,18,30,1))] sm:h-52"
+            className="profile-banner-surface h-40 rounded-t-[inherit] sm:h-52"
             style={
               user.bannerImage
                 ? {
@@ -96,7 +96,7 @@ export function PlayerProfileView({
                 : undefined
             }
           />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:36px_36px] opacity-20" />
+          <div className="profile-banner-grid absolute inset-0 opacity-20" />
 
           <div className="relative px-5 pb-6 sm:px-6">
             <div className="-mt-10 flex items-end justify-between gap-4 sm:-mt-12">
