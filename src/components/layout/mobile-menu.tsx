@@ -168,11 +168,11 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
 
       <div
         ref={menuRef}
-        className={cn("fixed inset-0 z-[200] lg:hidden", open ? "pointer-events-auto" : "pointer-events-none")}
+        className={cn("fixed inset-0 z-[999] lg:hidden", open ? "pointer-events-auto" : "pointer-events-none")}
         aria-hidden={!open}
       >
         <div
-          className={cn("absolute inset-0 bg-black/0 transition duration-300", open && "bg-black/75")}
+          className={cn("absolute inset-0 z-0 bg-black/0 transition duration-300", open && "bg-black/75")}
           onClick={closeMenu}
         />
 
@@ -183,7 +183,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
           aria-label="Мобильная навигация"
           style={menuPosition}
           className={cn(
-            "fixed left-3 right-3 flex origin-top flex-col overflow-hidden rounded-[1.8rem] border border-white/10 bg-[radial-gradient(circle_at_12%_0%,rgba(56,189,248,0.14),transparent_34%),linear-gradient(180deg,rgba(15,23,42,0.97),rgba(6,10,18,0.96))] shadow-[0_24px_70px_rgba(2,6,23,0.46),0_0_0_1px_rgba(148,163,184,0.06)] backdrop-blur-2xl transition-[transform,opacity,filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] sm:left-4 sm:right-4",
+            "fixed left-3 right-3 z-10 flex origin-top flex-col overflow-hidden rounded-md border border-primary/35 bg-[#0A0A0A] transition-[transform,opacity,filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] sm:left-4 sm:right-4",
             open ? "translate-y-0 scale-100 opacity-100" : "-translate-y-3 scale-[0.985] opacity-0",
           )}
           onClick={(event) => event.stopPropagation()}

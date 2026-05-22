@@ -1083,6 +1083,32 @@ body a[role="button"]:not(:disabled):hover {
 
 .cinematic-home {
   background: var(--classic-black) !important;
+  position: relative;
+}
+
+.home-background-video {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  height: 100%;
+  min-height: 100svh;
+  width: 100%;
+  object-fit: cover;
+  object-position: center;
+  background: var(--classic-black);
+}
+
+.home-background-video-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  min-height: 100svh;
+  background: rgba(0, 0, 0, 0.78);
+}
+
+.cinematic-home > section {
+  position: relative;
+  z-index: 2;
 }
 
 .cinematic-hero-copy,
