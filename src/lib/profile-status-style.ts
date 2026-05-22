@@ -14,11 +14,11 @@ export const profileStatusToneMeta: Record<ProfileStatusTone, { level: string; c
 export const profileStatusToneOrder: ProfileStatusTone[] = ["GOLD", "PURPLE", "BLUE", "GREEN", "GRAY"];
 
 export const profileStatusToneClasses: Record<ProfileStatusTone, string> = {
-  GOLD: "border-primary/45 bg-transparent text-primary",
-  PURPLE: "border-primary/35 bg-transparent text-primary",
-  BLUE: "border-primary/30 bg-transparent text-primary",
-  GREEN: "border-[#2F6B47]/55 bg-[#2F6B47]/15 text-[#BFE6CC]",
-  GRAY: "border-zinc-300/25 bg-zinc-300/10 text-zinc-200",
+  GOLD: "border-[#F5C542]/70 bg-[#2A2107]/85 text-[#FFE48A]",
+  PURPLE: "border-[#D8DCE7]/65 bg-[#202026]/85 text-[#F4F6FA]",
+  BLUE: "border-[#5AA9E6]/65 bg-[#071C2E]/85 text-[#A9D8FF]",
+  GREEN: "border-[#54C083]/65 bg-[#082416]/85 text-[#BFE6CC]",
+  GRAY: "border-[#8E8E8E]/55 bg-[#181818]/85 text-[#D7D7D7]",
 };
 
 export function profileStatusClassName(tone: ProfileStatusTone, className?: string) {
