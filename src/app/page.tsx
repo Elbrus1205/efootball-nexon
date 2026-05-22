@@ -8,7 +8,7 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { getArchivedHomeStats, parsePrizePoolValue } from "@/lib/home-stats";
 import { AnimatedCounter } from "@/components/home/animated-counter";
 
-const heroTitle = Array.from("eFootball Nexon");
+const heroTitleLines = ["eFootball", "Nexon"].map((line) => Array.from(line));
 
 export default async function HomePage() {
   const session = await getCurrentSession();
@@ -39,10 +39,10 @@ export default async function HomePage() {
     : "SOON";
 
   const stats = [
-    { icon: ShieldCheck, value: registeredPlayers, text: null, label: "REGISTERED PLAYERS" },
-    { icon: Trophy, value: null, text: prizeLabel, label: "PRIZE POOL" },
-    { icon: RadioTower, value: officialTournaments, text: null, label: "OFFICIAL TOURNAMENTS" },
-    { icon: Gauge, value: null, text: activeTournaments > 0 ? "ACTIVE" : "STANDBY", label: "ACTIVE SEASON" },
+    { icon: ShieldCheck, value: registeredPlayers, text: null, label: "ИГРОКОВ ЗАРЕГИСТРИРОВАНО" },
+    { icon: Trophy, value: null, text: prizeLabel, label: "ПРИЗОВОЙ ФОНД" },
+    { icon: RadioTower, value: officialTournaments, text: null, label: "ОФИЦИАЛЬНЫХ ТУРНИРОВ" },
+    { icon: Gauge, value: null, text: activeTournaments > 0 ? "АКТИВЕН" : "ОЖИДАНИЕ", label: "ТЕКУЩИЙ СЕЗОН" },
   ];
 
   return (
@@ -73,14 +73,22 @@ export default async function HomePage() {
 
             <h1 className="cinematic-title" aria-label="eFootball Nexon">
               <span className="sr-only">eFootball Nexon</span>
-              <span aria-hidden="true">
-                {heroTitle.map((char, index) => (
-                  <span
-                    key={`${char}-${index}`}
-                    className="cinematic-title-char"
-                    style={{ animationDelay: `${0.32 + index * 0.045}s` } as CSSProperties}
-                  >
-                    {char === " " ? "\u00a0" : char}
+              <span aria-hidden="true" className="cinematic-title-lines">
+                {heroTitleLines.map((line, lineIndex) => (
+                  <span key={lineIndex} className="cinematic-title-line">
+                    {line.map((char, charIndex) => {
+                      const globalIndex = lineIndex * 10 + charIndex;
+
+                      return (
+                        <span
+                          key={`${char}-${lineIndex}-${charIndex}`}
+                          className="cinematic-title-char"
+                          style={{ animationDelay: `${0.32 + globalIndex * 0.045}s` } as CSSProperties}
+                        >
+                          {char}
+                        </span>
+                      );
+                    })}
                   </span>
                 ))}
               </span>
