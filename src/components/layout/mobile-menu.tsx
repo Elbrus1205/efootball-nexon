@@ -172,7 +172,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
         aria-hidden={!open}
       >
         <div
-          className={cn("absolute inset-0 bg-black/0 backdrop-blur-0 transition duration-300", open && "bg-black/35 backdrop-blur-[2px]")}
+          className={cn("absolute inset-0 bg-black/0 transition duration-300", open && "bg-black/75")}
           onClick={closeMenu}
         />
 
