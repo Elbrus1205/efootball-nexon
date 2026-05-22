@@ -40,7 +40,7 @@ export default async function HomePage() {
 
   const stats = [
     { icon: ShieldCheck, value: registeredPlayers, text: null, label: "ИГРОКОВ ЗАРЕГИСТРИРОВАНО" },
-    { icon: Trophy, value: null, text: prizeLabel, label: "ПРИЗОВОЙ ФОНД" },
+    { icon: Trophy, value: null, text: prizeLabel, label: "ПРИЗОВ РАЗЫГРАНО" },
     { icon: RadioTower, value: officialTournaments, text: null, label: "ОФИЦИАЛЬНЫХ ТУРНИРОВ" },
     { icon: Gauge, value: null, text: activeTournaments > 0 ? "АКТИВЕН" : "ОЖИДАНИЕ", label: "ТЕКУЩИЙ СЕЗОН" },
   ];
@@ -95,14 +95,14 @@ export default async function HomePage() {
             </h1>
 
             <p className="cinematic-subtitle">
-              Professional tournament platform for competitive eFootball seasons
+              Профессиональная платформа турниров для соревновательных сезонов eFootball
             </p>
 
             <Link
               href={session?.user ? "/tournaments" : "/register"}
               className="cinematic-cta group"
             >
-              <span>ENTER TOURNAMENT</span>
+              <span>ПЕРЕЙТИ К ТУРНИРАМ</span>
               <span className="cinematic-cta-icon">
                 <ArrowRight className="h-4 w-4" />
               </span>
