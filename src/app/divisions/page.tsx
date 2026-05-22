@@ -7,7 +7,7 @@ import { autoResolveExpiredDivisionMatches, getDivisionLeaderboard, getDivisionP
 
 export const dynamic = "force-dynamic";
 
-export default async function DivisionsPage({ searchParams }: { searchParams?: { page?: string } }) {
+export default async function DivisionsPage({ searchParams }: { searchParams?: { page?: string; archiveSeason?: string } }) {
   const session = await requireAuth();
   await syncDivisionSeasons();
   const settings = await getDivisionSettings();
@@ -47,13 +47,25 @@ export default async function DivisionsPage({ searchParams }: { searchParams?: {
   const opponentById = new Map(opponents.map((opponent) => [opponent.id, opponent]));
   const history = rawHistory.map((item) => ({ ...item, opponent: opponentById.get(item.opponentId) ?? null }));
   const page = Math.max(1, Number(searchParams?.page ?? 1) || 1);
-  const leaderboard = await getDivisionLeaderboard({ page });
-  const myLeaderboard = await getDivisionLeaderboard({ aroundUserId: session.user.id });
+  const leaderboard = await getDivisionLeaderboard({ page, ratingOnly: true });
+  const myLeaderboard = await getDivisionLeaderboard({ aroundUserId: session.user.id, ratingOnly: true });
+  const archiveSeasons = await db.divisionSeason.findMany({
+    where: { archives: { some: { division: { in: [1, 2] } } } },
+    orderBy: { finishedAt: "desc" },
+    select: { id: true, name: true },
+  });
+  const selectedArchiveSeasonId = archiveSeasons.some((season) => season.id === searchParams?.archiveSeason)
+    ? searchParams?.archiveSeason ?? null
+    : archiveSeasons[0]?.id ?? null;
   const archivedRows = await db.divisionSeasonArchive.findMany({
-    orderBy: [{ createdAt: "desc" }, { place: "asc" }],
-    take: 20,
+    where: {
+      seasonId: selectedArchiveSeasonId ?? undefined,
+      division: { in: [1, 2] },
+    },
+    orderBy: [{ place: "asc" }, { rating: "desc" }],
+    take: 500,
     include: {
-      season: { select: { name: true } },
+      season: { select: { id: true, name: true } },
       user: { select: { name: true, email: true, telegramUsername: true } },
     },
   });
@@ -67,7 +79,9 @@ export default async function DivisionsPage({ searchParams }: { searchParams?: {
       history={history}
       leaderboard={leaderboard}
       myLeaderboard={myLeaderboard}
+      archiveSeasons={archiveSeasons}
       archivedRows={archivedRows}
+      selectedArchiveSeasonId={selectedArchiveSeasonId}
       leaderboardPage={page}
       betaEnabled={settings.betaEnabled}
       settings={{

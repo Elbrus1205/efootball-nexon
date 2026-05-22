@@ -62,8 +62,13 @@ type ArchiveRow = {
   draws: number;
   losses: number;
   place: number | null;
-  season: { name: string };
+  season: { id: string; name: string };
   user: { name: string | null; email: string | null; telegramUsername: string | null };
+};
+
+type ArchiveSeason = {
+  id: string;
+  name: string;
 };
 
 type DivisionSettings = {
@@ -279,19 +284,21 @@ function DivisionCycleAction({ profile }: { profile: PlayerRow }) {
   );
 }
 
-function ScoreForm({ match }: { match: DivisionMatch }) {
+function MatchScoreEditor({ match, currentUserId }: { match: DivisionMatch; currentUserId: string }) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
-  const [playerOneScore, setPlayerOneScore] = useState(match.playerOneScore ?? 0);
-  const [playerTwoScore, setPlayerTwoScore] = useState(match.playerTwoScore ?? 0);
-  const [screenshotUrl, setScreenshotUrl] = useState("");
+  const isPlayerOne = match.playerOneId === currentUserId;
+  const [myScore, setMyScore] = useState(isPlayerOne ? match.playerOneScore ?? 0 : match.playerTwoScore ?? 0);
+  const [opponentScore, setOpponentScore] = useState(isPlayerOne ? match.playerTwoScore ?? 0 : match.playerOneScore ?? 0);
 
   const submit = () =>
     startTransition(async () => {
+      const playerOneScore = isPlayerOne ? myScore : opponentScore;
+      const playerTwoScore = isPlayerOne ? opponentScore : myScore;
       const res = await fetch(`/api/divisions/matches/${match.id}/score`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ playerOneScore, playerTwoScore, screenshotUrl }),
+        body: JSON.stringify({ playerOneScore, playerTwoScore }),
       });
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
@@ -303,30 +310,24 @@ function ScoreForm({ match }: { match: DivisionMatch }) {
     });
 
   return (
-    <div className="space-y-2 sm:space-y-0 sm:grid sm:grid-cols-[auto_1fr_auto] sm:gap-2 sm:items-center">
-      <div className="flex items-center gap-2">
+    <div className="flex flex-col items-center gap-2">
+      <div className="flex items-center justify-center gap-2">
         <Input
           className="h-9 w-16 bg-black/30 text-center text-sm font-bold sm:h-10 sm:w-[72px]"
           type="number" min={0} max={99}
-          value={playerOneScore}
-          onChange={(e) => setPlayerOneScore(Number(e.target.value))}
+          value={myScore}
+          onChange={(e) => setMyScore(Number(e.target.value))}
         />
         <span className="text-base font-black text-zinc-500">:</span>
         <Input
           className="h-9 w-16 bg-black/30 text-center text-sm font-bold sm:h-10 sm:w-[72px]"
           type="number" min={0} max={99}
-          value={playerTwoScore}
-          onChange={(e) => setPlayerTwoScore(Number(e.target.value))}
+          value={opponentScore}
+          onChange={(e) => setOpponentScore(Number(e.target.value))}
         />
       </div>
-      <Input
-        className="h-9 bg-black/30 text-sm sm:h-10"
-        placeholder="Ссылка на скриншот"
-        value={screenshotUrl}
-        onChange={(e) => setScreenshotUrl(e.target.value)}
-      />
-      <Button disabled={pending} className="w-full sm:w-auto" onClick={submit}>
-        Ввести счет
+      <Button disabled={pending} size="sm" className="h-8 rounded-lg px-3 text-xs" onClick={submit}>
+        Сохранить
       </Button>
     </div>
   );
@@ -382,7 +383,9 @@ export function DivisionModeClient({
   history,
   leaderboard,
   myLeaderboard,
+  archiveSeasons,
   archivedRows,
+  selectedArchiveSeasonId,
   leaderboardPage,
   betaEnabled,
   settings,
@@ -394,7 +397,9 @@ export function DivisionModeClient({
   history: HistoryRow[];
   leaderboard: Leaderboard;
   myLeaderboard: Leaderboard;
+  archiveSeasons: ArchiveSeason[];
   archivedRows: ArchiveRow[];
+  selectedArchiveSeasonId: string | null;
   leaderboardPage: number;
   betaEnabled: boolean;
   settings: DivisionSettings;
@@ -505,7 +510,13 @@ export function DivisionModeClient({
                   </div>
                   <div className="shrink-0 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-center sm:px-5 sm:py-3">
                     <div className="text-[9px] uppercase tracking-[0.18em] text-zinc-500 sm:text-[10px]">Счёт</div>
-                    <div className="mt-0.5 text-xl font-black tabular-nums text-white sm:text-2xl">{myScore ?? "–"} : {oppScore ?? "–"}</div>
+                    {match.status !== "FINISHED" && match.status !== "CANCELLED" ? (
+                      <div className="mt-2">
+                        <MatchScoreEditor match={match} currentUserId={currentUserId} />
+                      </div>
+                    ) : (
+                      <div className="mt-0.5 text-xl font-black tabular-nums text-white sm:text-2xl">{myScore ?? "–"} : {oppScore ?? "–"}</div>
+                    )}
                   </div>
                   <div className="min-w-0 text-right">
                     <div className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Соперник</div>
@@ -514,11 +525,6 @@ export function DivisionModeClient({
                     </Link>
                   </div>
                 </div>
-                {match.status !== "FINISHED" && match.status !== "CANCELLED" ? (
-                  <div className="border-t border-white/[0.06] bg-black/20 px-3.5 py-3 sm:px-5 sm:py-3.5">
-                    <ScoreForm match={match} />
-                  </div>
-                ) : null}
               </article>
             );
           }) : (
@@ -564,32 +570,48 @@ export function DivisionModeClient({
       ) : null}
 
       {tab === "archive" ? (
+        <div className="space-y-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-sm font-black text-white">Архив рейтинга 1-2 дивизионов</div>
+              <div className="text-xs text-zinc-500">Выберите сезон, чтобы посмотреть полный рейтинг.</div>
+            </div>
+            <select
+              value={selectedArchiveSeasonId ?? ""}
+              onChange={(event) => router.push(event.target.value ? `/divisions?archiveSeason=${event.target.value}` : "/divisions")}
+              className="h-10 rounded-xl border border-white/10 bg-black/40 px-3 text-sm text-white"
+            >
+              {archiveSeasons.length ? null : <option value="">Сезонов нет</option>}
+              {archiveSeasons.map((season) => (
+                <option key={season.id} value={season.id}>{season.name}</option>
+              ))}
+            </select>
+          </div>
         <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.04]">
           <table className="min-w-[680px] w-full text-left text-sm">
             <thead className="border-b border-white/10 text-xs uppercase tracking-[0.14em] text-zinc-500">
               <tr>
-                <th className="px-4 py-3">Сезон</th>
                 <th className="px-4 py-3">Место</th>
                 <th className="px-4 py-3">Игрок</th>
                 <th className="px-4 py-3">Див</th>
-                <th className="px-4 py-3">Очки/рейтинг</th>
+                <th className="px-4 py-3">Рейтинг</th>
                 <th className="px-4 py-3">Статистика</th>
               </tr>
             </thead>
             <tbody>
               {archivedRows.map((row) => (
                 <tr key={row.id} className="border-b border-white/5 last:border-0">
-                  <td className="px-4 py-3 text-zinc-300">{row.season.name}</td>
                   <td className="px-4 py-3 font-black text-white">{row.place ?? "-"}</td>
                   <td className="px-4 py-3">{displayName(row.user)}</td>
                   <td className="px-4 py-3">Див {row.division}</td>
-                  <td className="px-4 py-3 font-bold text-yellow-200">{row.division <= 2 ? row.rating ?? 1000 : row.points}</td>
+                  <td className="px-4 py-3 font-bold text-yellow-200">{row.rating ?? 1000}</td>
                   <td className="px-4 py-3 text-zinc-400">{row.wins}-{row.draws}-{row.losses}</td>
                 </tr>
               ))}
             </tbody>
           </table>
           {!archivedRows.length ? <div className="p-6 text-center text-sm text-zinc-400">Архив появится после завершения сезона.</div> : null}
+        </div>
         </div>
       ) : null}
 

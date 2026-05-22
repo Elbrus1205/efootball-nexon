@@ -455,7 +455,6 @@ export async function submitDivisionScore(params: {
   userId: string;
   playerOneScore: number;
   playerTwoScore: number;
-  screenshotUrl?: string | null;
 }) {
   await autoResolveExpiredDivisionMatches();
   const match = await db.divisionMatch.findUnique({
@@ -484,14 +483,12 @@ export async function submitDivisionScore(params: {
     update: {
       playerOneScore: params.playerOneScore,
       playerTwoScore: params.playerTwoScore,
-      screenshotUrl: params.screenshotUrl || null,
     },
     create: {
       matchId: match.id,
       submittedById: params.userId,
       playerOneScore: params.playerOneScore,
       playerTwoScore: params.playerTwoScore,
-      screenshotUrl: params.screenshotUrl || null,
     },
   });
 
@@ -643,9 +640,9 @@ export async function cancelDivisionMatch(matchId: string, adminNote?: string | 
   });
 }
 
-export async function getDivisionLeaderboard(params?: { page?: number; aroundUserId?: string; division?: number }) {
+export async function getDivisionLeaderboard(params?: { page?: number; aroundUserId?: string; division?: number; ratingOnly?: boolean }) {
   const pageSize = 10;
-  const where = params?.division ? { division: params.division } : {};
+  const where = params?.ratingOnly ? { division: { in: [1, 2] } } : params?.division ? { division: params.division } : {};
   const total = await db.divisionPlayer.count({ where });
   let page = Math.max(1, params?.page ?? 1);
 

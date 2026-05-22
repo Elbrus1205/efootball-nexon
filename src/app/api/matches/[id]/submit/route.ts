@@ -98,7 +98,6 @@ export async function POST(request: Request, { params }: { params: { id: string 
         data: {
           player1Score: body.player1Score,
           player2Score: body.player2Score,
-          screenshotUrl: body.screenshotUrl || null,
           comment: body.comment || null,
         },
       })
@@ -108,7 +107,6 @@ export async function POST(request: Request, { params }: { params: { id: string 
           submittedById: session.user.id,
           player1Score: body.player1Score,
           player2Score: body.player2Score,
-          screenshotUrl: body.screenshotUrl || null,
           comment: body.comment || null,
           status: MatchResultStatus.PENDING,
         },

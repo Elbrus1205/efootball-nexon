@@ -11,7 +11,6 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const body = await request.json().catch(() => null);
   const playerOneScore = Number(body?.playerOneScore);
   const playerTwoScore = Number(body?.playerTwoScore);
-  const screenshotUrl = typeof body?.screenshotUrl === "string" ? body.screenshotUrl.trim() : "";
 
   if (
     !Number.isInteger(playerOneScore) ||
@@ -30,7 +29,6 @@ export async function POST(request: Request, { params }: { params: { id: string 
       userId: session.user.id,
       playerOneScore,
       playerTwoScore,
-      screenshotUrl,
     });
 
     return NextResponse.json({ match });
