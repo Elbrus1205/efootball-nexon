@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Archive, ArrowUpCircle, BarChart3, Clock, Crown, History, ListChecks, Percent, Search, Swords, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -331,31 +332,44 @@ function ScoreForm({ match }: { match: DivisionMatch }) {
   );
 }
 
+const PLACE_STYLES: Record<number, string> = {
+  1: "bg-yellow-400 text-black shadow-[0_0_12px_rgba(250,204,21,0.4)]",
+  2: "bg-zinc-300 text-black",
+  3: "bg-amber-600 text-white",
+};
+
 function LeaderboardTable({ leaderboard, currentUserId, offset = 0 }: { leaderboard: Leaderboard; currentUserId: string; offset?: number }) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.04]">
-      <table className="min-w-[460px] w-full text-left text-sm">
-        <thead className="border-b border-white/10 text-xs uppercase tracking-[0.16em] text-zinc-500">
-          <tr>
-            <th className="px-4 py-3">Место</th>
-            <th className="px-4 py-3">Игрок</th>
-            <th className="px-4 py-3">Рейтинг</th>
-          </tr>
-        </thead>
-        <tbody>
-          {leaderboard.players.map((player, index) => {
-            const place = (leaderboard.page - 1) * leaderboard.pageSize + index + 1 + offset;
-            const me = player.userId === currentUserId;
-            return (
-              <tr key={`${player.userId}-${offset}`} className={cn("border-b border-white/5 last:border-0", me && "bg-primary/10 text-white")}>
-                <td className="px-4 py-3 font-black text-white">{place}</td>
-                <td className="px-4 py-3">{displayName(player.user)}</td>
-                <td className="px-4 py-3 font-bold text-yellow-200">{scoreValue(player)}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="grid gap-2">
+      {leaderboard.players.map((player, index) => {
+        const place = (leaderboard.page - 1) * leaderboard.pageSize + index + 1 + offset;
+        const me = player.userId === currentUserId;
+        const placeStyle = PLACE_STYLES[place] ?? "bg-white/10 text-zinc-400";
+        return (
+          <div
+            key={`${player.userId}-${offset}`}
+            className={cn(
+              "flex items-center gap-3 rounded-2xl border px-3.5 py-2.5 transition sm:gap-4 sm:px-5 sm:py-3",
+              me ? "border-primary/30 bg-primary/10" : "border-white/10 bg-white/[0.04] hover:border-white/20 hover:bg-white/[0.06]",
+            )}
+          >
+            <div className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black sm:h-8 sm:w-8 sm:text-sm", placeStyle)}>
+              {place}
+            </div>
+            <Link href={`/players/${player.userId}`} className="min-w-0 flex-1">
+              <div className="truncate text-sm font-bold text-white transition hover:text-primary sm:text-base">
+                {displayName(player.user)}
+                {me && <span className="ml-1.5 text-[10px] font-normal text-primary">(вы)</span>}
+              </div>
+            </Link>
+            <DivisionBadge division={player.division} />
+            <div className="shrink-0 text-right">
+              <div className="text-[9px] uppercase tracking-wide text-zinc-500 sm:text-[10px]">{player.division <= 2 ? "Рейтинг" : "Очки"}</div>
+              <div className="text-base font-black text-yellow-200 sm:text-lg">{scoreValue(player)}</div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -467,24 +481,37 @@ export function DivisionModeClient({
       {tab === "matches" ? (
         <div className="grid gap-4">
           {activeMatches.length ? activeMatches.map((match) => {
-            const opponent = match.playerOneId === currentUserId ? match.playerTwo : match.playerOne;
+            const isPlayerOne = match.playerOneId === currentUserId;
+            const me = isPlayerOne ? match.playerOne : match.playerTwo;
+            const opponent = isPlayerOne ? match.playerTwo : match.playerOne;
+            const myScore = isPlayerOne ? match.playerOneScore : match.playerTwoScore;
+            const oppScore = isPlayerOne ? match.playerTwoScore : match.playerOneScore;
             return (
               <article key={match.id} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] transition hover:border-primary/25 hover:bg-white/[0.06]">
-                <div className="flex items-center justify-between gap-3 px-3.5 py-3 sm:px-5 sm:py-4">
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <DivisionBadge division={opponent.divisionProfile?.division ?? 5} />
-                      <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] text-zinc-300 sm:px-2.5 sm:text-xs">{statusLabel(match.status)}</span>
-                    </div>
-                    <div className="truncate text-base font-bold text-white sm:text-lg">{displayName(opponent)}</div>
-                    <div className="flex items-center gap-1 text-[11px] text-zinc-500 sm:text-xs">
-                      <Clock className="h-3 w-3 shrink-0 text-primary sm:h-3.5 sm:w-3.5" />
-                      До авто-завершения: {timeLeft(match.deadlineAt)}
-                    </div>
+                <div className="flex flex-wrap items-center gap-2 px-3.5 pt-3 sm:px-5 sm:pt-4">
+                  <DivisionBadge division={opponent.divisionProfile?.division ?? 5} />
+                  <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] text-zinc-300 sm:px-2.5 sm:text-xs">{statusLabel(match.status)}</span>
+                  <div className="ml-auto flex items-center gap-1 text-[11px] text-zinc-500 sm:text-xs">
+                    <Clock className="h-3 w-3 shrink-0 text-primary sm:h-3.5 sm:w-3.5" />
+                    {timeLeft(match.deadlineAt)}
+                  </div>
+                </div>
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3.5 py-3 sm:gap-4 sm:px-5 sm:py-4">
+                  <div className="min-w-0">
+                    <div className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">Вы</div>
+                    <Link href={`/players/${me.id}`} className="block truncate text-sm font-bold text-white transition hover:text-primary sm:text-base">
+                      {displayName(me)}
+                    </Link>
                   </div>
                   <div className="shrink-0 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-center sm:px-5 sm:py-3">
-                    <div className="text-[9px] uppercase tracking-[0.18em] text-zinc-500 sm:text-[10px]">Счет</div>
-                    <div className="mt-0.5 text-xl font-black tabular-nums text-white sm:text-3xl">{match.playerOneScore ?? "–"} : {match.playerTwoScore ?? "–"}</div>
+                    <div className="text-[9px] uppercase tracking-[0.18em] text-zinc-500 sm:text-[10px]">Счёт</div>
+                    <div className="mt-0.5 text-xl font-black tabular-nums text-white sm:text-2xl">{myScore ?? "–"} : {oppScore ?? "–"}</div>
+                  </div>
+                  <div className="min-w-0 text-right">
+                    <div className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Соперник</div>
+                    <Link href={`/players/${opponent.id}`} className="block truncate text-sm font-bold text-white transition hover:text-zinc-300 sm:text-base">
+                      {displayName(opponent)}
+                    </Link>
                   </div>
                 </div>
                 {match.status !== "FINISHED" && match.status !== "CANCELLED" ? (
@@ -505,15 +532,15 @@ export function DivisionModeClient({
           <LeaderboardTable leaderboard={leaderboard} currentUserId={currentUserId} />
           {!myRowInTop ? (
             <div className="space-y-2">
-              <div className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">Ваше место</div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">Ваше место</div>
               <LeaderboardTable leaderboard={myLeaderboard} currentUserId={currentUserId} />
             </div>
           ) : null}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-sm text-zinc-500">{leaderboard.from}-{leaderboard.to} из {leaderboard.total}</div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs text-zinc-500">{leaderboard.from}–{leaderboard.to} из {leaderboard.total}</div>
             <div className="flex gap-2">
-              <Button variant="outline" disabled={leaderboardPage <= 1} onClick={() => router.push(`/divisions?page=${leaderboardPage - 1}`)}>Назад</Button>
-              <Button variant="outline" disabled={leaderboard.to >= leaderboard.total} onClick={() => router.push(`/divisions?page=${leaderboardPage + 1}`)}>Далее</Button>
+              <Button variant="outline" className="h-9 rounded-xl px-4 text-xs sm:h-10 sm:text-sm" disabled={leaderboardPage <= 1} onClick={() => router.push(`/divisions?page=${leaderboardPage - 1}`)}>← Назад</Button>
+              <Button variant="outline" className="h-9 rounded-xl px-4 text-xs sm:h-10 sm:text-sm" disabled={leaderboard.to >= leaderboard.total} onClick={() => router.push(`/divisions?page=${leaderboardPage + 1}`)}>Далее →</Button>
             </div>
           </div>
         </div>

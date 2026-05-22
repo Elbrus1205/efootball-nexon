@@ -47,8 +47,8 @@ export default async function DivisionsPage({ searchParams }: { searchParams?: {
   const opponentById = new Map(opponents.map((opponent) => [opponent.id, opponent]));
   const history = rawHistory.map((item) => ({ ...item, opponent: opponentById.get(item.opponentId) ?? null }));
   const page = Math.max(1, Number(searchParams?.page ?? 1) || 1);
-  const leaderboard = await getDivisionLeaderboard({ page, division: profile.division });
-  const myLeaderboard = await getDivisionLeaderboard({ aroundUserId: session.user.id, division: profile.division });
+  const leaderboard = await getDivisionLeaderboard({ page });
+  const myLeaderboard = await getDivisionLeaderboard({ aroundUserId: session.user.id });
   const archivedRows = await db.divisionSeasonArchive.findMany({
     orderBy: [{ createdAt: "desc" }, { place: "asc" }],
     take: 20,
