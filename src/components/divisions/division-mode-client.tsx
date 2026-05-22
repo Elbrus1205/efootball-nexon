@@ -285,30 +285,46 @@ function ScoreForm({ match }: { match: DivisionMatch }) {
   const [playerTwoScore, setPlayerTwoScore] = useState(match.playerTwoScore ?? 0);
   const [screenshotUrl, setScreenshotUrl] = useState("");
 
+  const submit = () =>
+    startTransition(async () => {
+      const res = await fetch(`/api/divisions/matches/${match.id}/score`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerOneScore, playerTwoScore, screenshotUrl }),
+      });
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast.error(payload?.error || "Не удалось отправить счет.");
+        return;
+      }
+      toast.success("Счет отправлен.");
+      router.refresh();
+    });
+
   return (
-    <div className="grid gap-2 sm:grid-cols-[72px_72px_1fr_auto]">
-      <Input className="h-9 bg-black/30 text-sm sm:h-10" type="number" min={0} max={99} value={playerOneScore} onChange={(event) => setPlayerOneScore(Number(event.target.value))} />
-      <Input className="h-9 bg-black/30 text-sm sm:h-10" type="number" min={0} max={99} value={playerTwoScore} onChange={(event) => setPlayerTwoScore(Number(event.target.value))} />
-      <Input className="h-9 bg-black/30 text-sm sm:h-10" placeholder="Ссылка на скриншот" value={screenshotUrl} onChange={(event) => setScreenshotUrl(event.target.value)} />
-      <Button
-        disabled={pending}
-        onClick={() =>
-          startTransition(async () => {
-            const res = await fetch(`/api/divisions/matches/${match.id}/score`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ playerOneScore, playerTwoScore, screenshotUrl }),
-            });
-            const payload = await res.json().catch(() => null);
-            if (!res.ok) {
-              toast.error(payload?.error || "Не удалось отправить счет.");
-              return;
-            }
-            toast.success("Счет отправлен.");
-            router.refresh();
-          })
-        }
-      >
+    <div className="space-y-2 sm:space-y-0 sm:grid sm:grid-cols-[auto_1fr_auto] sm:gap-2 sm:items-center">
+      <div className="flex items-center gap-2">
+        <Input
+          className="h-9 w-16 bg-black/30 text-center text-sm font-bold sm:h-10 sm:w-[72px]"
+          type="number" min={0} max={99}
+          value={playerOneScore}
+          onChange={(e) => setPlayerOneScore(Number(e.target.value))}
+        />
+        <span className="text-base font-black text-zinc-500">:</span>
+        <Input
+          className="h-9 w-16 bg-black/30 text-center text-sm font-bold sm:h-10 sm:w-[72px]"
+          type="number" min={0} max={99}
+          value={playerTwoScore}
+          onChange={(e) => setPlayerTwoScore(Number(e.target.value))}
+        />
+      </div>
+      <Input
+        className="h-9 bg-black/30 text-sm sm:h-10"
+        placeholder="Ссылка на скриншот"
+        value={screenshotUrl}
+        onChange={(e) => setScreenshotUrl(e.target.value)}
+      />
+      <Button disabled={pending} className="w-full sm:w-auto" onClick={submit}>
         Ввести счет
       </Button>
     </div>
@@ -453,25 +469,29 @@ export function DivisionModeClient({
           {activeMatches.length ? activeMatches.map((match) => {
             const opponent = match.playerOneId === currentUserId ? match.playerTwo : match.playerOne;
             return (
-              <article key={match.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 transition hover:border-primary/25 hover:bg-white/[0.06] sm:p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 space-y-1.5">
+              <article key={match.id} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] transition hover:border-primary/25 hover:bg-white/[0.06]">
+                <div className="flex items-center justify-between gap-3 px-3.5 py-3 sm:px-5 sm:py-4">
+                  <div className="min-w-0 space-y-1">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <DivisionBadge division={opponent.divisionProfile?.division ?? 5} />
-                      <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] text-zinc-300 sm:px-2.5 sm:py-1 sm:text-xs">{statusLabel(match.status)}</span>
+                      <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] text-zinc-300 sm:px-2.5 sm:text-xs">{statusLabel(match.status)}</span>
                     </div>
-                    <div className="truncate text-base font-bold text-white sm:text-xl">{displayName(opponent)}</div>
-                    <div className="flex items-center gap-1.5 text-xs text-zinc-400 sm:text-sm">
-                      <Clock className="h-3.5 w-3.5 shrink-0 text-primary sm:h-4 sm:w-4" />
+                    <div className="truncate text-base font-bold text-white sm:text-lg">{displayName(opponent)}</div>
+                    <div className="flex items-center gap-1 text-[11px] text-zinc-500 sm:text-xs">
+                      <Clock className="h-3 w-3 shrink-0 text-primary sm:h-3.5 sm:w-3.5" />
                       До авто-завершения: {timeLeft(match.deadlineAt)}
                     </div>
                   </div>
-                  <div className="shrink-0 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-center sm:rounded-2xl sm:px-5 sm:py-3">
-                    <div className="text-[9px] uppercase tracking-[0.18em] text-zinc-500 sm:text-xs">Счет</div>
-                    <div className="mt-0.5 text-xl font-black text-white sm:mt-1 sm:text-3xl">{match.playerOneScore ?? "-"} : {match.playerTwoScore ?? "-"}</div>
+                  <div className="shrink-0 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-center sm:px-5 sm:py-3">
+                    <div className="text-[9px] uppercase tracking-[0.18em] text-zinc-500 sm:text-[10px]">Счет</div>
+                    <div className="mt-0.5 text-xl font-black tabular-nums text-white sm:text-3xl">{match.playerOneScore ?? "–"} : {match.playerTwoScore ?? "–"}</div>
                   </div>
                 </div>
-                {match.status !== "FINISHED" && match.status !== "CANCELLED" ? <div className="mt-3 sm:mt-4"><ScoreForm match={match} /></div> : null}
+                {match.status !== "FINISHED" && match.status !== "CANCELLED" ? (
+                  <div className="border-t border-white/[0.06] bg-black/20 px-3.5 py-3 sm:px-5 sm:py-3.5">
+                    <ScoreForm match={match} />
+                  </div>
+                ) : null}
               </article>
             );
           }) : (
