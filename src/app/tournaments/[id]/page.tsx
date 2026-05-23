@@ -623,6 +623,12 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           player1: true,
           player2: true,
           winner: true,
+          participant1Entry: {
+            include: { user: true },
+          },
+          participant2Entry: {
+            include: { user: true },
+          },
           stage: {
             include: {
               deadlines: true,
@@ -676,10 +682,18 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   if (!tournament) notFound();
 
   const currentUserId = session?.user?.id;
+  const isCurrentUserMatch = (match: (typeof tournament.matches)[number]) =>
+    Boolean(
+      currentUserId &&
+        (match.player1Id === currentUserId ||
+          match.player2Id === currentUserId ||
+          match.participant1Entry?.userId === currentUserId ||
+          match.participant2Entry?.userId === currentUserId),
+    );
 
   const myMatchIds = currentUserId
     ? tournament.matches
-        .filter((m) => m.player1Id === currentUserId || m.player2Id === currentUserId)
+        .filter(isCurrentUserMatch)
         .map((m) => m.id)
     : [];
 
@@ -736,7 +750,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   const scheduleSections = buildScheduleSections(visibleMatches);
 
   const myMatches = currentUserId
-    ? visibleMatches.filter((match) => match.player1Id === currentUserId || match.player2Id === currentUserId)
+    ? visibleMatches.filter(isCurrentUserMatch)
     : [];
 
   const myMatchesWithSubmissions = myMatches.map((match) => ({
@@ -765,6 +779,26 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
       },
     ]),
   );
+  const resolveMatchSide = (match: (typeof visibleMatches)[number], side: 1 | 2) => {
+    const player = side === 1 ? match.player1 : match.player2;
+    const entry = side === 1 ? match.participant1Entry : match.participant2Entry;
+    const playerId = (side === 1 ? match.player1Id : match.player2Id) ?? entry?.userId ?? null;
+    const playerName = player
+      ? getPlayerDisplayName(player)
+      : entry?.user
+        ? getPlayerDisplayName(entry.user)
+        : side === 1
+          ? "Игрок 1"
+          : "Игрок 2";
+    const mappedClub = playerId ? participantClubMap[playerId] : null;
+
+    return {
+      playerId,
+      playerName,
+      clubName: mappedClub?.clubName ?? (entry ? resolveClubName(entry, clubsBySlug, playerName) : null),
+      clubBadgePath: mappedClub?.clubBadgePath ?? (entry ? resolveClubBadgePath(entry, clubsBySlug) : null),
+    };
+  };
 
   return (
     <div className="page-shell space-y-8">
@@ -905,6 +939,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                     {section.matches.map((match, matchIndex) => {
                       const prevGroupName = matchIndex > 0 ? section.matches[matchIndex - 1].group?.name : null;
                       const showGroupLabel = match.group?.name && match.group.name !== prevGroupName;
+                      const sideOne = resolveMatchSide(match, 1);
+                      const sideTwo = resolveMatchSide(match, 2);
                       return (
                       <div key={match.id} className="py-4 first:pt-0 last:pb-0">
                         {showGroupLabel ? (
@@ -915,10 +951,10 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                         <div className="mx-auto grid max-w-[760px] grid-cols-[minmax(100px,1fr)_auto_minmax(100px,1fr)] items-center gap-3 sm:grid-cols-[minmax(180px,220px)_auto_minmax(180px,220px)] sm:gap-4">
                           <div className="min-w-0 justify-self-end">
                             <ClubPlayerLine
-                              playerId={match.player1?.id}
-                              playerName={match.player1 ? getPlayerDisplayName(match.player1) : "Игрок 1"}
-                              clubName={match.player1Id ? participantClubMap[match.player1Id]?.clubName : null}
-                              badgePath={match.player1Id ? participantClubMap[match.player1Id]?.clubBadgePath : null}
+                              playerId={sideOne.playerId}
+                              playerName={sideOne.playerName}
+                              clubName={sideOne.clubName}
+                              badgePath={sideOne.clubBadgePath}
                               align="center"
                               compact
                               reverse
@@ -931,10 +967,10 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                           </div>
                           <div className="min-w-0 justify-self-start">
                             <ClubPlayerLine
-                              playerId={match.player2?.id}
-                              playerName={match.player2 ? getPlayerDisplayName(match.player2) : "Игрок 2"}
-                              clubName={match.player2Id ? participantClubMap[match.player2Id]?.clubName : null}
-                              badgePath={match.player2Id ? participantClubMap[match.player2Id]?.clubBadgePath : null}
+                              playerId={sideTwo.playerId}
+                              playerName={sideTwo.playerName}
+                              clubName={sideTwo.clubName}
+                              badgePath={sideTwo.clubBadgePath}
                               align="center"
                               compact
                             />
@@ -958,8 +994,10 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
               <Card className="p-6 text-zinc-500">Здесь появятся матчи текущего участника после публикации расписания.</Card>
             ) : myMatchesWithSubmissions.length ? (
               myMatchesWithSubmissions.map((match) => {
-                const player1LatestSubmission = match.submissions.find((submission) => submission.submittedById === match.player1Id);
-                const player2LatestSubmission = match.submissions.find((submission) => submission.submittedById === match.player2Id);
+                const sideOne = resolveMatchSide(match, 1);
+                const sideTwo = resolveMatchSide(match, 2);
+                const player1LatestSubmission = match.submissions.find((submission) => submission.submittedById === sideOne.playerId);
+                const player2LatestSubmission = match.submissions.find((submission) => submission.submittedById === sideTwo.playerId);
                 const matchDeadline = match.stage?.deadlines.find((item) => item.round === match.round)?.deadlineAt ?? null;
                 const canSubmitScore = Boolean(matchDeadline) && match.status !== "CONFIRMED" && match.status !== "DISPUTED";
 
@@ -989,14 +1027,14 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                           ? "Дедлайн для этого тура не задан. Счёт можно отправить только после назначения дедлайна."
                           : "Оба игрока должны ввести один и тот же счёт. Если результаты не совпадут три раза, матч уйдёт в спор."
                     }
-                    player1Id={match.player1?.id}
-                    player2Id={match.player2?.id}
-                    player1Name={match.player1 ? getPlayerDisplayName(match.player1) : "Игрок 1"}
-                    player2Name={match.player2 ? getPlayerDisplayName(match.player2) : "Игрок 2"}
-                    player1ClubName={match.player1Id ? participantClubMap[match.player1Id]?.clubName : null}
-                    player2ClubName={match.player2Id ? participantClubMap[match.player2Id]?.clubName : null}
-                    player1ClubBadgePath={match.player1Id ? participantClubMap[match.player1Id]?.clubBadgePath : null}
-                    player2ClubBadgePath={match.player2Id ? participantClubMap[match.player2Id]?.clubBadgePath : null}
+                    player1Id={sideOne.playerId}
+                    player2Id={sideTwo.playerId}
+                    player1Name={sideOne.playerName}
+                    player2Name={sideTwo.playerName}
+                    player1ClubName={sideOne.clubName}
+                    player2ClubName={sideTwo.clubName}
+                    player1ClubBadgePath={sideOne.clubBadgePath}
+                    player2ClubBadgePath={sideTwo.clubBadgePath}
                     player1SubmissionState={getSubmissionState({
                       matchStatus: match.status,
                       latestSubmission: player1LatestSubmission
