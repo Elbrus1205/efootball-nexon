@@ -13,6 +13,7 @@ import { generateFallbackName } from "@/lib/player-name";
 import { generateUniquePublicPlayerId } from "@/lib/public-player-id";
 import { describeTelegramOidcError, verifyAndConsumeTelegramIdToken } from "@/lib/telegram-oidc-server";
 import { verifyTwoFactorChallenge } from "@/lib/two-factor";
+import { generateUniqueDisplayName } from "@/lib/user-names";
 
 const TELEGRAM_ADMIN_ID = "6595067194";
 const FALLBACK_SECURITY_CONTEXT = {
@@ -204,12 +205,16 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
+          const nextName = user.name?.trim()
+            ? undefined
+            : await generateUniqueDisplayName(vkProfile.vkId, vkProfile.fullName ?? "VK Player", user.id);
+
           user = await db.user.update({
             where: { id: user.id },
             data: {
               vkId: user.vkId ?? vkProfile.vkId,
               email: user.email ?? vkProfile.email ?? undefined,
-              name: user.name?.trim() ? user.name : vkProfile.fullName ?? undefined,
+              name: nextName,
               image: user.image ?? vkProfile.avatar ?? undefined,
               ...(!user.legalAcceptedAt && acceptedLegalDocuments ? getLegalAcceptanceData(req?.headers) : {}),
             },
@@ -217,12 +222,14 @@ export const authOptions: NextAuthOptions = {
         } else {
           if (!acceptedLegalDocuments) return null;
 
+          const displayName = await generateUniqueDisplayName(vkProfile.vkId, vkProfile.fullName ?? "VK Player");
+
           user = await db.user.create({
             data: {
               publicId: await generateUniquePublicPlayerId(),
               vkId: vkProfile.vkId,
               email: vkProfile.email,
-              name: vkProfile.fullName ?? "VK Player",
+              name: displayName,
               image: vkProfile.avatar,
               ...getLegalAcceptanceData(req?.headers),
             },
@@ -326,13 +333,15 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
+          const displayName = await generateUniqueDisplayName(telegramId, telegramUsername);
+
           user = await db.user.create({
             data: {
               publicId: await generateUniquePublicPlayerId(),
               telegramId,
               telegramUsername: profile.username ?? null,
               image: profile.picture || undefined,
-              name: telegramUsername,
+              name: displayName,
               role,
               ...getLegalAcceptanceData(req?.headers),
             },
@@ -342,13 +351,15 @@ export const authOptions: NextAuthOptions = {
 
         const normalizedCurrentName = user.name?.trim() || "";
         if (!normalizedCurrentName) {
+          const displayName = await generateUniqueDisplayName(telegramId, telegramUsername, user.id);
+
           await db.user.update({
             where: { id: user.id },
             data: {
-              name: telegramUsername,
+              name: displayName,
             },
           });
-          user.name = telegramUsername;
+          user.name = displayName;
         }
 
         const authSessionId = await createSecuritySession({

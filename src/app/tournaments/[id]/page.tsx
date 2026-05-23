@@ -22,6 +22,7 @@ import { db } from "@/lib/db";
 import { normalizeFormatBlueprint } from "@/lib/format-blueprint";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { shouldSyncTournamentRegistrationLifecycle, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
+import { getTelegramProfileHref } from "@/lib/social-links";
 import { formatDate } from "@/lib/utils";
 
 type LeagueRow = {
@@ -235,11 +236,6 @@ function resolveClubBadgePath(
 ) {
   if (entry.clubBadgePath?.trim()) return entry.clubBadgePath;
   return entry.clubSlug ? clubsBySlug.get(entry.clubSlug)?.imagePath ?? null : null;
-}
-
-function telegramProfileHref(username?: string | null) {
-  const normalized = username?.trim().replace(/^@/, "");
-  return normalized ? `https://t.me/${normalized}` : null;
 }
 
 function buildLeagueTable(
@@ -1033,7 +1029,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
         <TabsContent value="participants">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {activeParticipants.map((entry) => {
-              const telegramHref = telegramProfileHref(entry.user.telegramUsername);
+              const telegramHref = getTelegramProfileHref(entry.user);
               const playerName = getPlayerDisplayName(entry.user);
 
               return (

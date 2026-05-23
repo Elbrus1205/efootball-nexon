@@ -33,6 +33,7 @@ type ProfileUser = {
   bio: string | null;
   favoriteTeam: string | null;
   timeZone: string | null;
+  telegramId: string | null;
   telegramUsername: string | null;
   vkId: string | null;
   role: UserRole;

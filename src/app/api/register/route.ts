@@ -7,6 +7,7 @@ import { generateVerificationCode, hashVerificationCode, sendEmailVerificationCo
 import { getLegalAcceptanceData, LEGAL_ACCEPTANCE_REQUIRED_MESSAGE } from "@/lib/legal-acceptance";
 import { generateUniquePublicPlayerId } from "@/lib/public-player-id";
 import { resolveRequestTimeZone } from "@/lib/time-zone";
+import { DISPLAY_NAME_TAKEN_MESSAGE, isDisplayNameTaken, isDisplayNameUniqueError, normalizeDisplayName } from "@/lib/user-names";
 import { profileSchema, registerSchema } from "@/lib/validators";
 
 const REGISTER_CODE_TTL_MS = 10 * 60 * 1000;
@@ -33,6 +34,7 @@ export async function POST(request: Request) {
 
   const body = parsedBody.data;
   const normalizedEmail = body.email.trim().toLowerCase();
+  const normalizedName = normalizeDisplayName(body.name);
   const emailCode = String((rawBody as { emailCode?: unknown }).emailCode ?? "").trim();
   const requestTimeZone = resolveRequestTimeZone(request.headers);
   const existing = await db.user.findFirst({
@@ -46,6 +48,10 @@ export async function POST(request: Request) {
 
   if (existing) {
     return NextResponse.json({ error: "Email already exists" }, { status: 409 });
+  }
+
+  if (await isDisplayNameTaken(normalizedName)) {
+    return NextResponse.json({ error: DISPLAY_NAME_TAKEN_MESSAGE }, { status: 409 });
   }
 
   const identifier = getRegisterCodeIdentifier(normalizedEmail);
@@ -110,28 +116,37 @@ export async function POST(request: Request) {
 
   const passwordHash = await hash(body.password, 10);
 
-  const user = await db.$transaction(async (tx) => {
-    const created = await tx.user.create({
-      data: {
-        publicId: await generateUniquePublicPlayerId(),
-        email: normalizedEmail,
-        emailVerified: new Date(),
-        passwordHash,
-        name: body.name,
-        timeZone: requestTimeZone,
-        timeZoneUpdatedAt: requestTimeZone ? new Date() : null,
-        ...getLegalAcceptanceData(request.headers),
-      },
+  const user = await db
+    .$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          publicId: await generateUniquePublicPlayerId(),
+          email: normalizedEmail,
+          emailVerified: new Date(),
+          passwordHash,
+          name: normalizedName,
+          timeZone: requestTimeZone,
+          timeZoneUpdatedAt: requestTimeZone ? new Date() : null,
+          ...getLegalAcceptanceData(request.headers),
+        },
+      });
+
+      await tx.verificationToken.deleteMany({
+        where: {
+          identifier,
+        },
+      });
+
+      return created;
+    })
+    .catch((error) => {
+      if (isDisplayNameUniqueError(error)) return null;
+      throw error;
     });
 
-    await tx.verificationToken.deleteMany({
-      where: {
-        identifier,
-      },
-    });
-
-    return created;
-  });
+  if (!user) {
+    return NextResponse.json({ error: DISPLAY_NAME_TAKEN_MESSAGE }, { status: 409 });
+  }
 
   return NextResponse.json({ userId: user.id });
 }
@@ -169,7 +184,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Пользователь не найден." }, { status: 404 });
   }
 
-  const normalizedName = body.name.trim();
+  const normalizedName = normalizeDisplayName(body.name);
   const nameChanged = normalizedName !== (existingUser.name ?? "");
 
   if (nameChanged && existingUser.nameUpdatedAt) {
@@ -205,35 +220,48 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Можно выбрать только свои подтверждённые статусы." }, { status: 400 });
   }
 
-  const user = await db.$transaction(async (tx) => {
-    const updatedUser = await tx.user.update({
-      where: { id: session.user.id },
-      data: {
-        name: normalizedName,
-        ...(nameChanged ? { nameUpdatedAt: new Date() } : {}),
-        favoriteTeam: body.favoriteTeam || null,
-        bio: body.bio || null,
-        bannerImage: body.bannerImage || null,
-        image: body.image || null,
-      },
+  if (nameChanged && (await isDisplayNameTaken(normalizedName, session.user.id))) {
+    return NextResponse.json({ error: DISPLAY_NAME_TAKEN_MESSAGE }, { status: 409 });
+  }
+
+  const user = await db
+    .$transaction(async (tx) => {
+      const updatedUser = await tx.user.update({
+        where: { id: session.user.id },
+        data: {
+          name: normalizedName,
+          ...(nameChanged ? { nameUpdatedAt: new Date() } : {}),
+          favoriteTeam: body.favoriteTeam || null,
+          bio: body.bio || null,
+          bannerImage: body.bannerImage || null,
+          image: body.image || null,
+        },
+      });
+
+      await tx.userProfileStatus.updateMany({
+        where: { userId: session.user.id },
+        data: { selectedOrder: null },
+      });
+
+      await Promise.all(
+        selectedStatusIds.map((statusId, index) =>
+          tx.userProfileStatus.update({
+            where: { id: statusId },
+            data: { selectedOrder: index + 1 },
+          }),
+        ),
+      );
+
+      return updatedUser;
+    })
+    .catch((error) => {
+      if (isDisplayNameUniqueError(error)) return null;
+      throw error;
     });
 
-    await tx.userProfileStatus.updateMany({
-      where: { userId: session.user.id },
-      data: { selectedOrder: null },
-    });
-
-    await Promise.all(
-      selectedStatusIds.map((statusId, index) =>
-        tx.userProfileStatus.update({
-          where: { id: statusId },
-          data: { selectedOrder: index + 1 },
-        }),
-      ),
-    );
-
-    return updatedUser;
-  });
+  if (!user) {
+    return NextResponse.json({ error: DISPLAY_NAME_TAKEN_MESSAGE }, { status: 409 });
+  }
 
   return NextResponse.json({ user });
 }
