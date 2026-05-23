@@ -17,7 +17,7 @@ export const manualProfileStatusDrafts = [
     type: ProfileStatusType.ACTIVE,
     title: "Активный",
     description: "Статус для активных игроков, которые регулярно участвуют в жизни проекта.",
-    tone: ProfileStatusTone.BLUE,
+    tone: ProfileStatusTone.GREEN,
   },
   {
     type: ProfileStatusType.RELIABLE,
