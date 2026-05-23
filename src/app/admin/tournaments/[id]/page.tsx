@@ -1,7 +1,8 @@
 ﻿import Link from "next/link";
-import { MatchStatus, StageType } from "@prisma/client";
+import { MatchStatus, ParticipantStatus, StageType } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { Activity, CalendarClock, Dices, GitBranch, History, Pencil, Swords, Trash2, Trophy, Users } from "lucide-react";
+import { TournamentImageExporter, type ExportGroup, type ExportScheduleRound } from "@/components/admin/tournament-image-exporter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,50 +12,252 @@ import {
   tournamentStatusVariant,
 } from "@/lib/admin-display";
 import { requireAnyPermission } from "@/lib/auth/session";
+import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
+import { getPlayerDisplayName } from "@/lib/player-name";
 
 function stageRoundUnit(stage?: { type: StageType } | null) {
   return stage?.type === StageType.PLAYOFF ? "Раунд" : "Тур";
 }
 
+function isBrokenClubName(value: string | null | undefined) {
+  const name = value?.trim();
+  if (!name) return true;
+
+  const questionMarks = name.match(/\?/g)?.length ?? 0;
+  return questionMarks >= 3 || questionMarks / name.length > 0.4;
+}
+
+function resolveClubName(
+  entry: {
+    clubSlug?: string | null;
+    clubName?: string | null;
+  },
+  clubsBySlug: Map<string, { name: string }>,
+  fallback: string,
+) {
+  if (entry.clubSlug) {
+    const club = clubsBySlug.get(entry.clubSlug);
+    if (club && isBrokenClubName(entry.clubName)) {
+      return club.name;
+    }
+  }
+
+  return entry.clubName?.trim() && !isBrokenClubName(entry.clubName) ? entry.clubName.trim() : fallback;
+}
+
+function buildExportRows(
+  participants: Array<{
+    userId: string;
+    clubSlug: string | null;
+    clubName: string | null;
+    user: { id: string; name: string | null };
+  }>,
+  matches: Array<{
+    status: MatchStatus;
+    player1Id: string | null;
+    player2Id: string | null;
+    player1Score: number | null;
+    player2Score: number | null;
+  }>,
+  clubsBySlug: Map<string, { name: string }>,
+  scoring: { pointsForWin?: number | null; pointsForDraw?: number | null; pointsForLoss?: number | null },
+): ExportGroup["rows"] {
+  const table = new Map<string, ExportGroup["rows"][number]>();
+  const pointsForWin = scoring.pointsForWin ?? 3;
+  const pointsForDraw = scoring.pointsForDraw ?? 1;
+  const pointsForLoss = scoring.pointsForLoss ?? 0;
+
+  for (const entry of participants) {
+    const playerName = getPlayerDisplayName(entry.user);
+    table.set(entry.userId, {
+      rank: 0,
+      clubName: resolveClubName(entry, clubsBySlug, playerName),
+      playerName,
+      played: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      goalDifference: 0,
+      points: 0,
+    });
+  }
+
+  for (const match of matches) {
+    if (match.status !== MatchStatus.CONFIRMED && match.status !== MatchStatus.FINISHED) continue;
+    if (!match.player1Id || !match.player2Id) continue;
+    if (match.player1Score === null || match.player2Score === null) continue;
+
+    const player1 = table.get(match.player1Id);
+    const player2 = table.get(match.player2Id);
+    if (!player1 || !player2) continue;
+
+    player1.played += 1;
+    player2.played += 1;
+    player1.goalDifference += match.player1Score - match.player2Score;
+    player2.goalDifference += match.player2Score - match.player1Score;
+
+    if (match.player1Score > match.player2Score) {
+      player1.wins += 1;
+      player2.losses += 1;
+      player1.points += pointsForWin;
+      player2.points += pointsForLoss;
+    } else if (match.player1Score < match.player2Score) {
+      player2.wins += 1;
+      player1.losses += 1;
+      player2.points += pointsForWin;
+      player1.points += pointsForLoss;
+    } else {
+      player1.draws += 1;
+      player2.draws += 1;
+      player1.points += pointsForDraw;
+      player2.points += pointsForDraw;
+    }
+  }
+
+  return Array.from(table.values())
+    .sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      return a.clubName.localeCompare(b.clubName, "ru");
+    })
+    .map((row, index) => ({ ...row, rank: index + 1 }));
+}
+
+function exportRoundTitle(match: {
+  round: number;
+  stage?: { name: string; type: StageType } | null;
+}) {
+  if (match.stage?.type === StageType.PLAYOFF) {
+    return `${match.stage.name} · ${stageRoundUnit(match.stage)} ${match.round}`;
+  }
+
+  return `${match.round} тур`;
+}
+
 export default async function AdminTournamentWorkspacePage({ params }: { params: { id: string } }) {
   await requireAnyPermission(["tournaments.createEdit", "tournaments.manageParticipants", "tournaments.manageStructure", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
-  const tournament = await db.tournament.findUnique({
-    where: { id: params.id },
-    include: {
-      matches: {
-        select: {
-          id: true,
-          round: true,
-          matchNumber: true,
-          player1Id: true,
-          player2Id: true,
-          participant1EntryId: true,
-          participant2EntryId: true,
-          status: true,
-          player1Score: true,
-          player2Score: true,
-          stageId: true,
-          bracketId: true,
-          winnerId: true,
+  const [tournament, availableClubs] = await Promise.all([
+    db.tournament.findUnique({
+      where: { id: params.id },
+      include: {
+        participants: {
+          include: { user: true },
+          orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
         },
-        orderBy: [{ round: "asc" }, { matchNumber: "asc" }],
-      },
-      stages: {
-        include: {
-          groups: { select: { id: true } },
-          bracket: { select: { id: true } },
+        matches: {
+          include: {
+            player1: true,
+            player2: true,
+            participant1Entry: { include: { user: true } },
+            participant2Entry: { include: { user: true } },
+            stage: true,
+            group: true,
+          },
+          orderBy: [{ round: "asc" }, { matchNumber: "asc" }],
         },
-        orderBy: { orderIndex: "asc" },
+        stages: {
+          include: {
+            groups: {
+              include: {
+                members: {
+                  where: { status: ParticipantStatus.CONFIRMED },
+                  include: { user: true },
+                  orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
+                },
+              },
+              orderBy: { orderIndex: "asc" },
+            },
+            bracket: { select: { id: true } },
+          },
+          orderBy: { orderIndex: "asc" },
+        },
       },
-    },
-  });
+    }),
+    getAvailableClubs(),
+  ]);
 
   if (!tournament) notFound();
 
   const groupStage = tournament.stages.find((stage) => stage.type === StageType.GROUP_STAGE);
   const playoffStage = tournament.stages.find((stage) => stage.type === StageType.PLAYOFF);
+  const clubsBySlug = new Map(availableClubs.map((club) => [club.slug, club]));
+  const participantClubMap = new Map(
+    tournament.participants.map((entry) => {
+      const playerName = getPlayerDisplayName(entry.user);
+
+      return [
+        entry.userId,
+        {
+          clubName: resolveClubName(entry, clubsBySlug, playerName),
+          playerName,
+        },
+      ];
+    }),
+  );
+  const resolveExportSide = (match: (typeof tournament.matches)[number], side: 1 | 2) => {
+    const player = side === 1 ? match.player1 : match.player2;
+    const entry = side === 1 ? match.participant1Entry : match.participant2Entry;
+    const playerId = (side === 1 ? match.player1Id : match.player2Id) ?? entry?.userId ?? null;
+    const playerName = player
+      ? getPlayerDisplayName(player)
+      : entry?.user
+        ? getPlayerDisplayName(entry.user)
+        : side === 1
+          ? "Игрок 1"
+          : "Игрок 2";
+    const mappedClub = playerId ? participantClubMap.get(playerId) : null;
+
+    return {
+      playerName,
+      clubName: mappedClub?.clubName ?? (entry ? resolveClubName(entry, clubsBySlug, playerName) : playerName),
+    };
+  };
+
+  const exportGroups: ExportGroup[] =
+    groupStage?.groups.map((group) => ({
+      id: group.id,
+      name: group.name,
+      rows: buildExportRows(
+        group.members,
+        tournament.matches.filter((match) => match.groupId === group.id),
+        clubsBySlug,
+        groupStage,
+      ),
+    })) ?? [];
+
+  const exportRoundMap = new Map<string, ExportScheduleRound>();
+  for (const match of [...tournament.matches].sort(
+    (a, b) =>
+      (a.stage?.orderIndex ?? 999) - (b.stage?.orderIndex ?? 999) ||
+      a.round - b.round ||
+      (a.group?.orderIndex ?? 0) - (b.group?.orderIndex ?? 0) ||
+      a.matchNumber - b.matchNumber,
+  )) {
+    const key = [match.stageId ?? "stage", match.round].join(":");
+    const round = exportRoundMap.get(key) ?? {
+      key,
+      title: exportRoundTitle(match),
+      matches: [],
+    };
+    const player1 = resolveExportSide(match, 1);
+    const player2 = resolveExportSide(match, 2);
+
+    round.matches.push({
+      id: match.id,
+      groupName: match.group?.name ?? null,
+      matchNumber: match.matchNumber,
+      player1ClubName: player1.clubName,
+      player1Name: player1.playerName,
+      player2ClubName: player2.clubName,
+      player2Name: player2.playerName,
+      scoreLabel: match.player1Score !== null && match.player2Score !== null ? `${match.player1Score} - ${match.player2Score}` : "VS",
+    });
+    exportRoundMap.set(key, round);
+  }
+  const exportRounds = Array.from(exportRoundMap.values()).filter((round) => round.matches.length > 0);
   const randomScoreStatuses = new Set<MatchStatus>([
     MatchStatus.PENDING,
     MatchStatus.READY,
@@ -144,6 +347,8 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
           </div>
         </CardContent>
       </Card>
+
+      <TournamentImageExporter tournamentTitle={tournament.title} groups={exportGroups} rounds={exportRounds} />
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)] lg:items-stretch">
         <Card className="h-full overflow-hidden rounded-lg p-0">

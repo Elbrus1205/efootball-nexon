@@ -1,5 +1,5 @@
 import { ClubSelectionMode, MatchStatus, ParticipantStatus, StageType, TournamentFormat, TournamentStatus } from "@prisma/client";
-import { Clock3, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { unstable_noStore as noStore } from "next/cache";
 import { notFound } from "next/navigation";
 import { BracketView } from "@/components/tournaments/bracket-view";
@@ -7,6 +7,7 @@ import { CancelTournamentRegistrationButton } from "@/components/tournaments/can
 import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
 import { MyMatchCard } from "@/components/tournaments/my-match-card";
 import { RegisterTournamentButton } from "@/components/tournaments/register-tournament-button";
+import { TournamentScheduleView } from "@/components/tournaments/tournament-schedule-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -799,6 +800,29 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
       clubBadgePath: mappedClub?.clubBadgePath ?? (entry ? resolveClubBadgePath(entry, clubsBySlug) : null),
     };
   };
+  const scheduleViewSections = scheduleSections.map((section) => ({
+    key: section.key,
+    title: section.title,
+    deadlineLabel: section.deadlineAt ? formatDate(section.deadlineAt) : null,
+    matches: section.matches.map((match) => {
+      const sideOne = resolveMatchSide(match, 1);
+      const sideTwo = resolveMatchSide(match, 2);
+
+      return {
+        id: match.id,
+        roundKey: [match.stage?.id ?? "stage", match.round].join(":"),
+        roundLabel: section.title,
+        roundSort: match.round,
+        matchNumber: match.matchNumber,
+        groupId: match.group?.id ?? null,
+        groupName: match.group?.name ?? null,
+        groupSort: match.group?.orderIndex ?? 999,
+        scoreLabel: match.player1Score !== null && match.player2Score !== null ? `${match.player1Score} - ${match.player2Score}` : "VS",
+        sideOne,
+        sideTwo,
+      };
+    }),
+  }));
 
   return (
     <div className="page-shell space-y-8">
@@ -918,74 +942,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
         </TabsContent>
 
         <TabsContent value="matches">
-          {scheduleSections.length ? (
-            <div className="space-y-8">
-              {scheduleSections.map((section) => (
-                <section key={section.key} className="space-y-4 rounded-[1.75rem] border border-white/10 bg-white/[0.04] p-4 shadow-[0_18px_45px_rgba(0,0,0,0.18)] sm:p-5">
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
-                    <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-zinc-300">{section.title}</h3>
-                    <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.18em]">
-                      {section.deadlineAt ? (
-                        <div className="inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-amber-100">
-                          <Clock3 className="h-3.5 w-3.5" />
-                          Дедлайн: {formatDate(section.deadlineAt)}
-                        </div>
-                      ) : null}
-                      <div className="text-zinc-500">{section.matches.length} матчей</div>
-                    </div>
-                  </div>
-
-                  <div className="divide-y divide-white/10">
-                    {section.matches.map((match, matchIndex) => {
-                      const prevGroupName = matchIndex > 0 ? section.matches[matchIndex - 1].group?.name : null;
-                      const showGroupLabel = match.group?.name && match.group.name !== prevGroupName;
-                      const sideOne = resolveMatchSide(match, 1);
-                      const sideTwo = resolveMatchSide(match, 2);
-                      return (
-                      <div key={match.id} className="py-4 first:pt-0 last:pb-0">
-                        {showGroupLabel ? (
-                          <div className="mb-3 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                            {match.group!.name}
-                          </div>
-                        ) : null}
-                        <div className="mx-auto grid max-w-[760px] grid-cols-[minmax(100px,1fr)_auto_minmax(100px,1fr)] items-center gap-3 sm:grid-cols-[minmax(180px,220px)_auto_minmax(180px,220px)] sm:gap-4">
-                          <div className="min-w-0 justify-self-end">
-                            <ClubPlayerLine
-                              playerId={sideOne.playerId}
-                              playerName={sideOne.playerName}
-                              clubName={sideOne.clubName}
-                              badgePath={sideOne.clubBadgePath}
-                              align="center"
-                              compact
-                              reverse
-                            />
-                          </div>
-                          <div className="flex shrink-0 items-center justify-center self-center">
-                            <div className="flex min-w-[56px] items-center justify-center rounded-lg border border-white/10 bg-black/20 px-2.5 py-2 text-center text-xs font-semibold tracking-[0.18em] text-zinc-200 sm:min-w-[72px] sm:text-sm">
-                              {match.player1Score !== null && match.player2Score !== null ? `${match.player1Score} - ${match.player2Score}` : "VS"}
-                            </div>
-                          </div>
-                          <div className="min-w-0 justify-self-start">
-                            <ClubPlayerLine
-                              playerId={sideTwo.playerId}
-                              playerName={sideTwo.playerName}
-                              clubName={sideTwo.clubName}
-                              badgePath={sideTwo.clubBadgePath}
-                              align="center"
-                              compact
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                    })}
-                  </div>
-                </section>
-              ))}
-            </div>
-          ) : (
-            <Card className="p-6 text-zinc-500">После публикации расписания здесь появится календарь всех матчей турнира.</Card>
-          )}
+          <TournamentScheduleView sections={scheduleViewSections} />
         </TabsContent>
 
         <TabsContent value="my-matches">
