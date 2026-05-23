@@ -31,6 +31,34 @@ export default async function AdminTournamentMatchesPage({ params }: { params: {
 
   if (!tournament) notFound();
 
+  const matches = tournament.matches.map((match) => ({
+    id: match.id,
+    round: match.round,
+    matchNumber: match.matchNumber,
+    status: match.status,
+    scheduledAt: match.scheduledAt?.toISOString() ?? null,
+    player1Score: match.player1Score,
+    player2Score: match.player2Score,
+    notes: match.notes,
+    player1Id: match.player1Id,
+    player2Id: match.player2Id,
+    participant1EntryId: match.participant1EntryId,
+    participant2EntryId: match.participant2EntryId,
+    player1: match.player1 ? { name: match.player1.name } : null,
+    player2: match.player2 ? { name: match.player2.name } : null,
+    bracketId: match.bracketId,
+    stage: match.stage ? { name: match.stage.name, type: match.stage.type } : null,
+    group: match.group ? { name: match.group.name } : null,
+  }));
+
+  const participants = tournament.participants.map((participant) => ({
+    id: participant.id,
+    userId: participant.userId,
+    user: {
+      name: participant.user.name,
+    },
+  }));
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -54,11 +82,8 @@ export default async function AdminTournamentMatchesPage({ params }: { params: {
 
       <MatchManager
         tournamentId={tournament.id}
-        matches={tournament.matches.map((match) => ({
-          ...match,
-          scheduledAt: match.scheduledAt?.toISOString() ?? null,
-        }))}
-        participants={tournament.participants}
+        matches={matches}
+        participants={participants}
       />
     </div>
   );

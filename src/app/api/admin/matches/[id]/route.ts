@@ -1,4 +1,4 @@
-import { MatchStatus } from "@prisma/client";
+import { MatchStatus, Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
@@ -18,19 +18,20 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return NextResponse.json({ error: "Match not found" }, { status: 404 });
   }
 
+  const data: Prisma.MatchUpdateInput = {};
+  if ("player1Id" in body) data.player1 = body.player1Id ? { connect: { id: body.player1Id } } : { disconnect: true };
+  if ("player2Id" in body) data.player2 = body.player2Id ? { connect: { id: body.player2Id } } : { disconnect: true };
+  if ("participant1EntryId" in body) data.participant1Entry = body.participant1EntryId ? { connect: { id: body.participant1EntryId } } : { disconnect: true };
+  if ("participant2EntryId" in body) data.participant2Entry = body.participant2EntryId ? { connect: { id: body.participant2EntryId } } : { disconnect: true };
+  if ("scheduledAt" in body) data.scheduledAt = body.scheduledAt ? new Date(body.scheduledAt) : null;
+  if ("player1Score" in body) data.player1Score = body.player1Score;
+  if ("player2Score" in body) data.player2Score = body.player2Score;
+  if ("status" in body && body.status) data.status = body.status as MatchStatus;
+  if ("notes" in body) data.notes = body.notes || null;
+
   const updated = await db.match.update({
     where: { id: params.id },
-    data: {
-      player1Id: body.player1Id || null,
-      player2Id: body.player2Id || null,
-      participant1EntryId: body.participant1EntryId || null,
-      participant2EntryId: body.participant2EntryId || null,
-      scheduledAt: body.scheduledAt ? new Date(body.scheduledAt) : undefined,
-      player1Score: body.player1Score,
-      player2Score: body.player2Score,
-      status: (body.status as MatchStatus | "") || undefined,
-      notes: body.notes || null,
-    },
+    data,
   });
 
   const standingsRelevantChange =

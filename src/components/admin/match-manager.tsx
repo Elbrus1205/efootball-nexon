@@ -4,7 +4,7 @@ import { MatchStatus, StageType } from "@prisma/client";
 import { ExternalLink, GripVertical, Search, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,6 +63,14 @@ function roundSectionLabel(matches: MatchItem[], round: number) {
   return `Тур/раунд ${round}`;
 }
 
+function scoreFromInput(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const score = Number(trimmed);
+  return Number.isFinite(score) ? score : null;
+}
+
 export function MatchManager({
   tournamentId,
   matches,
@@ -79,6 +87,12 @@ export function MatchManager({
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [roundFilter, setRoundFilter] = useState<string>("all");
+
+  const participantById = useMemo(() => new Map(participants.map((participant) => [participant.id, participant])), [participants]);
+
+  useEffect(() => {
+    setOrderedMatches(matches);
+  }, [matches]);
 
   const rounds = useMemo(() => Array.from(new Set(orderedMatches.map((match) => match.round))).sort((a, b) => a - b), [orderedMatches]);
 
@@ -103,14 +117,73 @@ export function MatchManager({
     });
   }, [orderedMatches, query, statusFilter, roundFilter]);
 
+  const patchLocalMatch = (matchId: string, payload: Record<string, unknown>) => {
+    setOrderedMatches((current) =>
+      current.map((match) => {
+        if (match.id !== matchId) return match;
+
+        const next = { ...match };
+
+        if ("participant1EntryId" in payload) {
+          const participantId = typeof payload.participant1EntryId === "string" ? payload.participant1EntryId : "";
+          const participant = participantId ? participantById.get(participantId) ?? null : null;
+          next.participant1EntryId = participantId || null;
+          next.player1Id = participant?.userId ?? null;
+          next.player1 = participant ? { name: participant.user.name } : null;
+        }
+
+        if ("participant2EntryId" in payload) {
+          const participantId = typeof payload.participant2EntryId === "string" ? payload.participant2EntryId : "";
+          const participant = participantId ? participantById.get(participantId) ?? null : null;
+          next.participant2EntryId = participantId || null;
+          next.player2Id = participant?.userId ?? null;
+          next.player2 = participant ? { name: participant.user.name } : null;
+        }
+
+        if ("status" in payload && Object.values(MatchStatus).includes(payload.status as MatchStatus)) {
+          next.status = payload.status as MatchStatus;
+        }
+
+        if ("scheduledAt" in payload) {
+          const value = typeof payload.scheduledAt === "string" ? payload.scheduledAt : "";
+          const date = value ? new Date(value) : null;
+          next.scheduledAt = date && !Number.isNaN(date.getTime()) ? date.toISOString() : null;
+        }
+
+        if ("notes" in payload) {
+          next.notes = typeof payload.notes === "string" && payload.notes ? payload.notes : null;
+        }
+
+        if ("player1Score" in payload) {
+          const score = payload.player1Score;
+          next.player1Score = typeof score === "number" && Number.isFinite(score) ? score : null;
+        }
+
+        if ("player2Score" in payload) {
+          const score = payload.player2Score;
+          next.player2Score = typeof score === "number" && Number.isFinite(score) ? score : null;
+        }
+
+        return next;
+      }),
+    );
+  };
+
   const saveMatch = (matchId: string, payload: Record<string, unknown>) => {
+    patchLocalMatch(matchId, payload);
+
     startTransition(async () => {
-      await fetch(`/api/admin/matches/${matchId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      router.refresh();
+      try {
+        const response = await fetch(`/api/admin/matches/${matchId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) router.refresh();
+      } catch {
+        router.refresh();
+      }
     });
   };
 
@@ -230,8 +303,7 @@ export function MatchManager({
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant={matchStatusVariant[match.status] ?? "neutral"}>{matchStatusLabel[match.status] ?? match.status}</Badge>
                       <select
-                        defaultValue={match.status}
-                        disabled={pending}
+                        value={match.status}
                         onChange={(event) => saveMatch(match.id, { status: event.target.value })}
                         className="h-10 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white"
                       >
@@ -246,12 +318,12 @@ export function MatchManager({
 
                   <div className="grid gap-3 xl:grid-cols-2">
                     <select
-                      defaultValue={match.participant1EntryId ?? ""}
-                      disabled={pending}
+                      value={match.participant1EntryId ?? ""}
                       onChange={(event) => {
-                        const participant = participants.find((item) => item.id === event.target.value);
+                        const participantId = event.target.value;
+                        const participant = participantId ? participantById.get(participantId) : null;
                         saveMatch(match.id, {
-                          participant1EntryId: event.target.value,
+                          participant1EntryId: participantId,
                           player1Id: participant?.userId ?? null,
                         });
                       }}
@@ -266,12 +338,12 @@ export function MatchManager({
                     </select>
 
                     <select
-                      defaultValue={match.participant2EntryId ?? ""}
-                      disabled={pending}
+                      value={match.participant2EntryId ?? ""}
                       onChange={(event) => {
-                        const participant = participants.find((item) => item.id === event.target.value);
+                        const participantId = event.target.value;
+                        const participant = participantId ? participantById.get(participantId) : null;
                         saveMatch(match.id, {
-                          participant2EntryId: event.target.value,
+                          participant2EntryId: participantId,
                           player2Id: participant?.userId ?? null,
                         });
                       }}
@@ -288,7 +360,6 @@ export function MatchManager({
                     <Input
                       type="datetime-local"
                       defaultValue={toInputDate(match.scheduledAt)}
-                      disabled={pending}
                       onBlur={(event) => saveMatch(match.id, { scheduledAt: event.target.value })}
                     />
 
@@ -296,7 +367,6 @@ export function MatchManager({
                       type="text"
                       defaultValue={match.notes ?? ""}
                       placeholder="Комментарий к матчу"
-                      disabled={pending}
                       onBlur={(event) => saveMatch(match.id, { notes: event.target.value })}
                     />
 
@@ -305,15 +375,13 @@ export function MatchManager({
                         type="number"
                         defaultValue={match.player1Score ?? ""}
                         placeholder="Счёт игрока 1"
-                        disabled={pending}
-                        onBlur={(event) => saveMatch(match.id, { player1Score: Number(event.target.value) || 0 })}
+                        onBlur={(event) => saveMatch(match.id, { player1Score: scoreFromInput(event.target.value) })}
                       />
                       <Input
                         type="number"
                         defaultValue={match.player2Score ?? ""}
                         placeholder="Счёт игрока 2"
-                        disabled={pending}
-                        onBlur={(event) => saveMatch(match.id, { player2Score: Number(event.target.value) || 0 })}
+                        onBlur={(event) => saveMatch(match.id, { player2Score: scoreFromInput(event.target.value) })}
                       />
                     </div>
 
