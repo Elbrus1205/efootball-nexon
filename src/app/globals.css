@@ -1084,6 +1084,7 @@ body a[role="button"]:not(:disabled):hover {
 .cinematic-home {
   background: var(--classic-black) !important;
   position: relative;
+  min-height: 100svh;
 }
 
 .home-background-video {
@@ -1094,7 +1095,7 @@ body a[role="button"]:not(:disabled):hover {
   min-height: 100svh;
   width: 100%;
   object-fit: cover;
-  object-position: center;
+  object-position: center center;
   background: var(--classic-black);
 }
 
@@ -1103,7 +1104,9 @@ body a[role="button"]:not(:disabled):hover {
   inset: 0;
   z-index: 1;
   min-height: 100svh;
-  background: rgba(0, 0, 0, 0.78);
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.68), rgba(0, 0, 0, 0.82)),
+    radial-gradient(circle at 50% 34%, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.56) 72%);
 }
 
 .cinematic-home > section {

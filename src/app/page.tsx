@@ -56,7 +56,7 @@ export default async function HomePage() {
         preload="metadata"
         aria-hidden="true"
       >
-        <source src="/videos/home-bg.mp4" type="video/mp4" />
+        <source src="/videos/home-bg.mp4?v=20260523" type="video/mp4" />
       </video>
       <div className="home-background-video-overlay" aria-hidden="true" />
 
