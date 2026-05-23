@@ -598,7 +598,7 @@ textarea,
   .cinematic-hero-copy {
     position: relative;
     z-index: 10;
-    margin-top: clamp(42px, 9svh, 78px);
+    margin-top: clamp(21px, 4.5svh, 39px);
     text-align: center;
   }
 

@@ -60,7 +60,7 @@ export default async function HomePage() {
       </video>
       <div className="home-background-video-overlay" aria-hidden="true" />
 
-      <section className="relative mx-auto flex min-h-[100svh] w-full max-w-[480px] flex-col px-5 pb-8 pt-24 sm:px-7 sm:pt-28">
+      <section className="relative mx-auto flex min-h-[100svh] w-full max-w-[480px] flex-col px-5 pb-8 pt-16 sm:px-7 sm:pt-20">
         <div className="carbon-backdrop" />
         <div className="studio-shadow studio-shadow-left" />
         <div className="studio-shadow studio-shadow-right" />
