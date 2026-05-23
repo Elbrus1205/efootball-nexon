@@ -8,7 +8,6 @@ import {
   Pencil,
   Plus,
   RefreshCw,
-  RotateCcw,
   Shuffle,
   Table2,
   Trash2,
@@ -115,9 +114,6 @@ export default async function AdminTournamentsPage({
           const canAssignClubs = tournament.status === TournamentStatus.REGISTRATION_CLOSED || tournament.status === TournamentStatus.AWAITING_START;
           const canRegenerateMatches =
             tournament.status === TournamentStatus.IN_PROGRESS || tournament.status === TournamentStatus.COMPLETED;
-          const canResetMatches =
-            tournament._count.matches > 0 && tournament.status !== TournamentStatus.COMPLETED;
-
           return (
             <Card key={tournament.id} className="overflow-hidden p-0">
               <div className="grid gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(260px,0.85fr)_minmax(0,1.35fr)] xl:items-start">
@@ -186,16 +182,6 @@ export default async function AdminTournamentsPage({
                         <Button variant="outline" className={actionButtonClass}>
                           <RefreshCw />
                           Пересоздать матчи и расписание
-                        </Button>
-                      </form>
-                    ) : null}
-
-                    {canResetMatches ? (
-                      <form action={`/api/admin/tournaments/${tournament.id}`} method="post" className="col-span-2 grid min-w-0 sm:col-span-1">
-                        <input type="hidden" name="_method" value="reset-matches" />
-                        <Button variant="outline" className={actionButtonClass}>
-                          <RotateCcw />
-                          Сбросить и пересоздать матчи
                         </Button>
                       </form>
                     ) : null}
