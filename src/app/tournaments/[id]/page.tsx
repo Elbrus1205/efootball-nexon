@@ -8,6 +8,7 @@ import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
 import { MyMatchCard } from "@/components/tournaments/my-match-card";
 import { RegisterTournamentButton } from "@/components/tournaments/register-tournament-button";
 import { TournamentScheduleView } from "@/components/tournaments/tournament-schedule-view";
+import { TelegramProfileLink } from "@/components/telegram-profile-link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -23,7 +24,7 @@ import { db } from "@/lib/db";
 import { normalizeFormatBlueprint } from "@/lib/format-blueprint";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { shouldSyncTournamentRegistrationLifecycle, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
-import { getTelegramProfileHref } from "@/lib/social-links";
+import { getTelegramProfileLinks } from "@/lib/social-links";
 import { formatDate } from "@/lib/utils";
 
 type LeagueRow = {
@@ -1155,7 +1156,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
         <TabsContent value="participants">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {activeParticipants.map((entry) => {
-              const telegramHref = getTelegramProfileHref(entry.user);
+              const telegramProfile = getTelegramProfileLinks(entry.user);
               const playerName = getPlayerDisplayName(entry.user);
 
               return (
@@ -1167,16 +1168,16 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                     badgePath={resolveClubBadgePath(entry, clubsBySlug)}
                   />
 
-                  {telegramHref ? (
-                    <a
-                      href={telegramHref}
+                  {telegramProfile ? (
+                    <TelegramProfileLink
+                      {...telegramProfile}
                       target="_blank"
                       rel="noreferrer"
                       aria-label={`Открыть Telegram ${playerName}`}
                       className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-sky-300/20 bg-sky-500/10 text-sky-200 transition hover:border-sky-300/40 hover:bg-sky-500/20 hover:text-white"
                     >
                       <Send className="h-4 w-4" />
-                    </a>
+                    </TelegramProfileLink>
                   ) : (
                     <button
                       type="button"

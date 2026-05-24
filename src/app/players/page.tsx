@@ -4,6 +4,7 @@ import { ProfileStatusApprovalStatus } from "@prisma/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { TelegramProfileLink } from "@/components/telegram-profile-link";
 import { UserRoleBadge } from "@/components/users/user-role-badge";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
@@ -98,15 +99,13 @@ export default async function PlayersPage({
 
                 <div className="flex shrink-0 items-center gap-2">
                   {telegram ? (
-                    <a
-                      href={telegram.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label={`Написать ${displayName} в Telegram`}
+                    <TelegramProfileLink
+                      {...(telegram.telegramProfile ?? { href: telegram.href })}
+                      ariaLabel={`Написать ${displayName} в Telegram`}
                       className="flex h-10 w-10 items-center justify-center rounded-xl border border-sky-300/20 bg-sky-500/10 text-sky-200 transition hover:border-sky-300/40 hover:bg-sky-500/20 hover:text-white"
                     >
                       <Send className="h-4 w-4" />
-                    </a>
+                    </TelegramProfileLink>
                   ) : null}
 
                   {vk ? (

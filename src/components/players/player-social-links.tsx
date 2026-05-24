@@ -1,3 +1,4 @@
+import { TelegramProfileLink } from "@/components/telegram-profile-link";
 import type { SocialLink } from "@/lib/social-links";
 
 function TelegramIcon({ className }: { className?: string }) {
@@ -41,16 +42,10 @@ export function PlayerSocialLinks({ links }: { links: SocialLink[] }) {
         {links.map((link) => {
           const style = socialStyles[link.id];
           const Icon = style.icon;
-
-          return (
-            <a
-              key={link.id}
-              href={link.href}
-              target="_blank"
-              rel="noreferrer"
-              className={`group flex min-w-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition ${style.className}`}
-              aria-label={`Открыть ${style.label}`}
-            >
+          const className = `group flex min-w-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition ${style.className}`;
+          const ariaLabel = `Открыть ${style.label}`;
+          const content = (
+            <>
               <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${style.iconClassName}`}>
                 <Icon className="h-4 w-4" />
               </span>
@@ -58,6 +53,20 @@ export function PlayerSocialLinks({ links }: { links: SocialLink[] }) {
                 <span className="block text-xs font-bold uppercase text-current/60">{style.label}</span>
                 <span className="block truncate text-white">{link.handle}</span>
               </span>
+            </>
+          );
+
+          if (link.id === "telegram" && link.telegramProfile) {
+            return (
+              <TelegramProfileLink key={link.id} {...link.telegramProfile} className={className} ariaLabel={ariaLabel}>
+                {content}
+              </TelegramProfileLink>
+            );
+          }
+
+          return (
+            <a key={link.id} href={link.href} target="_blank" rel="noreferrer" className={className} aria-label={ariaLabel}>
+              {content}
             </a>
           );
         })}
