@@ -54,6 +54,8 @@ export default async function AdminTournamentMatchesPage({ params }: { params: {
   const participants = tournament.participants.map((participant) => ({
     id: participant.id,
     userId: participant.userId,
+    clubName: participant.clubName,
+    clubBadgePath: participant.clubBadgePath,
     user: {
       name: participant.user.name,
     },
