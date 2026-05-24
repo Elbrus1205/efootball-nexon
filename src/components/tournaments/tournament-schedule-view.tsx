@@ -116,17 +116,18 @@ export function TournamentScheduleView({ sections }: { sections: TournamentSched
 
   return (
     <div className="space-y-5">
-      <Card className="rounded-lg border-primary/15 bg-white/[0.035] p-4 sm:p-5">
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
-          <label className="grid gap-2">
-            <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+      <Card className="rounded-lg border-primary/15 bg-white/[0.035] p-2.5 sm:p-5">
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2.25rem] gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end sm:gap-3">
+          <label className="grid gap-1.5 sm:gap-2">
+            <span className="hidden items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 sm:flex">
               <Filter className="h-3.5 w-3.5 text-primary" />
               Тур
             </span>
             <select
               value={roundFilter}
               onChange={(event) => setRoundFilter(event.target.value)}
-              className="h-11 w-full rounded-md border border-white/10 bg-[#0A0A0A] px-3 text-sm text-white outline-none transition focus:border-primary/60"
+              aria-label="Фильтр по туру"
+              className="h-9 w-full rounded-md border border-white/10 bg-[#0A0A0A] px-2 text-xs font-medium text-white outline-none transition focus:border-primary/60 sm:h-11 sm:px-3 sm:text-sm"
             >
               <option value="all">Все туры</option>
               {roundOptions.map((option) => (
@@ -137,12 +138,13 @@ export function TournamentScheduleView({ sections }: { sections: TournamentSched
             </select>
           </label>
 
-          <label className="grid gap-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Группа</span>
+          <label className="grid gap-1.5 sm:gap-2">
+            <span className="hidden text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 sm:block">Группа</span>
             <select
               value={groupFilter}
               onChange={(event) => setGroupFilter(event.target.value)}
-              className="h-11 w-full rounded-md border border-white/10 bg-[#0A0A0A] px-3 text-sm text-white outline-none transition focus:border-primary/60"
+              aria-label="Фильтр по группе"
+              className="h-9 w-full rounded-md border border-white/10 bg-[#0A0A0A] px-2 text-xs font-medium text-white outline-none transition focus:border-primary/60 sm:h-11 sm:px-3 sm:text-sm"
             >
               <option value="all">Все группы</option>
               {groupOptions.map((option) => (
@@ -161,14 +163,15 @@ export function TournamentScheduleView({ sections }: { sections: TournamentSched
               setRoundFilter("all");
               setGroupFilter("all");
             }}
-            className="h-11 rounded-md px-4"
+            aria-label="Сбросить фильтры"
+            className="h-9 rounded-md px-0 sm:h-11 sm:px-4"
           >
-            <RotateCcw className="mr-2 h-4 w-4" />
-            Сбросить
+            <RotateCcw className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Сбросить</span>
           </Button>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-3 text-xs uppercase tracking-[0.16em] text-zinc-500">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-2 text-[10px] uppercase tracking-[0.14em] text-zinc-500 sm:mt-4 sm:pt-3 sm:text-xs sm:tracking-[0.16em]">
           <span>Показано: {pluralMatches(visibleMatchCount)}</span>
           <span>{hasFilters ? "Фильтр активен" : "Полное расписание"}</span>
         </div>

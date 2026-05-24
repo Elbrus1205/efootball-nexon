@@ -8,6 +8,7 @@ import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
 import { MyMatchCard } from "@/components/tournaments/my-match-card";
 import { RegisterTournamentButton } from "@/components/tournaments/register-tournament-button";
 import { TournamentScheduleView } from "@/components/tournaments/tournament-schedule-view";
+import { TournamentStructureSwitcher, type TournamentStructureOption } from "@/components/tournaments/tournament-structure-switcher";
 import { TelegramProfileLink } from "@/components/telegram-profile-link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -209,6 +210,15 @@ function isBrokenClubName(value: string | null | undefined) {
 
   const questionMarks = name.match(/\?/g)?.length ?? 0;
   return questionMarks >= 3 || questionMarks / name.length > 0.4;
+}
+
+function pluralRu(count: number, one: string, few: string, many: string) {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+
+  if (mod10 === 1 && mod100 !== 11) return `${count} ${one}`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} ${few}`;
+  return `${count} ${many}`;
 }
 
 function resolveClubName(
@@ -427,7 +437,7 @@ function getSubmissionState({
   };
 }) {
   if (matchStatus === "DISPUTED") return { label: "Матч в споре", tone: "danger" as const };
-  if (matchStatus === "CONFIRMED") return { label: "Счёт подтверждён", tone: "success" as const };
+  if (matchStatus === "CONFIRMED" || matchStatus === "FINISHED") return { label: "Счёт подтверждён", tone: "success" as const };
   if (!latestSubmission) return { label: "Ожидается результат", tone: "waiting" as const };
   if (latestSubmission.status === "PENDING") return { label: "Результат отправлен", tone: "success" as const };
   if (latestSubmission.status === "REJECTED" && latestSubmission.moderatorComment === "AUTO_MISMATCH") {
@@ -880,14 +890,38 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   );
   const scheduleSections = buildScheduleSections(visibleMatches);
 
+  const getMatchDeadline = (match: (typeof visibleMatches)[number]) => match.stage?.deadlines.find((item) => item.round === match.round)?.deadlineAt ?? null;
+  const isMatchOpenForScore = (match: (typeof visibleMatches)[number]) =>
+    Boolean(getMatchDeadline(match)) &&
+    match.status !== MatchStatus.CONFIRMED &&
+    match.status !== MatchStatus.FINISHED &&
+    match.status !== MatchStatus.DISPUTED &&
+    match.status !== MatchStatus.FORFEIT;
+  const isPlayedMatch = (match: (typeof visibleMatches)[number]) =>
+    match.status === MatchStatus.CONFIRMED ||
+    match.status === MatchStatus.FINISHED ||
+    match.status === MatchStatus.FORFEIT;
+  const myMatchSortGroup = (match: (typeof visibleMatches)[number]) => {
+    if (isMatchOpenForScore(match)) return 0;
+    if (isPlayedMatch(match)) return 1;
+    return 2;
+  };
+
   const myMatches = currentUserId
     ? visibleMatches.filter(isCurrentUserMatch)
     : [];
 
-  const myMatchesWithSubmissions = myMatches.map((match) => ({
-    ...match,
-    submissions: submissionsByMatchId.get(match.id) ?? [],
-  }));
+  const myMatchesWithSubmissions = myMatches
+    .map((match) => ({
+      ...match,
+      submissions: submissionsByMatchId.get(match.id) ?? [],
+    }))
+    .sort(
+      (a, b) =>
+        myMatchSortGroup(a) - myMatchSortGroup(b) ||
+        scheduleMatchTime(a) - scheduleMatchTime(b) ||
+        a.matchNumber - b.matchNumber,
+    );
 
   const leagueMatches = leagueStage
     ? tournament.matches.filter((match) => match.stageId === leagueStage.id)
@@ -901,6 +935,35 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   const takenClubSlugs = activeParticipants.map((entry) => entry.clubSlug).filter(Boolean) as string[];
   const structureSectionTitle = tournament.format === TournamentFormat.CUSTOM ? groupStage?.name?.trim() || "Лиги" : "Группы";
   const customStandingHighlights = buildCustomStandingHighlights(tournament);
+  const structureOptions: TournamentStructureOption[] = [
+    ...(groupStage
+      ? [
+          {
+            id: "groups",
+            title: "Групповой этап",
+            caption: pluralRu(groupStage.groups.length, "группа", "группы", "групп"),
+          },
+        ]
+      : []),
+    ...(leagueStage || tournament.format === TournamentFormat.ROUND_ROBIN
+      ? [
+          {
+            id: "league",
+            title: "Лига",
+            caption: "Общая таблица",
+          },
+        ]
+      : []),
+    ...(playoffStages.length
+      ? [
+          {
+            id: "playoff",
+            title: "Плей-офф",
+            caption: pluralRu(playoffStages.length, "сетка", "сетки", "сеток"),
+          },
+        ]
+      : []),
+  ];
   const participantClubMap = Object.fromEntries(
     tournament.participants.map((entry) => [
       entry.userId,
@@ -960,11 +1023,17 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
     <div className="page-shell space-y-8">
       <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
         <div className="space-y-4">
-          <div className="flex flex-wrap gap-3">
-            <Badge variant={tournamentStatusVariant[tournament.status]}>{tournamentStatusLabel[tournament.status]}</Badge>
-            {tournament.playoffType ? <Badge variant="neutral">{playoffTypeLabel[tournament.playoffType] ?? tournament.playoffType}</Badge> : null}
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+            <h1 className="min-w-0 max-w-full break-words font-display text-4xl font-thin text-white">{tournament.title}</h1>
+            <Badge variant={tournamentStatusVariant[tournament.status]} className="shrink-0">
+              {tournamentStatusLabel[tournament.status]}
+            </Badge>
+            {tournament.playoffType ? (
+              <Badge variant="neutral" className="shrink-0">
+                {playoffTypeLabel[tournament.playoffType] ?? tournament.playoffType}
+              </Badge>
+            ) : null}
           </div>
-          <h1 className="font-display text-4xl font-thin text-white">{tournament.title}</h1>
           <div className="flex flex-wrap gap-6 text-sm text-zinc-400">
             <span>Старт: {formatDate(tournament.startsAt)}</span>
             <span>Участники: {activeParticipants.length}/{tournament.maxParticipants}</span>
@@ -1008,69 +1077,77 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           </TabsList>
         </div>
 
-        <TabsContent value="structure" className="space-y-6">
-          {groupStage ? (
-            <div className="space-y-4">
-              <div className="text-sm uppercase tracking-[0.24em] text-zinc-500">{structureSectionTitle}</div>
-              <div className="grid min-w-0 gap-4">
-                {groupStage.groups.map((group) => {
-                  const activeMembers = group.members.filter(
-                    (member) => member.status !== ParticipantStatus.REMOVED && member.status !== ParticipantStatus.REJECTED,
-                  );
-                  const groupRows = buildLeagueTable(
-                    activeMembers,
-                    tournament.matches.filter((match) => match.groupId === group.id),
-                    clubsBySlug,
-                    groupStage,
-                  );
-                  const groupCapacity = group.capacity ?? groupStage.participantsPerGroup ?? 0;
-                  const emptySlots = Array.from({ length: Math.max(groupCapacity - activeMembers.length, 0) }, (_, index) => ({
-                    id: `${group.id}-slot-${index + 1}`,
-                    position: activeMembers.length + index + 1,
-                  }));
+        <TabsContent value="structure">
+          {structureOptions.length ? (
+            <TournamentStructureSwitcher options={structureOptions}>
+              {groupStage ? (
+                <div className="space-y-4">
+                  <div className="text-sm uppercase tracking-[0.24em] text-zinc-500">{structureSectionTitle}</div>
+                  <div className="grid min-w-0 gap-4">
+                    {groupStage.groups.map((group) => {
+                      const activeMembers = group.members.filter(
+                        (member) => member.status !== ParticipantStatus.REMOVED && member.status !== ParticipantStatus.REJECTED,
+                      );
+                      const groupRows = buildLeagueTable(
+                        activeMembers,
+                        tournament.matches.filter((match) => match.groupId === group.id),
+                        clubsBySlug,
+                        groupStage,
+                      );
+                      const groupCapacity = group.capacity ?? groupStage.participantsPerGroup ?? 0;
+                      const emptySlots = Array.from({ length: Math.max(groupCapacity - activeMembers.length, 0) }, (_, index) => ({
+                        id: `${group.id}-slot-${index + 1}`,
+                        position: activeMembers.length + index + 1,
+                      }));
 
-                  return (
-                    <Card key={group.id} className="w-full min-w-0 max-w-full overflow-hidden p-0">
-                      <div className="border-b border-white/10 px-5 py-4 font-medium text-white">
-                        {tournament.format === TournamentFormat.CUSTOM && groupStage.groups.length > 1 ? group.name : "Таблица лиги"}
-                      </div>
-                      {groupRows.length ? (
-                        <StandingsTable
-                          rows={groupRows}
-                          highlights={customStandingHighlights.get(group.orderIndex) ?? []}
-                        />
-                      ) : (
-                        <div className="px-4 py-4 text-sm text-zinc-500">Участники группы появятся здесь после регистрации или распределения.</div>
-                      )}
-                      <EmptyGroupSlots slots={emptySlots} />
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
-
-          {leagueStage || tournament.format === TournamentFormat.ROUND_ROBIN ? (
-            <Card className="w-full min-w-0 max-w-full overflow-hidden p-0">
-              <div className="border-b border-white/10 px-5 py-4 font-medium text-white">Таблица лиги</div>
-              {leagueTable.length ? (
-                <StandingsTable rows={leagueTable} />
-              ) : (
-                <div className="px-4 py-4 text-sm text-zinc-500">Таблица лиги заполнится после первых сыгранных матчей.</div>
-              )}
-            </Card>
-          ) : null}
-
-          {playoffStages.length
-            ? playoffStages.map((stage) => (
-                <div key={stage.id} className="space-y-3">
-                  {playoffStages.length > 1 ? (
-                    <div className="text-sm uppercase tracking-[0.24em] text-zinc-500">{stage.name}</div>
-                  ) : null}
-                  <BracketView matches={stage.bracket?.matches ?? []} clubsByUserId={participantClubMap} />
+                      return (
+                        <Card key={group.id} className="w-full min-w-0 max-w-full overflow-hidden p-0">
+                          <div className="border-b border-white/10 px-5 py-4 font-medium text-white">
+                            {tournament.format === TournamentFormat.CUSTOM && groupStage.groups.length > 1 ? group.name : "Таблица лиги"}
+                          </div>
+                          {groupRows.length ? (
+                            <StandingsTable
+                              rows={groupRows}
+                              highlights={customStandingHighlights.get(group.orderIndex) ?? []}
+                            />
+                          ) : (
+                            <div className="px-4 py-4 text-sm text-zinc-500">Участники группы появятся здесь после регистрации или распределения.</div>
+                          )}
+                          <EmptyGroupSlots slots={emptySlots} />
+                        </Card>
+                      );
+                    })}
+                  </div>
                 </div>
-              ))
-            : null}
+              ) : null}
+
+              {leagueStage || tournament.format === TournamentFormat.ROUND_ROBIN ? (
+                <Card className="w-full min-w-0 max-w-full overflow-hidden p-0">
+                  <div className="border-b border-white/10 px-5 py-4 font-medium text-white">Таблица лиги</div>
+                  {leagueTable.length ? (
+                    <StandingsTable rows={leagueTable} />
+                  ) : (
+                    <div className="px-4 py-4 text-sm text-zinc-500">Таблица лиги заполнится после первых сыгранных матчей.</div>
+                  )}
+                </Card>
+              ) : null}
+
+              {playoffStages.length ? (
+                <div className="space-y-4">
+                  {playoffStages.map((stage) => (
+                    <div key={stage.id} className="space-y-3">
+                      {playoffStages.length > 1 ? (
+                        <div className="text-sm uppercase tracking-[0.24em] text-zinc-500">{stage.name}</div>
+                      ) : null}
+                      <BracketView matches={stage.bracket?.matches ?? []} clubsByUserId={participantClubMap} />
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </TournamentStructureSwitcher>
+          ) : (
+            <Card className="p-6 text-zinc-500">Структура турнира появится после публикации этапов.</Card>
+          )}
         </TabsContent>
 
         <TabsContent value="matches">
@@ -1087,15 +1164,15 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                 const sideTwo = resolveMatchSide(match, 2);
                 const player1LatestSubmission = match.submissions.find((submission) => submission.submittedById === sideOne.playerId);
                 const player2LatestSubmission = match.submissions.find((submission) => submission.submittedById === sideTwo.playerId);
-                const matchDeadline = match.stage?.deadlines.find((item) => item.round === match.round)?.deadlineAt ?? null;
-                const canSubmitScore = Boolean(matchDeadline) && match.status !== "CONFIRMED" && match.status !== "DISPUTED";
+                const matchDeadline = getMatchDeadline(match);
+                const canSubmitScore = isMatchOpenForScore(match);
 
                 return (
                   <MyMatchCard
                     key={match.id}
                     id={match.id}
                     meta={matchDeadline ? `Дедлайн: ${formatDate(matchDeadline)}` : "Дедлайн не задан"}
-                    isConfirmed={match.status === "CONFIRMED"}
+                    isConfirmed={match.status === MatchStatus.CONFIRMED || match.status === MatchStatus.FINISHED}
                     confirmedPlayer1Score={match.player1Score}
                     confirmedPlayer2Score={match.player2Score}
                     canSubmit={canSubmitScore}
@@ -1110,7 +1187,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                         ),
                     )}
                     helperText={
-                      match.status === "DISPUTED"
+                      match.status === MatchStatus.DISPUTED
                         ? "Матч переведён в спор. Теперь результат выставляет администрация."
                         : !matchDeadline
                           ? "Дедлайн для этого тура не задан. Счёт можно отправить только после назначения дедлайна."
@@ -1143,7 +1220,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                         : undefined,
                     })}
                     disputeHref="/contacts"
-                    isDisputed={match.status === "DISPUTED"}
+                    isDisputed={match.status === MatchStatus.DISPUTED}
                   />
                 );
               })
