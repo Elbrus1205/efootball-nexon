@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import Script from "next/script";
 import "./globals.css";
 import { Navbar } from "@/components/layout/navbar";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -63,6 +64,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" className="dark">
+      <Script src="https://telegram.org/js/telegram-web-app.js?62" strategy="beforeInteractive" />
       <body className={`${eFootballSans.variable} ${eFootballStencil.variable} bg-background font-sans text-foreground antialiased`}>
         <TopMailRuPixel />
         <noscript>

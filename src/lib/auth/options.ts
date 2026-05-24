@@ -12,6 +12,7 @@ import { getLegalAcceptanceData, isLegalAccepted } from "@/lib/legal-acceptance"
 import { generateFallbackName } from "@/lib/player-name";
 import { generateUniquePublicPlayerId } from "@/lib/public-player-id";
 import { describeTelegramOidcError, verifyAndConsumeTelegramIdToken } from "@/lib/telegram-oidc-server";
+import { verifyTelegramMiniAppInitData } from "@/lib/telegram-mini-app";
 import { verifyTwoFactorChallenge } from "@/lib/two-factor";
 import { generateUniqueDisplayName } from "@/lib/user-names";
 
@@ -393,6 +394,101 @@ export const authOptions: NextAuthOptions = {
           image: user.image,
           name: user.name ?? "Telegram Player",
           role: user.role,
+          isBanned: user.isBanned,
+          authSessionId,
+        };
+      },
+    }),
+    CredentialsProvider({
+      id: "telegram-miniapp",
+      name: "Telegram Mini App",
+      credentials: {
+        initData: { label: "Telegram Mini App Init Data", type: "text" },
+      },
+      async authorize(credentials, req) {
+        const context = await resolveSecurityContext(req?.headers);
+        const initData = credentials?.initData?.trim();
+        if (!initData) {
+          console.warn("[telegram-miniapp-auth] missing-init-data");
+          return null;
+        }
+
+        let profile;
+        try {
+          profile = verifyTelegramMiniAppInitData(initData);
+        } catch (error) {
+          console.warn("[telegram-miniapp-auth] init-data-verification-failed", {
+            error: error instanceof Error ? error.message : "unknown-error",
+          });
+          return null;
+        }
+
+        const telegramId = profile.user.id;
+        let user = await db.user.findUnique({
+          where: { telegramId },
+        });
+
+        if (!user) {
+          await createLoginHistory({
+            email: `telegram:${telegramId}`,
+            status: LoginAttemptStatus.FAILED,
+            context,
+          });
+          console.warn("[telegram-miniapp-auth] linked-user-not-found", { telegramId });
+          return null;
+        }
+
+        if (user.isBanned) {
+          await createLoginHistory({
+            userId: user.id,
+            email: user.email,
+            status: LoginAttemptStatus.FAILED,
+            context,
+          });
+          console.warn("[telegram-miniapp-auth] banned-user", { telegramId, userId: user.id });
+          return null;
+        }
+
+        user = await db.user.update({
+          where: { id: user.id },
+          data: {
+            telegramUsername: profile.user.username ?? null,
+            image: user.image ?? profile.user.photoUrl ?? undefined,
+          },
+        });
+
+        const authSessionId = await createSecuritySession({
+          userId: user.id,
+          context,
+        });
+
+        await createLoginHistory({
+          userId: user.id,
+          email: user.email,
+          status: LoginAttemptStatus.SUCCESS,
+          context,
+        });
+
+        await notifySuccessfulLogin({
+          userId: user.id,
+          provider: "telegram",
+          context,
+        }).catch((error) => {
+          console.error("Failed to send auth security notifications", error);
+        });
+
+        console.info("[telegram-miniapp-auth] authorize-success", {
+          telegramId,
+          userId: user.id,
+        });
+
+        return {
+          id: user.id,
+          email: user.email,
+          image: user.image,
+          name: user.name ?? user.telegramUsername ?? "Telegram Player",
+          role: user.role,
+          telegramUsername: user.telegramUsername,
           isBanned: user.isBanned,
           authSessionId,
         };
