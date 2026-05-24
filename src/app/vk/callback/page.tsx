@@ -28,8 +28,8 @@ function normalizeVkRedirectUrl(url?: string | null) {
 
   try {
     const parsed = new URL(url, window.location.origin);
-    if (parsed.hostname.toLowerCase() === "www.efootball-nexon.ru") {
-      parsed.hostname = "efootball-nexon.ru";
+    if (parsed.hostname.toLowerCase() === "www.efootball-nexon.com") {
+      parsed.hostname = "efootball-nexon.com";
     }
 
     if (parsed.origin === window.location.origin) {

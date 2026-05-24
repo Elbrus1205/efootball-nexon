@@ -1,4 +1,4 @@
-export const SITE_BASE_URL = "https://efootball-nexon.ru";
+export const SITE_BASE_URL = "https://efootball-nexon.com";
 
 export function normalizePromoCode(value: string) {
   return value.trim().toUpperCase().replace(/\s+/g, "");
