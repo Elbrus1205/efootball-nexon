@@ -54,16 +54,16 @@ function isTourMatch(match: MatchItem) {
 }
 
 function roundLabel(match: MatchItem) {
-  return `${isTourMatch(match) ? "РўСѓСЂ" : "Р Р°СѓРЅРґ"} ${match.round}`;
+  return `${isTourMatch(match) ? "Тур" : "Раунд"} ${match.round}`;
 }
 
 function roundSectionLabel(matches: MatchItem[], round: number) {
   const hasTours = matches.some(isTourMatch);
   const hasRounds = matches.some((match) => !isTourMatch(match));
 
-  if (hasTours && !hasRounds) return `РўСѓСЂ ${round}`;
-  if (!hasTours && hasRounds) return `Р Р°СѓРЅРґ ${round}`;
-  return `РўСѓСЂ/СЂР°СѓРЅРґ ${round}`;
+  if (hasTours && !hasRounds) return `Тур ${round}`;
+  if (!hasTours && hasRounds) return `Раунд ${round}`;
+  return `Тур/раунд ${round}`;
 }
 
 function scoreFromInput(value: string) {
@@ -75,11 +75,11 @@ function scoreFromInput(value: string) {
 }
 
 function participantName(participant?: ParticipantOption | null) {
-  return participant?.user.name?.trim() || "РРіСЂРѕРє РЅРµ РІС‹Р±СЂР°РЅ";
+  return participant?.user.name?.trim() || "Игрок не выбран";
 }
 
 function participantClubName(participant?: ParticipantOption | null) {
-  return participant?.clubName?.trim() || "РљР»СѓР± РЅРµ РЅР°Р·РЅР°С‡РµРЅ";
+  return participant?.clubName?.trim() || "Клуб не назначен";
 }
 
 function TeamBadge({ participant }: { participant?: ParticipantOption | null }) {
@@ -132,7 +132,7 @@ function MatchSideSelect({
         <option value="">{placeholder}</option>
         {participants.map((participant) => (
           <option key={participant.id} value={participant.id}>
-            {participantClubName(participant)} В· {participant.user.name ?? participant.id}
+            {participantClubName(participant)} · {participant.user.name ?? participant.id}
           </option>
         ))}
       </select>
@@ -301,10 +301,10 @@ export function MatchManager({
         <div className="grid gap-3 lg:grid-cols-[1fr_220px_180px]">
           <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-            <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="РџРѕРёСЃРє РїРѕ РёРіСЂРѕРєСѓ, РіСЂСѓРїРїРµ, СЃС‚Р°РґРёРё РёР»Рё Р·Р°РјРµС‚РєРµ" className="pl-10" />
+            <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по игроку, группе, стадии или заметке" className="pl-10" />
           </div>
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-11 rounded-xl border border-white/10 bg-white/5 px-4 text-sm text-white">
-            <option value="all">Р’СЃРµ СЃС‚Р°С‚СѓСЃС‹</option>
+            <option value="all">Все статусы</option>
             {Object.values(MatchStatus).map((status) => (
               <option key={status} value={status}>
                 {matchStatusLabel[status] ?? status}
@@ -312,7 +312,7 @@ export function MatchManager({
             ))}
           </select>
           <select value={roundFilter} onChange={(event) => setRoundFilter(event.target.value)} className="h-11 rounded-xl border border-white/10 bg-white/5 px-4 text-sm text-white">
-            <option value="all">Р’СЃРµ С‚СѓСЂС‹/СЂР°СѓРЅРґС‹</option>
+            <option value="all">Все туры/раунды</option>
             {rounds.map((round) => (
               <option key={round} value={round}>
                 {roundSectionLabel(
@@ -333,7 +333,7 @@ export function MatchManager({
           <div key={round} className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <div className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">{roundSectionLabel(roundMatches, round)}</div>
-              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">{roundMatches.length} РјР°С‚С‡РµР№</div>
+              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">{roundMatches.length} матчей</div>
             </div>
 
             <div className="grid gap-4">
@@ -514,7 +514,7 @@ export function MatchManager({
       })}
 
       {!visibleMatches.length ? (
-        <div className="rounded-[2rem] border border-dashed border-white/10 bg-black/10 p-5 text-sm text-zinc-500">РџРѕ С‚РµРєСѓС‰РёРј С„РёР»СЊС‚СЂР°Рј РјР°С‚С‡Рё РЅРµ РЅР°Р№РґРµРЅС‹.</div>
+        <div className="rounded-[2rem] border border-dashed border-white/10 bg-black/10 p-5 text-sm text-zinc-500">По текущим фильтрам матчи не найдены.</div>
       ) : null}
     </div>
   );
