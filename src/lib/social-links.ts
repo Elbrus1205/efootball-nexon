@@ -21,10 +21,7 @@ export type SocialLink = {
 
 export type TelegramProfileLinks = {
   href: string;
-  androidHref?: string;
-  iosHref?: string;
   webHref?: string;
-  telegramId?: string;
   username?: string;
 };
 
@@ -34,20 +31,7 @@ function normalizeTelegramUsername(value?: string | null) {
 }
 
 export function getTelegramProfileLinks(user: Pick<SocialUser, "telegramId" | "telegramUsername">): TelegramProfileLinks | null {
-  const telegramId = user.telegramId?.trim();
   const telegramUsername = normalizeTelegramUsername(user.telegramUsername);
-
-  if (telegramId && /^\d+$/.test(telegramId)) {
-    const iosHref = `tg://user?id=${telegramId}`;
-
-    return {
-      href: iosHref,
-      androidHref: `tg://openmessage?user_id=${telegramId}`,
-      iosHref,
-      telegramId,
-      username: telegramUsername ?? undefined,
-    };
-  }
 
   return telegramUsername ? { href: `https://t.me/${telegramUsername}`, webHref: `https://t.me/${telegramUsername}`, username: telegramUsername } : null;
 }
