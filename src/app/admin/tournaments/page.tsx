@@ -29,10 +29,12 @@ import { shouldSyncTournamentRegistrationLifecycle, syncTournamentLifecycleStatu
 import { formatDate } from "@/lib/utils";
 
 const actionButtonClass =
-  "h-full min-h-10 w-full gap-1.5 whitespace-normal rounded-md px-2.5 py-2 text-center text-[12px] leading-snug sm:min-h-11 sm:px-3 sm:text-sm [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:shrink-0 sm:[&_svg]:h-4 sm:[&_svg]:w-4";
+  "h-full min-h-11 w-full gap-1.5 whitespace-normal rounded-md px-2.5 py-2 text-center text-[12px] leading-snug sm:px-3 sm:text-sm [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:shrink-0 sm:[&_svg]:h-4 sm:[&_svg]:w-4";
+
+const wideActionButtonClass = `${actionButtonClass} col-span-2 sm:col-span-1`;
 
 const quickButtonClass =
-  "h-full min-h-9 w-full gap-1.5 whitespace-normal rounded-md px-2 py-1.5 text-center text-[12px] leading-tight sm:min-h-10 sm:px-2.5 sm:text-sm [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:shrink-0 sm:[&_svg]:h-4 sm:[&_svg]:w-4";
+  "h-full min-h-11 w-full gap-1.5 whitespace-normal rounded-md px-2.5 py-2 text-center text-[12px] leading-tight sm:min-h-10 sm:px-2.5 sm:text-sm [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:shrink-0 sm:[&_svg]:h-4 sm:[&_svg]:w-4";
 
 export default async function AdminTournamentsPage({
   searchParams,
@@ -139,7 +141,7 @@ export default async function AdminTournamentsPage({
 
                 <div className="grid min-w-0 gap-2.5 xl:max-w-[860px] xl:justify-self-end">
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 2xl:grid-cols-4">
-                    <Button asChild variant="secondary" className={actionButtonClass}>
+                    <Button asChild variant="secondary" className={wideActionButtonClass}>
                       <Link href={`/admin/tournaments/${tournament.id}`}>
                         <Eye />
                         Workspace
@@ -147,7 +149,7 @@ export default async function AdminTournamentsPage({
                     </Button>
 
                     {canCloseRegistration ? (
-                      <form action={`/api/admin/tournaments/${tournament.id}`} method="post" className="grid min-w-0">
+                      <form action={`/api/admin/tournaments/${tournament.id}`} method="post" className="col-span-2 grid min-w-0 sm:col-span-1">
                         <input type="hidden" name="_method" value="close" />
                         <Button variant="outline" className={actionButtonClass}>
                           <XCircle />
@@ -157,7 +159,7 @@ export default async function AdminTournamentsPage({
                     ) : null}
 
                     {canAssignClubs ? (
-                      <form action={`/api/admin/tournaments/${tournament.id}`} method="post" className="grid min-w-0">
+                      <form action={`/api/admin/tournaments/${tournament.id}`} method="post" className="col-span-2 grid min-w-0 sm:col-span-1">
                         <input type="hidden" name="_method" value="assign-random-clubs" />
                         <Button variant="outline" className={actionButtonClass}>
                           <Shuffle />
@@ -167,7 +169,7 @@ export default async function AdminTournamentsPage({
                     ) : null}
 
                     {canStartTournament ? (
-                      <form action={`/api/admin/tournaments/${tournament.id}`} method="post" className="grid min-w-0">
+                      <form action={`/api/admin/tournaments/${tournament.id}`} method="post" className="col-span-2 grid min-w-0 sm:col-span-1">
                         <input type="hidden" name="_method" value="start" />
                         <Button className={actionButtonClass}>
                           <Trophy />
@@ -186,7 +188,7 @@ export default async function AdminTournamentsPage({
                       </form>
                     ) : null}
 
-                    <Button asChild variant="outline" className={actionButtonClass}>
+                    <Button asChild variant="outline" className={wideActionButtonClass}>
                       <Link href={`/tournaments/${tournament.id}`}>
                         <Globe2 />
                         Публичная страница
@@ -219,7 +221,7 @@ export default async function AdminTournamentsPage({
                         Таблицы
                       </Link>
                     </Button>
-                    <Button asChild variant="outline" className={quickButtonClass}>
+                    <Button asChild variant="outline" className={`${quickButtonClass} col-span-2 sm:col-span-1`}>
                       <Link href={`/admin/tournaments/${tournament.id}/bracket`}>
                         <GitBranch />
                         Сетка
