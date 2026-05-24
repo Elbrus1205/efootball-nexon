@@ -579,10 +579,14 @@ function EmptyGroupSlots({ slots }: { slots: EmptyGroupSlot[] }) {
   );
 }
 
+function logTiming(label: string, start: number) {
+  console.log(`${label}: ${(performance.now() - start).toFixed(3)}ms`);
+}
+
 export async function generateMetadata({ params }: { params: { id: string } }) {
-  console.time("tournament-metadata");
+  const metadataStart = performance.now();
   const tournament = await db.tournament.findUnique({ where: { id: params.id }, select: { title: true } });
-  console.timeEnd("tournament-metadata");
+  logTiming("tournament-metadata", metadataStart);
   return tournament ? { title: tournament.title } : { title: "Турнир не найден" };
 }
 
@@ -596,34 +600,32 @@ function shouldSyncTournamentBeforeView(tournament: {
 }
 
 export default async function TournamentDetailsPage({ params }: { params: { id: string } }) {
-  console.time("tournament-page");
+  const pageStart = performance.now();
   noStore();
-  console.time("load-session");
-  console.time("load-lifecycle");
+  const sessionStart = performance.now();
+  const lifecycleStart = performance.now();
   const [session, lifecycleCandidate] = await Promise.all([
-    getCurrentSession(),
-    db.tournament.findUnique({
-      where: { id: params.id },
-      select: {
-        status: true,
-        autoOpenRegistration: true,
-        registrationStartsAt: true,
-        startsAt: true,
-      },
-    }),
+    getCurrentSession().finally(() => logTiming("load-session", sessionStart)),
+    db.tournament
+      .findUnique({
+        where: { id: params.id },
+        select: {
+          status: true,
+          autoOpenRegistration: true,
+          registrationStartsAt: true,
+          startsAt: true,
+        },
+      })
+      .finally(() => logTiming("load-lifecycle", lifecycleStart)),
   ]);
-  console.timeEnd("load-session");
-  console.timeEnd("load-lifecycle");
 
   if (lifecycleCandidate && shouldSyncTournamentBeforeView(lifecycleCandidate)) {
-    console.time("sync-tournament-lifecycle");
+    const syncStart = performance.now();
     await syncTournamentLifecycleStatus(params.id).catch(() => null);
-    console.timeEnd("sync-tournament-lifecycle");
+    logTiming("sync-tournament-lifecycle", syncStart);
   }
 
-  console.time("load-tournament");
-  console.time("load-matches");
-  console.time("load-users");
+  const tournamentStart = performance.now();
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
     select: {
@@ -800,12 +802,12 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
       },
     },
   });
-  console.timeEnd("load-users");
-  console.timeEnd("load-matches");
-  console.timeEnd("load-tournament");
+  logTiming("load-users", tournamentStart);
+  logTiming("load-matches", tournamentStart);
+  logTiming("load-tournament", tournamentStart);
 
   if (!tournament) {
-    console.timeEnd("tournament-page");
+    logTiming("tournament-page", pageStart);
     notFound();
   }
 
@@ -951,7 +953,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
     }),
   }));
 
-  console.timeEnd("tournament-page");
+  logTiming("tournament-page", pageStart);
 
   return (
     <div className="page-shell space-y-8">

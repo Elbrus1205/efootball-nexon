@@ -39,6 +39,15 @@ export async function getDivisionSettings() {
   });
 }
 
+export async function getDivisionPreviewSettings() {
+  return (
+    (await db.divisionSettings.findUnique({
+      where: { id: "default" },
+      select: { coverImage: true },
+    })) ?? { coverImage: null }
+  );
+}
+
 function divisionSeasonStatusForDates(startsAt: Date, endsAt: Date, now = new Date()) {
   if (now < startsAt) return DivisionSeasonStatus.SCHEDULED;
   if (now > endsAt) return DivisionSeasonStatus.FINISHED;
