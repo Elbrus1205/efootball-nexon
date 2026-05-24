@@ -34,7 +34,7 @@ export function ClubPlayerLine({
           }
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={badgePath} alt={clubName ?? playerName} className="h-full w-full object-contain p-1" />
+          <img src={badgePath} alt={clubName ?? playerName} loading="lazy" decoding="async" className="h-full w-full object-contain p-1" />
         </div>
       ) : null}
 

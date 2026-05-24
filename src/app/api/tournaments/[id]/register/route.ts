@@ -38,7 +38,25 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
-    include: { participants: { where: { status: { not: "REMOVED" } } } },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      format: true,
+      formatBlueprintJson: true,
+      groupsCount: true,
+      participantsPerGroup: true,
+      maxParticipants: true,
+      clubSelectionMode: true,
+      participants: {
+        where: { status: { not: "REMOVED" } },
+        select: {
+          id: true,
+          userId: true,
+          clubSlug: true,
+        },
+      },
+    },
   });
 
   if (!tournament) {
@@ -141,7 +159,11 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
   const session = await requireAuth();
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
-    include: {
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      registrationEndsAt: true,
       participants: {
         where: { userId: session.user.id },
         select: { id: true },

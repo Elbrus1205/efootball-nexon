@@ -12,17 +12,38 @@ export default async function AdminTournamentMatchesPage({ params }: { params: {
 
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
-    include: {
+    select: {
+      id: true,
+      title: true,
       participants: {
-        include: { user: true, group: true },
+        select: {
+          id: true,
+          userId: true,
+          clubName: true,
+          clubBadgePath: true,
+          user: { select: { name: true } },
+        },
         orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
       },
       matches: {
-        include: {
-          player1: true,
-          player2: true,
-          stage: true,
-          group: true,
+        select: {
+          id: true,
+          round: true,
+          matchNumber: true,
+          status: true,
+          scheduledAt: true,
+          player1Score: true,
+          player2Score: true,
+          notes: true,
+          player1Id: true,
+          player2Id: true,
+          participant1EntryId: true,
+          participant2EntryId: true,
+          bracketId: true,
+          player1: { select: { name: true } },
+          player2: { select: { name: true } },
+          stage: { select: { name: true, type: true } },
+          group: { select: { name: true } },
         },
         orderBy: [{ round: "asc" }, { matchNumber: "asc" }],
       },

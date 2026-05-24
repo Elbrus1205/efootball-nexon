@@ -60,9 +60,15 @@ export default async function AdminTournamentsPage({
   );
 
   const tournaments = await db.tournament.findMany({
-    include: {
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      playoffType: true,
+      startsAt: true,
+      maxParticipants: true,
       _count: { select: { participants: { where: { status: { not: ParticipantStatus.REMOVED } } }, stages: true, matches: true } },
-      season: true,
+      season: { select: { name: true } },
     },
     orderBy: { createdAt: "desc" },
   });

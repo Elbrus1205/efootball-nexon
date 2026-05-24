@@ -142,29 +142,89 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
   const [tournament, availableClubs] = await Promise.all([
     db.tournament.findUnique({
       where: { id: params.id },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        playoffType: true,
         participants: {
-          include: { user: true },
+          select: {
+            id: true,
+            userId: true,
+            clubSlug: true,
+            clubName: true,
+            clubBadgePath: true,
+            user: { select: { id: true, name: true, email: true } },
+          },
           orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
         },
         matches: {
-          include: {
-            player1: true,
-            player2: true,
-            participant1Entry: { include: { user: true } },
-            participant2Entry: { include: { user: true } },
-            stage: true,
-            group: true,
+          select: {
+            id: true,
+            stageId: true,
+            groupId: true,
+            bracketId: true,
+            round: true,
+            matchNumber: true,
+            status: true,
+            player1Id: true,
+            player2Id: true,
+            participant1EntryId: true,
+            participant2EntryId: true,
+            winnerId: true,
+            player1Score: true,
+            player2Score: true,
+            player1: { select: { id: true, name: true, email: true } },
+            player2: { select: { id: true, name: true, email: true } },
+            participant1Entry: {
+              select: {
+                id: true,
+                userId: true,
+                clubSlug: true,
+                clubName: true,
+                clubBadgePath: true,
+                user: { select: { id: true, name: true, email: true } },
+              },
+            },
+            participant2Entry: {
+              select: {
+                id: true,
+                userId: true,
+                clubSlug: true,
+                clubName: true,
+                clubBadgePath: true,
+                user: { select: { id: true, name: true, email: true } },
+              },
+            },
+            stage: { select: { id: true, name: true, type: true, status: true, orderIndex: true } },
+            group: { select: { id: true, name: true, orderIndex: true } },
           },
           orderBy: [{ round: "asc" }, { matchNumber: "asc" }],
         },
         stages: {
-          include: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            status: true,
+            orderIndex: true,
+            pointsForWin: true,
+            pointsForDraw: true,
+            pointsForLoss: true,
             groups: {
-              include: {
+              select: {
+                id: true,
+                name: true,
+                orderIndex: true,
                 members: {
                   where: { status: ParticipantStatus.CONFIRMED },
-                  include: { user: true },
+                  select: {
+                    id: true,
+                    userId: true,
+                    clubSlug: true,
+                    clubName: true,
+                    user: { select: { id: true, name: true, email: true } },
+                  },
                   orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
                 },
               },

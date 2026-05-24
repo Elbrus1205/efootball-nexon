@@ -2,30 +2,176 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
-  const tournament = await db.tournament.findUnique({
-    where: { id: params.id },
-    include: {
-      participants: { include: { user: true, group: true } },
-      matches: { include: { player1: true, player2: true, winner: true, stage: true, group: true, schedules: true } },
-      stages: {
-        include: {
-          groups: {
-            include: {
-              standings: {
-                include: { participant: { include: { user: true } } },
+  const start = performance.now();
+
+  try {
+    const tournament = await db.tournament.findUnique({
+      where: { id: params.id },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        description: true,
+        rules: true,
+        coverImage: true,
+        prizePool: true,
+        format: true,
+        formatBlueprintJson: true,
+        playoffType: true,
+        status: true,
+        startsAt: true,
+        registrationStartsAt: true,
+        registrationEndsAt: true,
+        clubSelectionMode: true,
+        maxParticipants: true,
+        participants: {
+          select: {
+            id: true,
+            userId: true,
+            status: true,
+            seed: true,
+            stageSeed: true,
+            groupId: true,
+            clubSlug: true,
+            clubName: true,
+            clubBadgePath: true,
+            user: { select: { id: true, publicId: true, name: true, image: true, telegramId: true, telegramUsername: true } },
+            group: { select: { id: true, name: true, orderIndex: true } },
+          },
+          orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
+        },
+        matches: {
+          select: {
+            id: true,
+            tournamentId: true,
+            stageId: true,
+            groupId: true,
+            bracketId: true,
+            round: true,
+            matchNumber: true,
+            bracket: true,
+            seriesKey: true,
+            legNumber: true,
+            isPenaltyTiebreak: true,
+            isThirdPlaceMatch: true,
+            scheduledAt: true,
+            startsAt: true,
+            finishedAt: true,
+            player1Id: true,
+            player2Id: true,
+            participant1EntryId: true,
+            participant2EntryId: true,
+            winnerId: true,
+            player1Score: true,
+            player2Score: true,
+            status: true,
+            notes: true,
+            player1: { select: { id: true, publicId: true, name: true, image: true } },
+            player2: { select: { id: true, publicId: true, name: true, image: true } },
+            winner: { select: { id: true, publicId: true, name: true, image: true } },
+            stage: { select: { id: true, name: true, type: true, orderIndex: true, roundsCount: true } },
+            group: { select: { id: true, name: true, orderIndex: true } },
+            schedules: { select: { id: true, startsAt: true, endsAt: true, timezone: true, slotLabel: true } },
+          },
+          orderBy: [{ round: "asc" }, { matchNumber: "asc" }],
+        },
+        stages: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            type: true,
+            status: true,
+            orderIndex: true,
+            groupsCount: true,
+            participantsPerGroup: true,
+            advancingPerGroup: true,
+            roundsCount: true,
+            pointsForWin: true,
+            pointsForDraw: true,
+            pointsForLoss: true,
+            groups: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                orderIndex: true,
+                capacity: true,
+                standings: {
+                  select: {
+                    id: true,
+                    participantId: true,
+                    played: true,
+                    wins: true,
+                    draws: true,
+                    losses: true,
+                    goalDifference: true,
+                    points: true,
+                    rank: true,
+                    participant: {
+                      select: {
+                        id: true,
+                        userId: true,
+                        clubSlug: true,
+                        clubName: true,
+                        clubBadgePath: true,
+                        user: { select: { id: true, publicId: true, name: true, image: true } },
+                      },
+                    },
+                  },
+                  orderBy: { rank: "asc" },
+                },
+              },
+              orderBy: { orderIndex: "asc" },
+            },
+            bracket: {
+              select: {
+                id: true,
+                type: true,
+                size: true,
+                legsCount: true,
+                thirdPlaceMatch: true,
+                slots: {
+                  select: {
+                    id: true,
+                    participantId: true,
+                    round: true,
+                    matchNumber: true,
+                    slotNumber: true,
+                    sourceType: true,
+                    sourceRef: true,
+                  },
+                  orderBy: [{ round: "asc" }, { matchNumber: "asc" }, { slotNumber: "asc" }],
+                },
+                matches: {
+                  select: {
+                    id: true,
+                    round: true,
+                    matchNumber: true,
+                    bracket: true,
+                    seriesKey: true,
+                    legNumber: true,
+                    isPenaltyTiebreak: true,
+                    isThirdPlaceMatch: true,
+                    player1Id: true,
+                    player2Id: true,
+                    winnerId: true,
+                    player1Score: true,
+                    player2Score: true,
+                    status: true,
+                  },
+                  orderBy: [{ round: "asc" }, { matchNumber: "asc" }],
+                },
               },
             },
           },
-          bracket: {
-            include: {
-              slots: true,
-              matches: true,
-            },
-          },
+          orderBy: { orderIndex: "asc" },
         },
       },
-    },
-  });
+    });
 
-  return NextResponse.json({ tournament });
+    return NextResponse.json({ tournament });
+  } finally {
+    console.log("Tournament API:", performance.now() - start);
+  }
 }

@@ -18,30 +18,53 @@ function shouldSyncTournamentForList(tournament: {
 }
 
 export default async function TournamentsPage() {
-  const session = await getCurrentSession();
-  const syncCandidates = await db.tournament.findMany({
-    where: { status: { in: [TournamentStatus.DRAFT, TournamentStatus.REGISTRATION_OPEN] } },
-    select: {
-      id: true,
-      status: true,
-      autoOpenRegistration: true,
-      registrationStartsAt: true,
-      startsAt: true,
-    },
-  });
+  console.time("tournaments-page");
+  console.time("load-session");
+  console.time("load-lifecycle");
+  const [session, syncCandidates] = await Promise.all([
+    getCurrentSession(),
+    db.tournament.findMany({
+      where: { status: { in: [TournamentStatus.DRAFT, TournamentStatus.REGISTRATION_OPEN] } },
+      select: {
+        id: true,
+        status: true,
+        autoOpenRegistration: true,
+        registrationStartsAt: true,
+        startsAt: true,
+      },
+    }),
+  ]);
+  console.timeEnd("load-session");
+  console.timeEnd("load-lifecycle");
+
+  console.time("sync-tournaments");
   await Promise.all(
     syncCandidates
       .filter(shouldSyncTournamentForList)
       .map((tournament) => syncTournamentLifecycleStatus(tournament.id).catch(() => null)),
   );
+  console.timeEnd("sync-tournaments");
 
-  const tournaments = await db.tournament.findMany({
-    include: {
-      _count: { select: { participants: { where: { status: { not: ParticipantStatus.REMOVED } } } } },
-    },
-    orderBy: [{ status: "asc" }, { startsAt: "asc" }],
-  });
-  const divisionSettings = await getDivisionSettings();
+  console.time("load-tournaments");
+  const tournamentsPromise = db.tournament
+    .findMany({
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        startsAt: true,
+        maxParticipants: true,
+        prizePool: true,
+        coverImage: true,
+        _count: { select: { participants: { where: { status: { not: ParticipantStatus.REMOVED } } } } },
+      },
+      orderBy: [{ status: "asc" }, { startsAt: "asc" }],
+    })
+    .finally(() => console.timeEnd("load-tournaments"));
+  console.time("load-division-settings");
+  const divisionSettingsPromise = getDivisionSettings().finally(() => console.timeEnd("load-division-settings"));
+  const [tournaments, divisionSettings] = await Promise.all([tournamentsPromise, divisionSettingsPromise]);
+  console.timeEnd("tournaments-page");
 
   return (
     <div className="page-shell space-y-8">

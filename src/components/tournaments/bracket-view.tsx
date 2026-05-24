@@ -1,4 +1,4 @@
-import { Match, MatchStatus, TournamentRegistration, User } from "@prisma/client";
+import { MatchStatus } from "@prisma/client";
 import { GitBranch, Trophy } from "lucide-react";
 import Link from "next/link";
 import type { CSSProperties } from "react";
@@ -10,12 +10,37 @@ type ClubMeta = {
   clubBadgePath?: string | null;
 };
 
-type BracketMatch = Match & {
-  player1: User | null;
-  player2: User | null;
-  winner: User | null;
-  participant1Entry: TournamentRegistration | null;
-  participant2Entry: TournamentRegistration | null;
+type BracketUser = {
+  id: string;
+  name: string | null;
+  email?: string | null;
+};
+
+type BracketParticipantEntry = {
+  userId: string;
+  clubName: string | null;
+  clubBadgePath: string | null;
+};
+
+type BracketMatch = {
+  id: string;
+  round: number;
+  matchNumber: number;
+  bracket: string;
+  seriesKey: string | null;
+  legNumber: number | null;
+  isPenaltyTiebreak: boolean;
+  isThirdPlaceMatch: boolean;
+  player1Id: string | null;
+  player2Id: string | null;
+  winnerId: string | null;
+  player1Score: number | null;
+  player2Score: number | null;
+  status: MatchStatus;
+  player1: BracketUser | null;
+  player2: BracketUser | null;
+  participant1Entry: BracketParticipantEntry | null;
+  participant2Entry: BracketParticipantEntry | null;
 };
 
 type BracketSeries = {
@@ -218,7 +243,7 @@ function BracketTeamRow({ side }: { side: BracketSide }) {
       >
         {side.badgePath ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={side.badgePath} alt={side.clubName ?? side.playerName} className="h-full w-full object-contain p-1" />
+          <img src={side.badgePath} alt={side.clubName ?? side.playerName} loading="lazy" decoding="async" className="h-full w-full object-contain p-1" />
         ) : (
           <span className={cn("text-[10px] uppercase text-zinc-500", side.isChampion && "text-amber-100", isLoser && "text-zinc-600")}>FC</span>
         )}

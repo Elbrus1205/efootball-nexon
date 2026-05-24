@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CalendarDays, Trophy, Users } from "lucide-react";
-import { Tournament, TournamentStatus } from "@prisma/client";
+import { TournamentStatus } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils";
@@ -14,11 +14,21 @@ const statusMap: Record<TournamentStatus, { label: string; variant: "primary" | 
   COMPLETED: { label: "Завершён", variant: "neutral" },
 };
 
+type TournamentCardTournament = {
+  id: string;
+  title: string;
+  status: TournamentStatus;
+  startsAt: Date;
+  maxParticipants: number;
+  prizePool: string | null;
+  coverImage: string | null;
+};
+
 export function TournamentCard({
   tournament,
   participantsCount,
 }: {
-  tournament: Tournament;
+  tournament: TournamentCardTournament;
   participantsCount: number;
 }) {
   const status = statusMap[tournament.status];
@@ -29,7 +39,7 @@ export function TournamentCard({
         {tournament.coverImage ? (
           <div className="-mx-5 -mt-5 mb-5 h-40 overflow-hidden border-b border-white/10 bg-white/[0.03]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={tournament.coverImage} alt={tournament.title} className="h-full w-full object-cover" />
+            <img src={tournament.coverImage} alt={tournament.title} loading="lazy" decoding="async" className="h-full w-full object-cover" />
           </div>
         ) : null}
         <CardHeader>
