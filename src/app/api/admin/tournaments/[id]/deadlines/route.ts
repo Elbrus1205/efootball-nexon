@@ -6,6 +6,19 @@ import { logAdminAction } from "@/lib/services/admin-actions";
 import { roundDeadlineSchema } from "@/lib/validators";
 
 const staffRoles = [UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE];
+const datetimeLocalPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/;
+
+function parseDeadlineDate(value: string) {
+  const trimmed = value.trim();
+  const localMatch = datetimeLocalPattern.exec(trimmed);
+
+  if (localMatch) {
+    const [, year, month, day, hour, minute, second = "0"] = localMatch;
+    return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour) - 3, Number(minute), Number(second)));
+  }
+
+  return new Date(trimmed);
+}
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const session = await requireRole(staffRoles);
@@ -71,7 +84,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.json({ ok: true, deadline: null });
   }
 
-  const date = new Date(deadlineAt);
+  const date = parseDeadlineDate(deadlineAt);
 
   if (Number.isNaN(date.getTime())) {
     return NextResponse.json({ error: "Укажите корректную дату дедлайна." }, { status: 400 });

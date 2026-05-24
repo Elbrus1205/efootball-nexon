@@ -40,6 +40,12 @@ function toInputDate(value: string | null) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+function toApiDate(value: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString();
+}
+
 function roundUnit(type: DeadlineStage["type"]) {
   return type === "PLAYOFF" ? "Раунд" : "Тур";
 }
@@ -93,7 +99,7 @@ export function RoundDeadlineManager({ tournamentId, stages }: RoundDeadlineMana
             body: JSON.stringify({
               stageId: row.stageId,
               round: row.round,
-              deadlineAt: nextValues[row.key] ?? "",
+              deadlineAt: toApiDate(nextValues[row.key] ?? ""),
             }),
           });
           const payload = await response.json().catch(() => ({
@@ -131,7 +137,7 @@ export function RoundDeadlineManager({ tournamentId, stages }: RoundDeadlineMana
           Дедлайны туров
         </CardTitle>
         <CardDescription>
-          Перед стартом турнира задайте срок для каждого тура группы/лиги и каждого раунда плей-офф. Количество строк берётся из структуры турнира.
+          Перед стартом турнира задайте срок для каждого тура группы/лиги и каждого раунда плей-офф. Количество строк берется из структуры турнира.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -194,7 +200,7 @@ export function RoundDeadlineManager({ tournamentId, stages }: RoundDeadlineMana
                             {roundUnit(stage.type)} {round.round}
                           </div>
                           <div className="mt-1 text-xs text-zinc-500">
-                            {round.matchesCount ? `${round.matchesCount} матчей` : "Матчи ещё не созданы"}
+                            {round.matchesCount ? `${round.matchesCount} матчей` : "Матчи еще не созданы"}
                           </div>
                         </div>
 
