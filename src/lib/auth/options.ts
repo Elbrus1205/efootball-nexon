@@ -394,6 +394,7 @@ export const authOptions: NextAuthOptions = {
           image: user.image,
           name: user.name ?? "Telegram Player",
           role: user.role,
+          telegramUsername: user.telegramUsername,
           isBanned: user.isBanned,
           authSessionId,
         };
