@@ -875,7 +875,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
       ? db.matchResultSubmission.findMany({
           where: { matchId: { in: myMatchIds } },
           orderBy: { createdAt: "desc" },
-          select: { id: true, matchId: true, submittedById: true, status: true, moderatorComment: true },
+          select: { id: true, matchId: true, submittedById: true, status: true, moderatorComment: true, player1Score: true, player2Score: true },
         })
       : Promise.resolve([]),
     getAvailableClubs(),
@@ -1238,6 +1238,14 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                           }
                         : undefined,
                     })}
+                    player1SubmittedScore={
+                      player1LatestSubmission
+                        ? {
+                            player1Score: player1LatestSubmission.player1Score,
+                            player2Score: player1LatestSubmission.player2Score,
+                          }
+                        : undefined
+                    }
                     player2SubmissionState={getSubmissionState({
                       matchStatus: match.status,
                       latestSubmission: player2LatestSubmission
@@ -1247,6 +1255,14 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                           }
                         : undefined,
                     })}
+                    player2SubmittedScore={
+                      player2LatestSubmission
+                        ? {
+                            player1Score: player2LatestSubmission.player1Score,
+                            player2Score: player2LatestSubmission.player2Score,
+                          }
+                        : undefined
+                    }
                     disputeHref="/contacts"
                     isDisputed={match.status === MatchStatus.DISPUTED}
                   />

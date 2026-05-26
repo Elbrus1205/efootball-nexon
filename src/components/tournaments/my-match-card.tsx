@@ -14,6 +14,11 @@ type SubmissionState = {
   tone: "success" | "waiting" | "retry" | "danger";
 };
 
+type SubmittedScore = {
+  player1Score: number;
+  player2Score: number;
+};
+
 type MyMatchCardProps = {
   id: string;
   meta?: string;
@@ -34,6 +39,8 @@ type MyMatchCardProps = {
   player2ClubBadgePath?: string | null;
   player1SubmissionState: SubmissionState;
   player2SubmissionState: SubmissionState;
+  player1SubmittedScore?: SubmittedScore;
+  player2SubmittedScore?: SubmittedScore;
   disputeHref: string;
   isDisputed: boolean;
 };
@@ -43,6 +50,19 @@ function submissionToneClass(tone: SubmissionState["tone"]) {
   if (tone === "danger") return "border-red-400/20 bg-red-400/10 text-red-300";
   if (tone === "retry") return "border-amber-400/20 bg-amber-400/10 text-amber-300";
   return "border-white/10 bg-white/5 text-zinc-400";
+}
+
+function SubmittedScoreBadge({ score }: { score?: SubmittedScore }) {
+  if (!score) return null;
+
+  return (
+    <div className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-white/10 bg-black/25 px-2 py-1 text-[10px] font-medium text-zinc-300">
+      <span className="text-zinc-500">Введён</span>
+      <span className="font-semibold text-white">
+        {score.player1Score}:{score.player2Score}
+      </span>
+    </div>
+  );
 }
 
 export function MyMatchCard({
@@ -65,6 +85,8 @@ export function MyMatchCard({
   player2ClubBadgePath,
   player1SubmissionState,
   player2SubmissionState,
+  player1SubmittedScore,
+  player2SubmittedScore,
   disputeHref,
   isDisputed,
 }: MyMatchCardProps) {
@@ -117,7 +139,7 @@ export function MyMatchCard({
         </div>
       ) : null}
 
-      <div className="p-4 sm:p-5">
+      <div className="p-3 sm:p-5">
         {/* Match grid */}
         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2 sm:gap-4">
           {/* Player 1 */}
@@ -136,6 +158,9 @@ export function MyMatchCard({
                 {player1SubmissionState.label}
               </div>
             ) : null}
+            <div className="text-center">
+              <SubmittedScoreBadge score={player1SubmittedScore} />
+            </div>
           </div>
 
           {/* Score */}
@@ -175,6 +200,9 @@ export function MyMatchCard({
                 {player2SubmissionState.label}
               </div>
             ) : null}
+            <div className="text-center">
+              <SubmittedScoreBadge score={player2SubmittedScore} />
+            </div>
           </div>
         </div>
 
@@ -184,7 +212,7 @@ export function MyMatchCard({
             <div className="space-y-2.5">
               {/* Score inputs centered */}
               <div className="flex items-center justify-center">
-                <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-6 py-3">
+                <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-black/25 px-5 py-2.5 sm:rounded-xl sm:px-6 sm:py-3">
                   <input
                     type="number"
                     min={0}
@@ -192,7 +220,7 @@ export function MyMatchCard({
                     placeholder="0"
                     value={player1ScoreInput}
                     onChange={(e) => setPlayer1ScoreInput(e.target.value)}
-                    className="w-12 bg-transparent text-center text-2xl font-bold text-white outline-none placeholder:text-zinc-600 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    className="w-10 bg-transparent text-center text-xl font-bold text-white outline-none placeholder:text-zinc-600 [appearance:textfield] sm:w-12 sm:text-2xl [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                   />
                   <span className="text-xl font-semibold text-zinc-500">:</span>
                   <input
@@ -202,7 +230,7 @@ export function MyMatchCard({
                     placeholder="0"
                     value={player2ScoreInput}
                     onChange={(e) => setPlayer2ScoreInput(e.target.value)}
-                    className="w-12 bg-transparent text-center text-2xl font-bold text-white outline-none placeholder:text-zinc-600 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    className="w-10 bg-transparent text-center text-xl font-bold text-white outline-none placeholder:text-zinc-600 [appearance:textfield] sm:w-12 sm:text-2xl [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                   />
                 </div>
               </div>
@@ -210,7 +238,7 @@ export function MyMatchCard({
               <button
                 onClick={onSubmit}
                 disabled={isPending || player1ScoreInput === "" || player2ScoreInput === ""}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-[0_4px_18px_rgba(59,130,246,0.25)] transition-all hover:bg-primary/90 hover:shadow-[0_4px_24px_rgba(59,130,246,0.35)] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-[0_4px_18px_rgba(59,130,246,0.22)] transition-all hover:bg-primary/90 hover:shadow-[0_4px_24px_rgba(59,130,246,0.3)] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40 sm:rounded-xl sm:py-3"
               >
                 <Send className="h-4 w-4" />
                 {isPending ? "Отправка..." : "Отправить результат"}
