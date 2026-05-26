@@ -18,9 +18,7 @@ export default async function AdminTournamentStandingsPage({ params }: { params:
             include: {
               standings: {
                 where: {
-                  participant: {
-                    status: { notIn: [ParticipantStatus.REMOVED, ParticipantStatus.REJECTED] },
-                  },
+                  OR: [{ participant: { status: ParticipantStatus.CONFIRMED } }, { played: { gt: 0 } }],
                 },
                 include: {
                   participant: {

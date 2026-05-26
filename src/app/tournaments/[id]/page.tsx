@@ -753,7 +753,6 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
               orderIndex: true,
               capacity: true,
               members: {
-                where: { status: ParticipantStatus.CONFIRMED },
                 select: {
                   id: true,
                   userId: true,
@@ -1085,12 +1084,21 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                   <div className="text-sm uppercase tracking-[0.24em] text-zinc-500">{structureSectionTitle}</div>
                   <div className="grid min-w-0 gap-4">
                     {groupStage.groups.map((group) => {
+                      const groupMatches = tournament.matches.filter((match) => match.groupId === group.id);
+                      const historicalMemberIds = new Set(
+                        groupMatches
+                          .filter((match) => match.status === MatchStatus.CONFIRMED || match.status === MatchStatus.FINISHED)
+                          .flatMap((match) => [match.participant1EntryId, match.participant2EntryId])
+                          .filter(Boolean),
+                      );
                       const activeMembers = group.members.filter(
-                        (member) => member.status !== ParticipantStatus.REMOVED && member.status !== ParticipantStatus.REJECTED,
+                        (member) =>
+                          member.status !== ParticipantStatus.REJECTED &&
+                          (member.status !== ParticipantStatus.REMOVED || historicalMemberIds.has(member.id)),
                       );
                       const groupRows = buildLeagueTable(
                         activeMembers,
-                        tournament.matches.filter((match) => match.groupId === group.id),
+                        groupMatches,
                         clubsBySlug,
                         groupStage,
                       );

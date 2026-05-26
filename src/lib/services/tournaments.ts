@@ -1842,7 +1842,7 @@ export async function recalculateGroupStandings(tournamentId: string) {
     where: { stage: { tournamentId } },
     include: {
       members: {
-        where: { status: ParticipantStatus.CONFIRMED },
+        where: { status: { not: ParticipantStatus.REJECTED } },
       },
       matches: true,
       standings: true,
@@ -1851,9 +1851,20 @@ export async function recalculateGroupStandings(tournamentId: string) {
   });
 
   for (const group of groups) {
-    const activeMemberIds = new Set(group.members.map((member) => member.id));
+    const historicalMemberIds = new Set<string>();
+
+    for (const match of group.matches.filter((item) => item.status === MatchStatus.CONFIRMED || item.status === MatchStatus.FINISHED)) {
+      if (match.participant1EntryId) historicalMemberIds.add(match.participant1EntryId);
+      if (match.participant2EntryId) historicalMemberIds.add(match.participant2EntryId);
+    }
+
+    const visibleMemberIds = new Set(
+      group.members
+        .filter((member) => member.status === ParticipantStatus.CONFIRMED || historicalMemberIds.has(member.id))
+        .map((member) => member.id),
+    );
     const staleStandingIds = group.standings
-      .filter((standing) => !activeMemberIds.has(standing.participantId))
+      .filter((standing) => !visibleMemberIds.has(standing.participantId))
       .map((standing) => standing.id);
 
     if (staleStandingIds.length) {
@@ -1865,19 +1876,21 @@ export async function recalculateGroupStandings(tournamentId: string) {
     }
 
     const base = new Map(
-      group.members.map((member) => [
-        member.id,
-        {
-          played: 0,
-          wins: 0,
-          draws: 0,
-          losses: 0,
-          goalsFor: 0,
-          goalsAgainst: 0,
-          goalDifference: 0,
-          points: 0,
-        },
-      ]),
+      group.members
+        .filter((member) => visibleMemberIds.has(member.id))
+        .map((member) => [
+          member.id,
+          {
+            played: 0,
+            wins: 0,
+            draws: 0,
+            losses: 0,
+            goalsFor: 0,
+            goalsAgainst: 0,
+            goalDifference: 0,
+            points: 0,
+          },
+        ]),
     );
 
     for (const match of group.matches.filter((item) => item.status === MatchStatus.CONFIRMED || item.status === MatchStatus.FINISHED)) {
@@ -1964,9 +1977,7 @@ export async function recalculateGroupStandings(tournamentId: string) {
     include: {
       standings: {
         where: {
-          participant: {
-            status: ParticipantStatus.CONFIRMED,
-          },
+          OR: [{ participant: { status: ParticipantStatus.CONFIRMED } }, { played: { gt: 0 } }],
         },
         include: { participant: { include: { user: true } } },
         orderBy: { rank: "asc" },
