@@ -18,7 +18,7 @@ export default async function AdminTournamentStandingsPage({ params }: { params:
             include: {
               standings: {
                 where: {
-                  OR: [{ participant: { status: ParticipantStatus.CONFIRMED } }, { played: { gt: 0 } }],
+                  participant: { status: ParticipantStatus.CONFIRMED },
                 },
                 include: {
                   participant: {

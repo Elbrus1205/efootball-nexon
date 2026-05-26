@@ -11,11 +11,16 @@ import { createNotification } from "@/lib/services/notifications";
 import { getTournamentGroupCapacityLimit, syncTournamentLifecycleStatus, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
 import { formatTournamentBanMessage } from "@/lib/user-ban";
 
+function hasPublicTelegramUsername(value?: string | null) {
+  const username = value?.trim().replace(/^@/, "");
+  return Boolean(username && /^[A-Za-z0-9_]{5,32}$/.test(username));
+}
+
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const session = await requireAuth();
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { isBanned: true, banReason: true, bannedUntil: true, telegramId: true },
+    select: { isBanned: true, banReason: true, bannedUntil: true, telegramId: true, telegramUsername: true },
   });
   const banMessage = formatTournamentBanMessage(user);
 
@@ -67,8 +72,11 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.json({ error: "Регистрация уже закрыта." }, { status: 400 });
   }
 
-  if (!user?.telegramId) {
-    return NextResponse.json({ error: "Для регистрации на этот турнир нужно привязать Telegram в настройках профиля." }, { status: 403 });
+  if (!user?.telegramId || !hasPublicTelegramUsername(user.telegramUsername)) {
+    return NextResponse.json(
+      { error: "Для регистрации на этот турнир нужно привязать Telegram с публичным @username в настройках профиля." },
+      { status: 403 },
+    );
   }
 
   const groupCapacityLimit = getTournamentGroupCapacityLimit(tournament);

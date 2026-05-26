@@ -10,6 +10,20 @@ import { formatTournamentBanMessage } from "@/lib/user-ban";
 
 const replaceableMatchStatuses = [MatchStatus.PENDING, MatchStatus.READY, MatchStatus.SCHEDULED];
 
+function hasPublicTelegramUsername(value?: string | null) {
+  const username = value?.trim().replace(/^@/, "");
+  return Boolean(username && /^[A-Za-z0-9_]{5,32}$/.test(username));
+}
+
+async function tournamentRequiresTelegram(tournamentId: string) {
+  const tournament = await db.tournament.findUnique({
+    where: { id: tournamentId },
+    select: { requireTelegramForRegistration: true },
+  });
+
+  return Boolean(tournament?.requireTelegramForRegistration);
+}
+
 export async function GET(_: Request, { params }: { params: { id: string } }) {
   await requireAnyPermission(["tournaments.manageParticipants", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
@@ -29,12 +43,19 @@ export async function POST(request: Request, { params }: { params: { id: string 
   if (body.action === "add" && body.userId) {
     const user = await db.user.findUnique({
       where: { id: body.userId },
-      select: { isBanned: true, banReason: true, bannedUntil: true },
+      select: { isBanned: true, banReason: true, bannedUntil: true, telegramId: true, telegramUsername: true },
     });
     const banMessage = formatTournamentBanMessage(user);
 
     if (banMessage) {
       return NextResponse.json({ error: banMessage }, { status: 403 });
+    }
+
+    if ((await tournamentRequiresTelegram(params.id)) && (!user?.telegramId || !hasPublicTelegramUsername(user.telegramUsername))) {
+      return NextResponse.json(
+        { error: "Для участия в этом турнире у игрока должен быть привязан Telegram с публичным @username." },
+        { status: 403 },
+      );
     }
 
     const registration = await db.tournamentRegistration.create({
@@ -96,7 +117,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     const replacementUser = await db.user.findUnique({
       where: { id: replacementUserId },
-      select: { id: true, name: true, email: true, isBanned: true, banReason: true, bannedUntil: true },
+      select: { id: true, name: true, email: true, isBanned: true, banReason: true, bannedUntil: true, telegramId: true, telegramUsername: true },
     });
 
     if (!replacementUser) {
@@ -107,6 +128,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     if (banMessage) {
       return NextResponse.json({ error: banMessage }, { status: 403 });
+    }
+
+    if ((await tournamentRequiresTelegram(params.id)) && (!replacementUser.telegramId || !hasPublicTelegramUsername(replacementUser.telegramUsername))) {
+      return NextResponse.json(
+        { error: "Для замены в этом турнире у нового игрока должен быть привязан Telegram с публичным @username." },
+        { status: 403 },
+      );
     }
 
     const duplicate = await db.tournamentRegistration.findFirst({
@@ -173,6 +201,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
           checkedInAt: before.checkedInAt,
         },
         include: { user: true, group: true },
+      });
+
+      await tx.tournamentRegistration.update({
+        where: { id: before.id },
+        data: {
+          notes: [removedNotes, `replacementRegistrationId:${registration.id}`].filter(Boolean).join("\n"),
+        },
       });
 
       const playerOneMatchIds = replaceableMatches

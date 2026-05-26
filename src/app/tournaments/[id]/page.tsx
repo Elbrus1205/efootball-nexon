@@ -250,9 +250,28 @@ function resolveClubBadgePath(
   return entry.clubSlug ? clubsBySlug.get(entry.clubSlug)?.imagePath ?? null : null;
 }
 
+function getReplacementRegistrationId(notes?: string | null) {
+  return notes?.match(/replacementRegistrationId:([A-Za-z0-9]+)/)?.[1] ?? null;
+}
+
+function resolveReplacementRegistrationId(entryId: string, replacements: Map<string, string>) {
+  let current = entryId;
+  const seen = new Set<string>();
+
+  while (replacements.has(current) && !seen.has(current)) {
+    seen.add(current);
+    current = replacements.get(current)!;
+  }
+
+  return current;
+}
+
 function buildLeagueTable(
   participants: Array<{
+    id: string;
     userId: string;
+    status?: ParticipantStatus;
+    notes?: string | null;
     clubSlug: string | null;
     clubName: string | null;
     clubBadgePath: string | null;
@@ -262,6 +281,8 @@ function buildLeagueTable(
     status?: MatchStatus;
     player1Id: string | null;
     player2Id: string | null;
+    participant1EntryId?: string | null;
+    participant2EntryId?: string | null;
     player1Score: number | null;
     player2Score: number | null;
   }>,
@@ -272,10 +293,17 @@ function buildLeagueTable(
   const pointsForWin = scoring.pointsForWin ?? 3;
   const pointsForDraw = scoring.pointsForDraw ?? 1;
   const pointsForLoss = scoring.pointsForLoss ?? 0;
+  const participantIds = new Set(participants.map((entry) => entry.id));
+  const replacementByEntryId = new Map(
+    participants
+      .filter((entry) => entry.status === ParticipantStatus.REMOVED)
+      .map((entry) => [entry.id, getReplacementRegistrationId(entry.notes)])
+      .filter((item): item is [string, string] => Boolean(item[1] && participantIds.has(item[1]))),
+  );
 
-  for (const entry of participants) {
+  for (const entry of participants.filter((item) => item.status !== ParticipantStatus.REMOVED && item.status !== ParticipantStatus.REJECTED)) {
     const playerName = getPlayerDisplayName(entry.user);
-    table.set(entry.userId, {
+    table.set(entry.id, {
       id: entry.user.id,
       playerId: entry.user.id,
       playerName,
@@ -292,11 +320,11 @@ function buildLeagueTable(
 
   for (const match of matches) {
     if (match.status && match.status !== MatchStatus.CONFIRMED && match.status !== MatchStatus.FINISHED) continue;
-    if (!match.player1Id || !match.player2Id) continue;
+    if (!match.participant1EntryId || !match.participant2EntryId) continue;
     if (match.player1Score === null || match.player2Score === null) continue;
 
-    const player1 = table.get(match.player1Id);
-    const player2 = table.get(match.player2Id);
+    const player1 = table.get(resolveReplacementRegistrationId(match.participant1EntryId, replacementByEntryId));
+    const player2 = table.get(resolveReplacementRegistrationId(match.participant2EntryId, replacementByEntryId));
     if (!player1 || !player2) continue;
 
     player1.played += 1;
@@ -655,6 +683,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           id: true,
           userId: true,
           status: true,
+          notes: true,
           clubSlug: true,
           clubName: true,
           clubBadgePath: true,
@@ -757,6 +786,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                   id: true,
                   userId: true,
                   status: true,
+                  notes: true,
                   clubSlug: true,
                   clubName: true,
                   clubBadgePath: true,
@@ -839,7 +869,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
 
   const [currentUser, rawSubmissions, availableClubs] = await Promise.all([
     currentUserId
-      ? db.user.findUnique({ where: { id: currentUserId }, select: { telegramId: true } })
+      ? db.user.findUnique({ where: { id: currentUserId }, select: { telegramId: true, telegramUsername: true } })
       : Promise.resolve(null),
     myMatchIds.length
       ? db.matchResultSubmission.findMany({
@@ -867,7 +897,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   const isRegistrationOpen = tournament.status === TournamentStatus.REGISTRATION_OPEN;
   const isLoggedIn = Boolean(currentUserId);
   const alreadyRegistered = !!currentUserId && activeParticipants.some((entry) => entry.userId === currentUserId);
-  const needsTelegram = Boolean(isLoggedIn && !currentUser?.telegramId);
+  const needsTelegram = Boolean(isLoggedIn && (!currentUser?.telegramId || !getTelegramProfileLinks(currentUser)));
   const canRegister = isLoggedIn && isRegistrationOpen && hasFreeSlots && !alreadyRegistered && !needsTelegram;
   const canCancelRegistration =
     isLoggedIn &&
@@ -1085,19 +1115,9 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                   <div className="grid min-w-0 gap-4">
                     {groupStage.groups.map((group) => {
                       const groupMatches = tournament.matches.filter((match) => match.groupId === group.id);
-                      const historicalMemberIds = new Set(
-                        groupMatches
-                          .filter((match) => match.status === MatchStatus.CONFIRMED || match.status === MatchStatus.FINISHED)
-                          .flatMap((match) => [match.participant1EntryId, match.participant2EntryId])
-                          .filter(Boolean),
-                      );
-                      const activeMembers = group.members.filter(
-                        (member) =>
-                          member.status !== ParticipantStatus.REJECTED &&
-                          (member.status !== ParticipantStatus.REMOVED || historicalMemberIds.has(member.id)),
-                      );
+                      const activeMembers = group.members.filter((member) => member.status === ParticipantStatus.CONFIRMED);
                       const groupRows = buildLeagueTable(
-                        activeMembers,
+                        group.members,
                         groupMatches,
                         clubsBySlug,
                         groupStage,

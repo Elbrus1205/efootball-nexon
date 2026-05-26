@@ -1837,6 +1837,22 @@ export async function assignRandomClubsToTournament(tournamentId: string) {
   });
 }
 
+function getReplacementRegistrationId(notes?: string | null) {
+  return notes?.match(/replacementRegistrationId:([A-Za-z0-9]+)/)?.[1] ?? null;
+}
+
+function resolveReplacementRegistrationId(entryId: string, replacements: Map<string, string>) {
+  let current = entryId;
+  const seen = new Set<string>();
+
+  while (replacements.has(current) && !seen.has(current)) {
+    seen.add(current);
+    current = replacements.get(current)!;
+  }
+
+  return current;
+}
+
 export async function recalculateGroupStandings(tournamentId: string) {
   const groups = await db.tournamentGroup.findMany({
     where: { stage: { tournamentId } },
@@ -1851,18 +1867,14 @@ export async function recalculateGroupStandings(tournamentId: string) {
   });
 
   for (const group of groups) {
-    const historicalMemberIds = new Set<string>();
-
-    for (const match of group.matches.filter((item) => item.status === MatchStatus.CONFIRMED || item.status === MatchStatus.FINISHED)) {
-      if (match.participant1EntryId) historicalMemberIds.add(match.participant1EntryId);
-      if (match.participant2EntryId) historicalMemberIds.add(match.participant2EntryId);
-    }
-
-    const visibleMemberIds = new Set(
+    const groupMemberIds = new Set(group.members.map((member) => member.id));
+    const replacementByEntryId = new Map(
       group.members
-        .filter((member) => member.status === ParticipantStatus.CONFIRMED || historicalMemberIds.has(member.id))
-        .map((member) => member.id),
+        .filter((member) => member.status === ParticipantStatus.REMOVED)
+        .map((member) => [member.id, getReplacementRegistrationId(member.notes)])
+        .filter((item): item is [string, string] => Boolean(item[1] && groupMemberIds.has(item[1]))),
     );
+    const visibleMemberIds = new Set(group.members.filter((member) => member.status === ParticipantStatus.CONFIRMED).map((member) => member.id));
     const staleStandingIds = group.standings
       .filter((standing) => !visibleMemberIds.has(standing.participantId))
       .map((standing) => standing.id);
@@ -1897,8 +1909,8 @@ export async function recalculateGroupStandings(tournamentId: string) {
       if (!match.participant1EntryId || !match.participant2EntryId) continue;
       if (match.player1Score == null || match.player2Score == null) continue;
 
-      const one = base.get(match.participant1EntryId);
-      const two = base.get(match.participant2EntryId);
+      const one = base.get(resolveReplacementRegistrationId(match.participant1EntryId, replacementByEntryId));
+      const two = base.get(resolveReplacementRegistrationId(match.participant2EntryId, replacementByEntryId));
       if (!one || !two) continue;
 
       one.played += 1;
@@ -1977,7 +1989,7 @@ export async function recalculateGroupStandings(tournamentId: string) {
     include: {
       standings: {
         where: {
-          OR: [{ participant: { status: ParticipantStatus.CONFIRMED } }, { played: { gt: 0 } }],
+          participant: { status: ParticipantStatus.CONFIRMED },
         },
         include: { participant: { include: { user: true } } },
         orderBy: { rank: "asc" },
