@@ -52,15 +52,20 @@ function submissionToneClass(tone: SubmissionState["tone"]) {
   return "border-white/10 bg-white/5 text-zinc-400";
 }
 
-function SubmittedScoreBadge({ score }: { score?: SubmittedScore }) {
-  if (!score) return null;
+function SubmissionBadge({ state, score, hidden }: { state: SubmissionState; score?: SubmittedScore; hidden?: boolean }) {
+  if (hidden) return null;
 
   return (
-    <div className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-white/10 bg-black/25 px-2 py-1 text-[10px] font-medium text-zinc-300">
-      <span className="text-zinc-500">Введён</span>
-      <span className="font-semibold text-white">
-        {score.player1Score}:{score.player2Score}
-      </span>
+    <div className={cn("mt-2 rounded-lg border px-2 py-1 text-center text-[10px] leading-[1.4]", submissionToneClass(state.tone))}>
+      <span>{state.label}</span>
+      {score ? (
+        <>
+          <span className="mx-1.5 text-current/45">•</span>
+          <span className="font-semibold text-white">
+            {score.player1Score}:{score.player2Score}
+          </span>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -153,14 +158,7 @@ export function MyMatchCard({
               compact
               reverse
             />
-            {!(player1SubmissionState.tone === "success" && isConfirmed) ? (
-              <div className={cn("mt-2 rounded-lg border px-2 py-1 text-center text-[10px] leading-[1.4]", submissionToneClass(player1SubmissionState.tone))}>
-                {player1SubmissionState.label}
-              </div>
-            ) : null}
-            <div className="text-center">
-              <SubmittedScoreBadge score={player1SubmittedScore} />
-            </div>
+            <SubmissionBadge state={player1SubmissionState} score={player1SubmittedScore} hidden={player1SubmissionState.tone === "success" && isConfirmed} />
           </div>
 
           {/* Score */}
@@ -195,14 +193,7 @@ export function MyMatchCard({
               align="center"
               compact
             />
-            {!(player2SubmissionState.tone === "success" && isConfirmed) ? (
-              <div className={cn("mt-2 rounded-lg border px-2 py-1 text-center text-[10px] leading-[1.4]", submissionToneClass(player2SubmissionState.tone))}>
-                {player2SubmissionState.label}
-              </div>
-            ) : null}
-            <div className="text-center">
-              <SubmittedScoreBadge score={player2SubmittedScore} />
-            </div>
+            <SubmissionBadge state={player2SubmissionState} score={player2SubmittedScore} hidden={player2SubmissionState.tone === "success" && isConfirmed} />
           </div>
         </div>
 
