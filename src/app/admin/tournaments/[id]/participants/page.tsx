@@ -1,7 +1,6 @@
 ﻿import { StageType } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { ParticipantManager } from "@/components/admin/participant-manager";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
@@ -33,16 +32,5 @@ export default async function AdminTournamentParticipantsPage({ params }: { para
     orderBy: [{ name: "asc" }, { createdAt: "desc" }],
   });
 
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Участники, посев и группы</CardTitle>
-          <CardDescription>Подтверждение, удаление, распределение по группам и ручной контроль состава турнира.</CardDescription>
-        </CardHeader>
-      </Card>
-
-      <ParticipantManager tournamentId={tournament.id} participants={tournament.participants} groups={tournament.stages.flatMap((stage) => stage.groups)} users={users} />
-    </div>
-  );
+  return <ParticipantManager tournamentId={tournament.id} participants={tournament.participants} groups={tournament.stages.flatMap((stage) => stage.groups)} users={users} />;
 }
