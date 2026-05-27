@@ -10,6 +10,7 @@ import { shouldSyncTournamentRegistrationLifecycle, syncTournamentLifecycleStatu
 export const dynamic = "force-dynamic";
 
 function logTiming(label: string, start: number) {
+  if (process.env.NODE_ENV === "production") return;
   console.log(`${label}: ${(performance.now() - start).toFixed(3)}ms`);
 }
 

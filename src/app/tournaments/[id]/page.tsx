@@ -619,6 +619,7 @@ function EmptyGroupSlots({ slots }: { slots: EmptyGroupSlot[] }) {
 }
 
 function logTiming(label: string, start: number) {
+  if (process.env.NODE_ENV === "production") return;
   console.log(`${label}: ${(performance.now() - start).toFixed(3)}ms`);
 }
 
@@ -682,7 +683,9 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
         select: {
           id: true,
           userId: true,
+          groupId: true,
           status: true,
+          seed: true,
           notes: true,
           clubSlug: true,
           clubName: true,
@@ -781,60 +784,12 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
               name: true,
               orderIndex: true,
               capacity: true,
-              members: {
-                select: {
-                  id: true,
-                  userId: true,
-                  status: true,
-                  notes: true,
-                  clubSlug: true,
-                  clubName: true,
-                  clubBadgePath: true,
-                  user: { select: { id: true, name: true, email: true } },
-                },
-                orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
-              },
             },
             orderBy: { orderIndex: "asc" },
           },
           bracket: {
             select: {
               id: true,
-              matches: {
-                select: {
-                  id: true,
-                  round: true,
-                  matchNumber: true,
-                  bracket: true,
-                  seriesKey: true,
-                  legNumber: true,
-                  isPenaltyTiebreak: true,
-                  isThirdPlaceMatch: true,
-                  player1Id: true,
-                  player2Id: true,
-                  winnerId: true,
-                  player1Score: true,
-                  player2Score: true,
-                  status: true,
-                  player1: { select: { id: true, name: true, email: true } },
-                  player2: { select: { id: true, name: true, email: true } },
-                  participant1Entry: {
-                    select: {
-                      userId: true,
-                      clubName: true,
-                      clubBadgePath: true,
-                    },
-                  },
-                  participant2Entry: {
-                    select: {
-                      userId: true,
-                      clubName: true,
-                      clubBadgePath: true,
-                    },
-                  },
-                },
-                orderBy: [{ round: "asc" }, { matchNumber: "asc" }],
-              },
             },
           },
         },
@@ -842,8 +797,6 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
       },
     },
   });
-  logTiming("load-users", tournamentStart);
-  logTiming("load-matches", tournamentStart);
   logTiming("load-tournament", tournamentStart);
 
   if (!tournament) {
@@ -908,6 +861,18 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   const groupStage = tournament.stages.find((stage) => stage.type === StageType.GROUP_STAGE);
   const playoffStages = tournament.stages.filter((stage) => stage.type === StageType.PLAYOFF && stage.bracket);
   const leagueStage = tournament.stages.find((stage) => stage.type === StageType.LEAGUE);
+  const participantsByGroupId = new Map<string, typeof tournament.participants>();
+
+  for (const participant of tournament.participants) {
+    if (!participant.groupId) continue;
+    const bucket = participantsByGroupId.get(participant.groupId) ?? [];
+    bucket.push(participant);
+    participantsByGroupId.set(participant.groupId, bucket);
+  }
+
+  for (const bucket of Array.from(participantsByGroupId.values())) {
+    bucket.sort((a, b) => (a.seed ?? 9999) - (b.seed ?? 9999));
+  }
 
   const visibleMatches = tournament.matches.sort(
     (a, b) =>
@@ -1115,9 +1080,10 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                   <div className="grid min-w-0 gap-4">
                     {groupStage.groups.map((group) => {
                       const groupMatches = tournament.matches.filter((match) => match.groupId === group.id);
-                      const activeMembers = group.members.filter((member) => member.status === ParticipantStatus.CONFIRMED);
+                      const groupMembers = participantsByGroupId.get(group.id) ?? [];
+                      const activeMembers = groupMembers.filter((member) => member.status === ParticipantStatus.CONFIRMED);
                       const groupRows = buildLeagueTable(
-                        group.members,
+                        groupMembers,
                         groupMatches,
                         clubsBySlug,
                         groupStage,
@@ -1167,7 +1133,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                       {playoffStages.length > 1 ? (
                         <div className="text-sm uppercase tracking-[0.24em] text-zinc-500">{stage.name}</div>
                       ) : null}
-                      <BracketView matches={stage.bracket?.matches ?? []} clubsByUserId={participantClubMap} />
+                      <BracketView matches={tournament.matches.filter((match) => match.stageId === stage.id)} clubsByUserId={participantClubMap} />
                     </div>
                   ))}
                 </div>
