@@ -214,19 +214,21 @@ export function RoundDeadlineManager({ tournamentId, stages }: RoundDeadlineMana
                           </div>
                         </div>
 
-                        <div className="min-w-0">
-                          <Input
-                            type="datetime-local"
-                            value={value}
-                            disabled={isSaving}
-                            onChange={(event) =>
-                              setValues((current) => ({
-                                ...current,
-                                [key]: event.target.value,
-                              }))
-                            }
-                            className="h-10 w-full min-w-0 rounded-lg px-2 text-[16px] sm:text-sm"
-                          />
+                        <div className="min-w-0 overflow-hidden">
+                          <div className="w-full max-w-full overflow-hidden rounded-lg">
+                            <Input
+                              type="datetime-local"
+                              value={value}
+                              disabled={isSaving}
+                              onChange={(event) =>
+                                setValues((current) => ({
+                                  ...current,
+                                  [key]: event.target.value,
+                                }))
+                              }
+                              className="block h-10 w-full max-w-full min-w-0 rounded-lg px-1.5 text-[13px] sm:px-2 sm:text-sm"
+                            />
+                          </div>
                           <div className="mt-1.5 min-h-4 truncate text-xs text-zinc-500">
                             {readableDate ? `Дедлайн: ${readableDate} МСК` : "Дедлайн не задан"}
                           </div>
