@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 export type ExportGroupRow = {
   rank: number;
   clubName: string;
+  clubBadgePath?: string | null;
   playerName: string;
   played: number;
   wins: number;
@@ -28,8 +29,10 @@ export type ExportScheduleMatch = {
   groupName: string | null;
   matchNumber: number;
   player1ClubName: string;
+  player1ClubBadgePath?: string | null;
   player1Name: string;
   player2ClubName: string;
+  player2ClubBadgePath?: string | null;
   player2Name: string;
   scoreLabel: string;
 };
@@ -48,6 +51,7 @@ type CanvasTextOptions = {
 };
 
 const CANVAS_SIZE = 1600;
+const SCHEDULE_MATCHES_PER_PAGE = 20;
 const COLORS = {
   black: "#070707",
   panel: "#101010",
@@ -81,6 +85,28 @@ function createCanvas() {
   canvas.width = CANVAS_SIZE;
   canvas.height = CANVAS_SIZE;
   return canvas;
+}
+
+const imageCache = new Map<string, Promise<HTMLImageElement | null>>();
+
+function loadImage(src?: string | null) {
+  const value = src?.trim();
+  if (!value) return Promise.resolve(null);
+
+  if (!imageCache.has(value)) {
+    imageCache.set(
+      value,
+      new Promise((resolve) => {
+        const image = new Image();
+        image.crossOrigin = "anonymous";
+        image.onload = () => resolve(image);
+        image.onerror = () => resolve(null);
+        image.src = value;
+      }),
+    );
+  }
+
+  return imageCache.get(value)!;
 }
 
 function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
@@ -138,6 +164,27 @@ function teamMark(value: string) {
     .join("");
 }
 
+async function drawClubBadge(ctx: CanvasRenderingContext2D, src: string | null | undefined, fallback: string, x: number, y: number, size: number) {
+  const radius = Math.max(9, size * 0.22);
+  fillRound(ctx, x, y, size, size, radius, "rgba(212,175,55,0.1)");
+  strokeRound(ctx, x, y, size, size, radius, "rgba(212,175,55,0.28)", 1.5);
+
+  const image = await loadImage(src);
+  if (image) {
+    ctx.save();
+    roundedRect(ctx, x + 5, y + 5, size - 10, size - 10, Math.max(7, size * 0.17));
+    ctx.clip();
+    ctx.drawImage(image, x + 5, y + 5, size - 10, size - 10);
+    ctx.restore();
+    return;
+  }
+
+  centeredText(ctx, teamMark(fallback), x + size / 2, y + size * 0.64, size - 10, {
+    font: `800 ${Math.max(12, Math.round(size * 0.3))}px Inter, Arial, sans-serif`,
+    fill: COLORS.gold,
+  });
+}
+
 function drawBackground(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = COLORS.black;
   ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
@@ -159,7 +206,7 @@ function drawBackground(ctx: CanvasRenderingContext2D) {
   }
 }
 
-function drawHeader(ctx: CanvasRenderingContext2D, tournamentTitle: string, title: string, subtitle: string) {
+function drawHeader(ctx: CanvasRenderingContext2D, tournamentTitle: string, title: string) {
   text(ctx, "EFOOTBALL NEXON", 82, 96, 620, {
     font: "700 34px Inter, Arial, sans-serif",
     fill: COLORS.white,
@@ -175,16 +222,6 @@ function drawHeader(ctx: CanvasRenderingContext2D, tournamentTitle: string, titl
   text(ctx, title, 82, 282, 820, {
     font: "700 32px Inter, Arial, sans-serif",
     fill: COLORS.muted,
-  });
-  text(ctx, subtitle, 82, 324, 820, {
-    font: "500 22px Inter, Arial, sans-serif",
-    fill: COLORS.dim,
-  });
-
-  strokeRound(ctx, 1186, 80, 330, 72, 12, "rgba(212, 175, 55, 0.46)", 2);
-  centeredText(ctx, "PNG EXPORT", 1351, 126, 260, {
-    font: "700 24px Inter, Arial, sans-serif",
-    fill: COLORS.gold,
   });
 }
 
@@ -207,7 +244,7 @@ function drawFooter(ctx: CanvasRenderingContext2D, pageLabel: string) {
   });
 }
 
-function drawGroupCard(ctx: CanvasRenderingContext2D, group: ExportGroup, x: number, y: number, width: number, height: number) {
+async function drawGroupCard(ctx: CanvasRenderingContext2D, group: ExportGroup, x: number, y: number, width: number, height: number) {
   fillRound(ctx, x, y, width, height, 24, COLORS.panel);
   strokeRound(ctx, x, y, width, height, 24, "rgba(212, 175, 55, 0.34)", 2);
 
@@ -247,7 +284,8 @@ function drawGroupCard(ctx: CanvasRenderingContext2D, group: ExportGroup, x: num
     });
   }
 
-  shownRows.forEach((row, index) => {
+  for (let index = 0; index < shownRows.length; index += 1) {
+    const row = shownRows[index];
     const rowY = tableTop + 38 + index * rowHeight;
     if (index % 2 === 0) {
       ctx.fillStyle = "rgba(255,255,255,0.025)";
@@ -260,11 +298,12 @@ function drawGroupCard(ctx: CanvasRenderingContext2D, group: ExportGroup, x: num
       fill: rankColor,
       align: "center",
     });
-    text(ctx, row.clubName, x + 78, rowY + rowHeight * 0.48, width - 374, {
+    await drawClubBadge(ctx, row.clubBadgePath, row.clubName, x + 76, rowY + rowHeight * 0.17, 28);
+    text(ctx, row.clubName, x + 112, rowY + rowHeight * 0.48, width - 408, {
       font: "700 19px Inter, Arial, sans-serif",
       fill: COLORS.white,
     });
-    text(ctx, row.playerName, x + 78, rowY + rowHeight * 0.84, width - 374, {
+    text(ctx, row.playerName, x + 112, rowY + rowHeight * 0.84, width - 408, {
       font: "500 15px Inter, Arial, sans-serif",
       fill: COLORS.dim,
     });
@@ -278,7 +317,7 @@ function drawGroupCard(ctx: CanvasRenderingContext2D, group: ExportGroup, x: num
         align: "center",
       });
     });
-  });
+  }
 
   if (shownRows.length < group.rows.length) {
     text(ctx, `+${group.rows.length - shownRows.length} игроков`, x + 30, y + height - 26, width - 60, {
@@ -288,9 +327,9 @@ function drawGroupCard(ctx: CanvasRenderingContext2D, group: ExportGroup, x: num
   }
 }
 
-function drawGroupsPage(ctx: CanvasRenderingContext2D, tournamentTitle: string, groups: ExportGroup[], pageIndex: number, totalPages: number) {
+async function drawGroupsPage(ctx: CanvasRenderingContext2D, tournamentTitle: string, groups: ExportGroup[], pageIndex: number, totalPages: number) {
   drawBackground(ctx);
-  drawHeader(ctx, tournamentTitle, "Таблицы групп", "4 группы на одном квадратном изображении");
+  drawHeader(ctx, tournamentTitle, "Таблицы групп");
 
   const marginX = 82;
   const top = 382;
@@ -298,35 +337,33 @@ function drawGroupsPage(ctx: CanvasRenderingContext2D, tournamentTitle: string, 
   const cardWidth = (CANVAS_SIZE - marginX * 2 - gap) / 2;
   const cardHeight = 520;
 
-  groups.forEach((group, index) => {
+  for (let index = 0; index < groups.length; index += 1) {
+    const group = groups[index];
     const col = index % 2;
     const row = Math.floor(index / 2);
-    drawGroupCard(ctx, group, marginX + col * (cardWidth + gap), top + row * (cardHeight + gap), cardWidth, cardHeight);
-  });
+    await drawGroupCard(ctx, group, marginX + col * (cardWidth + gap), top + row * (cardHeight + gap), cardWidth, cardHeight);
+  }
 
   drawFooter(ctx, `Группы · ${pageIndex + 1}/${totalPages}`);
 }
 
-function drawScheduleRow(ctx: CanvasRenderingContext2D, match: ExportScheduleMatch, x: number, y: number, width: number, height: number) {
+async function drawScheduleRow(
+  ctx: CanvasRenderingContext2D,
+  match: ExportScheduleMatch,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  showGroupLabel: boolean,
+) {
   fillRound(ctx, x, y, width, height, 16, COLORS.panel);
   strokeRound(ctx, x, y, width, height, 16, "rgba(255,255,255,0.1)", 1.5);
 
   const badgeSize = 44;
-  fillRound(ctx, x + 20, y + 28, badgeSize, badgeSize, 11, "rgba(212,175,55,0.1)");
-  strokeRound(ctx, x + 20, y + 28, badgeSize, badgeSize, 11, "rgba(212,175,55,0.28)", 1.5);
-  centeredText(ctx, teamMark(match.player1ClubName), x + 42, y + 57, 36, {
-    font: "800 14px Inter, Arial, sans-serif",
-    fill: COLORS.gold,
-  });
+  await drawClubBadge(ctx, match.player1ClubBadgePath, match.player1ClubName, x + 20, y + 32, badgeSize);
+  await drawClubBadge(ctx, match.player2ClubBadgePath, match.player2ClubName, x + width - 64, y + 32, badgeSize);
 
-  fillRound(ctx, x + width - 64, y + 28, badgeSize, badgeSize, 11, "rgba(212,175,55,0.1)");
-  strokeRound(ctx, x + width - 64, y + 28, badgeSize, badgeSize, 11, "rgba(212,175,55,0.28)", 1.5);
-  centeredText(ctx, teamMark(match.player2ClubName), x + width - 42, y + 57, 36, {
-    font: "800 14px Inter, Arial, sans-serif",
-    fill: COLORS.gold,
-  });
-
-  if (match.groupName) {
+  if (showGroupLabel && match.groupName) {
     text(ctx, match.groupName.toUpperCase(), x + 82, y + 25, 230, {
       font: "700 13px Inter, Arial, sans-serif",
       fill: COLORS.goldSoft,
@@ -359,7 +396,7 @@ function drawScheduleRow(ctx: CanvasRenderingContext2D, match: ExportScheduleMat
   });
 }
 
-function drawSchedulePage(
+async function drawSchedulePage(
   ctx: CanvasRenderingContext2D,
   tournamentTitle: string,
   round: ExportScheduleRound,
@@ -368,20 +405,25 @@ function drawSchedulePage(
   totalPages: number,
 ) {
   drawBackground(ctx);
-  drawHeader(ctx, tournamentTitle, round.title, `${matches.length} матчей на этой странице`);
+  drawHeader(ctx, tournamentTitle, round.title);
 
   const marginX = 82;
   const top = 382;
   const gapX = 28;
-  const gapY = 18;
-  const rowHeight = 92;
+  const gapY = 14;
+  const rowHeight = 98;
   const columnWidth = (CANVAS_SIZE - marginX * 2 - gapX) / 2;
+  const seenGroups = new Set<string>();
 
-  matches.forEach((match, index) => {
-    const column = index >= 12 ? 1 : 0;
-    const row = index % 12;
-    drawScheduleRow(ctx, match, marginX + column * (columnWidth + gapX), top + row * (rowHeight + gapY), columnWidth, rowHeight);
-  });
+  for (let index = 0; index < matches.length; index += 1) {
+    const match = matches[index];
+    const column = index >= 10 ? 1 : 0;
+    const row = index % 10;
+    const groupKey = match.groupName ?? "no-group";
+    const showGroupLabel = !seenGroups.has(groupKey);
+    seenGroups.add(groupKey);
+    await drawScheduleRow(ctx, match, marginX + column * (columnWidth + gapX), top + row * (rowHeight + gapY), columnWidth, rowHeight, showGroupLabel);
+  }
 
   drawFooter(ctx, `${round.title} · ${pageIndex + 1}/${totalPages}`);
 }
@@ -450,7 +492,7 @@ export function TournamentImageExporter({
       const ctx = canvas.getContext("2d");
       if (!ctx) continue;
 
-      drawGroupsPage(ctx, tournamentTitle, chunk, index, chunks.length);
+      await drawGroupsPage(ctx, tournamentTitle, chunk, index, chunks.length);
       await downloadCanvas(canvas, `${safeFileName(tournamentTitle)}-groups-${index + 1}.png`);
     }
 
@@ -463,14 +505,14 @@ export function TournamentImageExporter({
 
     let downloaded = 0;
     for (const round of selectedRounds) {
-      const chunks = chunkArray(round.matches, 24);
+      const chunks = chunkArray(round.matches, SCHEDULE_MATCHES_PER_PAGE);
       for (let index = 0; index < chunks.length; index += 1) {
         const chunk = chunks[index];
         const canvas = createCanvas();
         const ctx = canvas.getContext("2d");
         if (!ctx) continue;
 
-        drawSchedulePage(ctx, tournamentTitle, round, chunk, index, chunks.length);
+        await drawSchedulePage(ctx, tournamentTitle, round, chunk, index, chunks.length);
         await downloadCanvas(canvas, `${safeFileName(tournamentTitle)}-${safeFileName(round.title)}-${index + 1}.png`);
         downloaded += 1;
       }

@@ -46,11 +46,23 @@ function resolveClubName(
   return entry.clubName?.trim() && !isBrokenClubName(entry.clubName) ? entry.clubName.trim() : fallback;
 }
 
+function resolveClubBadgePath(
+  entry: {
+    clubSlug?: string | null;
+    clubBadgePath?: string | null;
+  },
+  clubsBySlug: Map<string, { imagePath: string }>,
+) {
+  if (entry.clubBadgePath?.trim()) return entry.clubBadgePath;
+  return entry.clubSlug ? clubsBySlug.get(entry.clubSlug)?.imagePath ?? null : null;
+}
+
 function buildExportRows(
   participants: Array<{
     userId: string;
     clubSlug: string | null;
     clubName: string | null;
+    clubBadgePath: string | null;
     user: { id: string; name: string | null };
   }>,
   matches: Array<{
@@ -60,7 +72,7 @@ function buildExportRows(
     player1Score: number | null;
     player2Score: number | null;
   }>,
-  clubsBySlug: Map<string, { name: string }>,
+  clubsBySlug: Map<string, { name: string; imagePath: string }>,
   scoring: { pointsForWin?: number | null; pointsForDraw?: number | null; pointsForLoss?: number | null },
 ): ExportGroup["rows"] {
   const table = new Map<string, ExportGroup["rows"][number]>();
@@ -73,6 +85,7 @@ function buildExportRows(
     table.set(entry.userId, {
       rank: 0,
       clubName: resolveClubName(entry, clubsBySlug, playerName),
+      clubBadgePath: resolveClubBadgePath(entry, clubsBySlug),
       playerName,
       played: 0,
       wins: 0,
@@ -223,6 +236,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
                     userId: true,
                     clubSlug: true,
                     clubName: true,
+                    clubBadgePath: true,
                     user: { select: { id: true, name: true, email: true } },
                   },
                   orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
@@ -252,6 +266,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
         entry.userId,
         {
           clubName: resolveClubName(entry, clubsBySlug, playerName),
+          clubBadgePath: resolveClubBadgePath(entry, clubsBySlug),
           playerName,
         },
       ];
@@ -273,6 +288,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
     return {
       playerName,
       clubName: mappedClub?.clubName ?? (entry ? resolveClubName(entry, clubsBySlug, playerName) : playerName),
+      clubBadgePath: mappedClub?.clubBadgePath ?? (entry ? resolveClubBadgePath(entry, clubsBySlug) : null),
     };
   };
 
@@ -310,8 +326,10 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
       groupName: match.group?.name ?? null,
       matchNumber: match.matchNumber,
       player1ClubName: player1.clubName,
+      player1ClubBadgePath: player1.clubBadgePath,
       player1Name: player1.playerName,
       player2ClubName: player2.clubName,
+      player2ClubBadgePath: player2.clubBadgePath,
       player2Name: player2.playerName,
       scoreLabel: match.player1Score !== null && match.player2Score !== null ? `${match.player1Score} - ${match.player2Score}` : "VS",
     });
