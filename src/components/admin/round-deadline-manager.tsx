@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+
+const MOSCOW_TIME_ZONE = "Europe/Moscow";
 
 type DeadlineRound = {
   round: number;
@@ -31,19 +33,31 @@ function rowKey(stageId: string, round: number) {
   return `${stageId}:${round}`;
 }
 
+function getMoscowParts(date: Date) {
+  const parts = new Intl.DateTimeFormat("ru-RU", {
+    timeZone: MOSCOW_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+
+  return Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
+}
+
 function toInputDate(value: string | null) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
 
-  const pad = (num: number) => String(num).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  const parts = getMoscowParts(date);
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
 }
 
 function toApiDate(value: string) {
-  if (!value) return "";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "" : date.toISOString();
+  return value.trim();
 }
 
 function roundUnit(type: DeadlineStage["type"]) {
@@ -51,15 +65,17 @@ function roundUnit(type: DeadlineStage["type"]) {
 }
 
 function formatShortDate(value: string) {
-  const date = new Date(value);
+  if (!value) return null;
+  const date = new Date(`${value}:00+03:00`);
   if (Number.isNaN(date.getTime())) return null;
 
-  return date.toLocaleString("ru-RU", {
+  return new Intl.DateTimeFormat("ru-RU", {
+    timeZone: MOSCOW_TIME_ZONE,
     day: "2-digit",
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
-  });
+  }).format(date);
 }
 
 export function RoundDeadlineManager({ tournamentId, stages }: RoundDeadlineManagerProps) {
@@ -130,58 +146,52 @@ export function RoundDeadlineManager({ tournamentId, stages }: RoundDeadlineMana
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <Card className="overflow-hidden rounded-lg">
+      <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-3">
+        <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
           <CalendarClock className="h-5 w-5 text-primary" />
           Дедлайны туров
         </CardTitle>
-        <CardDescription>
-          Перед стартом турнира задайте срок для каждого тура группы/лиги и каждого раунда плей-офф. Количество строк берется из структуры турнира.
-        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 p-3 pt-2 sm:space-y-4 sm:p-5 sm:pt-2">
         {totalRows ? (
           <>
-            <div className="flex flex-col gap-3 rounded-2xl border border-primary/15 bg-primary/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-sm text-zinc-300">
-                Заполните нужные даты, оставьте лишние поля пустыми и сохраните все дедлайны одним нажатием.
-              </div>
-              <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
+            <div className="flex justify-end rounded-lg border border-primary/15 bg-primary/[0.06] p-2 sm:p-3">
+              <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:justify-end">
                 <Button
                   type="button"
                   disabled={isSaving}
                   onClick={() => void saveAllDeadlines()}
-                  className="h-11 min-h-11 rounded-xl px-4"
+                  className="h-9 min-w-0 rounded-lg px-2 text-xs sm:px-3 sm:text-sm"
                 >
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  {isSaving ? "Сохранение" : "Сохранить все"}
+                  <CheckCircle2 className="mr-1.5 h-4 w-4 shrink-0" />
+                  {isSaving ? "Сохраняю" : "Сохранить"}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   disabled={isSaving}
                   onClick={clearAllDeadlines}
-                  className="h-11 min-h-11 rounded-xl px-4"
+                  className="h-9 min-w-0 rounded-lg px-2 text-xs sm:px-3 sm:text-sm"
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Очистить все
+                  <Trash2 className="mr-1.5 h-4 w-4 shrink-0" />
+                  Очистить
                 </Button>
               </div>
             </div>
 
             {stages.map((stage) => (
-              <div key={stage.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <div className="font-medium text-white">{stage.name}</div>
-                    <div className="mt-1 text-xs uppercase tracking-[0.18em] text-zinc-500">
+              <div key={stage.id} className="rounded-lg border border-white/10 bg-black/20 p-3 sm:p-4">
+                <div className="mb-3 flex min-w-0 items-center justify-between gap-2 sm:mb-4">
+                  <div className="min-w-0">
+                    <div className="truncate font-medium text-white">{stage.name}</div>
+                    <div className="mt-1 text-[11px] uppercase tracking-[0.12em] text-zinc-500 sm:text-xs">
                       {roundUnit(stage.type) === "Тур" ? "Туры" : "Раунды"}: {stage.rounds.length}
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {stage.rounds.map((round) => {
                     const key = rowKey(stage.id, round.round);
                     const value = values[key] ?? "";
@@ -191,15 +201,15 @@ export function RoundDeadlineManager({ tournamentId, stages }: RoundDeadlineMana
                       <div
                         key={key}
                         className={cn(
-                          "grid gap-3 rounded-xl border border-white/10 bg-white/[0.035] p-3 transition md:grid-cols-[minmax(120px,0.8fr)_minmax(220px,1fr)] md:items-start",
+                          "grid min-w-0 gap-2 rounded-lg border border-white/10 bg-white/[0.035] p-2.5 transition sm:p-3 md:grid-cols-[minmax(110px,0.75fr)_minmax(220px,1fr)] md:items-start",
                           value && "border-primary/25 bg-primary/[0.06]",
                         )}
                       >
                         <div className="min-w-0">
-                          <div className="font-medium text-white">
+                          <div className="text-sm font-medium text-white sm:text-base">
                             {roundUnit(stage.type)} {round.round}
                           </div>
-                          <div className="mt-1 text-xs text-zinc-500">
+                          <div className="mt-0.5 text-xs text-zinc-500">
                             {round.matchesCount ? `${round.matchesCount} матчей` : "Матчи еще не созданы"}
                           </div>
                         </div>
@@ -215,10 +225,10 @@ export function RoundDeadlineManager({ tournamentId, stages }: RoundDeadlineMana
                                 [key]: event.target.value,
                               }))
                             }
-                            className="w-full min-w-0"
+                            className="h-10 w-full min-w-0 rounded-lg px-2 text-[16px] sm:text-sm"
                           />
-                          <div className="mt-2 min-h-4 text-xs text-zinc-500">
-                            {readableDate ? `Дедлайн: ${readableDate}` : "Дедлайн не задан"}
+                          <div className="mt-1.5 min-h-4 truncate text-xs text-zinc-500">
+                            {readableDate ? `Дедлайн: ${readableDate} МСК` : "Дедлайн не задан"}
                           </div>
                         </div>
                       </div>
@@ -229,7 +239,7 @@ export function RoundDeadlineManager({ tournamentId, stages }: RoundDeadlineMana
             ))}
           </>
         ) : (
-          <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-4 text-sm text-zinc-500">
+          <div className="rounded-lg border border-dashed border-white/10 bg-black/10 p-4 text-sm text-zinc-500">
             Сначала создайте этапы и матчи турнира. После этого здесь появятся туры и раунды для дедлайнов.
           </div>
         )}
