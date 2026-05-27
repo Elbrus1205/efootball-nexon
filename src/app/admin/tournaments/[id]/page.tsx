@@ -2,6 +2,7 @@
 import { MatchStatus, ParticipantStatus, StageType } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { Activity, CalendarClock, Dices, GitBranch, History, Pencil, Swords, Trash2, Trophy, Users } from "lucide-react";
+import { RandomScoresButton } from "@/components/admin/random-scores-button";
 import { TournamentImageExporter, type ExportGroup, type ExportScheduleRound } from "@/components/admin/tournament-image-exporter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -450,17 +451,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
                         : "Нет матчей без результата с двумя назначенными игроками."}
                   </div>
                 </div>
-                <form action={`/api/admin/tournaments/${tournament.id}/matches/random-scores`} method="post">
-                  <Button
-                    type="submit"
-                    disabled={!canRunRandomScores}
-                    variant="outline"
-                    className="h-10 w-full rounded-lg border-amber-300/30 bg-amber-300/10 px-4 text-amber-100 hover:bg-amber-300/15 sm:w-auto"
-                  >
-                    <Dices className="mr-2 h-4 w-4" />
-                    Выставить рандом
-                  </Button>
-                </form>
+                <RandomScoresButton tournamentId={tournament.id} disabled={!canRunRandomScores} />
               </div>
             </div>
           </CardContent>

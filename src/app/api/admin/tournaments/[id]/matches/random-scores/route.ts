@@ -111,7 +111,7 @@ async function fallbackAdvancePlayoffWinner(matchId: string) {
   }
 }
 
-export async function POST(_: Request, { params }: { params: { id: string } }) {
+export async function POST(_request: Request, { params }: { params: { id: string } }) {
   const session = await requirePermission("matches.generate");
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
@@ -150,7 +150,7 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
 
   if (!playableMatches.length) {
     await syncTournamentLifecycleStatus(params.id);
-    return NextResponse.redirect(new URL(`/admin/tournaments/${params.id}`, _.url));
+    return NextResponse.json({ message: "Матчей без результата нет, статусы турнира обновлены." });
   }
 
   const stageWithMatches =
@@ -222,5 +222,8 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
     },
   });
 
-  return NextResponse.redirect(new URL(`/admin/tournaments/${params.id}`, _.url));
+  return NextResponse.json({
+    message: `Рандомный счет выставлен для ${updatedMatches.length} матчей.`,
+    updatedCount: updatedMatches.length,
+  });
 }
