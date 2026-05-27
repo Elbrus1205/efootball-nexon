@@ -226,7 +226,7 @@ export function RoundDeadlineManager({ tournamentId, stages }: RoundDeadlineMana
                                   [key]: event.target.value,
                                 }))
                               }
-                              className="block h-10 w-full max-w-full min-w-0 rounded-lg px-1.5 text-[13px] sm:px-2 sm:text-sm"
+                              className="block h-10 w-full max-w-full min-w-0 rounded-lg px-1.5 py-0 text-center text-[13px] leading-10 sm:px-2 sm:text-sm [&::-webkit-date-and-time-value]:m-0 [&::-webkit-date-and-time-value]:min-h-10 [&::-webkit-date-and-time-value]:text-center [&::-webkit-date-and-time-value]:leading-10"
                             />
                           </div>
                           <div className="mt-1.5 min-h-4 truncate text-xs text-zinc-500">
