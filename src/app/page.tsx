@@ -47,18 +47,7 @@ export default async function HomePage() {
 
   return (
     <div className="cinematic-home -mt-16 min-h-screen overflow-hidden sm:-mt-[72px] lg:-mt-20">
-      <video
-        className="home-background-video"
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="metadata"
-        aria-hidden="true"
-      >
-        <source src="/videos/home-bg.mp4?v=20260523" type="video/mp4" />
-      </video>
-      <div className="home-background-video-overlay" aria-hidden="true" />
+      <div className="home-static-background" aria-hidden="true" />
 
       <section className="relative mx-auto flex min-h-[100svh] w-full max-w-[480px] flex-col px-5 pb-8 pt-16 sm:px-7 sm:pt-20">
         <div className="carbon-backdrop" />

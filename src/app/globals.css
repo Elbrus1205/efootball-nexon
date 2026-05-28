@@ -1087,31 +1087,20 @@ body a[role="button"]:not(:disabled):hover {
   min-height: 100svh;
 }
 
-.home-background-video {
+.home-static-background {
   position: absolute;
   inset: 0;
   z-index: 0;
-  height: 100%;
-  min-height: 100svh;
-  width: 100%;
-  object-fit: cover;
-  object-position: center center;
-  background: var(--classic-black);
-}
-
-.home-background-video-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
   min-height: 100svh;
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.68), rgba(0, 0, 0, 0.82)),
-    radial-gradient(circle at 50% 34%, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.56) 72%);
+    linear-gradient(180deg, rgba(8, 8, 8, 0.94), rgba(0, 0, 0, 1)),
+    radial-gradient(ellipse at 50% 24%, rgba(74, 58, 20, 0.18), transparent 64%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.035), transparent 34%, rgba(185, 148, 79, 0.08) 100%);
 }
 
 .cinematic-home > section {
   position: relative;
-  z-index: 2;
+  z-index: 1;
 }
 
 .cinematic-hero-copy,
