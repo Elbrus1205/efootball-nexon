@@ -73,7 +73,7 @@ function AchievementVisual({ group }: { group: AchievementGroupProgress }) {
   return (
     <div className="overflow-hidden rounded-lg border border-white/10 bg-black/40">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={group.imagePath} alt={group.currentLevel?.title ?? group.title} className="aspect-[5/1] w-full object-cover" />
+      <img src={group.imagePath} alt={group.currentLevel?.title ?? group.title} className="h-auto max-h-24 w-full object-contain sm:max-h-32" />
     </div>
   );
 }
