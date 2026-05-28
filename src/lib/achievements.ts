@@ -114,12 +114,13 @@ export const achievementGroups: AchievementGroupDefinition[] = [
     metric: "played",
     metricLabel: "Матчи",
     accent: "blue",
+    baseImagePath: "/dostij/IMG_6680.PNG",
     levels: [
-      { key: "played_100", title: "Сыграйте 100 матчей", shortTitle: "100 матчей", target: 100 },
-      { key: "played_1000", title: "Сыграйте 1000 матчей", shortTitle: "1000 матчей", target: 1000 },
-      { key: "played_5000", title: "Сыграйте 5000 матчей", shortTitle: "5000 матчей", target: 5000 },
-      { key: "played_10000", title: "Сыграйте 10000 матчей", shortTitle: "10000 матчей", target: 10000 },
-      { key: "played_15000", title: "Сыграйте 15000 матчей", shortTitle: "15000 матчей", target: 15000 },
+      { key: "played_100", title: "Сыграйте 100 матчей", shortTitle: "100 матчей", target: 100, imagePath: "/dostij/IMG_6681.PNG" },
+      { key: "played_1000", title: "Сыграйте 1000 матчей", shortTitle: "1000 матчей", target: 1000, imagePath: "/dostij/IMG_6682.PNG" },
+      { key: "played_5000", title: "Сыграйте 5000 матчей", shortTitle: "5000 матчей", target: 5000, imagePath: "/dostij/IMG_6683.PNG" },
+      { key: "played_10000", title: "Сыграйте 10000 матчей", shortTitle: "10000 матчей", target: 10000, imagePath: "/dostij/IMG_6684.PNG" },
+      { key: "played_15000", title: "Сыграйте 15000 матчей", shortTitle: "15000 матчей", target: 15000, imagePath: "/dostij/IMG_6685.PNG" },
     ],
   },
   {
