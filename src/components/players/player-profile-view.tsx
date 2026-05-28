@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { Clock3, PencilLine } from "lucide-react";
+import { ArrowRight, Clock3, PencilLine, Trophy } from "lucide-react";
 import type { ProfileStatusTone, Season, UserRole } from "@prisma/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { PlayerAchievementsPanel } from "@/components/players/player-achievements-panel";
 import { PlayerCareerStatsPanel } from "@/components/players/player-career-stats";
 import { PlayerSocialLinks } from "@/components/players/player-social-links";
 import { StatsPeriodSwitcher } from "@/components/players/stats-period-switcher";
@@ -55,6 +54,47 @@ type PlayerProfileViewProps = {
   badgeLabel: string;
   editHref?: string;
 };
+
+function AchievementShortcut({ achievements, href }: { achievements: AchievementGroupProgress[]; href: string }) {
+  const unlockedTotal = achievements.reduce((sum, group) => sum + group.unlockedCount, 0);
+  const total = achievements.reduce((sum, group) => sum + group.totalCount, 0);
+  const percent = total ? Math.round((unlockedTotal / total) * 100) : 0;
+  const featuredImage = achievements.find((group) => group.imagePath)?.imagePath;
+
+  return (
+    <Card className="overflow-hidden rounded-lg p-0">
+      <Link href={href} className="group grid gap-3 p-4 transition hover:bg-white/[0.035] sm:grid-cols-[minmax(0,1fr)_220px] sm:items-center sm:p-5">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-amber-200" />
+            <div className="font-semibold text-white">Достижения</div>
+          </div>
+          <div className="mt-1 text-sm text-zinc-500">
+            Открыто {unlockedTotal} из {total}
+          </div>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+            <div className="h-full rounded-full bg-amber-300" style={{ width: `${percent}%` }} />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+          {featuredImage ? (
+            <div className="min-w-0 overflow-hidden rounded-md border border-white/10 bg-black/40">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={featuredImage} alt="Достижения" className="h-10 w-28 object-cover sm:h-12 sm:w-36" />
+            </div>
+          ) : (
+            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-200">Профиль</div>
+          )}
+          <div className="flex shrink-0 items-center gap-1 text-sm font-medium text-zinc-200 group-hover:text-white">
+            Открыть
+            <ArrowRight className="h-4 w-4" />
+          </div>
+        </div>
+      </Link>
+    </Card>
+  );
+}
 
 export function PlayerProfileView({
   user,
@@ -218,7 +258,7 @@ export function PlayerProfileView({
         </div>
       </Card>
 
-      <PlayerAchievementsPanel achievements={achievements} />
+      <AchievementShortcut achievements={achievements} href={`${basePath}/achievements`} />
 
       <Card className="rounded-lg p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
