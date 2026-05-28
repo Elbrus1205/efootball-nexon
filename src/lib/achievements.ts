@@ -130,12 +130,13 @@ export const achievementGroups: AchievementGroupDefinition[] = [
     metric: "cleanSheets",
     metricLabel: "Сухие матчи",
     accent: "violet",
+    baseImagePath: "/dostij/IMG_6686.PNG",
     levels: [
-      { key: "clean_sheets_10", title: "Проведите 10 сухих матчей", shortTitle: "10 сухих", target: 10 },
-      { key: "clean_sheets_100", title: "Проведите 100 сухих матчей", shortTitle: "100 сухих", target: 100 },
-      { key: "clean_sheets_500", title: "Проведите 500 сухих матчей", shortTitle: "500 сухих", target: 500 },
-      { key: "clean_sheets_1000", title: "Проведите 1000 сухих матчей", shortTitle: "1000 сухих", target: 1000 },
-      { key: "clean_sheets_3000", title: "Проведите 3000 сухих матчей", shortTitle: "3000 сухих", target: 3000 },
+      { key: "clean_sheets_10", title: "Проведите 10 сухих матчей", shortTitle: "10 сухих", target: 10, imagePath: "/dostij/IMG_6687.PNG" },
+      { key: "clean_sheets_100", title: "Проведите 100 сухих матчей", shortTitle: "100 сухих", target: 100, imagePath: "/dostij/IMG_6688.PNG" },
+      { key: "clean_sheets_500", title: "Проведите 500 сухих матчей", shortTitle: "500 сухих", target: 500, imagePath: "/dostij/IMG_6689.PNG" },
+      { key: "clean_sheets_1000", title: "Проведите 1000 сухих матчей", shortTitle: "1000 сухих", target: 1000, imagePath: "/dostij/IMG_6690.PNG" },
+      { key: "clean_sheets_3000", title: "Проведите 3000 сухих матчей", shortTitle: "3000 сухих", target: 3000, imagePath: "/dostij/IMG_6691.PNG" },
     ],
   },
 ];
