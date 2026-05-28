@@ -1,26 +1,50 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { ArrowRight, Gauge, RadioTower, ShieldCheck, Trophy } from "lucide-react";
+import { ArrowRight, CircleDollarSign, RadioTower, Send, ShieldCheck, Trophy, Users } from "lucide-react";
 import { TournamentStatus } from "@prisma/client";
-import { db } from "@/lib/db";
-import { getCurrentSession } from "@/lib/auth/session";
-import { getArchivedHomeStats, parsePrizePoolValue } from "@/lib/home-stats";
 import { AnimatedCounter } from "@/components/home/animated-counter";
+import { getCurrentSession } from "@/lib/auth/session";
+import { db } from "@/lib/db";
+import { getArchivedHomeStats, parsePrizePoolValue } from "@/lib/home-stats";
 
-const heroTitleLines = ["eFootball", "Nexon"].map((line) => Array.from(line));
+const heroPhrases = [
+  "Докажи, что ты лучший",
+  "Покажи свой уровень",
+  "Участвуй в турнирах eFootball",
+  "Выигрывай титулы и достижения",
+  "Стань частью eFootball Nexon",
+];
+
+const telegramHref = process.env.NEXT_PUBLIC_SUPPORT_TELEGRAM_URL ?? "https://t.me/efootball_nexon";
+const vkHref = process.env.NEXT_PUBLIC_SUPPORT_VK_URL ?? "https://vk.com/efootball_nexon";
+
+function formatPrize(value: number) {
+  return value > 0 ? `${new Intl.NumberFormat("ru-RU").format(value)} ₽` : "SOON";
+}
 
 export default async function HomePage() {
   const session = await getCurrentSession();
+  const onlineSince = new Date(Date.now() - 15 * 60 * 1000);
 
-  const [activeTournaments, totalUsers, totalTournaments, prizePoolTournaments] = await db.$transaction([
+  const [onlineSessions, totalUsers, completedTournaments, activeTournaments, prizePoolTournaments] = await db.$transaction([
+    db.securitySession.findMany({
+      where: {
+        revokedAt: null,
+        lastActiveAt: { gte: onlineSince },
+      },
+      distinct: ["userId"],
+      select: { userId: true },
+    }),
+    db.user.count(),
+    db.tournament.count({
+      where: { status: TournamentStatus.COMPLETED },
+    }),
     db.tournament.count({
       where: {
         status: { in: [TournamentStatus.REGISTRATION_OPEN, TournamentStatus.AWAITING_START, TournamentStatus.IN_PROGRESS] },
       },
     }),
-    db.user.count(),
-    db.tournament.count(),
     db.tournament.findMany({
       where: { prizePool: { not: null } },
       select: { prizePool: true },
@@ -32,109 +56,93 @@ export default async function HomePage() {
     return sum + parsePrizePoolValue(tournament.prizePool);
   }, archivedHomeStats.prizePool);
 
-  const registeredPlayers = totalUsers + archivedHomeStats.users;
-  const officialTournaments = totalTournaments + archivedHomeStats.tournaments;
-  const prizeLabel = totalPrizePool > 0
-    ? `${new Intl.NumberFormat("en-US").format(totalPrizePool)} ₽`
-    : "SOON";
-
   const stats = [
-    { icon: ShieldCheck, value: registeredPlayers, text: null, label: "ИГРОКОВ ЗАРЕГИСТРИРОВАНО" },
-    { icon: Trophy, value: null, text: prizeLabel, label: "ПРИЗОВ РАЗЫГРАНО" },
-    { icon: RadioTower, value: officialTournaments, text: null, label: "ОФИЦИАЛЬНЫХ ТУРНИРОВ" },
-    { icon: Gauge, value: null, text: activeTournaments > 0 ? "АКТИВЕН" : "ОЖИДАНИЕ", label: "ТЕКУЩИЙ СЕЗОН" },
+    { icon: RadioTower, value: onlineSessions.length, text: null, label: "игроков онлайн", meta: "live now" },
+    { icon: Users, value: totalUsers + archivedHomeStats.users, text: null, label: "игроков зарегистрировано", meta: "community" },
+    { icon: Trophy, value: completedTournaments + archivedHomeStats.tournaments, text: null, label: "турниров сыграно", meta: "official seasons" },
+    { icon: CircleDollarSign, value: null, text: formatPrize(totalPrizePool), label: "призов разыграно", meta: "awarded" },
   ];
 
   return (
-    <div className="cinematic-home -mt-16 min-h-screen overflow-hidden sm:-mt-[72px] lg:-mt-20">
-      <div className="home-static-background" aria-hidden="true" />
+    <main className="home-premium -mt-16 min-h-screen overflow-hidden sm:-mt-[72px] lg:-mt-20">
+      <div className="home-premium-bg" aria-hidden="true">
+        <Image
+          src="/images-site/home-hero-football-bg.png"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="home-premium-bg-image"
+        />
+        <div className="home-premium-bg-grade" />
+        <div className="home-premium-depth home-premium-depth-left" />
+        <div className="home-premium-depth home-premium-depth-right" />
+      </div>
 
-      <section className="relative mx-auto flex min-h-[100svh] w-full max-w-[480px] flex-col px-5 pb-8 pt-16 sm:px-7 sm:pt-20">
-        <div className="carbon-backdrop" />
-        <div className="studio-shadow studio-shadow-left" />
-        <div className="studio-shadow studio-shadow-right" />
-        <div className="cinematic-fog" />
-        <div className="cinematic-grain" />
-        <div className="gold-particle-field" />
-        <div className="hud-depth-lines" />
+      <section className="home-premium-stage">
+        <div className="home-premium-loader" aria-hidden="true" />
+        <div className="home-premium-grid" aria-hidden="true" />
+        <div className="home-premium-rings" aria-hidden="true" />
 
-        <div className="brand-monolith" aria-hidden="true">
-          <Image
-            src="/images-site/IMG_6086.PNG"
-            alt=""
-            width={780}
-            height={780}
-            priority
-            className="brand-monolith-image"
-          />
-        </div>
-
-        <div className="relative z-10 flex flex-1 flex-col justify-center">
-          <div className="cinematic-hero-copy">
-            <div className="hero-system-label">GLOBAL MOBILE CHAMPIONSHIP</div>
-
-            <h1 className="cinematic-title" aria-label="eFootball Nexon">
-              <span className="sr-only">eFootball Nexon</span>
-              <span aria-hidden="true" className="cinematic-title-lines">
-                {heroTitleLines.map((line, lineIndex) => (
-                  <span key={lineIndex} className="cinematic-title-line">
-                    {line.map((char, charIndex) => {
-                      const globalIndex = lineIndex * 10 + charIndex;
-
-                      return (
-                        <span
-                          key={`${char}-${lineIndex}-${charIndex}`}
-                          className="cinematic-title-char"
-                          style={{ animationDelay: `${0.32 + globalIndex * 0.045}s` } as CSSProperties}
-                        >
-                          {char}
-                        </span>
-                      );
-                    })}
-                  </span>
-                ))}
-              </span>
-            </h1>
-
-            <p className="cinematic-subtitle">
-              Профессиональная платформа турниров для соревновательных сезонов eFootball
-            </p>
-
-            <Link
-              href={session?.user ? "/tournaments" : "/register"}
-              className="cinematic-cta group"
-            >
-              <span>ПЕРЕЙТИ К ТУРНИРАМ</span>
-              <span className="cinematic-cta-icon">
-                <ArrowRight className="h-4 w-4" />
-              </span>
-            </Link>
+        <div className="home-premium-content">
+          <div className="home-premium-topline">
+            <ShieldCheck className="h-4 w-4" />
+            <span>Professional eFootball Mobile League</span>
+            <span className="home-premium-dot" />
+            <span>{activeTournaments > 0 ? "Season active" : "Next season loading"}</span>
           </div>
 
-          <div className="cinematic-stats" aria-label="Platform statistics">
-            {stats.map((stat, index) => (
-              <div
-                key={stat.label}
-                className="cinematic-stat-card"
-                style={{ "--stat-delay": `${1.38 + index * 0.16}s` } as CSSProperties}
+          <div className="home-premium-phrases" aria-label="Платформа eFootball Nexon">
+            {heroPhrases.map((phrase, index) => (
+              <span
+                key={phrase}
+                className="home-premium-phrase"
+                style={{ "--phrase-delay": `${index * 4.4}s` } as CSSProperties}
               >
-                <div className="stat-card-portal" />
-                <div className="stat-card-particles" />
-                <div className="flex items-start justify-between gap-3">
-                  <stat.icon className="mt-1 h-4 w-4 text-[#b9944f]" strokeWidth={1.7} />
-                  <div className="stat-card-index">0{index + 1}</div>
-                </div>
-                <div className="cinematic-stat-value mt-5 text-[1.7rem] font-bold leading-none tracking-[0.01em]">
-                  {stat.value !== null ? <AnimatedCounter value={stat.value} /> : stat.text}
-                </div>
-                <div className="cinematic-stat-label mt-2 text-[0.58rem] font-bold uppercase tracking-[0.24em]">
-                  {stat.label}
-                </div>
-              </div>
+                {phrase}
+              </span>
             ))}
           </div>
+
+          <h1 className="home-premium-title">eFootball Nexon</h1>
+          <div className="home-premium-gold-line" />
+          <p className="home-premium-subtitle">Профессиональная платформа турнирных сезонов eFootball Mobile</p>
+
+          <div className="home-premium-actions">
+            <Link href={telegramHref} target="_blank" rel="noreferrer" className="home-social-button">
+              <Send className="h-4 w-4" />
+              <span>Telegram</span>
+            </Link>
+            <Link href={vkHref} target="_blank" rel="noreferrer" className="home-social-button">
+              <span className="home-vk-mark">VK</span>
+              <span>ВК</span>
+            </Link>
+            <Link href={session?.user ? "/tournaments" : "/register"} className="home-main-action">
+              <span>{session?.user ? "Перейти к турнирам" : "Начать сезон"}</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+
+        <div className="home-premium-stats" aria-label="Статистика платформы">
+          {stats.map((stat, index) => (
+            <div
+              key={stat.label}
+              className="home-premium-stat"
+              style={{ "--stat-delay": `${0.9 + index * 0.13}s` } as CSSProperties}
+            >
+              <div className="home-stat-head">
+                <stat.icon className="h-4 w-4" />
+                <span>{stat.meta}</span>
+              </div>
+              <div className="home-stat-value">
+                {stat.value !== null ? <AnimatedCounter value={stat.value} /> : stat.text}
+              </div>
+              <div className="home-stat-label">{stat.label}</div>
+            </div>
+          ))}
         </div>
       </section>
-    </div>
+    </main>
   );
 }
