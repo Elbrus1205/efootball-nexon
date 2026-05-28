@@ -9,6 +9,7 @@ export type PlayerCareerStats = {
   goalsFor: number;
   goalsAgainst: number;
   goalDifference: number;
+  cleanSheets: number;
   winRate: number;
 };
 
@@ -21,6 +22,7 @@ export function emptyPlayerCareerStats(): PlayerCareerStats {
     goalsFor: 0,
     goalsAgainst: 0,
     goalDifference: 0,
+    cleanSheets: 0,
     winRate: 0,
   };
 }
@@ -64,6 +66,7 @@ export async function getPlayerCareerStats(playerId: string, options: PlayerCare
     stats.played += 1;
     stats.goalsFor += goalsFor;
     stats.goalsAgainst += goalsAgainst;
+    if (goalsAgainst === 0) stats.cleanSheets += 1;
 
     if (goalsFor > goalsAgainst) {
       stats.wins += 1;

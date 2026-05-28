@@ -1,6 +1,7 @@
 import { ProfileStatusApprovalStatus } from "@prisma/client";
 import { PlayerProfileView } from "@/components/players/player-profile-view";
 import { requireAuth } from "@/lib/auth/session";
+import { getUserAchievementProgress, syncUserAchievements } from "@/lib/achievements";
 import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
 import { getPlayerCareerStats } from "@/lib/player-stats";
@@ -11,6 +12,7 @@ export default async function DashboardPage({
   searchParams?: { season?: string };
 }) {
   const session = await requireAuth();
+  await syncUserAchievements(session.user.id);
   const [user, clubs, seasons] = await Promise.all([
     db.user.findUnique({
       where: { id: session.user.id },
@@ -37,6 +39,7 @@ export default async function DashboardPage({
 
   const selectedSeason = searchParams?.season ? seasons.find((season) => season.id === searchParams.season || season.slug === searchParams.season) ?? null : null;
   const careerStats = await getPlayerCareerStats(user.id, { seasonId: selectedSeason?.id ?? null });
+  const achievements = await getUserAchievementProgress(user.id);
 
   return (
     <PlayerProfileView
@@ -45,6 +48,7 @@ export default async function DashboardPage({
       seasons={seasons}
       selectedSeason={selectedSeason}
       careerStats={careerStats}
+      achievements={achievements}
       basePath="/dashboard"
       badgeLabel="Личный кабинет игрока"
       editHref="/dashboard/edit"

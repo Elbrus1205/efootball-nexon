@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { MatchStatus, NotificationType } from "@prisma/client";
 import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
+import { syncUserAchievementsForUsers } from "@/lib/achievements";
 import { db } from "@/lib/db";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { logAdminAction } from "@/lib/services/admin-actions";
@@ -97,6 +98,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     await recalculateGroupStandings(match.tournamentId);
     await resolveConfirmedMatch(match.id);
     await createMatchOutcomeNotifications({ ...match, winnerId }, player1Score, player2Score);
+    await syncUserAchievementsForUsers([match.player1Id, match.player2Id]);
   } else if (body.action === "reject") {
     await db.match.update({
       where: { id: params.id },

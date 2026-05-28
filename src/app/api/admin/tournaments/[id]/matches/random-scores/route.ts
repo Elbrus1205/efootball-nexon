@@ -1,6 +1,7 @@
 ﻿import { AdminActionType, MatchStatus, StageType } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/session";
+import { syncUserAchievementsForUsers } from "@/lib/achievements";
 import { db } from "@/lib/db";
 import { recalculateGroupStandings, resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 
@@ -195,6 +196,7 @@ export async function POST(_request: Request, { params }: { params: { id: string
     await resolveConfirmedMatch(match.id);
     await fallbackAdvancePlayoffWinner(match.id);
   }
+  await syncUserAchievementsForUsers(updatedMatches.flatMap((match) => [match.player1Id, match.player2Id]));
 
   if (!stageWithMatches || stageWithMatches.type === StageType.GROUP_STAGE || stageWithMatches.type === StageType.LEAGUE) {
     await recalculateGroupStandings(params.id);

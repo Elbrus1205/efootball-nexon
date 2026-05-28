@@ -254,6 +254,7 @@ model User {
   winningMatches      Match[]                  @relation("winner")
   submittedResults    MatchResultSubmission[]
   notifications       Notification[]
+  achievements        UserAchievement[]
   passwordResetTokens PasswordResetToken[]
   emailVerificationCodes EmailVerificationCode[]
   adminActions        AdminAction[]
@@ -839,6 +840,20 @@ model Notification {
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead, createdAt])
+}
+
+model UserAchievement {
+  id             String   @id @default(cuid())
+  userId         String
+  achievementKey String
+  achievedAt     DateTime @default(now())
+  notifiedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementKey])
+  @@index([userId, achievedAt])
 }
 
 model AdminAction {

@@ -1,6 +1,7 @@
 import { MatchResultStatus, MatchStatus, NotificationType, UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
+import { syncUserAchievementsForUsers } from "@/lib/achievements";
 import { db } from "@/lib/db";
 import { createNotification } from "@/lib/services/notifications";
 import { recalculateGroupStandings, resolveConfirmedMatch } from "@/lib/services/tournaments";
@@ -190,6 +191,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       player1Submission.player1Score,
       player1Submission.player2Score,
     );
+    await syncUserAchievementsForUsers([match.player1Id, match.player2Id]);
 
     return NextResponse.json({
       ok: true,

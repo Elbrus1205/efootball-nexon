@@ -3,6 +3,7 @@ import { ProfileStatusApprovalStatus } from "@prisma/client";
 import { PlayerProfileView } from "@/components/players/player-profile-view";
 import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
+import { getUserAchievementProgress } from "@/lib/achievements";
 import { getPlayerCareerStats } from "@/lib/player-stats";
 
 export default async function PlayerProfilePage({
@@ -40,6 +41,7 @@ export default async function PlayerProfilePage({
 
   const selectedSeason = searchParams?.season ? seasons.find((season) => season.id === searchParams.season || season.slug === searchParams.season) ?? null : null;
   const careerStats = await getPlayerCareerStats(user.id, { seasonId: selectedSeason?.id ?? null });
+  const achievements = await getUserAchievementProgress(user.id);
 
   return (
     <PlayerProfileView
@@ -48,6 +50,7 @@ export default async function PlayerProfilePage({
       seasons={seasons}
       selectedSeason={selectedSeason}
       careerStats={careerStats}
+      achievements={achievements}
       basePath={`/players/${user.publicId}`}
       badgeLabel="Профиль игрока"
     />

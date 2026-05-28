@@ -5,11 +5,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { PlayerAchievementsPanel } from "@/components/players/player-achievements-panel";
 import { PlayerCareerStatsPanel } from "@/components/players/player-career-stats";
 import { PlayerSocialLinks } from "@/components/players/player-social-links";
 import { StatsPeriodSwitcher } from "@/components/players/stats-period-switcher";
 import { UserRoleBadge } from "@/components/users/user-role-badge";
 import type { ClubOption } from "@/lib/clubs";
+import type { AchievementGroupProgress } from "@/lib/achievements";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import type { PlayerCareerStats } from "@/lib/player-stats";
 import { profileStatusClassName } from "@/lib/profile-status-style";
@@ -48,6 +50,7 @@ type PlayerProfileViewProps = {
   seasons: Season[];
   selectedSeason: Season | null;
   careerStats: PlayerCareerStats;
+  achievements: AchievementGroupProgress[];
   basePath: string;
   badgeLabel: string;
   editHref?: string;
@@ -59,6 +62,7 @@ export function PlayerProfileView({
   seasons,
   selectedSeason,
   careerStats,
+  achievements,
   basePath,
   badgeLabel,
   editHref,
@@ -213,6 +217,8 @@ export function PlayerProfileView({
           {!user.profileStatuses.length ? <div className="text-sm text-zinc-500">Подтверждённых статусов пока нет.</div> : null}
         </div>
       </Card>
+
+      <PlayerAchievementsPanel achievements={achievements} />
 
       <Card className="rounded-lg p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
