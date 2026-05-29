@@ -155,7 +155,7 @@ export function MatchManager({
   const [orderedMatches, setOrderedMatches] = useState(matches);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [roundFilter, setRoundFilter] = useState<string>("all");
+  const [roundFilter, setRoundFilter] = useState<string>(() => (matches[0]?.round ? String(matches[0].round) : "all"));
 
   const participantById = useMemo(() => new Map(participants.map((participant) => [participant.id, participant])), [participants]);
 

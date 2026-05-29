@@ -3,7 +3,7 @@
 import { ParticipantStatus } from "@prisma/client";
 import { ChevronDown, Plus, Search, Shuffle, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { participantStatusLabel } from "@/lib/admin-display";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,10 @@ type UserOption = {
   id: string;
   name: string | null;
   email: string | null;
+  publicId?: string | null;
+  telegramUsername?: string | null;
+  favoriteTeam?: string | null;
+  clubs?: string[];
 };
 
 function userLabel(user: UserOption) {
@@ -48,6 +52,10 @@ function userMeta(user: UserOption) {
 
 function normalizeSearch(value: string) {
   return value.trim().toLowerCase();
+}
+
+function userSearchMeta(user: UserOption) {
+  return [user.email, user.telegramUsername ? `@${user.telegramUsername}` : null, ...(user.clubs ?? [])].filter(Boolean).join(" • ");
 }
 
 function participantLabel(participant: ParticipantItem) {
@@ -73,25 +81,98 @@ export function ParticipantManager({
   tournamentId,
   participants,
   groups,
-  users,
 }: {
   tournamentId: string;
   participants: ParticipantItem[];
   groups: GroupItem[];
-  users: UserOption[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [selectedUserId, setSelectedUserId] = useState(users[0]?.id ?? "");
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [userSearch, setUserSearch] = useState("");
+  const [userOptions, setUserOptions] = useState<UserOption[]>([]);
+  const [isUserSearchLoading, setIsUserSearchLoading] = useState(false);
   const [participantQuery, setParticipantQuery] = useState("");
   const [openParticipantId, setOpenParticipantId] = useState<string | null>(null);
   const [replacementByParticipant, setReplacementByParticipant] = useState<Record<string, string>>({});
   const [replacementSearchByParticipant, setReplacementSearchByParticipant] = useState<Record<string, string>>({});
-  const usersById = useMemo(() => new Map(users.map((user) => [user.id, user])), [users]);
+  const [replacementOptionsByParticipant, setReplacementOptionsByParticipant] = useState<Record<string, UserOption[]>>({});
+  const allLoadedUsers = useMemo(() => {
+    const map = new Map<string, UserOption>();
+    for (const user of userOptions) map.set(user.id, user);
+    for (const options of Object.values(replacementOptionsByParticipant)) {
+      for (const user of options) map.set(user.id, user);
+    }
+    return Array.from(map.values());
+  }, [replacementOptionsByParticipant, userOptions]);
+  const usersById = useMemo(() => new Map(allLoadedUsers.map((user) => [user.id, user])), [allLoadedUsers]);
   const normalizedParticipantQuery = normalizeSearch(participantQuery);
   const visibleParticipants = normalizedParticipantQuery
     ? participants.filter((participant) => participantSearchText(participant).includes(normalizedParticipantQuery))
     : [];
+
+  const searchUsers = async (query: string) => {
+    const normalized = normalizeSearch(query);
+    if (normalized.length < 2) return [];
+
+    const response = await fetch(`/api/admin/tournaments/${tournamentId}/available-users?q=${encodeURIComponent(normalized)}`);
+    if (!response.ok) return [];
+
+    const payload = (await response.json().catch(() => ({ users: [] }))) as { users?: UserOption[] };
+    return payload.users ?? [];
+  };
+
+  useEffect(() => {
+    const normalized = normalizeSearch(userSearch);
+    setSelectedUserId("");
+
+    if (normalized.length < 2) {
+      setUserOptions([]);
+      setIsUserSearchLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsUserSearchLoading(true);
+    const timer = window.setTimeout(() => {
+      searchUsers(normalized)
+        .then((items) => {
+          if (!cancelled) setUserOptions(items);
+        })
+        .finally(() => {
+          if (!cancelled) setIsUserSearchLoading(false);
+        });
+    }, 220);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [tournamentId, userSearch]);
+
+  useEffect(() => {
+    if (!openParticipantId) return;
+
+    const normalized = normalizeSearch(replacementSearchByParticipant[openParticipantId] ?? "");
+    if (normalized.length < 2) {
+      setReplacementOptionsByParticipant((current) => ({ ...current, [openParticipantId]: [] }));
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      searchUsers(normalized).then((items) => {
+        if (!cancelled) {
+          setReplacementOptionsByParticipant((current) => ({ ...current, [openParticipantId]: items }));
+        }
+      });
+    }, 220);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [openParticipantId, replacementSearchByParticipant, tournamentId]);
 
   const run = (body: Record<string, unknown>, successMessage?: string) => {
     startTransition(async () => {
@@ -133,17 +214,62 @@ export function ParticipantManager({
     <div className="space-y-4">
       <div className="rounded-lg border border-white/10 bg-white/[0.035] p-3 sm:p-4">
         <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto_auto]">
-          <select
-            value={selectedUserId}
-            onChange={(event) => setSelectedUserId(event.target.value)}
-            className="h-10 min-w-0 rounded-lg border border-white/10 bg-black/30 px-3 text-sm text-white outline-none transition focus:border-primary/50"
-          >
-            {users.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.name ?? user.email ?? user.id}
-              </option>
-            ))}
-          </select>
+          <div className="min-w-0 space-y-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+              <Input
+                value={userSearch}
+                onChange={(event) => setUserSearch(event.target.value)}
+                placeholder="Найти игрока по нику, email, Telegram или клубу"
+                className="h-10 rounded-lg pl-10 pr-10 text-sm"
+              />
+              {userSearch ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUserSearch("");
+                    setSelectedUserId("");
+                  }}
+                  className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-white/10 hover:text-white"
+                  aria-label="Очистить поиск"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              ) : null}
+            </div>
+
+            {normalizeSearch(userSearch).length >= 2 ? (
+              <div className="max-h-44 overflow-y-auto rounded-lg border border-white/10 bg-black/20 p-1">
+                {isUserSearchLoading ? (
+                  <div className="px-3 py-3 text-sm text-zinc-500">Ищу игрока...</div>
+                ) : userOptions.length ? (
+                  userOptions.map((user) => {
+                    const isSelected = user.id === selectedUserId;
+
+                    return (
+                      <button
+                        key={user.id}
+                        type="button"
+                        disabled={pending}
+                        onClick={() => setSelectedUserId(user.id)}
+                        className={`flex w-full min-w-0 items-center justify-between gap-3 rounded-md px-3 py-2 text-left transition ${
+                          isSelected ? "bg-primary/15 text-white" : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                        }`}
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-medium">{userLabel(user)}</span>
+                          <span className="mt-0.5 block truncate text-xs text-zinc-500">{userSearchMeta(user) || user.publicId || user.id}</span>
+                        </span>
+                        {isSelected ? <Badge variant="primary">Выбран</Badge> : null}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="px-3 py-3 text-sm text-zinc-500">Игрок не найден.</div>
+                )}
+              </div>
+            ) : null}
+          </div>
           <Button className="h-10 rounded-lg" disabled={pending || !selectedUserId} onClick={() => run({ action: "add", userId: selectedUserId })}>
             <Plus className="mr-2 h-4 w-4" />
             Добавить
@@ -200,15 +326,7 @@ export function ParticipantManager({
             const replacementQuery = replacementSearchByParticipant[participant.id] ?? "";
             const normalizedReplacementQuery = normalizeSearch(replacementQuery);
             const selectedReplacement = usersById.get(replacementUserId);
-            const replacementMatches = normalizedReplacementQuery
-              ? users
-                  .filter((user) =>
-                    [user.name, user.email, user.id]
-                      .filter(Boolean)
-                      .some((value) => value?.toLowerCase().includes(normalizedReplacementQuery)),
-                  )
-                  .slice(0, 8)
-              : [];
+            const replacementMatches = normalizedReplacementQuery ? replacementOptionsByParticipant[participant.id] ?? [] : [];
             const canReplace = participant.status !== ParticipantStatus.REMOVED;
             const isHistoryEntry = participant.status === ParticipantStatus.REMOVED;
             const isOpen = openParticipantId === participant.id;
@@ -293,7 +411,7 @@ export function ParticipantManager({
                             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
                             <Input
                               value={replacementQuery}
-                              disabled={pending || !canReplace || !users.length}
+                              disabled={pending || !canReplace}
                               placeholder="Найти игрока для замены"
                               onChange={(event) =>
                                 setReplacementSearchByParticipant((current) => ({
@@ -325,7 +443,7 @@ export function ParticipantManager({
                             <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/[0.08] px-3 py-2">
                               <div className="min-w-0">
                                 <div className="truncate text-sm font-medium text-white">{userLabel(selectedReplacement)}</div>
-                                <div className="mt-0.5 truncate text-xs text-zinc-400">{userMeta(selectedReplacement) || "Игрок выбран"}</div>
+                                <div className="mt-0.5 truncate text-xs text-zinc-400">{userSearchMeta(selectedReplacement) || "Игрок выбран"}</div>
                               </div>
                               <button
                                 type="button"
@@ -371,7 +489,7 @@ export function ParticipantManager({
                                     >
                                       <span className="min-w-0">
                                         <span className="block truncate text-sm font-medium">{userLabel(user)}</span>
-                                        <span className="mt-0.5 block truncate text-xs text-zinc-500">{userMeta(user) || user.id}</span>
+                                        <span className="mt-0.5 block truncate text-xs text-zinc-500">{userSearchMeta(user) || user.id}</span>
                                       </span>
                                       {isSelected ? <Badge variant="primary">Выбран</Badge> : null}
                                     </button>
