@@ -16,7 +16,6 @@ import type { PlayerCareerStats } from "@/lib/player-stats";
 import { profileStatusClassName } from "@/lib/profile-status-style";
 import { getUserSocialLinks } from "@/lib/social-links";
 import { formatTimeZoneLabel, formatTimeZoneLocalTime } from "@/lib/time-zone";
-import { formatDate } from "@/lib/utils";
 
 type ProfileStatus = {
   id: string;
@@ -249,22 +248,11 @@ export function PlayerProfileView({
 
       <AchievementShortcut achievements={achievements} href={`${basePath}/achievements`} />
 
-      <Card className="rounded-lg p-5">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="font-semibold text-white">Период статистики</div>
-          </div>
-          {selectedSeason ? (
-            <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-zinc-300">
-              {selectedSeason.startsAt ? formatDate(selectedSeason.startsAt, "d MMM yyyy") : "Дата старта не указана"}
-            </div>
-          ) : null}
-        </div>
-
-        <StatsPeriodSwitcher basePath={basePath} seasons={seasons} selectedSeasonId={selectedSeason?.id ?? null} />
-      </Card>
-
-      <PlayerCareerStatsPanel stats={careerStats} periodLabel={periodLabel} />
+      <PlayerCareerStatsPanel
+        stats={careerStats}
+        periodLabel={periodLabel}
+        periodControl={<StatsPeriodSwitcher basePath={basePath} seasons={seasons} selectedSeasonId={selectedSeason?.id ?? null} />}
+      />
     </div>
   );
 }

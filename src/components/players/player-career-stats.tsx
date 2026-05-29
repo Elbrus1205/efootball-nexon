@@ -1,4 +1,5 @@
 import { BarChart3, Shield, Target, Trophy } from "lucide-react";
+import type { ReactNode } from "react";
 import type { PlayerCareerStats } from "@/lib/player-stats";
 
 function formatGoalDifference(value: number) {
@@ -9,9 +10,10 @@ function formatGoalDifference(value: number) {
 type PlayerCareerStatsPanelProps = {
   stats: PlayerCareerStats;
   periodLabel?: string;
+  periodControl?: ReactNode;
 };
 
-export function PlayerCareerStatsPanel({ stats, periodLabel = "За всё время" }: PlayerCareerStatsPanelProps) {
+export function PlayerCareerStatsPanel({ stats, periodLabel = "За всё время", periodControl }: PlayerCareerStatsPanelProps) {
   const resultItems = [
     { label: "Победы", value: stats.wins, className: "border-emerald-300/25 bg-emerald-400/10 text-emerald-100" },
     { label: "Ничьи", value: stats.draws, className: "border-sky-300/25 bg-sky-400/10 text-sky-100" },
@@ -26,9 +28,12 @@ export function PlayerCareerStatsPanel({ stats, periodLabel = "За всё вр�
 
   return (
     <section className="rounded-lg border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.025))] p-4 shadow-[0_18px_45px_rgba(0,0,0,0.22)] sm:p-5">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Статистика игрока</div>
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="min-w-0 text-xs font-semibold uppercase tracking-[0.22em] text-primary">Статистика игрока</div>
+            {periodControl ? <div className="shrink-0">{periodControl}</div> : null}
+          </div>
           <div className="mt-1 text-xs font-semibold text-zinc-500">{periodLabel}</div>
           <div className="mt-2 flex items-end gap-2">
             <span className="text-3xl font-black leading-none text-white">{stats.played}</span>
