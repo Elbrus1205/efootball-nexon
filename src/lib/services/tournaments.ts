@@ -611,6 +611,7 @@ export async function notifyActiveTournamentRoundsStarted(tournamentId: string) 
       }),
       type: NotificationType.TOURNAMENT,
       link: `/tournaments/${tournament.id}`,
+      dedupeKey: `tournament-round-start:${tournament.id}:${stage.id}:${currentRound}`,
       dedupeWithinHours: 24 * 365,
     });
   }

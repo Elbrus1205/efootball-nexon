@@ -1,5 +1,5 @@
 import Pusher from "pusher";
-import { NotificationType } from "@prisma/client";
+import { NotificationType, Prisma } from "@prisma/client";
 import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
 import { isTelegramRecipientUnavailableError, sendTelegramMessage } from "@/lib/telegram-bot";
@@ -23,6 +23,7 @@ export async function createNotification({
   body,
   type,
   link,
+  dedupeKey,
   dedupeWithinHours,
   skipTelegram,
 }: {
@@ -31,6 +32,7 @@ export async function createNotification({
   body: string;
   type: NotificationType;
   link?: string;
+  dedupeKey?: string;
   dedupeWithinHours?: number;
   skipTelegram?: boolean;
 }) {
@@ -56,16 +58,33 @@ export async function createNotification({
     }
   }
 
-  const notification = await db.notification.create({
-    data: { userId, title: safeTitle, body: safeBody, type, link },
-    include: {
-      user: {
-        select: {
-          telegramId: true,
+  let notification;
+
+  try {
+    notification = await db.notification.create({
+      data: { userId, title: safeTitle, body: safeBody, type, link, dedupeKey },
+      include: {
+        user: {
+          select: {
+            telegramId: true,
+          },
         },
       },
-    },
-  });
+    });
+  } catch (error) {
+    if (dedupeKey && error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const existing = await db.notification.findFirst({
+        where: { userId, dedupeKey },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (existing) {
+        return existing;
+      }
+    }
+
+    throw error;
+  }
 
   const payload = {
     id: notification.id,
@@ -121,6 +140,7 @@ export async function createNotificationsForUsers({
   body,
   type,
   link,
+  dedupeKey,
   dedupeWithinHours,
 }: {
   userIds: string[];
@@ -128,6 +148,7 @@ export async function createNotificationsForUsers({
   body: string;
   type: NotificationType;
   link?: string;
+  dedupeKey?: string;
   dedupeWithinHours?: number;
 }) {
   const uniqueUserIds = Array.from(new Set(userIds.filter(Boolean)));
@@ -140,6 +161,7 @@ export async function createNotificationsForUsers({
         body,
         type,
         link,
+        dedupeKey,
         dedupeWithinHours,
       }),
     ),
