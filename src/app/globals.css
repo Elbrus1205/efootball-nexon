@@ -1251,21 +1251,23 @@ body a[role="button"]:not(:disabled):hover {
 
 .home-premium-phrases {
   position: relative;
-  height: clamp(2.5rem, 5.4vw, 4.5rem);
+  height: clamp(4.2rem, 7.8vw, 7.8rem);
   margin-top: clamp(1.8rem, 4vh, 3.4rem);
   overflow: hidden;
 }
 
 .home-premium-phrase {
   position: absolute;
-  inset: 0 0 auto 0;
-  display: block;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   max-width: 100%;
   color: rgba(244, 242, 235, 0.9);
-  font-size: clamp(1.35rem, 4.2vw, 3.85rem);
+  font-size: clamp(1.35rem, 3.65vw, 3.35rem);
   font-weight: 650;
-  letter-spacing: -0.015em;
-  line-height: 1.05;
+  letter-spacing: 0;
+  line-height: 1.12;
   text-align: center;
   text-wrap: balance;
   opacity: 0;
@@ -1333,15 +1335,18 @@ body a[role="button"]:not(:disabled):hover {
   gap: 0.62rem;
   overflow: hidden;
   border: 1px solid rgba(185, 148, 79, 0.36);
-  background: rgba(3, 3, 3, 0.58);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0)),
+    rgba(3, 3, 3, 0.64);
   padding: 0.82rem 1rem;
   color: rgba(244, 242, 235, 0.9);
   font-size: 0.82rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   text-transform: uppercase;
   backdrop-filter: blur(18px);
-  transition: transform 0.35s ease, border-color 0.35s ease, background-color 0.35s ease, color 0.35s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 16px 34px rgba(0, 0, 0, 0.26);
+  transition: transform 0.35s ease, border-color 0.35s ease, background-color 0.35s ease, color 0.35s ease, box-shadow 0.35s ease;
 }
 
 .home-social-button::before,
@@ -1355,11 +1360,37 @@ body a[role="button"]:not(:disabled):hover {
   transition: transform 0.55s ease, opacity 0.35s ease;
 }
 
+.home-social-button::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  pointer-events: none;
+}
+
+.home-social-button svg,
+.home-social-button span,
+.home-main-action svg,
+.home-main-action span {
+  position: relative;
+  z-index: 1;
+}
+
+.home-social-button svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  padding: 0.18rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.035);
+  color: #f8f2df;
+}
+
 .home-social-button:hover,
 .home-main-action:hover {
   transform: translateY(-3px);
   border-color: rgba(226, 196, 116, 0.78);
   background: rgba(23, 19, 10, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 18px 44px rgba(185, 148, 79, 0.12);
 }
 
 .home-social-button:hover::before,
@@ -1377,11 +1408,13 @@ body a[role="button"]:not(:disabled):hover {
   width: 1.35rem;
   height: 1.35rem;
   place-items: center;
-  border-radius: 0.32rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.36rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.035);
   color: #f4f2eb;
   font-size: 0.58rem;
   font-weight: 900;
+  letter-spacing: 0;
 }
 
 .home-premium-stats {
@@ -1577,8 +1610,13 @@ body a[role="button"]:not(:disabled):hover {
   .home-social-button,
   .home-main-action {
     min-height: 2.85rem;
-    padding: 0.76rem 0.75rem;
-    font-size: 0.74rem;
+    padding: 0.76rem 0.62rem;
+    font-size: 0.7rem;
+    letter-spacing: 0;
+  }
+
+  .home-social-button {
+    gap: 0.48rem;
   }
 
   .home-premium-stats {

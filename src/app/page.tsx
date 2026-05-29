@@ -115,7 +115,7 @@ export default async function HomePage() {
             </Link>
             <Link href={vkHref} target="_blank" rel="noreferrer" className="home-social-button">
               <span className="home-vk-mark">VK</span>
-              <span>ВК</span>
+              <span>ВКонтакте</span>
             </Link>
             <Link href={session?.user ? "/tournaments" : "/register"} className="home-main-action">
               <span>{session?.user ? "Перейти к турнирам" : "Начать сезон"}</span>
