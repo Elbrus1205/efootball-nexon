@@ -59,16 +59,14 @@ export function TournamentCard({
               Участники: {participantsCount}/{tournament.maxParticipants}
             </span>
           </div>
-          <div className="mt-1 flex flex-col gap-3 rounded-lg border border-primary/15 bg-black/20 p-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 items-center gap-3">
-              <Trophy className="h-4 w-4 shrink-0 text-accent" />
-              <span className="min-w-0 text-zinc-300">Призовой фонд: {tournament.prizePool || "Уточняется"}</span>
-            </div>
-            <span className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 text-xs font-bold uppercase tracking-[0.08em] text-primary transition group-hover:border-primary/55 group-hover:bg-primary/15 group-hover:text-amber-100">
-              В турнир
-              <ArrowRight className="h-4 w-4" />
-            </span>
+          <div className="flex items-center gap-3">
+            <Trophy className="h-4 w-4 text-accent" />
+            <span>Призовой фонд: {tournament.prizePool || "Уточняется"}</span>
           </div>
+          <span className="mt-1 inline-flex h-10 w-fit items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-4 text-xs font-bold uppercase tracking-[0.08em] text-primary transition group-hover:border-primary/55 group-hover:bg-primary/15 group-hover:text-amber-100">
+            В турнир
+            <ArrowRight className="h-4 w-4" />
+          </span>
         </CardContent>
       </Card>
     </Link>
