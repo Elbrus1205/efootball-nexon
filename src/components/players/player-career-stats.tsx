@@ -31,7 +31,7 @@ export function PlayerCareerStatsPanel({ stats, periodLabel = "За всё вр�
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-2">
-            <div className="min-w-0 text-xs font-semibold uppercase tracking-[0.22em] text-primary">Статистика игрока</div>
+            <div className="min-w-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary sm:text-xs sm:tracking-[0.22em]">Статистика игрока</div>
             {periodControl ? <div className="shrink-0">{periodControl}</div> : null}
           </div>
           <div className="mt-1 text-xs font-semibold text-zinc-500">{periodLabel}</div>

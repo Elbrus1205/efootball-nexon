@@ -45,26 +45,30 @@ export function StatsPeriodSwitcher({
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="max-h-[320px] w-[min(22rem,calc(100vw-2rem))] overflow-y-auto">
+      <DropdownMenuContent
+        align="end"
+        sideOffset={6}
+        className="max-h-[260px] w-[min(15.75rem,calc(100vw-2rem))] overflow-y-auto rounded-lg p-1.5 shadow-[0_18px_48px_rgba(0,0,0,0.45)]"
+      >
         <DropdownMenuItem
-          className={cn("items-start py-2.5", !selectedSeason ? "bg-white/10" : "")}
+          className={cn("items-start rounded-md px-3 py-2", !selectedSeason ? "bg-white/10" : "")}
           onSelect={() => router.push(basePath)}
         >
           <div className="min-w-0">
-            <div className="truncate font-semibold text-white">Общая статистика</div>
-            <div className="mt-1 text-xs text-zinc-400">Все подтверждённые матчи игрока</div>
+            <div className="truncate text-sm font-semibold text-white">Общая статистика</div>
+            <div className="mt-0.5 line-clamp-1 text-[11px] text-zinc-400">Все матчи игрока</div>
           </div>
         </DropdownMenuItem>
 
         {seasons.map((season) => (
           <DropdownMenuItem
             key={season.id}
-            className={cn("items-start py-2.5", selectedSeason?.id === season.id ? "bg-white/10" : "")}
+            className={cn("items-start rounded-md px-3 py-2", selectedSeason?.id === season.id ? "bg-white/10" : "")}
             onSelect={() => router.push(`${basePath}?season=${season.id}`)}
           >
             <div className="min-w-0">
-              <div className="truncate font-semibold text-white">{season.name}</div>
-              <div className="mt-1 text-xs text-zinc-400">
+              <div className="truncate text-sm font-semibold text-white">{season.name}</div>
+              <div className="mt-0.5 truncate text-[11px] text-zinc-400">
                 {season.isActive ? "Активный сезон" : "Архивный сезон"}
                 {season.startsAt ? ` • c ${formatDate(season.startsAt, "d MMM yyyy")}` : ""}
                 {season.endsAt ? ` по ${formatDate(season.endsAt, "d MMM yyyy")}` : ""}
