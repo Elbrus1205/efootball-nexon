@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
+import { notifyActiveTournamentRoundsStarted } from "@/lib/services/tournaments";
 import { roundDeadlineSchema } from "@/lib/validators";
 
 const staffRoles = [UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE];
@@ -117,6 +118,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
     beforeJson: before,
     afterJson: deadline,
   });
+
+  await notifyActiveTournamentRoundsStarted(params.id);
 
   return NextResponse.json({ ok: true, deadline });
 }

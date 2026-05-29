@@ -88,12 +88,12 @@ export async function createNotification({
     const absoluteLink = buildAbsoluteNotificationLink(link);
     await sendTelegramMessage({
       chatId: notification.user.telegramId,
-      text: buildTelegramNotificationText(safeTitle, safeBody),
+      text: buildTelegramNotificationText(notification.type, safeTitle, safeBody),
       disableWebPagePreview: true,
       replyMarkup: absoluteLink
         ? buildTelegramInlineKeyboard([
             {
-              text: "Открыть на сайте",
+              text: getTelegramNotificationButtonText(notification.type),
               url: absoluteLink,
               row: 1,
             },
@@ -178,15 +178,35 @@ export async function createNotificationForAllUsers({
   });
 }
 
-function buildTelegramNotificationText(title: string, body: string) {
+function buildTelegramNotificationText(type: NotificationType, title: string, body: string) {
   const safeTitle = escapeTelegramHtml(title);
   const safeBody = escapeTelegramHtml(body);
+  const typeLabel = getTelegramNotificationTypeLabel(type);
 
   if (!safeBody) {
-    return `<b>${safeTitle}</b>`;
+    return [`<b>eFootball Nexon</b>`, `<b>${safeTitle}</b>`, `<i>${typeLabel}</i>`].join("\n");
   }
 
-  return [`<b>${safeTitle}</b>`, `<blockquote>${safeBody}</blockquote>`].join("\n\n");
+  return [
+    `<b>eFootball Nexon</b>`,
+    `<b>${safeTitle}</b>`,
+    `<blockquote>${safeBody}</blockquote>`,
+    `<i>${typeLabel}</i>`,
+  ].join("\n\n");
+}
+
+function getTelegramNotificationTypeLabel(type: NotificationType) {
+  if (type === NotificationType.TOURNAMENT) return "Турнирное уведомление";
+  if (type === NotificationType.MATCH) return "Матчевое уведомление";
+  if (type === NotificationType.RESULT) return "Результат матча";
+  return "Системное уведомление";
+}
+
+function getTelegramNotificationButtonText(type: NotificationType) {
+  if (type === NotificationType.TOURNAMENT) return "Открыть турнир";
+  if (type === NotificationType.MATCH) return "Открыть матч";
+  if (type === NotificationType.RESULT) return "Открыть результат";
+  return "Открыть на сайте";
 }
 
 function buildAbsoluteNotificationLink(link?: string | null) {

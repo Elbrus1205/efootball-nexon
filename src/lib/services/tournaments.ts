@@ -497,11 +497,123 @@ function formatScheduleDate(value?: Date | null) {
   if (!value) return "";
 
   return new Intl.DateTimeFormat("ru-RU", {
+    timeZone: "Europe/Moscow",
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
   }).format(value);
+}
+
+function roundUnitForStage(stageType: StageType) {
+  return stageType === StageType.PLAYOFF ? "Раунд" : "Тур";
+}
+
+function buildRoundStartTitle(stageType: StageType, round: number) {
+  return `${roundUnitForStage(stageType)} ${round} начался`;
+}
+
+function buildRoundStartBody(params: {
+  tournamentTitle: string;
+  stageName: string;
+  stageType: StageType;
+  round: number;
+  matchesCount: number;
+  deadlineAt: Date;
+}) {
+  const unit = roundUnitForStage(params.stageType).toLowerCase();
+  const deadline = formatScheduleDate(params.deadlineAt);
+
+  return [
+    `${params.tournamentTitle}: ${params.stageName}, ${unit} ${params.round} открыт.`,
+    `Матчей в этом ${unit === "тур" ? "туре" : "раунде"}: ${params.matchesCount}.`,
+    `Дедлайн: ${deadline} МСК.`,
+    "Откройте турнир и сыграйте матч до дедлайна.",
+  ].join("\n");
+}
+
+export async function notifyActiveTournamentRoundsStarted(tournamentId: string) {
+  const tournament = await db.tournament.findUnique({
+    where: { id: tournamentId },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      stages: {
+        where: { status: StageStatus.ACTIVE },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          orderIndex: true,
+          deadlines: {
+            select: {
+              round: true,
+              deadlineAt: true,
+            },
+          },
+          matches: {
+            where: {
+              isPenaltyTiebreak: false,
+              player1Id: { not: null },
+              player2Id: { not: null },
+            },
+            select: {
+              id: true,
+              round: true,
+              status: true,
+              player1Id: true,
+              player2Id: true,
+            },
+          },
+        },
+        orderBy: { orderIndex: "asc" },
+      },
+    },
+  });
+
+  if (!tournament || tournament.status !== TournamentStatus.IN_PROGRESS) return;
+
+  for (const stage of tournament.stages) {
+    const deadlineByRound = new Map(stage.deadlines.map((deadline) => [deadline.round, deadline.deadlineAt]));
+    const rounds = Array.from(new Set(stage.matches.map((match) => match.round))).sort((a, b) => a - b);
+    const currentRound = rounds.find((round) => {
+      if (!deadlineByRound.has(round)) return false;
+
+      const roundMatches = stage.matches.filter((match) => match.round === round);
+      if (!roundMatches.some((match) => !TERMINAL_MATCH_STATUSES.has(match.status))) return false;
+
+      const previousMatches = stage.matches.filter((match) => match.round < round);
+      return previousMatches.every((match) => TERMINAL_MATCH_STATUSES.has(match.status));
+    });
+
+    if (!currentRound) continue;
+
+    const deadlineAt = deadlineByRound.get(currentRound);
+    if (!deadlineAt) continue;
+
+    const roundMatches = stage.matches.filter((match) => match.round === currentRound);
+    const activeRoundMatches = roundMatches.filter((match) => !TERMINAL_MATCH_STATUSES.has(match.status));
+    const userIds = activeRoundMatches.flatMap((match) => [match.player1Id, match.player2Id]).filter(Boolean) as string[];
+
+    if (!userIds.length) continue;
+
+    await createNotificationsForUsers({
+      userIds,
+      title: buildRoundStartTitle(stage.type, currentRound),
+      body: buildRoundStartBody({
+        tournamentTitle: tournament.title,
+        stageName: stage.name,
+        stageType: stage.type,
+        round: currentRound,
+        matchesCount: activeRoundMatches.length,
+        deadlineAt,
+      }),
+      type: NotificationType.TOURNAMENT,
+      link: `/tournaments/${tournament.id}`,
+      dedupeWithinHours: 24 * 365,
+    });
+  }
 }
 
 async function notifyMatchReady(matchId: string) {
@@ -2502,6 +2614,8 @@ export async function startTournament(tournamentId: string) {
     ),
   );
 
+  await notifyActiveTournamentRoundsStarted(tournamentId);
+
   return db.tournament.findUnique({ where: { id: tournamentId } });
 }
 
@@ -2608,17 +2722,25 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
         });
       }
 
-      return db.tournament.update({
+      const updatedTournament = await db.tournament.update({
         where: { id: tournamentId },
         data: { status: TournamentStatus.IN_PROGRESS },
       });
+
+      await notifyActiveTournamentRoundsStarted(tournamentId);
+
+      return updatedTournament;
     }
 
     if (leagueStage && hasLeagueMatches && !hasPlayoffMatches && allMatchesCompleted) {
-      return db.tournament.update({
+      const updatedTournament = await db.tournament.update({
         where: { id: tournamentId },
         data: { status: TournamentStatus.IN_PROGRESS },
       });
+
+      await notifyActiveTournamentRoundsStarted(tournamentId);
+
+      return updatedTournament;
     }
   }
 
@@ -2630,6 +2752,10 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
         : null;
 
   if (!nextStatus) {
+    if (tournament.status === TournamentStatus.IN_PROGRESS) {
+      await notifyActiveTournamentRoundsStarted(tournamentId);
+    }
+
     return tournament;
   }
 

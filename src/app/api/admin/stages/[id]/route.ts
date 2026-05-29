@@ -3,6 +3,7 @@ import { StageStatus } from "@prisma/client";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
+import { notifyActiveTournamentRoundsStarted } from "@/lib/services/tournaments";
 import { stageUpdateSchema } from "@/lib/validators";
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
@@ -34,6 +35,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     beforeJson: before,
     afterJson: stage,
   });
+
+  if (stage.status === StageStatus.ACTIVE && before?.status !== StageStatus.ACTIVE) {
+    await notifyActiveTournamentRoundsStarted(stage.tournamentId);
+  }
 
   return NextResponse.json({ ok: true, stage });
 }
