@@ -46,7 +46,7 @@ function userLabel(user: UserOption) {
   return user.name ?? user.email ?? user.id;
 }
 
-function userMeta(user: UserOption) {
+export function userMeta(user: UserOption) {
   return [user.name, user.email].filter(Boolean).join(" • ");
 }
 
