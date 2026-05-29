@@ -8,7 +8,13 @@ import { recalculateGroupStandings } from "@/lib/services/tournaments";
 import { participantManageSchema } from "@/lib/validators";
 import { formatTournamentBanMessage } from "@/lib/user-ban";
 
-const replaceableMatchStatuses = [MatchStatus.PENDING, MatchStatus.READY, MatchStatus.SCHEDULED];
+const replaceableMatchStatuses = [
+  MatchStatus.PENDING,
+  MatchStatus.READY,
+  MatchStatus.SCHEDULED,
+  MatchStatus.LIVE,
+  MatchStatus.REJECTED,
+];
 
 function hasPublicTelegramUsername(value?: string | null) {
   const username = value?.trim().replace(/^@/, "");

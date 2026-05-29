@@ -804,14 +804,30 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
     notFound();
   }
 
+  const participantIds = new Set(tournament.participants.map((entry) => entry.id));
+  const participantByEntryId = new Map(tournament.participants.map((entry) => [entry.id, entry]));
+  const replacementByEntryId = new Map(
+    tournament.participants
+      .filter((entry) => entry.status === ParticipantStatus.REMOVED)
+      .map((entry) => [entry.id, getReplacementRegistrationId(entry.notes)])
+      .filter((item): item is [string, string] => Boolean(item[1] && participantIds.has(item[1]))),
+  );
+  const resolveActiveEntryId = (entryId?: string | null) =>
+    entryId ? resolveReplacementRegistrationId(entryId, replacementByEntryId) : null;
+  const resolveMatchEntry = (match: (typeof tournament.matches)[number], side: 1 | 2) => {
+    const rawEntry = side === 1 ? match.participant1Entry : match.participant2Entry;
+    const activeEntryId = resolveActiveEntryId(side === 1 ? match.participant1EntryId : match.participant2EntryId);
+    return (activeEntryId ? participantByEntryId.get(activeEntryId) : null) ?? rawEntry;
+  };
+  const resolveMatchUserId = (match: (typeof tournament.matches)[number], side: 1 | 2) =>
+    resolveMatchEntry(match, side)?.userId ?? (side === 1 ? match.player1Id : match.player2Id) ?? null;
+
   const currentUserId = session?.user?.id;
   const isCurrentUserMatch = (match: (typeof tournament.matches)[number]) =>
     Boolean(
       currentUserId &&
-        (match.player1Id === currentUserId ||
-          match.player2Id === currentUserId ||
-          match.participant1Entry?.userId === currentUserId ||
-          match.participant2Entry?.userId === currentUserId),
+        (resolveMatchUserId(match, 1) === currentUserId ||
+          resolveMatchUserId(match, 2) === currentUserId),
     );
 
   const myMatchIds = currentUserId
@@ -969,12 +985,12 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   );
   const resolveMatchSide = (match: (typeof visibleMatches)[number], side: 1 | 2) => {
     const player = side === 1 ? match.player1 : match.player2;
-    const entry = side === 1 ? match.participant1Entry : match.participant2Entry;
-    const playerId = (side === 1 ? match.player1Id : match.player2Id) ?? entry?.userId ?? null;
-    const playerName = player
-      ? getPlayerDisplayName(player)
-      : entry?.user
-        ? getPlayerDisplayName(entry.user)
+    const entry = resolveMatchEntry(match, side);
+    const playerId = entry?.userId ?? (side === 1 ? match.player1Id : match.player2Id) ?? null;
+    const playerName = entry?.user
+      ? getPlayerDisplayName(entry.user)
+      : player
+        ? getPlayerDisplayName(player)
         : side === 1
           ? "Игрок 1"
           : "Игрок 2";
