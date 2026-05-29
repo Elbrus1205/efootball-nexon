@@ -1252,7 +1252,7 @@ body a[role="button"]:not(:disabled):hover {
 .home-premium-phrases {
   position: relative;
   height: clamp(4.2rem, 7.8vw, 7.8rem);
-  margin-top: clamp(1.8rem, 4vh, 3.4rem);
+  margin-top: 0;
   overflow: hidden;
 }
 

@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { ArrowRight, CircleDollarSign, RadioTower, Send, ShieldCheck, Trophy, Users } from "lucide-react";
+import { ArrowRight, CircleDollarSign, RadioTower, Send, Trophy, Users } from "lucide-react";
 import { TournamentStatus } from "@prisma/client";
 import { AnimatedCounter } from "@/components/home/animated-counter";
 import { getCurrentSession } from "@/lib/auth/session";
@@ -27,7 +27,7 @@ export default async function HomePage() {
   const session = await getCurrentSession();
   const onlineSince = new Date(Date.now() - 15 * 60 * 1000);
 
-  const [onlineSessions, totalUsers, completedTournaments, activeTournaments, prizePoolTournaments] = await db.$transaction([
+  const [onlineSessions, totalUsers, completedTournaments, prizePoolTournaments] = await db.$transaction([
     db.securitySession.findMany({
       where: {
         revokedAt: null,
@@ -39,11 +39,6 @@ export default async function HomePage() {
     db.user.count(),
     db.tournament.count({
       where: { status: TournamentStatus.COMPLETED },
-    }),
-    db.tournament.count({
-      where: {
-        status: { in: [TournamentStatus.REGISTRATION_OPEN, TournamentStatus.AWAITING_START, TournamentStatus.IN_PROGRESS] },
-      },
     }),
     db.tournament.findMany({
       where: { prizePool: { not: null } },
@@ -85,13 +80,6 @@ export default async function HomePage() {
         <div className="home-premium-rings" aria-hidden="true" />
 
         <div className="home-premium-content">
-          <div className="home-premium-topline">
-            <ShieldCheck className="h-4 w-4" />
-            <span>Professional eFootball Mobile League</span>
-            <span className="home-premium-dot" />
-            <span>{activeTournaments > 0 ? "Season active" : "Next season loading"}</span>
-          </div>
-
           <div className="home-premium-phrases" aria-label="Платформа eFootball Nexon">
             {heroPhrases.map((phrase, index) => (
               <span
