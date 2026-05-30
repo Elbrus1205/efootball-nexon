@@ -368,7 +368,9 @@ export function SecurityPanel({
       setRepeatPassword("");
       setPasswordCode("");
       toast.success("Пароль обновлён.");
-      router.refresh();
+      await signOut({
+        callbackUrl: "/login",
+      });
     });
   };
 
