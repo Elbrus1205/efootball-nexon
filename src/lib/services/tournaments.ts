@@ -80,6 +80,10 @@ const TERMINAL_MATCH_STATUSES = new Set<MatchStatus>([
 ]);
 const AUTO_BYE_NOTE = "AUTO_BYE";
 
+function tournamentNotificationsEnabled(tournament: { notificationsEnabled?: boolean | null }) {
+  return tournament.notificationsEnabled !== false;
+}
+
 export function getTournamentRegistrationOpenAt(tournament: { registrationStartsAt: Date | null; startsAt: Date }) {
   return tournament.registrationStartsAt ?? tournament.startsAt;
 }
@@ -539,6 +543,7 @@ export async function notifyActiveTournamentRoundsStarted(tournamentId: string) 
       id: true,
       title: true,
       status: true,
+      notificationsEnabled: true,
       stages: {
         where: { status: StageStatus.ACTIVE },
         select: {
@@ -572,7 +577,7 @@ export async function notifyActiveTournamentRoundsStarted(tournamentId: string) 
     },
   });
 
-  if (!tournament || tournament.status !== TournamentStatus.IN_PROGRESS) return;
+  if (!tournament || tournament.status !== TournamentStatus.IN_PROGRESS || !tournamentNotificationsEnabled(tournament)) return;
 
   for (const stage of tournament.stages) {
     const deadlineByRound = new Map(stage.deadlines.map((deadline) => [deadline.round, deadline.deadlineAt]));
@@ -635,6 +640,10 @@ async function notifyMatchReady(matchId: string) {
     return;
   }
 
+  if (!tournamentNotificationsEnabled(match.tournament)) {
+    return;
+  }
+
   const scheduleDate = formatScheduleDate(match.scheduledAt ?? match.schedules[0]?.startsAt);
   const scheduleText = scheduleDate ? ` Время: ${scheduleDate}.` : "";
   const descriptor = formatMatchDescriptor(match);
@@ -690,7 +699,7 @@ async function notifyPlayoffQualified(tournamentId: string) {
     },
   });
 
-  if (!tournament) return;
+  if (!tournament || !tournamentNotificationsEnabled(tournament)) return;
 
   const qualifiedUserIds = tournament.brackets.flatMap((bracket) => bracket.slots.map((slot) => slot.participant?.userId).filter(Boolean) as string[]);
 
@@ -721,7 +730,7 @@ async function notifyTournamentCompleted(tournamentId: string) {
     },
   });
 
-  if (!tournament) return;
+  if (!tournament || !tournamentNotificationsEnabled(tournament)) return;
 
   const finalWinnerId = tournament.matches.find((match) => match.winnerId)?.winnerId ?? null;
   const participantUserIds = tournament.participants.map((participant) => participant.userId);
@@ -2471,6 +2480,10 @@ export async function closeTournamentRegistration(tournamentId: string) {
     },
   });
 
+  if (!tournamentNotificationsEnabled(tournament)) {
+    return db.tournament.findUnique({ where: { id: tournamentId } });
+  }
+
   await Promise.all(
     tournament.participants.map((player) =>
       createNotification({
@@ -2602,6 +2615,10 @@ export async function startTournament(tournamentId: string) {
       registrationClosedAt: tournament.registrationClosedAt ?? new Date(),
     },
   });
+
+  if (!tournamentNotificationsEnabled(tournament)) {
+    return db.tournament.findUnique({ where: { id: tournamentId } });
+  }
 
   await Promise.all(
     tournament.participants.map((player) =>
@@ -2769,7 +2786,7 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
     },
   });
 
-  if (nextStatus === TournamentStatus.AWAITING_START) {
+  if (nextStatus === TournamentStatus.AWAITING_START && tournamentNotificationsEnabled(tournament)) {
     await createNotificationsForUsers({
       userIds: tournament.participants.map((participant) => participant.userId),
       title: "Регистрация закрыта",

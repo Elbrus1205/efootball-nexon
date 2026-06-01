@@ -88,6 +88,7 @@ export default async function AdminUsersPage({
                     <select name="role" defaultValue={user.role} className="h-11 rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white">
                       <option value="PLAYER">{userRoleLabel.PLAYER}</option>
                       <option value="JUDGE">{userRoleLabel.JUDGE}</option>
+                      <option value="TRAINEE">{userRoleLabel.TRAINEE}</option>
                       <option value="ADMIN">{userRoleLabel.ADMIN}</option>
                       <option value="ORGANIZER">{userRoleLabel.ORGANIZER}</option>
                     </select>

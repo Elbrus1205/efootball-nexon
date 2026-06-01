@@ -1,7 +1,7 @@
 import { UserRole } from "@prisma/client";
 import { db } from "@/lib/db";
 
-export type ManagedRole = Extract<UserRole, "JUDGE" | "ORGANIZER" | "ADMIN">;
+export type ManagedRole = Extract<UserRole, "TRAINEE" | "JUDGE" | "ORGANIZER" | "ADMIN">;
 
 export type RolePermission = {
   id: string;
@@ -9,7 +9,7 @@ export type RolePermission = {
   description?: string;
 };
 
-export const managedRoles = [UserRole.JUDGE, UserRole.ORGANIZER, UserRole.ADMIN] as const;
+export const managedRoles = [UserRole.TRAINEE, UserRole.JUDGE, UserRole.ORGANIZER, UserRole.ADMIN] as const;
 
 export const rolePermissions = [
   {
@@ -49,6 +49,21 @@ export type RolePermissionId = (typeof rolePermissions)[number]["id"];
 export const rolePermissionIds = rolePermissions.map((permission) => permission.id) as RolePermissionId[];
 
 export const defaultRolePermissions: Record<ManagedRole, RolePermissionId[]> = {
+  [UserRole.TRAINEE]: [
+    "matches.reviewResults",
+    "matches.confirmResults",
+    "matches.rejectResults",
+    "matches.markDispute",
+    "matches.commentDispute",
+    "tournaments.createEdit",
+    "tournaments.manageParticipants",
+    "tournaments.manageStructure",
+    "matches.generate",
+    "schedule.manage",
+    "participants.assignClubs",
+    "tournaments.manageDeadlines",
+    "ownTournaments.moderateMatches",
+  ],
   [UserRole.JUDGE]: [
     "admin.matchesOnly",
     "matches.reviewResults",

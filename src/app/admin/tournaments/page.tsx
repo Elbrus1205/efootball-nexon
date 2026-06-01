@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ParticipantStatus, TournamentStatus } from "@prisma/client";
+import { ParticipantStatus, TournamentStatus, UserRole } from "@prisma/client";
 import {
   Eye,
   GitBranch,
@@ -41,7 +41,8 @@ export default async function AdminTournamentsPage({
 }: {
   searchParams?: { created?: string; warning?: string };
 }) {
-  await requireAnyPermission(["tournaments.createEdit", "tournaments.manageParticipants", "tournaments.manageStructure", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
+  const session = await requireAnyPermission(["tournaments.createEdit", "tournaments.manageParticipants", "tournaments.manageStructure", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
+  const canDeleteTournaments = session.user.role !== UserRole.TRAINEE;
 
   const syncCandidates = await db.tournament.findMany({
     where: { status: { in: [TournamentStatus.DRAFT, TournamentStatus.REGISTRATION_OPEN] } },
@@ -235,6 +236,7 @@ export default async function AdminTournamentsPage({
                     </Button>
                   </div>
 
+                  {canDeleteTournaments ? (
                   <form action={`/api/admin/tournaments/${tournament.id}`} method="post" className="grid gap-2 rounded-md border border-red-400/15 bg-red-500/[0.045] p-2.5 sm:grid-cols-[minmax(0,1fr)_180px] sm:items-center">
                     <input type="hidden" name="_method" value="delete" />
                     <label className="flex min-w-0 items-start gap-2 px-1 text-[11px] leading-4 text-zinc-400 sm:text-xs">
@@ -253,6 +255,7 @@ export default async function AdminTournamentsPage({
                       Удалить турнир
                     </Button>
                   </form>
+                  ) : null}
                 </div>
               </div>
             </Card>

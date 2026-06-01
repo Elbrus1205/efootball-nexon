@@ -1,5 +1,5 @@
 ﻿import Link from "next/link";
-import { MatchStatus, ParticipantStatus, StageType } from "@prisma/client";
+import { MatchStatus, ParticipantStatus, StageType, UserRole } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { Activity, CalendarClock, Dices, GitBranch, History, Pencil, Swords, Trash2, Trophy, Users } from "lucide-react";
 import { RandomScoresButton } from "@/components/admin/random-scores-button";
@@ -151,7 +151,8 @@ function exportRoundTitle(match: {
 }
 
 export default async function AdminTournamentWorkspacePage({ params }: { params: { id: string } }) {
-  await requireAnyPermission(["tournaments.createEdit", "tournaments.manageParticipants", "tournaments.manageStructure", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
+  const session = await requireAnyPermission(["tournaments.createEdit", "tournaments.manageParticipants", "tournaments.manageStructure", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
+  const canDeleteTournament = session.user.role !== UserRole.TRAINEE;
 
   const [tournament, availableClubs] = await Promise.all([
     db.tournament.findUnique({
@@ -413,6 +414,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
               <History className="h-4 w-4" />
               История
             </Link>
+            {canDeleteTournament ? (
             <form action={`/api/admin/tournaments/${tournament.id}`} method="post" className="contents">
               <input type="hidden" name="_method" value="delete" />
               <button
@@ -423,6 +425,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
                 Удалить
               </button>
             </form>
+            ) : null}
           </div>
         </CardContent>
       </Card>

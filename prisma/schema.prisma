@@ -13,6 +13,7 @@ enum UserRole {
   ORGANIZER
   ADMIN
   JUDGE
+  TRAINEE
   PLAYER
 }
 
@@ -559,6 +560,7 @@ model Tournament {
   registrationClosedAt   DateTime?
   checkInRequired        Boolean                  @default(false)
   requireTelegramForRegistration Boolean          @default(false)
+  notificationsEnabled Boolean                    @default(true)
   autoCreateMatches      Boolean                  @default(true)
   autoCreateStages       Boolean                  @default(true)
   autoCreateSchedule     Boolean                  @default(false)

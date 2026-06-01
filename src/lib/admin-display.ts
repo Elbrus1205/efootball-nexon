@@ -18,6 +18,7 @@ export const userRoleLabel: Record<UserRole, string> = {
   ORGANIZER: "Организатор",
   ADMIN: "Администратор",
   JUDGE: "Судья",
+  TRAINEE: "Практикант",
   PLAYER: "Игрок",
 };
 
@@ -26,6 +27,7 @@ export const userRoleColor: Record<UserRole, string> = {
   ORGANIZER: "#FF8C00",
   ADMIN: "#DC143C",
   JUDGE: "#2E8B57",
+  TRAINEE: "#B08D57",
   PLAYER: "#1E90FF",
 };
 

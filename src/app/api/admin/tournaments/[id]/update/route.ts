@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { NotificationType, Prisma, TournamentFormat, TournamentStatus } from "@prisma/client";
+import { NotificationType, Prisma, TournamentFormat, TournamentStatus, UserRole } from "@prisma/client";
 import { getRequestBaseUrl } from "@/lib/affiliate";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
@@ -17,7 +17,7 @@ function resolveUpdatedStatus(status: TournamentStatus, startsAt: Date, autoOpen
 }
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  await requirePermission("tournaments.createEdit");
+  const session = await requirePermission("tournaments.createEdit");
 
   const formData = await request.formData();
   const body = tournamentBuilderSchema.parse({
@@ -62,7 +62,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   const before = await db.tournament.findUnique({
     where: { id: params.id },
-    select: { status: true, title: true },
+    select: { status: true, title: true, rules: true, notificationsEnabled: true },
   });
 
   const updated = await db.tournament.update({
@@ -70,7 +70,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     data: {
       title: body.title,
       description: "",
-      rules: body.rules,
+      rules: session.user.role === UserRole.TRAINEE ? before?.rules : body.rules,
       startsAt,
       endsAt: null,
       registrationEndsAt: startsAt,
@@ -108,7 +108,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     },
   });
 
-  if (before?.status !== TournamentStatus.REGISTRATION_OPEN && updated.status === TournamentStatus.REGISTRATION_OPEN) {
+  if (updated.notificationsEnabled && before?.status !== TournamentStatus.REGISTRATION_OPEN && updated.status === TournamentStatus.REGISTRATION_OPEN) {
     await createNotificationForAllUsers({
       title: "Регистрация на турнир началась",
       body: `${updated.title}: регистрация открыта. Можно занимать место в турнире.`,

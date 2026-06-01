@@ -6,7 +6,7 @@ import { logAdminAction } from "@/lib/services/admin-actions";
 import { notifyActiveTournamentRoundsStarted } from "@/lib/services/tournaments";
 import { roundDeadlineSchema } from "@/lib/validators";
 
-const staffRoles = [UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE];
+const staffRoles = [UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE, UserRole.TRAINEE];
 const datetimeLocalPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/;
 
 function parseDeadlineDate(value: string) {

@@ -12,11 +12,13 @@ const AUTO_CONFIRMED_COMMENT = "AUTO_CONFIRMED";
 
 async function createMatchOutcomeNotifications(match: {
   tournamentId: string;
-  tournament: { title: string };
+  tournament: { title: string; notificationsEnabled?: boolean | null };
   player1Id: string | null;
   player2Id: string | null;
   winnerId: string | null;
 }, player1Score: number, player2Score: number) {
+  if (match.tournament.notificationsEnabled === false) return;
+
   const playerIds = [match.player1Id, match.player2Id].filter(Boolean) as string[];
 
   await Promise.all(
@@ -132,7 +134,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   if (!player1Submission || !player2Submission) {
     const opponentId = session.user.id === match.player1Id ? match.player2Id : match.player1Id;
-    if (opponentId) {
+    if (opponentId && match.tournament.notificationsEnabled !== false) {
       await createNotification({
         userId: opponentId,
         title: "Соперник отправил результат",
@@ -230,10 +232,11 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   if (shouldDispute) {
     const moderators = await db.user.findMany({
-      where: { role: { in: [UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE] } },
+      where: { role: { in: [UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE, UserRole.TRAINEE] } },
     });
 
-    await Promise.all(
+    if (match.tournament.notificationsEnabled !== false) {
+      await Promise.all(
       moderators.map((moderator) =>
         createNotification({
           userId: moderator.id,
@@ -243,7 +246,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
           link: "/admin/moderation",
         }),
       ),
-    );
+      );
+    }
 
     return NextResponse.json({
       ok: true,

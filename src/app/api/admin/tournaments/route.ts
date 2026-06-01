@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { NotificationType, Prisma, TournamentFormat, TournamentStatus } from "@prisma/client";
+import { NotificationType, Prisma, TournamentFormat, TournamentStatus, UserRole } from "@prisma/client";
 import { getRequestBaseUrl } from "@/lib/affiliate";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
@@ -76,6 +76,7 @@ export async function POST(request: Request) {
     const startsAt = new Date(body.startsAt);
     const activeSeason = await getActiveSeason();
     const status = resolveInitialStatus(body.status, startsAt, body.autoOpenRegistration);
+    const notificationsEnabled = session.user.role !== UserRole.TRAINEE;
 
     const tournament = await db.tournament.create({
       data: {
@@ -114,6 +115,7 @@ export async function POST(request: Request) {
         manualPlayoffSelection: body.manualPlayoffSelection,
         checkInRequired: body.checkInRequired,
         requireTelegramForRegistration: body.requireTelegramForRegistration,
+        notificationsEnabled,
         clubSelectionMode: body.clubSelectionMode,
         sortRules: body.sortRules,
         createdById: session.user.id,
@@ -138,7 +140,7 @@ export async function POST(request: Request) {
       return NextResponse.redirect(new URL(`/admin/tournaments?created=1&warning=${warning}`, origin), 303);
     }
 
-    if (status === TournamentStatus.REGISTRATION_OPEN) {
+    if (notificationsEnabled && status === TournamentStatus.REGISTRATION_OPEN) {
       await createNotificationForAllUsers({
         title: "Открыта регистрация на турнир",
         body: `${tournament.title}: новый турнир уже доступен для регистрации.`,

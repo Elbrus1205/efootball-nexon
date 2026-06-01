@@ -303,15 +303,17 @@ export async function POST(request: Request, { params }: { params: { id: string 
       beforeJson: before,
       afterJson: registration,
     });
-    const tournament = await db.tournament.findUnique({ where: { id: params.id }, select: { title: true } });
-    await createNotification({
+    const tournament = await db.tournament.findUnique({ where: { id: params.id }, select: { title: true, notificationsEnabled: true } });
+    if (tournament?.notificationsEnabled) {
+      await createNotification({
       userId: registration.userId,
       title: "Статус участия изменён",
       body: `${tournament?.title ?? "Турнир"}: ваш статус участника изменён на ${registration.status}.`,
       type: NotificationType.TOURNAMENT,
       link: `/tournaments/${params.id}`,
       dedupeWithinHours: 6,
-    });
+      });
+    }
     return NextResponse.json({ ok: true, registration });
   }
 

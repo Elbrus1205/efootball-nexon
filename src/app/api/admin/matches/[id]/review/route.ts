@@ -11,11 +11,13 @@ import { reviewSchema } from "@/lib/validators";
 
 async function createMatchOutcomeNotifications(match: {
   tournamentId: string;
-  tournament: { title: string };
+  tournament: { title: string; notificationsEnabled?: boolean | null };
   player1Id: string | null;
   player2Id: string | null;
   winnerId: string | null;
 }, player1Score: number, player2Score: number) {
+  if (match.tournament.notificationsEnabled === false) return;
+
   const playerIds = [match.player1Id, match.player2Id].filter(Boolean) as string[];
 
   await Promise.all(
@@ -114,7 +116,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   await syncTournamentLifecycleStatus(match.tournamentId);
 
   const targets = [match.player1Id, match.player2Id].filter(Boolean) as string[];
-  if (body.action !== "approve") {
+  if (body.action !== "approve" && match.tournament.notificationsEnabled !== false) {
     await Promise.all(
       targets.map((userId) =>
         createNotification({

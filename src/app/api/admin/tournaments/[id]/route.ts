@@ -3,7 +3,7 @@ import { getRequestBaseUrl } from "@/lib/affiliate";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { addArchivedTournamentStats } from "@/lib/home-stats";
-import { MatchStatus } from "@prisma/client";
+import { MatchStatus, UserRole } from "@prisma/client";
 import {
   assignRandomClubsToTournament,
   closeTournamentRegistration,
@@ -14,12 +14,16 @@ import {
 } from "@/lib/services/tournaments";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  await requirePermission("tournaments.createEdit");
+  const session = await requirePermission("tournaments.createEdit");
   const formData = await request.formData();
   const method = formData.get("_method");
   const redirectUrl = new URL("/admin/tournaments", getRequestBaseUrl(request));
   try {
     if (method === "delete") {
+      if (session.user.role === UserRole.TRAINEE) {
+        throw new Error("Практикант не может удалять турниры.");
+      }
+
       const preserveHomeStats = formData.get("preserveHomeStats") === "on";
 
       await db.$transaction(async (tx) => {
@@ -58,6 +62,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }
 
     if (method === "reset-matches") {
+      if (session.user.role === UserRole.TRAINEE) {
+        throw new Error("Практикант не может удалять или сбрасывать матчи турнира.");
+      }
+
       const confirmedCount = await db.match.count({
         where: {
           tournamentId: params.id,

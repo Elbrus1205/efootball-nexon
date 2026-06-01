@@ -56,7 +56,8 @@ export async function PATCH(request: Request) {
       afterJson: schedule,
     });
 
-    await createNotificationsForUsers({
+    if (match.tournament.notificationsEnabled !== false) {
+      await createNotificationsForUsers({
       userIds: [match.player1Id, match.player2Id].filter(Boolean) as string[],
       title: existing ? "Матч перенесён" : "Матч запланирован",
       body: `${match.tournament.title}: матч назначен на ${new Intl.DateTimeFormat("ru-RU", {
@@ -68,7 +69,8 @@ export async function PATCH(request: Request) {
       type: NotificationType.MATCH,
       link: `/tournaments/${match.tournamentId}`,
       dedupeWithinHours: 3,
-    });
+      });
+    }
   }
 
   return NextResponse.json({ ok: true, schedule });
