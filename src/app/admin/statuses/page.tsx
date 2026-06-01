@@ -1,11 +1,11 @@
 import { Award, CheckCircle2, Clock3, ShieldCheck, Sparkles, XCircle } from "lucide-react";
-import { ProfileStatusApprovalStatus } from "@prisma/client";
+import { ProfileStatusApprovalStatus, ProfileStatusType } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { manualProfileStatusDrafts } from "@/lib/profile-statuses";
+import { manualProfileStatusDrafts, notifyExpiredProfileStatuses } from "@/lib/profile-statuses";
 import { profileStatusClassName, profileStatusToneMeta, profileStatusToneOrder } from "@/lib/profile-status-style";
 import { formatDate } from "@/lib/utils";
 
@@ -21,6 +21,7 @@ export default async function AdminStatusesPage({
   searchParams?: { statusApproved?: string; statusRejected?: string; statusAdded?: string; error?: string };
 }) {
   await requirePermission("profileStatuses.manage");
+  await notifyExpiredProfileStatuses();
 
   const statuses = await db.userProfileStatus.findMany({
     include: {
@@ -163,6 +164,9 @@ export default async function AdminStatusesPage({
                     <span className="mt-2 block text-xs text-zinc-500">
                       {toneMeta.color} · {toneMeta.value}
                     </span>
+                    {draft.type === ProfileStatusType.GOAL_MASTER ? (
+                      <span className="mt-2 block text-xs font-semibold text-primary">Временный статус: 3 месяца с момента выдачи</span>
+                    ) : null}
                   </span>
                 </label>
               );
@@ -201,6 +205,8 @@ export default async function AdminStatusesPage({
                   <div className="flex flex-wrap gap-4 text-xs text-zinc-500">
                     <span>Сезон: {status.season?.name ?? "Без сезона"}</span>
                     <span>Создан: {formatDate(status.createdAt, "d MMM yyyy")}</span>
+                    <span>Срок: {status.expiresAt ? formatDate(status.expiresAt, "d MMM yyyy") : "Без срока"}</span>
+                    {status.expiredNotifiedAt ? <span>Окончание отправлено: {formatDate(status.expiredNotifiedAt, "d MMM yyyy")}</span> : null}
                     {reviewerName ? <span>Проверил: {reviewerName}</span> : null}
                   </div>
                 </div>

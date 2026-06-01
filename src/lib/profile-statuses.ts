@@ -6,6 +6,8 @@ import { MAX_SELECTED_PROFILE_STATUSES } from "@/lib/profile-status-style";
 
 export { MAX_SELECTED_PROFILE_STATUSES };
 
+const GOAL_MASTER_DURATION_MONTHS = 3;
+
 export const manualProfileStatusDrafts = [
   {
     type: ProfileStatusType.LEGEND,
@@ -25,7 +27,39 @@ export const manualProfileStatusDrafts = [
     description: "Статус для надежных игроков сообщества.",
     tone: ProfileStatusTone.BLUE,
   },
+  {
+    type: ProfileStatusType.GOAL_MASTER,
+    title: "Goal Master",
+    description: "Статус за победу в розыгрыше за красивый гол. Действует 3 месяца с момента выдачи.",
+    tone: ProfileStatusTone.PURPLE,
+  },
 ] as const;
+
+function addMonths(date: Date, months: number) {
+  const nextDate = new Date(date);
+  nextDate.setMonth(nextDate.getMonth() + months);
+  return nextDate;
+}
+
+function getManualProfileStatusExpiresAt(type: ProfileStatusType, issuedAt: Date) {
+  if (type !== ProfileStatusType.GOAL_MASTER) return null;
+  return addMonths(issuedAt, GOAL_MASTER_DURATION_MONTHS);
+}
+
+function formatStatusExpirationDate(date: Date) {
+  return new Intl.DateTimeFormat("ru-RU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function buildProfileStatusGrantedBody(status: Pick<UserProfileStatus, "title" | "expiresAt">) {
+  const base = `Администратор выдал вам статус: ${status.title}. Его можно выбрать в редакторе профиля.`;
+
+  if (!status.expiresAt) return base;
+  return `${base} Статус действует до ${formatStatusExpirationDate(status.expiresAt)}.`;
+}
 
 function formatSeasonStatusPeriod(seasonName: string) {
   return seasonName.trim().replace(/^сезон\s+/i, "");
@@ -92,6 +126,8 @@ export async function createSeasonStatusNominations(seasonId: string) {
           approvalStatus: ProfileStatusApprovalStatus.PENDING,
           selectedOrder: null,
           approvedAt: null,
+          expiresAt: null,
+          expiredNotifiedAt: null,
           reviewedAt: null,
           reviewedById: null,
         },
@@ -110,12 +146,16 @@ export async function createSeasonStatusNominations(seasonId: string) {
 }
 
 export async function approveProfileStatus(status: UserProfileStatus, adminId: string) {
+  const now = new Date();
+  const expiresAt = status.expiresAt ?? getManualProfileStatusExpiresAt(status.type, now);
   const approved = await db.userProfileStatus.update({
     where: { id: status.id },
     data: {
       approvalStatus: ProfileStatusApprovalStatus.APPROVED,
-      approvedAt: new Date(),
-      reviewedAt: new Date(),
+      approvedAt: now,
+      expiresAt,
+      expiredNotifiedAt: null,
+      reviewedAt: now,
       reviewedById: adminId,
     },
   });
@@ -123,7 +163,7 @@ export async function approveProfileStatus(status: UserProfileStatus, adminId: s
   await createNotification({
     userId: status.userId,
     title: "Новый статус профиля",
-    body: `Администратор подтвердил статус: ${status.title}. Его можно выбрать в редакторе профиля.`,
+    body: buildProfileStatusGrantedBody(approved),
     type: NotificationType.SYSTEM,
     link: "/dashboard/edit",
   });
@@ -146,6 +186,7 @@ export async function grantManualProfileStatuses({
 
   const statuses = await Promise.all(
     drafts.map(async (draft) => {
+      const expiresAt = getManualProfileStatusExpiresAt(draft.type, now);
       const existing = await db.userProfileStatus.findFirst({
         where: {
           userId,
@@ -163,6 +204,8 @@ export async function grantManualProfileStatuses({
             tone: draft.tone,
             approvalStatus: ProfileStatusApprovalStatus.APPROVED,
             approvedAt: now,
+            expiresAt,
+            expiredNotifiedAt: null,
             reviewedAt: now,
             reviewedById: adminId,
           },
@@ -178,6 +221,8 @@ export async function grantManualProfileStatuses({
           tone: draft.tone,
           approvalStatus: ProfileStatusApprovalStatus.APPROVED,
           approvedAt: now,
+          expiresAt,
+          expiredNotifiedAt: null,
           reviewedAt: now,
           reviewedById: adminId,
         },
@@ -190,7 +235,7 @@ export async function grantManualProfileStatuses({
       createNotification({
         userId,
         title: "Новый статус профиля",
-        body: `Администратор выдал вам статус: ${status.title}. Его можно выбрать в редакторе профиля.`,
+        body: buildProfileStatusGrantedBody(status),
         type: NotificationType.SYSTEM,
         link: "/dashboard/edit",
       }),
@@ -198,4 +243,58 @@ export async function grantManualProfileStatuses({
   );
 
   return statuses;
+}
+
+export async function notifyExpiredProfileStatuses({
+  userId,
+  now = new Date(),
+  take = 100,
+}: {
+  userId?: string;
+  now?: Date;
+  take?: number;
+} = {}) {
+  const expiredStatuses = await db.userProfileStatus.findMany({
+    where: {
+      ...(userId ? { userId } : {}),
+      approvalStatus: ProfileStatusApprovalStatus.APPROVED,
+      expiresAt: { lte: now },
+      expiredNotifiedAt: null,
+    },
+    select: {
+      id: true,
+      userId: true,
+      title: true,
+    },
+    orderBy: { expiresAt: "asc" },
+    take,
+  });
+
+  await Promise.all(
+    expiredStatuses.map(async (status) => {
+      const updated = await db.userProfileStatus.updateMany({
+        where: {
+          id: status.id,
+          expiredNotifiedAt: null,
+        },
+        data: {
+          selectedOrder: null,
+          expiredNotifiedAt: now,
+        },
+      });
+
+      if (!updated.count) return null;
+
+      return createNotification({
+        userId: status.userId,
+        title: "Срок статуса закончился",
+        body: `Статус ${status.title} больше не активен и убран из профиля.`,
+        type: NotificationType.SYSTEM,
+        link: "/dashboard",
+        dedupeKey: `profile-status-expired:${status.id}`,
+      });
+    }),
+  );
+
+  return { expiredCount: expiredStatuses.length };
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCurrentSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { notifyExpiredProfileStatuses } from "@/lib/profile-statuses";
 import { MobileMenu } from "@/components/layout/mobile-menu";
 import { AuthNav } from "@/components/layout/auth-nav";
 import { DesktopNav } from "@/components/layout/desktop-nav";
@@ -18,6 +19,9 @@ const links = [
 
 export async function Navbar() {
   const session = await getCurrentSession();
+  if (session?.user) {
+    await notifyExpiredProfileStatuses({ userId: session.user.id });
+  }
   const unread = session?.user ? await db.notification.count({ where: { userId: session.user.id, isRead: false } }) : 0;
 
   return (

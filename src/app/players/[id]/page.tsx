@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
-import { ProfileStatusApprovalStatus } from "@prisma/client";
 import { PlayerProfileView } from "@/components/players/player-profile-view";
 import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
 import { getUserAchievementProgress } from "@/lib/achievements";
 import { getPlayerCareerStats } from "@/lib/player-stats";
+import { getActiveProfileStatusWhere } from "@/lib/profile-status-query";
 
 export default async function PlayerProfilePage({
   params,
@@ -26,7 +26,7 @@ export default async function PlayerProfilePage({
           },
         },
         profileStatuses: {
-          where: { approvalStatus: ProfileStatusApprovalStatus.APPROVED },
+          where: getActiveProfileStatusWhere(),
           orderBy: [{ selectedOrder: "asc" }, { createdAt: "desc" }],
         },
       },

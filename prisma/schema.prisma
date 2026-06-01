@@ -173,6 +173,7 @@ enum ProfileStatusType {
   LEGEND
   ACTIVE
   RELIABLE
+  GOAL_MASTER
 }
 
 enum ProfileStatusTone {
@@ -540,6 +541,8 @@ model UserProfileStatus {
   createdAt      DateTime                    @default(now())
   updatedAt      DateTime                    @updatedAt
   approvedAt     DateTime?
+  expiresAt      DateTime?
+  expiredNotifiedAt DateTime?
   reviewedAt     DateTime?
   reviewedById   String?
   user           User                        @relation("profileStatusOwner", fields: [userId], references: [id], onDelete: Cascade)
@@ -549,6 +552,7 @@ model UserProfileStatus {
   @@unique([userId, seasonId, type])
   @@index([userId, approvalStatus, selectedOrder])
   @@index([approvalStatus, createdAt])
+  @@index([approvalStatus, expiresAt, expiredNotifiedAt])
   @@index([seasonId, sourceRank])
 }
 

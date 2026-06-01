@@ -1,6 +1,6 @@
 import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
-import { ProfileStatusApprovalStatus } from "@prisma/client";
+import { getActiveProfileStatusWhere } from "@/lib/profile-status-query";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth/session";
 import { generateVerificationCode, hashVerificationCode, sendEmailVerificationCode } from "@/lib/email";
@@ -208,9 +208,9 @@ export async function PATCH(request: Request) {
   const ownedStatuses = selectedStatusIds.length
     ? await db.userProfileStatus.findMany({
         where: {
+          ...getActiveProfileStatusWhere(),
           id: { in: selectedStatusIds },
           userId: session.user.id,
-          approvalStatus: ProfileStatusApprovalStatus.APPROVED,
         },
         select: { id: true },
       })

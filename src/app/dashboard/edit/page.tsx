@@ -3,15 +3,17 @@ import { ProfileForm } from "@/components/dashboard/profile-form";
 import { requireAuth } from "@/lib/auth/session";
 import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
-import { ProfileStatusApprovalStatus } from "@prisma/client";
+import { getActiveProfileStatusWhere } from "@/lib/profile-status-query";
+import { notifyExpiredProfileStatuses } from "@/lib/profile-statuses";
 
 export default async function DashboardEditPage() {
   const session = await requireAuth();
+  await notifyExpiredProfileStatuses({ userId: session.user.id });
   const user = await db.user.findUnique({
     where: { id: session.user.id },
     include: {
       profileStatuses: {
-        where: { approvalStatus: ProfileStatusApprovalStatus.APPROVED },
+        where: getActiveProfileStatusWhere(),
         orderBy: [{ selectedOrder: "asc" }, { createdAt: "desc" }],
       },
     },

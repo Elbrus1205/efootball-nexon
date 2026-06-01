@@ -1,10 +1,11 @@
-import { ProfileStatusApprovalStatus } from "@prisma/client";
 import { PlayerProfileView } from "@/components/players/player-profile-view";
 import { requireAuth } from "@/lib/auth/session";
 import { getUserAchievementProgress, syncUserAchievements } from "@/lib/achievements";
 import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
 import { getPlayerCareerStats } from "@/lib/player-stats";
+import { getActiveProfileStatusWhere } from "@/lib/profile-status-query";
+import { notifyExpiredProfileStatuses } from "@/lib/profile-statuses";
 
 export default async function DashboardPage({
   searchParams,
@@ -13,6 +14,7 @@ export default async function DashboardPage({
 }) {
   const session = await requireAuth();
   await syncUserAchievements(session.user.id);
+  await notifyExpiredProfileStatuses({ userId: session.user.id });
   const [user, clubs, seasons] = await Promise.all([
     db.user.findUnique({
       where: { id: session.user.id },
@@ -24,7 +26,7 @@ export default async function DashboardPage({
           },
         },
         profileStatuses: {
-          where: { approvalStatus: ProfileStatusApprovalStatus.APPROVED },
+          where: getActiveProfileStatusWhere(),
           orderBy: [{ selectedOrder: "asc" }, { createdAt: "desc" }],
         },
       },

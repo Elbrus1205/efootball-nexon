@@ -1,6 +1,7 @@
-import { MatchStatus, Prisma, ProfileStatusApprovalStatus, TournamentStatus, User, UserRole, type ProfileStatusTone } from "@prisma/client";
+import { MatchStatus, Prisma, TournamentStatus, User, UserRole, type ProfileStatusTone } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
+import { getSelectedProfileStatusWhere } from "@/lib/profile-status-query";
 
 const INITIAL_RATING = 500;
 const K_FACTOR = 30;
@@ -117,7 +118,7 @@ export async function getPlayerRatings(options: PlayerRatingOptions = {}) {
         name: true,
         image: true,
         profileStatuses: {
-          where: { approvalStatus: ProfileStatusApprovalStatus.APPROVED, selectedOrder: { not: null } },
+          where: getSelectedProfileStatusWhere(),
           select: { id: true, title: true, tone: true, selectedOrder: true },
           orderBy: [{ selectedOrder: "asc" }],
           take: 3,

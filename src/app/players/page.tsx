@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Search, Send } from "lucide-react";
-import { ProfileStatusApprovalStatus } from "@prisma/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,7 @@ import { TelegramProfileLink } from "@/components/telegram-profile-link";
 import { UserRoleBadge } from "@/components/users/user-role-badge";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
+import { getSelectedProfileStatusWhere } from "@/lib/profile-status-query";
 import { profileStatusClassName } from "@/lib/profile-status-style";
 import { getUserSocialLinks } from "@/lib/social-links";
 
@@ -43,7 +43,7 @@ export default async function PlayersPage({
         },
       },
       profileStatuses: {
-        where: { approvalStatus: ProfileStatusApprovalStatus.APPROVED, selectedOrder: { not: null } },
+        where: getSelectedProfileStatusWhere(),
         orderBy: [{ selectedOrder: "asc" }, { createdAt: "desc" }],
         take: 3,
       },
