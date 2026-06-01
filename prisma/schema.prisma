@@ -256,6 +256,8 @@ model User {
   submittedResults    MatchResultSubmission[]
   notifications       Notification[]
   achievements        UserAchievement[]
+  warningsReceived    UserWarning[]             @relation("warningTarget")
+  warningsIssued      UserWarning[]             @relation("warningIssuer")
   passwordResetTokens PasswordResetToken[]
   emailVerificationCodes EmailVerificationCode[]
   adminActions        AdminAction[]
@@ -433,6 +435,19 @@ model RolePermission {
 
   @@unique([role, permission])
   @@index([role, enabled])
+}
+
+model UserWarning {
+  id        String   @id @default(cuid())
+  userId    String
+  issuedById String
+  reason    String?  @db.Text
+  createdAt DateTime @default(now())
+  user      User     @relation("warningTarget", fields: [userId], references: [id], onDelete: Cascade)
+  issuedBy  User     @relation("warningIssuer", fields: [issuedById], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([issuedById, createdAt])
 }
 
 model Account {

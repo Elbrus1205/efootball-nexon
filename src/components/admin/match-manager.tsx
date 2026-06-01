@@ -16,6 +16,7 @@ type ParticipantOption = {
   id: string;
   userId: string;
   clubName: string | null;
+  clubSlug?: string | null;
   clubBadgePath: string | null;
   user: {
     name: string | null;
@@ -37,6 +38,8 @@ type MatchItem = {
   participant2EntryId: string | null;
   player1: { name: string | null } | null;
   player2: { name: string | null } | null;
+  participant1Entry?: { clubName: string | null; clubSlug?: string | null } | null;
+  participant2Entry?: { clubName: string | null; clubSlug?: string | null } | null;
   bracketId?: string | null;
   stage?: { name: string | null; type: StageType } | null;
   group?: { name: string } | null;
@@ -158,6 +161,7 @@ export function MatchManager({
   const [roundFilter, setRoundFilter] = useState<string>(() => (matches[0]?.round ? String(matches[0].round) : "all"));
 
   const participantById = useMemo(() => new Map(participants.map((participant) => [participant.id, participant])), [participants]);
+  const participantSearchTokens = (participant?: ParticipantOption | null) => [participant?.clubName, participant?.clubSlug, participant?.user.name].filter(Boolean);
 
   useEffect(() => {
     setOrderedMatches(matches);
@@ -171,6 +175,12 @@ export function MatchManager({
       const haystack = [
         match.player1?.name,
         match.player2?.name,
+        match.participant1Entry?.clubName,
+        match.participant1Entry?.clubSlug,
+        match.participant2Entry?.clubName,
+        match.participant2Entry?.clubSlug,
+        ...participantSearchTokens(match.participant1EntryId ? participantById.get(match.participant1EntryId) : null),
+        ...participantSearchTokens(match.participant2EntryId ? participantById.get(match.participant2EntryId) : null),
         match.stage?.name,
         match.group?.name,
         match.notes,
@@ -184,7 +194,7 @@ export function MatchManager({
       if (normalized && !haystack.includes(normalized) && !`match ${match.matchNumber}`.includes(normalized)) return false;
       return true;
     });
-  }, [orderedMatches, query, statusFilter, roundFilter]);
+  }, [orderedMatches, participantById, query, statusFilter, roundFilter]);
 
   const patchLocalMatch = (matchId: string, payload: Record<string, unknown>) => {
     setOrderedMatches((current) =>
@@ -301,7 +311,7 @@ export function MatchManager({
         <div className="grid gap-3 lg:grid-cols-[1fr_220px_180px]">
           <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-            <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по игроку, группе, стадии или заметке" className="pl-10" />
+            <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по игроку, клубу, группе, стадии или заметке" className="pl-10" />
           </div>
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-11 rounded-xl border border-white/10 bg-white/5 px-4 text-sm text-white">
             <option value="all">Все статусы</option>
