@@ -20,6 +20,8 @@ type ParticipantItem = {
     id: string;
     name: string | null;
     email: string | null;
+    publicId?: string | null;
+    telegramUsername?: string | null;
   };
   group: {
     id: string;
@@ -67,6 +69,8 @@ function participantSearchText(participant: ParticipantItem) {
     participant.user.name,
     participant.user.email,
     participant.user.id,
+    participant.user.publicId,
+    participant.user.telegramUsername,
     participant.clubName,
     participant.clubSlug,
     participant.group?.name,

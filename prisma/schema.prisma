@@ -699,6 +699,7 @@ model TournamentRegistration {
   @@unique([tournamentId, userId])
   @@unique([tournamentId, clubSlug])
   @@index([tournamentId, status])
+  @@index([tournamentId, seed, createdAt])
   @@index([groupId])
 }
 

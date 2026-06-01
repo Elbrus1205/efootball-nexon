@@ -7,21 +7,53 @@ import { db } from "@/lib/db";
 export default async function AdminTournamentParticipantsPage({ params }: { params: { id: string } }) {
   await requirePermission("tournaments.manageParticipants");
 
-  const tournament = await db.tournament.findUnique({
-    where: { id: params.id },
-    include: {
-      participants: {
-        include: { user: true, group: true },
-        orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
+  const [tournament, participants, stages] = await Promise.all([
+    db.tournament.findUnique({
+      where: { id: params.id },
+      select: { id: true },
+    }),
+    db.tournamentRegistration.findMany({
+      where: { tournamentId: params.id },
+      select: {
+        id: true,
+        status: true,
+        seed: true,
+        clubSlug: true,
+        clubName: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            publicId: true,
+            telegramUsername: true,
+          },
+        },
+        group: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
-      stages: {
-        where: { type: StageType.GROUP_STAGE },
-        include: { groups: { orderBy: { orderIndex: "asc" } } },
+      orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
+    }),
+    db.tournamentStage.findMany({
+      where: { tournamentId: params.id, type: StageType.GROUP_STAGE },
+      select: {
+        groups: {
+          select: {
+            id: true,
+            name: true,
+          },
+          orderBy: { orderIndex: "asc" },
+        },
       },
-    },
-  });
+      orderBy: { orderIndex: "asc" },
+    }),
+  ]);
 
   if (!tournament) notFound();
 
-  return <ParticipantManager tournamentId={tournament.id} participants={tournament.participants} groups={tournament.stages.flatMap((stage) => stage.groups)} />;
+  return <ParticipantManager tournamentId={tournament.id} participants={participants} groups={stages.flatMap((stage) => stage.groups)} />;
 }

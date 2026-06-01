@@ -35,7 +35,28 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 
   const participants = await db.tournamentRegistration.findMany({
     where: { tournamentId: params.id },
-    include: { user: true, group: true },
+    select: {
+      id: true,
+      status: true,
+      seed: true,
+      clubSlug: true,
+      clubName: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          publicId: true,
+          telegramUsername: true,
+        },
+      },
+      group: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
     orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
   });
 
