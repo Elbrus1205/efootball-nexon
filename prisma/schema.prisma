@@ -844,6 +844,8 @@ model Match {
   winnerEntryId       String?
   player1Score        Int?
   player2Score        Int?
+  player1PenaltyScore Int?
+  player2PenaltyScore Int?
   status              MatchStatus             @default(PENDING)
   notes               String?                 @db.Text
   locationLabel       String?

@@ -351,6 +351,8 @@ export const matchUpdateSchema = z.object({
   scheduledAt: z.string().optional().or(z.literal("")),
   player1Score: z.preprocess((value) => (value === "" ? null : value), z.coerce.number().min(0).max(99).nullable()).optional(),
   player2Score: z.preprocess((value) => (value === "" ? null : value), z.coerce.number().min(0).max(99).nullable()).optional(),
+  player1PenaltyScore: z.preprocess((value) => (value === "" ? null : value), z.coerce.number().min(0).max(99).nullable()).optional(),
+  player2PenaltyScore: z.preprocess((value) => (value === "" ? null : value), z.coerce.number().min(0).max(99).nullable()).optional(),
   status: z.string().optional().or(z.literal("")),
   notes: z.string().max(1000).optional().or(z.literal("")),
 });

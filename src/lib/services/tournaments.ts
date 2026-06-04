@@ -2101,15 +2101,22 @@ export async function recalculateGroupStandings(tournamentId: string) {
           const seriesTwo = ensureSeriesRow(seriesTwoId);
           const scoreOne = seriesMatch.player1Score ?? 0;
           const scoreTwo = seriesMatch.player2Score ?? 0;
+          const winnerEntryId =
+            seriesMatch.winnerEntryId ??
+            (seriesMatch.winnerId === seriesMatch.player1Id
+              ? seriesMatch.participant1EntryId
+              : seriesMatch.winnerId === seriesMatch.player2Id
+                ? seriesMatch.participant2EntryId
+                : null);
 
           seriesOne.goalsFor += scoreOne;
           seriesOne.goalsAgainst += scoreTwo;
           seriesTwo.goalsFor += scoreTwo;
           seriesTwo.goalsAgainst += scoreOne;
 
-          if (scoreOne > scoreTwo) {
+          if (scoreOne > scoreTwo || (scoreOne === scoreTwo && winnerEntryId === seriesMatch.participant1EntryId)) {
             seriesOne.wins += 1;
-          } else if (scoreTwo > scoreOne) {
+          } else if (scoreTwo > scoreOne || (scoreOne === scoreTwo && winnerEntryId === seriesMatch.participant2EntryId)) {
             seriesTwo.wins += 1;
           }
         }

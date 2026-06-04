@@ -4,8 +4,56 @@ import { assertCanManageMatch } from "@/lib/admin-tournament-access";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
-import { recalculateGroupStandings } from "@/lib/services/tournaments";
+import { recalculateGroupStandings, resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { matchUpdateSchema } from "@/lib/validators";
+
+function matchRequiresWinner(match: {
+  bracketId: string | null;
+  isPenaltyTiebreak: boolean;
+  seriesWinsRequired: number | null;
+}) {
+  return Boolean(match.bracketId) || match.isPenaltyTiebreak || Boolean(match.seriesWinsRequired && match.seriesWinsRequired > 1);
+}
+
+function resolveWinner(params: {
+  player1Id: string | null;
+  player2Id: string | null;
+  participant1EntryId: string | null;
+  participant2EntryId: string | null;
+  player1Score: number | null;
+  player2Score: number | null;
+  player1PenaltyScore: number | null;
+  player2PenaltyScore: number | null;
+  requiresWinner: boolean;
+}) {
+  if (params.player1Score === null || params.player2Score === null) {
+    return { winnerId: null, winnerEntryId: null };
+  }
+
+  if (params.player1Score > params.player2Score) {
+    return { winnerId: params.player1Id, winnerEntryId: params.participant1EntryId };
+  }
+
+  if (params.player2Score > params.player1Score) {
+    return { winnerId: params.player2Id, winnerEntryId: params.participant2EntryId };
+  }
+
+  if (!params.requiresWinner) {
+    return { winnerId: null, winnerEntryId: null };
+  }
+
+  if (
+    params.player1PenaltyScore === null ||
+    params.player2PenaltyScore === null ||
+    params.player1PenaltyScore === params.player2PenaltyScore
+  ) {
+    throw new Error("PENALTY_REQUIRED");
+  }
+
+  return params.player1PenaltyScore > params.player2PenaltyScore
+    ? { winnerId: params.player1Id, winnerEntryId: params.participant1EntryId }
+    : { winnerId: params.player2Id, winnerEntryId: params.participant2EntryId };
+}
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const session = await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
@@ -28,8 +76,44 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if ("scheduledAt" in body) data.scheduledAt = body.scheduledAt ? new Date(body.scheduledAt) : null;
   if ("player1Score" in body) data.player1Score = body.player1Score;
   if ("player2Score" in body) data.player2Score = body.player2Score;
+  if ("player1PenaltyScore" in body) data.player1PenaltyScore = body.player1PenaltyScore;
+  if ("player2PenaltyScore" in body) data.player2PenaltyScore = body.player2PenaltyScore;
   if ("status" in body && body.status) data.status = body.status as MatchStatus;
   if ("notes" in body) data.notes = body.notes || null;
+
+  const nextPlayer1Id = "player1Id" in body ? body.player1Id || null : before.player1Id;
+  const nextPlayer2Id = "player2Id" in body ? body.player2Id || null : before.player2Id;
+  const nextParticipant1EntryId = "participant1EntryId" in body ? body.participant1EntryId || null : before.participant1EntryId;
+  const nextParticipant2EntryId = "participant2EntryId" in body ? body.participant2EntryId || null : before.participant2EntryId;
+  const nextPlayer1Score = "player1Score" in body ? body.player1Score ?? null : before.player1Score;
+  const nextPlayer2Score = "player2Score" in body ? body.player2Score ?? null : before.player2Score;
+  const nextPlayer1PenaltyScore = "player1PenaltyScore" in body ? body.player1PenaltyScore ?? null : before.player1PenaltyScore;
+  const nextPlayer2PenaltyScore = "player2PenaltyScore" in body ? body.player2PenaltyScore ?? null : before.player2PenaltyScore;
+  const nextStatus = "status" in body && body.status ? (body.status as MatchStatus) : before.status;
+
+  if (nextStatus === MatchStatus.CONFIRMED || nextStatus === MatchStatus.FINISHED) {
+    try {
+      const winner = resolveWinner({
+        player1Id: nextPlayer1Id,
+        player2Id: nextPlayer2Id,
+        participant1EntryId: nextParticipant1EntryId,
+        participant2EntryId: nextParticipant2EntryId,
+        player1Score: nextPlayer1Score,
+        player2Score: nextPlayer2Score,
+        player1PenaltyScore: nextPlayer1PenaltyScore,
+        player2PenaltyScore: nextPlayer2PenaltyScore,
+        requiresWinner: matchRequiresWinner(before),
+      });
+
+      data.winner = winner.winnerId ? { connect: { id: winner.winnerId } } : { disconnect: true };
+      data.winningEntry = winner.winnerEntryId ? { connect: { id: winner.winnerEntryId } } : { disconnect: true };
+    } catch (error) {
+      if (error instanceof Error && error.message === "PENALTY_REQUIRED") {
+        return NextResponse.json({ error: "Для ничьей в этом матче нужно указать пенальти с победителем." }, { status: 400 });
+      }
+      throw error;
+    }
+  }
 
   const updated = await db.match.update({
     where: { id: params.id },
@@ -42,11 +126,19 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     before.status !== updated.status ||
     before.player1Score !== updated.player1Score ||
     before.player2Score !== updated.player2Score ||
+    before.player1PenaltyScore !== updated.player1PenaltyScore ||
+    before.player2PenaltyScore !== updated.player2PenaltyScore ||
+    before.winnerId !== updated.winnerId ||
     before.participant1EntryId !== updated.participant1EntryId ||
     before.participant2EntryId !== updated.participant2EntryId;
 
   if (standingsRelevantChange) {
     await recalculateGroupStandings(before.tournamentId);
+  }
+
+  if (updated.status === MatchStatus.CONFIRMED || updated.status === MatchStatus.FINISHED) {
+    await resolveConfirmedMatch(updated.id);
+    await syncTournamentLifecycleStatus(updated.tournamentId);
   }
 
   await logAdminAction({
