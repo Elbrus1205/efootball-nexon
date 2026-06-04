@@ -53,6 +53,12 @@ export function RosterManager({
     return null;
   }
 
+  const canInvite = currentMembership.isCaptain && currentMembership.status === TeamInviteStatus.ACCEPTED && activeMembers.length < rosterSize;
+
+  if (currentMembership.status !== TeamInviteStatus.PENDING && !canInvite && !message) {
+    return null;
+  }
+
   const respond = (action: "accept" | "decline") => {
     startTransition(async () => {
       setMessage("");
@@ -88,21 +94,16 @@ export function RosterManager({
     });
   };
 
-  const title =
-    participantMode === TournamentParticipantMode.TEAM
-      ? currentMembership.registration.teamName ?? "Команда"
-      : currentMembership.registration.clubName ?? "Кооперативный состав";
-
   return (
-    <Card className="space-y-4 p-4 sm:p-5">
+    <Card className="space-y-3 p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Состав</div>
-          <h2 className="mt-1 text-xl font-semibold text-white">{title}</h2>
+          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Управление составом</div>
           <p className="mt-1 text-sm text-zinc-400">
             {activeMembers.length}/{rosterSize} игроков
           </p>
         </div>
+
         {currentMembership.status === TeamInviteStatus.PENDING ? (
           <div className="flex gap-2">
             <Button size="sm" className="gap-2" disabled={isPending} onClick={() => respond("accept")}>
@@ -117,19 +118,7 @@ export function RosterManager({
         ) : null}
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {activeMembers.map((member) => (
-          <div key={member.id} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
-            <div className="truncate text-sm font-semibold text-white">{member.user.name ?? member.user.email ?? "Игрок"}</div>
-            <div className="mt-1 text-xs text-zinc-500">
-              {member.isCaptain ? "Капитан · " : ""}
-              {member.status === TeamInviteStatus.ACCEPTED ? "принято" : "ожидает"}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {currentMembership.isCaptain && currentMembership.status === TeamInviteStatus.ACCEPTED && activeMembers.length < rosterSize ? (
+      {canInvite ? (
         <div className="flex flex-col gap-2 sm:flex-row">
           <input
             value={nickname}
