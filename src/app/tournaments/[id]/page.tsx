@@ -1089,9 +1089,9 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   }));
   const currentRosterMembership = tournament.rosterMembers[0] ?? null;
   const showRosterTab = tournament.participantMode !== "SINGLE";
-  const rosterCards = (
+  const renderRosterCards = (entries: typeof activeParticipants) => (
     <div className="grid gap-4 md:grid-cols-2">
-      {activeParticipants.map((entry) => {
+      {entries.map((entry) => {
         const playerName = getPlayerDisplayName(entry.user);
         const rosterTitle = resolveClubName(entry, clubsBySlug, playerName);
         const rosterBadge = resolveClubBadgePath(entry, clubsBySlug);
@@ -1157,6 +1157,14 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
       })}
     </div>
   );
+  const currentRosterCards = currentRosterMembership
+    ? renderRosterCards(activeParticipants.filter((entry) => entry.id === currentRosterMembership.registration.id))
+    : (
+      <Card className="p-6 text-zinc-500">
+        Ваш состав появится здесь после регистрации или принятия приглашения.
+      </Card>
+    );
+  const allRosterCards = renderRosterCards(activeParticipants);
 
   logTiming("tournament-page", pageStart);
 
@@ -1399,14 +1407,14 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                 rosterSize={tournament.rosterSize}
                 currentMembership={currentRosterMembership}
               />
-              {rosterCards}
+              {currentRosterCards}
             </div>
           </TabsContent>
         ) : null}
 
         <TabsContent value="participants">
           {showRosterTab ? (
-            rosterCards
+            allRosterCards
           ) : (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {activeParticipants.map((entry) => {
