@@ -99,14 +99,16 @@ export async function getPlayerRatings(options: PlayerRatingOptions = {}) {
     player1Score: { not: null },
     player2Score: { not: null },
     isPenaltyTiebreak: false,
+    tournament: { isTest: false },
   };
 
   const tournamentWhere: Prisma.TournamentWhereInput = {
     status: TournamentStatus.COMPLETED,
+    isTest: false,
   };
 
   if (options.seasonId) {
-    matchWhere.tournament = { seasonId: options.seasonId };
+    matchWhere.tournament = { seasonId: options.seasonId, isTest: false };
     tournamentWhere.seasonId = options.seasonId;
   }
 

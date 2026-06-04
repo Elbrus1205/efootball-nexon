@@ -23,6 +23,10 @@ function shouldSyncTournamentForList(tournament: {
   return shouldSyncTournamentRegistrationLifecycle(tournament);
 }
 
+function canSeeTestTournaments(role?: string | null) {
+  return role === "FOUNDER" || role === "ADMIN" || role === "ORGANIZER" || role === "JUDGE" || role === "TRAINEE";
+}
+
 async function getCurrentRoleFromToken() {
   const requestHeaders = headers();
   const token = await getToken({
@@ -50,6 +54,7 @@ export default async function TournamentsPage() {
           maxParticipants: true,
           prizePool: true,
           coverImage: true,
+          isTest: true,
           autoOpenRegistration: true,
           registrationStartsAt: true,
           _count: {
@@ -65,8 +70,12 @@ export default async function TournamentsPage() {
       .finally(() => logTiming("load-tournament-list", tournamentListStart)),
   ]);
 
+  const showTestTournaments = canSeeTestTournaments(currentRole);
+  const visibleInitialTournamentList = showTestTournaments
+    ? initialTournamentList
+    : initialTournamentList.filter((tournament) => !tournament.isTest);
   const syncStart = performance.now();
-  const syncCandidates = initialTournamentList.filter(shouldSyncTournamentForList);
+  const syncCandidates = visibleInitialTournamentList.filter(shouldSyncTournamentForList);
   await Promise.all(
     syncCandidates.map((tournament) => syncTournamentLifecycleStatus(tournament.id).catch(() => null)),
   );
@@ -74,6 +83,7 @@ export default async function TournamentsPage() {
 
   const tournamentList = syncCandidates.length
     ? await db.tournament.findMany({
+        where: showTestTournaments ? undefined : { isTest: false },
         select: {
           id: true,
           title: true,
@@ -82,6 +92,7 @@ export default async function TournamentsPage() {
           maxParticipants: true,
           prizePool: true,
           coverImage: true,
+          isTest: true,
           _count: {
             select: {
               participants: {
@@ -92,7 +103,7 @@ export default async function TournamentsPage() {
         },
         orderBy: [{ status: "asc" }, { startsAt: "asc" }],
       })
-    : initialTournamentList;
+    : visibleInitialTournamentList;
   const canOpenDivisions = isDivisionAdminRole(currentRole);
   const divisionSettingsStart = performance.now();
   const divisionSettings = canOpenDivisions

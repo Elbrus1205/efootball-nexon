@@ -47,6 +47,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       id: true,
       title: true,
       status: true,
+      isTest: true,
       notificationsEnabled: true,
       format: true,
       formatBlueprintJson: true,
@@ -77,6 +78,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   if (tournament.status !== TournamentStatus.REGISTRATION_OPEN) {
     return NextResponse.json({ error: "Регистрация уже закрыта." }, { status: 400 });
+  }
+
+  if (tournament.isTest && session.user.role === "PLAYER") {
+    return NextResponse.json({ error: "Тестовый турнир доступен только админам." }, { status: 404 });
   }
 
   if (!user?.telegramId || !hasPublicTelegramUsername(user.telegramUsername)) {

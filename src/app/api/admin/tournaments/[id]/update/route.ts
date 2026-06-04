@@ -33,6 +33,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     rosterSize: formData.get("rosterSize"),
     matchupFormat: formData.get("matchupFormat"),
     bestOfWins: formData.get("bestOfWins"),
+    isTest: checkboxValue(formData.get("isTest")),
     prizePool: formData.get("prizePool"),
     format: TournamentFormat.CUSTOM,
     status: formData.get("status"),
@@ -65,6 +66,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const formatBlueprint = parseFormatBlueprintJson(typeof body.formatBlueprintJson === "string" ? body.formatBlueprintJson : "");
   const startsAt = new Date(body.startsAt);
   const status = resolveUpdatedStatus(body.status, startsAt, body.autoOpenRegistration);
+  const isTest = body.isTest || session.user.role === UserRole.TRAINEE;
 
   const before = await db.tournament.findUnique({
     where: { id: params.id },
@@ -86,6 +88,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       rosterSize: body.participantMode === "SINGLE" ? 1 : body.rosterSize,
       matchupFormat: body.matchupFormat,
       bestOfWins: body.matchupFormat === "BEST_OF" ? body.bestOfWins : 1,
+      isTest,
       prizePool: body.prizePool || null,
       format: TournamentFormat.CUSTOM,
       formatBlueprintJson: formatBlueprint ?? Prisma.DbNull,
@@ -113,6 +116,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       manualPlayoffSelection: body.manualPlayoffSelection,
       checkInRequired: body.checkInRequired,
       requireTelegramForRegistration: body.requireTelegramForRegistration,
+      notificationsEnabled: session.user.role !== UserRole.TRAINEE && !isTest,
       clubSelectionMode: body.clubSelectionMode,
       sortRules: body.sortRules,
     },

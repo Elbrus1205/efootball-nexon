@@ -44,6 +44,7 @@ type BuilderValues = {
   rosterSize?: number;
   matchupFormat?: MatchupFormat;
   bestOfWins?: number;
+  isTest?: boolean;
   prizePool?: string;
   format?: TournamentFormat;
   status?: TournamentStatus;
@@ -182,6 +183,14 @@ export function TournamentBuilderForm({
               defaultValue={initialValues?.maxParticipants ?? 16}
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Тестовый режим</Label>
+            <label className="flex min-h-11 items-center gap-3 rounded-xl border border-amber-400/20 bg-amber-500/[0.06] px-4 py-3 text-sm text-zinc-300">
+              <input type="checkbox" name="isTest" value="true" defaultChecked={initialValues?.isTest ?? false} />
+              Тестовый турнир: скрыт от игроков, уведомления не отправляются
+            </label>
           </div>
 
           <div className="space-y-2">

@@ -645,6 +645,10 @@ function shouldSyncTournamentBeforeView(tournament: {
   return shouldSyncTournamentRegistrationLifecycle(tournament);
 }
 
+function canSeeTestTournaments(role?: string | null) {
+  return role === "FOUNDER" || role === "ADMIN" || role === "ORGANIZER" || role === "JUDGE" || role === "TRAINEE";
+}
+
 export default async function TournamentDetailsPage({ params }: { params: { id: string } }) {
   const pageStart = performance.now();
   noStore();
@@ -679,6 +683,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
       title: true,
       rules: true,
       status: true,
+      isTest: true,
       startsAt: true,
       maxParticipants: true,
       format: true,
@@ -849,6 +854,11 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   logTiming("load-tournament", tournamentStart);
 
   if (!tournament) {
+    logTiming("tournament-page", pageStart);
+    notFound();
+  }
+
+  if (tournament.isTest && !canSeeTestTournaments(session?.user.role)) {
     logTiming("tournament-page", pageStart);
     notFound();
   }

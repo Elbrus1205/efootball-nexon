@@ -36,6 +36,7 @@ export default async function AdminTournamentEditPage({ params }: { params: { id
           rosterSize: tournament.rosterSize,
           matchupFormat: tournament.matchupFormat,
           bestOfWins: tournament.bestOfWins,
+          isTest: tournament.isTest,
           prizePool: tournament.prizePool ?? "",
           format: tournament.format,
           status: tournament.status,

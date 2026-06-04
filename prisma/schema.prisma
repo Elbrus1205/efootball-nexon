@@ -600,6 +600,7 @@ model Tournament {
   checkInRequired        Boolean                  @default(false)
   requireTelegramForRegistration Boolean          @default(false)
   notificationsEnabled Boolean                    @default(true)
+  isTest               Boolean                    @default(false)
   participantMode      TournamentParticipantMode  @default(SINGLE)
   rosterSize           Int                        @default(1)
   matchupFormat        MatchupFormat             @default(SINGLE_MATCH)
@@ -636,6 +637,7 @@ model Tournament {
   @@index([status, startsAt])
   @@index([seasonId, status])
   @@index([participantMode, status])
+  @@index([isTest, status])
 }
 
 model TournamentStage {

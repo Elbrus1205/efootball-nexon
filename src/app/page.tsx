@@ -38,10 +38,10 @@ export default async function HomePage() {
     }),
     db.user.count(),
     db.tournament.count({
-      where: { status: TournamentStatus.COMPLETED },
+      where: { status: TournamentStatus.COMPLETED, isTest: false },
     }),
     db.tournament.findMany({
-      where: { prizePool: { not: null } },
+      where: { prizePool: { not: null }, isTest: false },
       select: { prizePool: true },
     }),
   ]);

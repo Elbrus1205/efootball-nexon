@@ -138,6 +138,7 @@ export const tournamentBuilderSchema = z.object({
   rosterSize: z.coerce.number().int().min(1).max(8).default(1),
   matchupFormat: z.nativeEnum(MatchupFormat).default(MatchupFormat.SINGLE_MATCH),
   bestOfWins: z.coerce.number().int().min(1).max(9).default(1),
+  isTest: z.coerce.boolean().default(false),
   prizePool: z.string().optional().or(z.literal("")),
   format: z.nativeEnum(TournamentFormat),
   status: z.nativeEnum(TournamentStatus).default(TournamentStatus.DRAFT),
