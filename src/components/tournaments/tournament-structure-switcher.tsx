@@ -28,7 +28,7 @@ export function TournamentStructureSwitcher({
   const activePanel = panels[activeIndex] ?? panels[0] ?? null;
   const activeCaption = useMemo(() => activeOption?.caption?.trim(), [activeOption?.caption]);
 
-  if (!options.length) return <>{children}</>;
+  if (options.length <= 1) return <div>{children}</div>;
 
   return (
     <div className="space-y-4">

@@ -712,7 +712,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
               id: true,
               status: true,
               isCaptain: true,
-              user: { select: { id: true, name: true, email: true } },
+              user: { select: { id: true, name: true, email: true, telegramId: true, telegramUsername: true } },
             },
             orderBy: [{ isCaptain: "desc" }, { invitedAt: "asc" }],
           },
@@ -744,7 +744,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                   id: true,
                   status: true,
                   isCaptain: true,
-                  user: { select: { id: true, name: true, email: true } },
+                  user: { select: { id: true, name: true, email: true, telegramId: true, telegramUsername: true } },
                 },
                 orderBy: [{ isCaptain: "desc" }, { invitedAt: "asc" }],
               },
@@ -1088,6 +1088,75 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
     }),
   }));
   const currentRosterMembership = tournament.rosterMembers[0] ?? null;
+  const showRosterTab = tournament.participantMode !== "SINGLE";
+  const rosterCards = (
+    <div className="grid gap-4 md:grid-cols-2">
+      {activeParticipants.map((entry) => {
+        const playerName = getPlayerDisplayName(entry.user);
+        const rosterTitle = resolveClubName(entry, clubsBySlug, playerName);
+        const rosterBadge = resolveClubBadgePath(entry, clubsBySlug);
+        const members = entry.rosterMembers.filter((member) => member.status === "PENDING" || member.status === "ACCEPTED");
+
+        return (
+          <Card key={entry.id} className="min-w-0 overflow-hidden p-0">
+            <div className="flex min-w-0 items-center gap-3 border-b border-white/10 px-4 py-4">
+              {rosterBadge ? (
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/25">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={rosterBadge} alt={rosterTitle} className="h-full w-full object-contain p-1.5" />
+                </div>
+              ) : null}
+              <div className="min-w-0">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary">
+                  {tournament.participantMode === "TEAM" ? "Команда" : "Состав"}
+                </div>
+                <div className="mt-1 max-w-full truncate text-lg font-semibold text-white">{rosterTitle}</div>
+                <div className="mt-0.5 text-xs text-zinc-500">
+                  {members.filter((member) => member.status === "ACCEPTED").length}/{tournament.rosterSize} игроков
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-2 p-3">
+              {members.map((member) => {
+                const memberName = getPlayerDisplayName(member.user);
+                const telegramProfile = getTelegramProfileLinks(member.user);
+
+                return (
+                  <div key={member.id} className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold text-white">{memberName}</div>
+                      <div className="mt-0.5 text-xs text-zinc-500">
+                        {member.isCaptain ? "Капитан · " : ""}
+                        {member.status === "ACCEPTED" ? "принято" : member.status === "PENDING" ? "ожидает" : "отклонено"}
+                      </div>
+                    </div>
+
+                    {telegramProfile ? (
+                      <TelegramProfileLink
+                        {...telegramProfile}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label={`Открыть Telegram ${memberName}`}
+                        className="flex h-9 min-w-0 shrink-0 items-center gap-2 rounded-xl border border-sky-300/20 bg-sky-500/10 px-3 text-xs font-semibold text-sky-100 transition hover:border-sky-300/40 hover:bg-sky-500/20"
+                      >
+                        <Send className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">@{telegramProfile.username}</span>
+                      </TelegramProfileLink>
+                    ) : (
+                      <span className="shrink-0 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-zinc-500">
+                        без TG
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        );
+      })}
+    </div>
+  );
 
   logTiming("tournament-page", pageStart);
 
@@ -1140,19 +1209,13 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
         ) : null}
       </div>
 
-      <RosterManager
-        tournamentId={tournament.id}
-        participantMode={tournament.participantMode}
-        rosterSize={tournament.rosterSize}
-        currentMembership={currentRosterMembership}
-      />
-
       <Tabs defaultValue="structure">
         <div className="max-w-full overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <TabsList className="inline-flex min-w-max flex-nowrap">
             <TabsTrigger className="shrink-0 whitespace-nowrap" value="structure">Структура турнира</TabsTrigger>
             <TabsTrigger className="shrink-0 whitespace-nowrap" value="matches">Расписание</TabsTrigger>
             <TabsTrigger className="shrink-0 whitespace-nowrap" value="my-matches">Мои матчи</TabsTrigger>
+            {showRosterTab ? <TabsTrigger className="shrink-0 whitespace-nowrap" value="roster">Состав</TabsTrigger> : null}
             <TabsTrigger className="shrink-0 whitespace-nowrap" value="participants">Участники</TabsTrigger>
             <TabsTrigger className="shrink-0 whitespace-nowrap" value="rules">Правила</TabsTrigger>
           </TabsList>
@@ -1327,45 +1390,63 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           </div>
         </TabsContent>
 
+        {showRosterTab ? (
+          <TabsContent value="roster">
+            <div className="grid gap-4">
+              <RosterManager
+                tournamentId={tournament.id}
+                participantMode={tournament.participantMode}
+                rosterSize={tournament.rosterSize}
+                currentMembership={currentRosterMembership}
+              />
+              {rosterCards}
+            </div>
+          </TabsContent>
+        ) : null}
+
         <TabsContent value="participants">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {activeParticipants.map((entry) => {
-              const telegramProfile = getTelegramProfileLinks(entry.user);
-              const playerName = getPlayerDisplayName(entry.user);
+          {showRosterTab ? (
+            rosterCards
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {activeParticipants.map((entry) => {
+                const telegramProfile = getTelegramProfileLinks(entry.user);
+                const playerName = getPlayerDisplayName(entry.user);
 
-              return (
-                <Card key={entry.id} className="flex min-w-0 items-center justify-between gap-3 p-4">
-                  <ClubPlayerLine
-                    playerId={entry.user.id}
-                    playerName={playerName}
-                    clubName={resolveClubName(entry, clubsBySlug, playerName)}
-                    badgePath={resolveClubBadgePath(entry, clubsBySlug)}
-                  />
+                return (
+                  <Card key={entry.id} className="flex min-w-0 items-center justify-between gap-3 p-4">
+                    <ClubPlayerLine
+                      playerId={entry.user.id}
+                      playerName={playerName}
+                      clubName={resolveClubName(entry, clubsBySlug, playerName)}
+                      badgePath={resolveClubBadgePath(entry, clubsBySlug)}
+                    />
 
-                  {telegramProfile ? (
-                    <TelegramProfileLink
-                      {...telegramProfile}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label={`Открыть Telegram ${playerName}`}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-sky-300/20 bg-sky-500/10 text-sky-200 transition hover:border-sky-300/40 hover:bg-sky-500/20 hover:text-white"
-                    >
-                      <Send className="h-4 w-4" />
-                    </TelegramProfileLink>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled
-                      aria-label="Telegram не указан"
-                      className="flex h-10 w-10 shrink-0 cursor-default items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-zinc-600"
-                    >
-                      <Send className="h-4 w-4" />
-                    </button>
-                  )}
-                </Card>
-              );
-            })}
-          </div>
+                    {telegramProfile ? (
+                      <TelegramProfileLink
+                        {...telegramProfile}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label={`Открыть Telegram ${playerName}`}
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-sky-300/20 bg-sky-500/10 text-sky-200 transition hover:border-sky-300/40 hover:bg-sky-500/20 hover:text-white"
+                      >
+                        <Send className="h-4 w-4" />
+                      </TelegramProfileLink>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        aria-label="Telegram не указан"
+                        className="flex h-10 w-10 shrink-0 cursor-default items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-zinc-600"
+                      >
+                        <Send className="h-4 w-4" />
+                      </button>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="rules">

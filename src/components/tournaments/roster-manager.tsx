@@ -11,7 +11,7 @@ type RosterMember = {
   id: string;
   status: TeamInviteStatus;
   isCaptain: boolean;
-  user: { id: string; name: string | null; email: string | null };
+  user: { id: string; name: string | null; email: string | null; telegramId?: string | null; telegramUsername?: string | null };
 };
 
 export function RosterManager({
