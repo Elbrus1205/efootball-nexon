@@ -7,6 +7,7 @@ import { CancelTournamentRegistrationButton } from "@/components/tournaments/can
 import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
 import { MyMatchCard } from "@/components/tournaments/my-match-card";
 import { RegisterTournamentButton } from "@/components/tournaments/register-tournament-button";
+import { RosterManager } from "@/components/tournaments/roster-manager";
 import { TournamentScheduleView } from "@/components/tournaments/tournament-schedule-view";
 import { TournamentStructureSwitcher, type TournamentStructureOption } from "@/components/tournaments/tournament-structure-switcher";
 import { TelegramProfileLink } from "@/components/telegram-profile-link";
@@ -225,10 +226,15 @@ function resolveClubName(
   entry: {
     clubSlug?: string | null;
     clubName?: string | null;
+    teamName?: string | null;
   },
   clubsBySlug: Map<string, { name: string }>,
   fallback: string,
 ) {
+  if (entry.teamName?.trim()) {
+    return entry.teamName.trim();
+  }
+
   if (entry.clubSlug) {
     const club = clubsBySlug.get(entry.clubSlug);
     if (club && isBrokenClubName(entry.clubName)) {
@@ -679,6 +685,10 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
       formatBlueprintJson: true,
       playoffType: true,
       clubSelectionMode: true,
+      participantMode: true,
+      rosterSize: true,
+      matchupFormat: true,
+      bestOfWins: true,
       participants: {
         select: {
           id: true,
@@ -690,6 +700,17 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           clubSlug: true,
           clubName: true,
           clubBadgePath: true,
+          teamName: true,
+          teamLogo: true,
+          rosterMembers: {
+            select: {
+              id: true,
+              status: true,
+              isCaptain: true,
+              user: { select: { id: true, name: true, email: true } },
+            },
+            orderBy: [{ isCaptain: "desc" }, { invitedAt: "asc" }],
+          },
           user: {
             select: {
               id: true,
@@ -701,6 +722,30 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           },
         },
         orderBy: { createdAt: "asc" },
+      },
+      rosterMembers: {
+        where: { userId: session?.user.id ?? "__anonymous__" },
+        select: {
+          id: true,
+          status: true,
+          isCaptain: true,
+          registration: {
+            select: {
+              id: true,
+              teamName: true,
+              clubName: true,
+              rosterMembers: {
+                select: {
+                  id: true,
+                  status: true,
+                  isCaptain: true,
+                  user: { select: { id: true, name: true, email: true } },
+                },
+                orderBy: [{ isCaptain: "desc" }, { invitedAt: "asc" }],
+              },
+            },
+          },
+        },
       },
       matches: {
         select: {
@@ -734,6 +779,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
               clubSlug: true,
               clubName: true,
               clubBadgePath: true,
+              teamName: true,
+              teamLogo: true,
               user: { select: { id: true, name: true, email: true } },
             },
           },
@@ -744,6 +791,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
               clubSlug: true,
               clubName: true,
               clubBadgePath: true,
+              teamName: true,
+              teamLogo: true,
               user: { select: { id: true, name: true, email: true } },
             },
           },
@@ -906,11 +955,13 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
     match.status !== MatchStatus.CONFIRMED &&
     match.status !== MatchStatus.FINISHED &&
     match.status !== MatchStatus.DISPUTED &&
-    match.status !== MatchStatus.FORFEIT;
+    match.status !== MatchStatus.FORFEIT &&
+    match.status !== MatchStatus.CANCELLED;
   const isPlayedMatch = (match: (typeof visibleMatches)[number]) =>
     match.status === MatchStatus.CONFIRMED ||
     match.status === MatchStatus.FINISHED ||
-    match.status === MatchStatus.FORFEIT;
+    match.status === MatchStatus.FORFEIT ||
+    match.status === MatchStatus.CANCELLED;
   const myMatchSortGroup = (match: (typeof visibleMatches)[number]) => {
     if (isMatchOpenForScore(match)) return 0;
     if (isPlayedMatch(match)) return 1;
@@ -1026,6 +1077,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
       };
     }),
   }));
+  const currentRosterMembership = tournament.rosterMembers[0] ?? null;
 
   logTiming("tournament-page", pageStart);
 
@@ -1054,6 +1106,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           <RegisterTournamentButton
             tournamentId={tournament.id}
             clubSelectionMode={tournament.clubSelectionMode ?? ClubSelectionMode.ADMIN_RANDOM}
+            participantMode={tournament.participantMode}
+            rosterSize={tournament.rosterSize}
             clubs={availableClubs}
             takenClubSlugs={takenClubSlugs}
           />
@@ -1075,6 +1129,13 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           )
         ) : null}
       </div>
+
+      <RosterManager
+        tournamentId={tournament.id}
+        participantMode={tournament.participantMode}
+        rosterSize={tournament.rosterSize}
+        currentMembership={currentRosterMembership}
+      />
 
       <Tabs defaultValue="structure">
         <div className="max-w-full overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

@@ -27,6 +27,24 @@ enum TournamentFormat {
   CUSTOM
 }
 
+enum TournamentParticipantMode {
+  SINGLE
+  COOP
+  TEAM
+}
+
+enum MatchupFormat {
+  SINGLE_MATCH
+  BEST_OF
+}
+
+enum TeamInviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  REMOVED
+}
+
 enum TournamentStatus {
   DRAFT
   REGISTRATION_OPEN
@@ -43,6 +61,7 @@ enum MatchStatus {
   CONFIRMED
   REJECTED
   FORFEIT
+  CANCELLED
   SCHEDULED
   LIVE
   DISPUTED
@@ -251,6 +270,7 @@ model User {
   accounts            Account[]
   sessions            Session[]
   tournamentEntries   TournamentRegistration[]
+  tournamentRosterMemberships TournamentRegistrationMember[]
   playerOneMatches    Match[]                  @relation("playerOne")
   playerTwoMatches    Match[]                  @relation("playerTwo")
   winningMatches      Match[]                  @relation("winner")
@@ -580,6 +600,10 @@ model Tournament {
   checkInRequired        Boolean                  @default(false)
   requireTelegramForRegistration Boolean          @default(false)
   notificationsEnabled Boolean                    @default(true)
+  participantMode      TournamentParticipantMode  @default(SINGLE)
+  rosterSize           Int                        @default(1)
+  matchupFormat        MatchupFormat             @default(SINGLE_MATCH)
+  bestOfWins           Int                        @default(1)
   autoCreateMatches      Boolean                  @default(true)
   autoCreateStages       Boolean                  @default(true)
   autoCreateSchedule     Boolean                  @default(false)
@@ -602,6 +626,7 @@ model Tournament {
   updatedAt              DateTime                 @updatedAt
   season                 Season?                  @relation(fields: [seasonId], references: [id], onDelete: SetNull)
   participants           TournamentRegistration[]
+  rosterMembers          TournamentRegistrationMember[]
   matches                Match[]
   stages                 TournamentStage[]
   deadlines              RoundDeadline[]
@@ -610,6 +635,7 @@ model Tournament {
 
   @@index([status, startsAt])
   @@index([seasonId, status])
+  @@index([participantMode, status])
 }
 
 model TournamentStage {
@@ -686,6 +712,8 @@ model TournamentRegistration {
   clubSlug            String?
   clubName            String?
   clubBadgePath       String?
+  teamName            String?
+  teamLogo            String?
   approvedAt          DateTime?
   checkedInAt         DateTime?
   notes               String?           @db.Text
@@ -699,12 +727,34 @@ model TournamentRegistration {
   participant1Matches Match[]           @relation("participantOneRegistration")
   participant2Matches Match[]           @relation("participantTwoRegistration")
   winningMatches      Match[]           @relation("winningRegistration")
+  rosterMembers       TournamentRegistrationMember[]
 
   @@unique([tournamentId, userId])
   @@unique([tournamentId, clubSlug])
   @@index([tournamentId, status])
   @@index([tournamentId, seed, createdAt])
   @@index([groupId])
+}
+
+model TournamentRegistrationMember {
+  id             String             @id @default(cuid())
+  tournamentId   String
+  registrationId String
+  userId         String
+  status         TeamInviteStatus   @default(PENDING)
+  isCaptain      Boolean            @default(false)
+  invitedAt      DateTime           @default(now())
+  respondedAt    DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  tournament     Tournament         @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  registration   TournamentRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, userId])
+  @@unique([registrationId, userId])
+  @@index([registrationId, status])
+  @@index([userId, status])
 }
 
 model GroupStanding {
@@ -778,6 +828,8 @@ model Match {
   seriesKey           String?
   legNumber           Int?
   isPenaltyTiebreak   Boolean                 @default(false)
+  seriesWinsRequired  Int?
+  seriesMatchNumber   Int?
   isThirdPlaceMatch   Boolean                 @default(false)
   scheduledAt         DateTime?
   startsAt            DateTime?

@@ -1,6 +1,6 @@
 "use client";
 
-import { ClubSelectionMode, SeedingMethod, SortRule, TournamentFormat, TournamentStatus } from "@prisma/client";
+import { ClubSelectionMode, MatchupFormat, SeedingMethod, SortRule, TournamentFormat, TournamentParticipantMode, TournamentStatus } from "@prisma/client";
 import type { PlayoffType } from "@prisma/client";
 import { ChangeEvent, useState } from "react";
 import { genUploader } from "uploadthing/client";
@@ -40,6 +40,10 @@ type BuilderValues = {
   endsAt?: string;
   registrationEndsAt?: string;
   maxParticipants?: number;
+  participantMode?: TournamentParticipantMode;
+  rosterSize?: number;
+  matchupFormat?: MatchupFormat;
+  bestOfWins?: number;
   prizePool?: string;
   format?: TournamentFormat;
   status?: TournamentStatus;
@@ -82,6 +86,8 @@ export function TournamentBuilderForm({
   const [coverImage, setCoverImage] = useState(initialValues?.coverImage ?? "");
   const [coverUploading, setCoverUploading] = useState(false);
   const [coverUploadError, setCoverUploadError] = useState("");
+  const [participantMode, setParticipantMode] = useState(initialValues?.participantMode ?? TournamentParticipantMode.SINGLE);
+  const [matchupFormat, setMatchupFormat] = useState(initialValues?.matchupFormat ?? MatchupFormat.SINGLE_MATCH);
 
   const selectedSortRules = initialValues?.sortRules ?? [
     SortRule.POINTS,
@@ -179,6 +185,56 @@ export function TournamentBuilderForm({
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="participantMode">Тип участников</Label>
+            <select
+              id="participantMode"
+              name="participantMode"
+              value={participantMode}
+              onChange={(event) => setParticipantMode(event.target.value as TournamentParticipantMode)}
+              className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white"
+            >
+              <option value={TournamentParticipantMode.SINGLE}>Одиночный</option>
+              <option value={TournamentParticipantMode.COOP}>Кооперативный</option>
+              <option value={TournamentParticipantMode.TEAM}>Командный</option>
+            </select>
+          </div>
+
+          {participantMode === TournamentParticipantMode.SINGLE ? <input type="hidden" name="rosterSize" value="1" /> : null}
+
+          {participantMode === TournamentParticipantMode.COOP ? (
+            <div className="space-y-2">
+              <Label htmlFor="rosterSize">Размер состава</Label>
+              <select
+                id="rosterSize"
+                name="rosterSize"
+                defaultValue={initialValues?.rosterSize && [2, 3].includes(initialValues.rosterSize) ? initialValues.rosterSize : 2}
+                className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white"
+              >
+                <option value={2}>2 игрока (2v2)</option>
+                <option value={3}>3 игрока (3v3)</option>
+              </select>
+            </div>
+          ) : null}
+
+          {participantMode === TournamentParticipantMode.TEAM ? (
+            <div className="space-y-2">
+              <Label htmlFor="rosterSize">Размер команды</Label>
+              <select
+                id="rosterSize"
+                name="rosterSize"
+                defaultValue={initialValues?.rosterSize && initialValues.rosterSize >= 2 ? initialValues.rosterSize : 2}
+                className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white"
+              >
+                {[2, 3, 4, 5, 6, 7, 8].map((size) => (
+                  <option key={size} value={size}>
+                    {size} игроков
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+
+          <div className="space-y-2">
             <Label htmlFor="prizePool">Призовой фонд</Label>
             <Input id="prizePool" name="prizePool" placeholder="10 000 ₽" defaultValue={initialValues?.prizePool ?? ""} />
           </div>
@@ -231,6 +287,51 @@ export function TournamentBuilderForm({
       </Card>
 
       <FormatBlueprintBuilder name="formatBlueprintJson" initialValue={initialValues?.formatBlueprint ?? null} visible />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Формат противостояния</CardTitle>
+          <CardDescription>Один матч или серия до нужного количества побед.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="matchupFormat">Режим матчей</Label>
+            <select
+              id="matchupFormat"
+              name="matchupFormat"
+              value={matchupFormat}
+              onChange={(event) => setMatchupFormat(event.target.value as MatchupFormat)}
+              className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white"
+            >
+              <option value={MatchupFormat.SINGLE_MATCH}>Обычный матч</option>
+              <option value={MatchupFormat.BEST_OF}>Серия до побед</option>
+            </select>
+          </div>
+
+          {matchupFormat === MatchupFormat.SINGLE_MATCH ? <input type="hidden" name="bestOfWins" value="1" /> : null}
+
+          {matchupFormat === MatchupFormat.BEST_OF ? (
+            <div className="space-y-2">
+              <Label htmlFor="bestOfWins">Количество побед для выигрыша серии</Label>
+              <select
+                id="bestOfWins"
+                name="bestOfWins"
+                defaultValue={initialValues?.bestOfWins && initialValues.bestOfWins > 1 ? initialValues.bestOfWins : 2}
+                className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white"
+              >
+                <option value={2}>До 2 побед (BO3)</option>
+                <option value={3}>До 3 побед (BO5)</option>
+                <option value={4}>До 4 побед (BO7)</option>
+                <option value={5}>Пользовательское: до 5 побед</option>
+                <option value={6}>Пользовательское: до 6 побед</option>
+                <option value={7}>Пользовательское: до 7 побед</option>
+                <option value={8}>Пользовательское: до 8 побед</option>
+                <option value={9}>Пользовательское: до 9 побед</option>
+              </select>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

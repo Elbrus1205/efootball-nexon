@@ -1,6 +1,6 @@
 "use client";
 
-import { ClubSelectionMode } from "@prisma/client";
+import { ClubSelectionMode, TournamentParticipantMode } from "@prisma/client";
 import { CheckCircle2, ScrollText, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
@@ -24,17 +24,22 @@ type AfterRegulationsAction = "register" | "choose-club";
 export function RegisterTournamentButton({
   tournamentId,
   clubSelectionMode,
+  participantMode = TournamentParticipantMode.SINGLE,
+  rosterSize = 1,
   clubs,
   takenClubSlugs,
 }: {
   tournamentId: string;
   clubSelectionMode: ClubSelectionMode;
+  participantMode?: TournamentParticipantMode;
+  rosterSize?: number;
   clubs: ClubOption[];
   takenClubSlugs: string[];
 }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedClubSlug, setSelectedClubSlug] = useState("");
+  const [teamName, setTeamName] = useState("");
   const [message, setMessage] = useState("");
   const [regulations, setRegulations] = useState<RegulationsState | null>(null);
   const [regulationsOpen, setRegulationsOpen] = useState(false);
@@ -80,10 +85,14 @@ export function RegisterTournamentButton({
   const submitRegistration = async (clubSlug?: string) => {
     setMessage("Регистрация...");
 
+    const body: Record<string, string> = {};
+    if (clubSlug) body.clubSlug = clubSlug;
+    if (participantMode === TournamentParticipantMode.TEAM) body.teamName = teamName.trim();
+
     const response = await fetch(`/api/tournaments/${tournamentId}/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(clubSlug ? { clubSlug } : {}),
+      body: JSON.stringify(body),
     });
 
     const result = await response.json().catch(() => ({ error: "Не удалось обработать ответ сервера." }));
@@ -232,7 +241,7 @@ export function RegisterTournamentButton({
     </div>
   ) : null;
 
-  if (clubSelectionMode === ClubSelectionMode.ADMIN_RANDOM) {
+  if (clubSelectionMode === ClubSelectionMode.ADMIN_RANDOM && participantMode !== TournamentParticipantMode.TEAM) {
     return (
       <div className="space-y-2">
         <Button size="lg" onClick={() => submit()} disabled={isPending}>
@@ -269,6 +278,20 @@ export function RegisterTournamentButton({
               </Button>
             </div>
 
+            {participantMode === TournamentParticipantMode.TEAM ? (
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-zinc-200">Название команды</span>
+                <input
+                  value={teamName}
+                  onChange={(event) => setTeamName(event.target.value)}
+                  className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-primary/60"
+                  placeholder="Например: Nexon Elite"
+                />
+                <span className="block text-xs text-zinc-500">Размер состава: {rosterSize} игроков</span>
+              </label>
+            ) : null}
+
+            {clubSelectionMode === ClubSelectionMode.PLAYER_PICK ? (
             <div className="grid max-h-[60vh] gap-3 overflow-y-auto sm:grid-cols-2">
               {clubs.map((club) => {
                 const taken = takenClubSlugs.includes(club.slug);
@@ -300,6 +323,7 @@ export function RegisterTournamentButton({
                 );
               })}
             </div>
+            ) : null}
 
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="text-sm text-zinc-400">
@@ -309,7 +333,14 @@ export function RegisterTournamentButton({
                 <Button variant="outline" onClick={() => setIsOpen(false)}>
                   Отмена
                 </Button>
-                <Button onClick={submitSelectedClub} disabled={isPending || !selectedClubSlug}>
+                <Button
+                  onClick={clubSelectionMode === ClubSelectionMode.PLAYER_PICK ? submitSelectedClub : () => submit(undefined)}
+                  disabled={
+                    isPending ||
+                    (clubSelectionMode === ClubSelectionMode.PLAYER_PICK && !selectedClubSlug) ||
+                    (participantMode === TournamentParticipantMode.TEAM && teamName.trim().length < 2)
+                  }
+                >
                   {isPending ? "Регистрация..." : "Подтвердить выбор"}
                 </Button>
               </div>

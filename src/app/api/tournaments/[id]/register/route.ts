@@ -1,4 +1,4 @@
-import { ClubSelectionMode, NotificationType, TournamentStatus } from "@prisma/client";
+import { ClubSelectionMode, NotificationType, ParticipantStatus, TournamentParticipantMode, TournamentStatus } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
@@ -54,6 +54,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       participantsPerGroup: true,
       maxParticipants: true,
       clubSelectionMode: true,
+      participantMode: true,
+      rosterSize: true,
       participants: {
         where: { status: { not: "REMOVED" } },
         select: {
@@ -61,6 +63,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
           userId: true,
           clubSlug: true,
         },
+      },
+      rosterMembers: {
+        where: { userId: session.user.id, status: { not: "REMOVED" } },
+        select: { id: true },
       },
     },
   });
@@ -88,7 +94,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 
   const existingRegistration = tournament.participants.find((entry) => entry.userId === session.user.id);
-  if (existingRegistration) {
+  if (existingRegistration || tournament.rosterMembers.length > 0) {
     return NextResponse.json({ error: "Участник уже зарегистрирован в этом турнире." }, { status: 409 });
   }
 
@@ -101,6 +107,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
   let clubSlug: string | null = null;
   let clubName: string | null = null;
   let clubBadgePath: string | null = null;
+  const teamName = typeof payload.teamName === "string" ? payload.teamName.trim() : "";
+  const teamLogo = typeof payload.teamLogo === "string" ? payload.teamLogo.trim() : "";
+
+  if (tournament.participantMode === TournamentParticipantMode.TEAM && teamName.length < 2) {
+    return NextResponse.json({ error: "Укажите название команды." }, { status: 400 });
+  }
 
   if (tournament.clubSelectionMode === ClubSelectionMode.PLAYER_PICK) {
     const selectedClubSlug = typeof payload.clubSlug === "string" ? payload.clubSlug : "";
@@ -125,14 +137,30 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 
   try {
-    await db.tournamentRegistration.create({
-      data: {
-        tournamentId: params.id,
-        userId: session.user.id,
-        clubSlug,
-        clubName,
-        clubBadgePath,
-      },
+    await db.$transaction(async (tx) => {
+      const registration = await tx.tournamentRegistration.create({
+        data: {
+          tournamentId: params.id,
+          userId: session.user.id,
+          clubSlug,
+          clubName,
+          clubBadgePath,
+          status: tournament.participantMode === TournamentParticipantMode.SINGLE ? ParticipantStatus.CONFIRMED : ParticipantStatus.PENDING,
+          teamName: tournament.participantMode === TournamentParticipantMode.TEAM ? teamName : null,
+          teamLogo: tournament.participantMode === TournamentParticipantMode.TEAM ? teamLogo || null : null,
+        },
+      });
+
+      await tx.tournamentRegistrationMember.create({
+        data: {
+          tournamentId: params.id,
+          registrationId: registration.id,
+          userId: session.user.id,
+          status: "ACCEPTED",
+          isCaptain: true,
+          respondedAt: new Date(),
+        },
+      });
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {

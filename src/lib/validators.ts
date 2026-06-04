@@ -1,10 +1,12 @@
 import {
   ClubSelectionMode,
+  MatchupFormat,
   ParticipantStatus,
   PlayoffType,
   SeedingMethod,
   SortRule,
   TournamentFormat,
+  TournamentParticipantMode,
   TournamentStatus,
   UserRole,
 } from "@prisma/client";
@@ -132,6 +134,10 @@ export const tournamentBuilderSchema = z.object({
   registrationEndsAt: z.string().optional().or(z.literal("")),
   endsAt: z.string().optional().or(z.literal("")),
   maxParticipants: z.coerce.number().min(2, "Минимум 2 участника.").max(256, "Максимум 256 участников."),
+  participantMode: z.nativeEnum(TournamentParticipantMode).default(TournamentParticipantMode.SINGLE),
+  rosterSize: z.coerce.number().int().min(1).max(8).default(1),
+  matchupFormat: z.nativeEnum(MatchupFormat).default(MatchupFormat.SINGLE_MATCH),
+  bestOfWins: z.coerce.number().int().min(1).max(9).default(1),
   prizePool: z.string().optional().or(z.literal("")),
   format: z.nativeEnum(TournamentFormat),
   status: z.nativeEnum(TournamentStatus).default(TournamentStatus.DRAFT),
@@ -168,6 +174,38 @@ export const tournamentBuilderSchema = z.object({
 }).superRefine((data, ctx) => {
   const isLeague = data.format === TournamentFormat.LEAGUE || data.format === TournamentFormat.ROUND_ROBIN;
   const isGroups = data.format === TournamentFormat.GROUPS || data.format === TournamentFormat.GROUPS_PLAYOFF;
+
+  if (data.participantMode === TournamentParticipantMode.SINGLE && data.rosterSize !== 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["rosterSize"],
+      message: "Для одиночного режима размер состава должен быть 1.",
+    });
+  }
+
+  if (data.participantMode === TournamentParticipantMode.COOP && ![2, 3].includes(data.rosterSize)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["rosterSize"],
+      message: "Для кооперативного режима выберите 2v2 или 3v3.",
+    });
+  }
+
+  if (data.participantMode === TournamentParticipantMode.TEAM && (data.rosterSize < 2 || data.rosterSize > 8)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["rosterSize"],
+      message: "Размер команды должен быть от 2 до 8 игроков.",
+    });
+  }
+
+  if (data.matchupFormat === MatchupFormat.SINGLE_MATCH && data.bestOfWins !== 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["bestOfWins"],
+      message: "Для обычного матча значение серии должно быть 1.",
+    });
+  }
 
   if (isLeague && !data.roundsInLeague) {
     ctx.addIssue({

@@ -15,6 +15,7 @@ const statusVariant: Partial<Record<MatchStatus, "primary" | "accent" | "neutral
   CONFIRMED: "success",
   REJECTED: "danger",
   FORFEIT: "danger",
+  CANCELLED: "neutral",
 };
 
 function matchRoundLabel(match: { round: number; stage?: { type: StageType } | null }) {

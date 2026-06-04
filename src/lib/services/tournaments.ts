@@ -1,6 +1,7 @@
 import {
   ClubSelectionMode,
   MatchStatus,
+  MatchupFormat,
   NotificationType,
   ParticipantStatus,
   PlayoffType,
@@ -77,6 +78,7 @@ const TERMINAL_MATCH_STATUSES = new Set<MatchStatus>([
   MatchStatus.CONFIRMED,
   MatchStatus.FINISHED,
   MatchStatus.FORFEIT,
+  MatchStatus.CANCELLED,
 ]);
 const AUTO_BYE_NOTE = "AUTO_BYE";
 
@@ -806,6 +808,8 @@ async function createRoundRobinMatchesForEntries({
   entries,
   roundsCount,
   roundsMode = "cycles",
+  matchupFormat = MatchupFormat.SINGLE_MATCH,
+  bestOfWins = 1,
 }: {
   tournamentId: string;
   stageId?: string;
@@ -813,6 +817,8 @@ async function createRoundRobinMatchesForEntries({
   entries: { id: string; userId: string }[];
   roundsCount?: number | null;
   roundsMode?: "cycles" | "series";
+  matchupFormat?: MatchupFormat;
+  bestOfWins?: number;
 }) {
   const data: {
     tournamentId: string;
@@ -824,6 +830,10 @@ async function createRoundRobinMatchesForEntries({
     participant2EntryId?: string;
     player1Id?: string;
     player2Id?: string;
+    seriesKey?: string;
+    seriesWinsRequired?: number;
+    seriesMatchNumber?: number;
+    legNumber?: number;
     status: MatchStatus;
   }[] = [];
 
@@ -831,9 +841,11 @@ async function createRoundRobinMatchesForEntries({
   let slots: ({ id: string; userId: string } | null)[] = entries.length % 2 === 0 ? [...entries] : [...entries, null];
   const roundsPerCycle = Math.max(slots.length - 1, 1);
   const requestedCount = Math.max(roundsCount ?? 1, 1);
-  const matchesPerPair = roundsMode === "series" ? Math.min(requestedCount, 6) : 1;
+  const seriesWinsRequired = matchupFormat === MatchupFormat.BEST_OF ? Math.max(2, Math.min(bestOfWins, 9)) : null;
+  const bestOfMatchesPerPair = seriesWinsRequired ? seriesWinsRequired * 2 - 1 : null;
+  const matchesPerPair = bestOfMatchesPerPair ?? (roundsMode === "series" ? Math.min(requestedCount, 6) : 1);
   const totalTours = roundsMode === "series" ? roundsPerCycle : requestedCount * roundsPerCycle;
-  const maxMatchesPerPair = roundsMode === "series" ? matchesPerPair : requestedCount;
+  const maxMatchesPerPair = bestOfMatchesPerPair ?? (roundsMode === "series" ? matchesPerPair : requestedCount);
   const pairMatchesCount = new Map<string, number>();
 
   for (let tourIndex = 0; tourIndex < totalTours; tourIndex += 1) {
@@ -865,6 +877,10 @@ async function createRoundRobinMatchesForEntries({
           groupId,
           round: tourIndex + 1,
           matchNumber: matchNumber++,
+          seriesKey: seriesWinsRequired ? `group:${groupId ?? stageId ?? tournamentId}:${pairKey}:${tourIndex + 1}` : undefined,
+          seriesWinsRequired: seriesWinsRequired ?? undefined,
+          seriesMatchNumber: seriesWinsRequired ? legIndex + 1 : undefined,
+          legNumber: seriesWinsRequired ? legIndex + 1 : undefined,
           participant1EntryId: participant1.id,
           participant2EntryId: participant2.id,
           player1Id: participant1.userId,
@@ -891,6 +907,8 @@ async function createPlayoffMatches({
   legsCount,
   thirdPlaceMatch,
   sizeOverride,
+  matchupFormat = MatchupFormat.SINGLE_MATCH,
+  bestOfWins = 1,
 }: {
   tournamentId: string;
   stageId: string;
@@ -900,12 +918,15 @@ async function createPlayoffMatches({
   legsCount: number;
   thirdPlaceMatch: boolean;
   sizeOverride?: number;
+  matchupFormat?: MatchupFormat;
+  bestOfWins?: number;
 }) {
   const orderedEntries = [...entries].sort((a, b) => (a.seed ?? Number.MAX_SAFE_INTEGER) - (b.seed ?? Number.MAX_SAFE_INTEGER));
   const bracketSize = sizeOverride && isPowerOfTwo(sizeOverride) ? sizeOverride : nextPowerOfTwo(orderedEntries.length);
   const firstRoundSlots = createFirstRoundSlotEntries(orderedEntries, bracketSize);
   const rounds = Math.log2(bracketSize);
-  const effectiveLegsCount = type === PlayoffType.DOUBLE ? 1 : Math.max(1, Math.min(legsCount, 2));
+  const seriesWinsRequired = matchupFormat === MatchupFormat.BEST_OF ? Math.max(2, Math.min(bestOfWins, 9)) : null;
+  const effectiveLegsCount = seriesWinsRequired ? seriesWinsRequired * 2 - 1 : type === PlayoffType.DOUBLE ? 1 : Math.max(1, Math.min(legsCount, 2));
   const createdMatches: { id: string; round: number; matchNumber: number; legNumber: number; seriesKey: string }[] = [];
 
   for (let round = 1; round <= rounds; round += 1) {
@@ -924,6 +945,8 @@ async function createPlayoffMatches({
             bracket: "upper",
             seriesKey,
             legNumber,
+            seriesWinsRequired,
+            seriesMatchNumber: seriesWinsRequired ? legNumber : null,
             status: MatchStatus.PENDING,
           },
         });
@@ -1052,6 +1075,8 @@ async function createPlayoffMatches({
         bracket: "upper",
         seriesKey: createSeriesKey(bracketId, "upper", rounds, 2, "third-place"),
         legNumber: 1,
+        seriesWinsRequired,
+        seriesMatchNumber: seriesWinsRequired ? 1 : null,
         isThirdPlaceMatch: true,
         status: MatchStatus.PENDING,
       },
@@ -1761,6 +1786,8 @@ export async function generateTournamentMatches(tournamentId: string) {
         entries: tournament.participants.map((entry) => ({ id: entry.id, userId: entry.userId })),
         roundsCount: getCustomStageMatchesPerOpponent(stage, tournament.formatBlueprintJson) ?? stage.roundsCount,
         roundsMode: isCustomTourCountStage(stage) ? "series" : "cycles",
+        matchupFormat: tournament.matchupFormat,
+        bestOfWins: tournament.bestOfWins,
       });
     }
 
@@ -1777,6 +1804,8 @@ export async function generateTournamentMatches(tournamentId: string) {
           entries: members,
           roundsCount: getCustomStageMatchesPerOpponent(stage, tournament.formatBlueprintJson) ?? stage.roundsCount,
           roundsMode: isCustomTourCountStage(stage) ? "series" : "cycles",
+          matchupFormat: tournament.matchupFormat,
+          bestOfWins: tournament.bestOfWins,
         });
       }
     }
@@ -1802,6 +1831,8 @@ export async function generateTournamentMatches(tournamentId: string) {
           legsCount: stage.bracket.legsCount,
           thirdPlaceMatch: stage.bracket.thirdPlaceMatch,
           sizeOverride: stage.bracket.size,
+          matchupFormat: tournament.matchupFormat,
+          bestOfWins: tournament.bestOfWins,
         });
       }
     }
@@ -2027,13 +2058,84 @@ export async function recalculateGroupStandings(tournamentId: string) {
         ]),
     );
 
-    for (const match of group.matches.filter((item) => item.status === MatchStatus.CONFIRMED || item.status === MatchStatus.FINISHED)) {
+    const completedMatches = group.matches
+      .filter((item) => item.status === MatchStatus.CONFIRMED || item.status === MatchStatus.FINISHED)
+      .sort((a, b) => (a.round === b.round ? a.matchNumber - b.matchNumber : a.round - b.round));
+    const countedSeriesKeys = new Set<string>();
+
+    for (const match of completedMatches) {
       if (!match.participant1EntryId || !match.participant2EntryId) continue;
       if (match.player1Score == null || match.player2Score == null) continue;
 
-      const one = base.get(resolveReplacementRegistrationId(match.participant1EntryId, replacementByEntryId));
-      const two = base.get(resolveReplacementRegistrationId(match.participant2EntryId, replacementByEntryId));
+      const resolvedOneId = resolveReplacementRegistrationId(match.participant1EntryId, replacementByEntryId);
+      const resolvedTwoId = resolveReplacementRegistrationId(match.participant2EntryId, replacementByEntryId);
+      const one = base.get(resolvedOneId);
+      const two = base.get(resolvedTwoId);
       if (!one || !two) continue;
+
+      if (match.seriesKey && match.seriesWinsRequired && match.seriesWinsRequired > 1) {
+        if (countedSeriesKeys.has(match.seriesKey)) continue;
+        const winsRequired = match.seriesWinsRequired;
+
+        const seriesMatches = completedMatches.filter(
+          (item) =>
+            item.seriesKey === match.seriesKey &&
+            item.participant1EntryId &&
+            item.participant2EntryId &&
+            item.player1Score != null &&
+            item.player2Score != null,
+        );
+        const seriesRows = new Map<string, { wins: number; goalsFor: number; goalsAgainst: number }>();
+        const ensureSeriesRow = (participantId: string) => {
+          const existing = seriesRows.get(participantId);
+          if (existing) return existing;
+          const created = { wins: 0, goalsFor: 0, goalsAgainst: 0 };
+          seriesRows.set(participantId, created);
+          return created;
+        };
+
+        for (const seriesMatch of seriesMatches) {
+          const seriesOneId = resolveReplacementRegistrationId(seriesMatch.participant1EntryId!, replacementByEntryId);
+          const seriesTwoId = resolveReplacementRegistrationId(seriesMatch.participant2EntryId!, replacementByEntryId);
+          const seriesOne = ensureSeriesRow(seriesOneId);
+          const seriesTwo = ensureSeriesRow(seriesTwoId);
+          const scoreOne = seriesMatch.player1Score ?? 0;
+          const scoreTwo = seriesMatch.player2Score ?? 0;
+
+          seriesOne.goalsFor += scoreOne;
+          seriesOne.goalsAgainst += scoreTwo;
+          seriesTwo.goalsFor += scoreTwo;
+          seriesTwo.goalsAgainst += scoreOne;
+
+          if (scoreOne > scoreTwo) {
+            seriesOne.wins += 1;
+          } else if (scoreTwo > scoreOne) {
+            seriesTwo.wins += 1;
+          }
+        }
+
+        const winnerId = Array.from(seriesRows.entries()).find(([, row]) => row.wins >= winsRequired)?.[0];
+        if (!winnerId) continue;
+
+        for (const [participantId, row] of Array.from(seriesRows.entries())) {
+          const target = base.get(participantId);
+          if (!target) continue;
+          target.goalsFor += row.goalsFor;
+          target.goalsAgainst += row.goalsAgainst;
+        }
+
+        one.played += 1;
+        two.played += 1;
+        if (winnerId === resolvedOneId) {
+          one.wins += 1;
+          two.losses += 1;
+        } else if (winnerId === resolvedTwoId) {
+          two.wins += 1;
+          one.losses += 1;
+        }
+        countedSeriesKeys.add(match.seriesKey);
+        continue;
+      }
 
       one.played += 1;
       two.played += 1;
@@ -2862,6 +2964,80 @@ async function createPenaltyMatch(match: {
   });
 }
 
+async function resolveBestOfSeriesIfCompleted(match: {
+  id: string;
+  tournamentId: string;
+  bracketId: string | null;
+  seriesKey: string | null;
+  seriesWinsRequired: number | null;
+}) {
+  if (!match.seriesKey || !match.seriesWinsRequired || match.seriesWinsRequired <= 1) {
+    return false;
+  }
+  const winsRequired = match.seriesWinsRequired;
+
+  const seriesMatches = await db.match.findMany({
+    where: { seriesKey: match.seriesKey, isPenaltyTiebreak: false },
+    orderBy: [{ seriesMatchNumber: "asc" }, { legNumber: "asc" }, { createdAt: "asc" }],
+  });
+  const confirmedMatches = seriesMatches.filter((item) => item.status === MatchStatus.CONFIRMED || item.status === MatchStatus.FINISHED);
+  const winsByEntryId = new Map<string, number>();
+
+  for (const seriesMatch of confirmedMatches) {
+    const { winnerEntryId } = getMatchWinnerAndLoser(seriesMatch);
+    if (!winnerEntryId) continue;
+    winsByEntryId.set(winnerEntryId, (winsByEntryId.get(winnerEntryId) ?? 0) + 1);
+  }
+
+  const winnerEntryId = Array.from(winsByEntryId.entries()).find(([, wins]) => wins >= winsRequired)?.[0] ?? null;
+  if (!winnerEntryId) {
+    if (!match.bracketId) {
+      await recalculateGroupStandings(match.tournamentId);
+    }
+    await syncTournamentLifecycleStatus(match.tournamentId);
+    return true;
+  }
+
+  const winnerMatch = confirmedMatches.find((item) => item.participant1EntryId === winnerEntryId || item.participant2EntryId === winnerEntryId);
+  if (!winnerMatch) {
+    await syncTournamentLifecycleStatus(match.tournamentId);
+    return true;
+  }
+
+  const winnerId = winnerMatch.participant1EntryId === winnerEntryId ? winnerMatch.player1Id : winnerMatch.player2Id;
+  const loserId = winnerMatch.participant1EntryId === winnerEntryId ? winnerMatch.player2Id : winnerMatch.player1Id;
+  const loserEntryId = winnerMatch.participant1EntryId === winnerEntryId ? winnerMatch.participant2EntryId : winnerMatch.participant1EntryId;
+
+  await db.match.updateMany({
+    where: {
+      seriesKey: match.seriesKey,
+      id: { not: match.id },
+      isPenaltyTiebreak: false,
+      status: {
+        in: [
+          MatchStatus.PENDING,
+          MatchStatus.READY,
+          MatchStatus.RESULT_SUBMITTED,
+          MatchStatus.REJECTED,
+          MatchStatus.SCHEDULED,
+          MatchStatus.LIVE,
+          MatchStatus.DISPUTED,
+        ],
+      },
+    },
+    data: { status: MatchStatus.CANCELLED },
+  });
+
+  if (match.bracketId && winnerId) {
+    await advanceResolvedWinnerForMatch(match.id, winnerId, loserId, winnerEntryId, loserEntryId);
+  } else {
+    await recalculateGroupStandings(match.tournamentId);
+    await syncTournamentLifecycleStatus(match.tournamentId);
+  }
+
+  return true;
+}
+
 export async function resolveConfirmedMatch(matchId: string) {
   const match = await db.match.findUnique({
     where: { id: matchId },
@@ -2870,6 +3046,10 @@ export async function resolveConfirmedMatch(matchId: string) {
     },
   });
   if (!match) throw new Error("Match not found");
+
+  if (await resolveBestOfSeriesIfCompleted(match)) {
+    return;
+  }
 
   if (!match.bracketId || !match.seriesKey) {
     if (match.winnerId) {
