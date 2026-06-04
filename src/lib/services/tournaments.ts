@@ -145,6 +145,246 @@ function createFirstRoundSlotEntries<T>(entries: T[], bracketSize: number): (T |
   return slotEntries;
 }
 
+type GroupPlayoffEntry = {
+  groupId: string;
+  groupOrder: number;
+  rank: number;
+};
+
+type GroupPlayoffSlotMapping = {
+  round: 1;
+  matchNumber: number;
+  slotNumber: 1 | 2;
+  sourceRef?: string;
+};
+
+function parseGroupSourceRef(sourceRef?: string | null) {
+  const match = /^group:(.+):rank:(\d+)$/.exec(sourceRef ?? "");
+  if (!match) return null;
+
+  return {
+    groupId: match[1],
+    rank: Number(match[2]),
+  };
+}
+
+function hashSeed(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function createSeededRandom(seed: string) {
+  let state = hashSeed(seed) || 1;
+
+  return () => {
+    state += 0x6d2b79f5;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function seededShuffle<T>(items: T[], seed: string) {
+  const shuffled = [...items];
+  const random = createSeededRandom(seed);
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+
+  return shuffled;
+}
+
+function pairEntriesAcrossGroups(leftEntries: GroupPlayoffEntry[], rightEntries: GroupPlayoffEntry[], seed: string) {
+  const left = [...leftEntries].sort((a, b) => a.groupOrder - b.groupOrder || a.rank - b.rank);
+  const right = [...rightEntries].sort((a, b) => a.groupOrder - b.groupOrder || a.rank - b.rank);
+
+  if (!left.length) {
+    return right.map((entry) => [entry, null] as const);
+  }
+
+  if (!right.length) {
+    return left.map((entry) => [entry, null] as const);
+  }
+
+  const pairs: Array<readonly [GroupPlayoffEntry | null, GroupPlayoffEntry | null]> = [];
+  const offset = right.length > 1 ? (hashSeed(seed) % (right.length - 1)) + 1 : 0;
+
+  for (let index = 0; index < left.length; index += 1) {
+    let opponent = right[(index + offset) % right.length] ?? null;
+
+    if (opponent?.groupId === left[index].groupId && right.length > 1) {
+      opponent = right.find((entry) => entry.groupId !== left[index].groupId) ?? opponent;
+    }
+
+    pairs.push([left[index], opponent]);
+  }
+
+  for (let index = left.length; index < right.length; index += 1) {
+    pairs.push([null, right[index]]);
+  }
+
+  return seededShuffle(pairs, `${seed}:pairs`);
+}
+
+function buildCrossGroupPlayoffSlotMappingsFromEntries(params: {
+  entries: GroupPlayoffEntry[];
+  advancingPerGroup: number;
+  bracketSize: number;
+  seed: string;
+}): GroupPlayoffSlotMapping[] {
+  const entriesByRank = new Map<number, GroupPlayoffEntry[]>();
+
+  for (const entry of params.entries) {
+    entriesByRank.set(entry.rank, [...(entriesByRank.get(entry.rank) ?? []), entry]);
+  }
+
+  const pairs: Array<readonly [GroupPlayoffEntry | null, GroupPlayoffEntry | null]> = [];
+  const mirroredRanksCount = Math.floor(params.advancingPerGroup / 2);
+
+  for (let rank = 1; rank <= mirroredRanksCount; rank += 1) {
+    const opponentRank = params.advancingPerGroup + 1 - rank;
+    pairs.push(
+      ...pairEntriesAcrossGroups(
+        entriesByRank.get(rank) ?? [],
+        entriesByRank.get(opponentRank) ?? [],
+        `${params.seed}:rank:${rank}:${opponentRank}`,
+      ),
+    );
+  }
+
+  if (params.advancingPerGroup % 2 === 1) {
+    const middleRank = Math.ceil(params.advancingPerGroup / 2);
+    const middleEntries = seededShuffle(entriesByRank.get(middleRank) ?? [], `${params.seed}:rank:${middleRank}:middle`);
+    for (let index = 0; index < middleEntries.length; index += 2) {
+      pairs.push([middleEntries[index] ?? null, middleEntries[index + 1] ?? null]);
+    }
+  }
+
+  const maxPairs = params.bracketSize / 2;
+  while (pairs.length < maxPairs) {
+    pairs.push([null, null]);
+  }
+
+  return pairs.slice(0, maxPairs).flatMap(([first, second], index) => [
+    {
+      round: 1,
+      matchNumber: index + 1,
+      slotNumber: 1,
+      sourceRef: first ? createGroupSourceRef(first.groupId, first.rank) : undefined,
+    } satisfies GroupPlayoffSlotMapping,
+    {
+      round: 1,
+      matchNumber: index + 1,
+      slotNumber: 2,
+      sourceRef: second ? createGroupSourceRef(second.groupId, second.rank) : undefined,
+    } satisfies GroupPlayoffSlotMapping,
+  ]);
+}
+
+function buildCrossGroupPlayoffSlotMappings(params: {
+  groups: Array<{
+    id: string;
+    orderIndex: number;
+    standings: Array<{ rank: number | null }>;
+  }>;
+  advancingPerGroup: number;
+  bracketSize: number;
+  seed: string;
+}): GroupPlayoffSlotMapping[] {
+  const entries = params.groups.flatMap((group) =>
+    group.standings
+      .filter((standing) => standing.rank && standing.rank <= params.advancingPerGroup)
+      .map((standing) => ({
+        groupId: group.id,
+        groupOrder: group.orderIndex,
+        rank: standing.rank!,
+      })),
+  );
+
+  return buildCrossGroupPlayoffSlotMappingsFromEntries({
+    entries,
+    advancingPerGroup: params.advancingPerGroup,
+    bracketSize: params.bracketSize,
+    seed: params.seed,
+  });
+}
+
+function buildCrossGroupPlayoffSlotMappingsFromRefs(params: {
+  groups: Array<{ id: string; orderIndex: number }>;
+  sourceRefs: string[];
+  bracketSize: number;
+  seed: string;
+}): GroupPlayoffSlotMapping[] {
+  const groupOrderById = new Map(params.groups.map((group) => [group.id, group.orderIndex]));
+  const entries = params.sourceRefs
+    .map((sourceRef) => {
+      const parsed = parseGroupSourceRef(sourceRef);
+      if (!parsed) return null;
+
+      return {
+        groupId: parsed.groupId,
+        groupOrder: groupOrderById.get(parsed.groupId) ?? 999,
+        rank: parsed.rank,
+      } satisfies GroupPlayoffEntry;
+    })
+    .filter(Boolean) as GroupPlayoffEntry[];
+  const advancingPerGroup = entries.reduce((maxRank, entry) => Math.max(maxRank, entry.rank), 0);
+
+  if (advancingPerGroup < 2) {
+    return params.sourceRefs.map((sourceRef, index) => ({
+      round: 1,
+      matchNumber: Math.floor(index / 2) + 1,
+      slotNumber: (index % 2) + 1 === 1 ? 1 : 2,
+      sourceRef,
+    }));
+  }
+
+  return buildCrossGroupPlayoffSlotMappingsFromEntries({
+    entries,
+    advancingPerGroup,
+    bracketSize: params.bracketSize,
+    seed: params.seed,
+  });
+}
+
+function isValidCrossGroupPlayoffMapping(
+  mappings: Array<{ matchNumber: number; slotNumber: number; sourceRef: string | null }>,
+  advancingPerGroup: number,
+) {
+  if (!mappings.length) return false;
+
+  const byMatch = new Map<number, Array<{ slotNumber: number; sourceRef: string | null }>>();
+  for (const mapping of mappings) {
+    byMatch.set(mapping.matchNumber, [...(byMatch.get(mapping.matchNumber) ?? []), mapping]);
+  }
+
+  for (const matchSlots of Array.from(byMatch.values())) {
+    const parsedSlots = matchSlots
+      .sort((a: { slotNumber: number }, b: { slotNumber: number }) => a.slotNumber - b.slotNumber)
+      .map((slot: { sourceRef: string | null }) => parseGroupSourceRef(slot.sourceRef))
+      .filter(Boolean) as Array<{ groupId: string; rank: number }>;
+
+    if (parsedSlots.length < 2) continue;
+
+    const [first, second] = parsedSlots;
+    if (first.groupId === second.groupId) return false;
+
+    const expectedRankSum = advancingPerGroup + 1;
+    const middleRank = advancingPerGroup % 2 === 1 ? Math.ceil(advancingPerGroup / 2) : null;
+    const isMiddleRankPair = middleRank && first.rank === middleRank && second.rank === middleRank;
+    if (!isMiddleRankPair && first.rank + second.rank !== expectedRankSum) return false;
+  }
+
+  return true;
+}
+
 function getGroupsPlayoffQualifiedCount(tournament: {
   participants: unknown[];
   groupsCount: number | null;
@@ -167,6 +407,22 @@ function getDefaultPlayoffSize(tournament: {
   }
 
   return nextPowerOfTwo(Math.max(tournament.participants.length, 2));
+}
+
+function resolveGroupsAdvancingPerGroup(params: {
+  groupStageValue?: number | null;
+  tournamentValue?: number | null;
+  bracketSize: number;
+  groupsCount: number;
+}) {
+  const configured = params.groupStageValue ?? params.tournamentValue;
+  if (configured) return Math.max(1, Math.min(configured, 8));
+
+  if (params.groupsCount > 0) {
+    return Math.max(1, Math.min(Math.floor(params.bracketSize / params.groupsCount), 8));
+  }
+
+  return 2;
 }
 
 function createSeriesKey(bracketId: string, bracket: string, round: number, matchNumber: number, kind: "main" | "third-place" = "main") {
@@ -1324,6 +1580,12 @@ async function seedCustomPlayoffBracket(params: {
 
   const upperRefs = expandSelectionRefs(params.groups, settings.selections, "upper");
   const lowerRefs = expandSelectionRefs(params.groups, settings.selections, "lower");
+  const upperSlotMappings = buildCrossGroupPlayoffSlotMappingsFromRefs({
+    groups: params.groups,
+    sourceRefs: upperRefs,
+    bracketSize: bracket.size,
+    seed: bracket.id,
+  });
   const upperMatches = bracket.matches.filter(
     (match) => match.bracket === "upper" && match.round === 1 && !match.isThirdPlaceMatch && (match.legNumber ?? 1) === 1 && !match.isPenaltyTiebreak,
   );
@@ -1371,8 +1633,11 @@ async function seedCustomPlayoffBracket(params: {
   );
 
   await Promise.all(
-    upperMatches.flatMap((match, index) => {
-      const refs = [upperRefs[index * 2] ?? null, upperRefs[index * 2 + 1] ?? null];
+    upperMatches.flatMap((match) => {
+      const refs = [
+        upperSlotMappings.find((mapping) => mapping.matchNumber === match.matchNumber && mapping.slotNumber === 1)?.sourceRef ?? null,
+        upperSlotMappings.find((mapping) => mapping.matchNumber === match.matchNumber && mapping.slotNumber === 2)?.sourceRef ?? null,
+      ];
       return refs.map((sourceRef, slotIndex) =>
         setBracketSlot({
           bracketId: bracket.id,
@@ -2295,7 +2560,7 @@ export async function generatePlayoffFromGroups(tournamentId: string) {
   const playoffStage = tournament.stages.find((stage) => stage.type === StageType.PLAYOFF);
   if (!groupStage || !playoffStage?.bracket) throw new Error("Stages for groups/playoff are not configured");
 
-  const bracketSize = getDefaultPlayoffSize(tournament);
+  const bracketSize = Math.max(getDefaultPlayoffSize(tournament), playoffStage.bracket.size);
   await ensureGroupsPlayoffBracketShape({
     tournamentId,
     stageId: playoffStage.id,
@@ -2311,18 +2576,11 @@ export async function generatePlayoffFromGroups(tournamentId: string) {
       bracketId: playoffStage.bracket.id,
       round: 1,
       bracket: "upper",
+      isThirdPlaceMatch: false,
+      isPenaltyTiebreak: false,
+      legNumber: 1,
     },
     orderBy: { matchNumber: "asc" },
-  });
-
-  await db.match.updateMany({
-    where: { bracketId: playoffStage.bracket.id, round: 1 },
-    data: {
-      participant1EntryId: null,
-      participant2EntryId: null,
-      player1Id: null,
-      player2Id: null,
-    },
   });
 
   const existingRoundOneMappings = await db.bracketSlot.findMany({
@@ -2335,35 +2593,58 @@ export async function generatePlayoffFromGroups(tournamentId: string) {
     orderBy: [{ matchNumber: "asc" }, { slotNumber: "asc" }],
   });
 
-  const mappedSlots =
-    existingRoundOneMappings.length > 0
-      ? existingRoundOneMappings.map((slot) => ({
-          round: slot.round,
-          matchNumber: slot.matchNumber,
-          slotNumber: slot.slotNumber,
-          sourceRef: slot.sourceRef!,
-        }))
-      : (() => {
-          const advancingPerGroup = groupStage.advancingPerGroup ?? 2;
-          const qualified = groupStage.groups.flatMap((group) =>
-            group.standings
-              .filter((standing) => (standing.rank ?? 999) <= advancingPerGroup)
-              .map((standing) => ({
-                groupId: group.id,
-                rank: standing.rank ?? 999,
-                participantId: standing.participantId,
-              })),
-          );
+  const advancingPerGroup = resolveGroupsAdvancingPerGroup({
+    groupStageValue: groupStage.advancingPerGroup,
+    tournamentValue: tournament.playoffTeamsPerGroup,
+    bracketSize,
+    groupsCount: groupStage.groups.length,
+  });
+  const shouldKeepExistingMappings = isValidCrossGroupPlayoffMapping(existingRoundOneMappings, advancingPerGroup);
+  const mappedSlots = shouldKeepExistingMappings
+    ? existingRoundOneMappings.map((slot) => ({
+        round: 1 as const,
+        matchNumber: slot.matchNumber,
+        slotNumber: slot.slotNumber as 1 | 2,
+        sourceRef: slot.sourceRef!,
+      }))
+    : buildCrossGroupPlayoffSlotMappings({
+        groups: groupStage.groups,
+        advancingPerGroup,
+        bracketSize,
+        seed: tournament.id,
+      });
 
-          const ordered = qualified.sort((a, b) => a.rank - b.rank);
+  if (!shouldKeepExistingMappings) {
+    const terminalPlayoffMatches = await db.match.count({
+      where: {
+        bracketId: playoffStage.bracket.id,
+        status: { in: Array.from(TERMINAL_MATCH_STATUSES) },
+      },
+    });
 
-          return ordered.map((item, index) => ({
-            round: 1,
-            matchNumber: Math.floor(index / 2) + 1,
-            slotNumber: (index % 2) + 1,
-            sourceRef: createGroupSourceRef(item.groupId, item.rank),
-          }));
-        })();
+    if (terminalPlayoffMatches > 0) {
+      throw new Error("Нельзя пересобрать посев плей-офф: в сетке уже есть завершенные матчи.");
+    }
+  }
+
+  await db.match.updateMany({
+    where: { bracketId: playoffStage.bracket.id, round: 1, status: { notIn: Array.from(TERMINAL_MATCH_STATUSES) } },
+    data: {
+      participant1EntryId: null,
+      participant2EntryId: null,
+      player1Id: null,
+      player2Id: null,
+      winnerId: null,
+      winnerEntryId: null,
+      player1Score: null,
+      player2Score: null,
+      player1PenaltyScore: null,
+      player2PenaltyScore: null,
+      finishedAt: null,
+      notes: null,
+      status: MatchStatus.PENDING,
+    },
+  });
 
   const standingMap = new Map(
     groupStage.groups.flatMap((group) =>

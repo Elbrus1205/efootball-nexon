@@ -56,11 +56,15 @@ export default async function AdminTournamentBracketPage({ params }: { params: {
   const activeParticipants = tournament.participants.filter(
     (participant) => participant.status !== ParticipantStatus.REMOVED && participant.status !== ParticipantStatus.REJECTED,
   );
+  const advancingPerGroup =
+    groupStage?.advancingPerGroup ??
+    tournament.playoffTeamsPerGroup ??
+    (groupStage?.groups.length && bracket ? Math.max(1, Math.min(Math.floor(bracket.size / groupStage.groups.length), 8)) : 2);
 
   const mappingSources =
     groupStage?.groups.flatMap((group, groupIndex) =>
       group.standings
-        .filter((standing) => (standing.rank ?? 999) <= (groupStage.advancingPerGroup ?? 2))
+        .filter((standing) => (standing.rank ?? 999) <= advancingPerGroup)
         .map((standing) => ({
           groupId: group.id,
           groupName: group.name,
