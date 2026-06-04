@@ -1,8 +1,7 @@
 import { ParticipantStatus, TournamentStatus } from "@prisma/client";
-import { getToken } from "next-auth/jwt";
-import { headers } from "next/headers";
 import { DivisionPreviewCard } from "@/components/divisions/division-preview-card";
 import { TournamentCard } from "@/components/tournaments/tournament-card";
+import { getCurrentSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getDivisionPreviewSettings, isDivisionAdminRole } from "@/lib/services/divisions";
 import { shouldSyncTournamentRegistrationLifecycle, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
@@ -27,23 +26,13 @@ function canSeeTestTournaments(role?: string | null) {
   return role === "FOUNDER" || role === "ADMIN" || role === "ORGANIZER" || role === "JUDGE" || role === "TRAINEE";
 }
 
-async function getCurrentRoleFromToken() {
-  const requestHeaders = headers();
-  const token = await getToken({
-    req: { headers: Object.fromEntries(requestHeaders.entries()), cookies: {} } as Parameters<typeof getToken>[0]["req"],
-    secret: process.env.NEXTAUTH_SECRET,
-  });
-
-  return typeof token?.role === "string" ? token.role : null;
-}
-
 export default async function TournamentsPage() {
   const pageStart = performance.now();
   const roleStart = performance.now();
   const tournamentsStart = performance.now();
   const tournamentListStart = performance.now();
-  const [currentRole, initialTournamentList] = await Promise.all([
-    getCurrentRoleFromToken().finally(() => logTiming("load-role-token", roleStart)),
+  const [session, initialTournamentList] = await Promise.all([
+    getCurrentSession().finally(() => logTiming("load-session-role", roleStart)),
     db.tournament
       .findMany({
         select: {
@@ -70,6 +59,7 @@ export default async function TournamentsPage() {
       .finally(() => logTiming("load-tournament-list", tournamentListStart)),
   ]);
 
+  const currentRole = session?.user.role ?? null;
   const showTestTournaments = canSeeTestTournaments(currentRole);
   const visibleInitialTournamentList = showTestTournaments
     ? initialTournamentList
