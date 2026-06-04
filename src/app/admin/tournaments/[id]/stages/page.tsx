@@ -1,14 +1,15 @@
 ﻿import { notFound } from "next/navigation";
 import { StageEditor } from "@/components/admin/stage-editor";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getAdminTournamentAccessWhere } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
 export default async function AdminTournamentStagesPage({ params }: { params: { id: string } }) {
-  await requirePermission("tournaments.manageStructure");
+  const session = await requirePermission("tournaments.manageStructure");
 
-  const tournament = await db.tournament.findUnique({
-    where: { id: params.id },
+  const tournament = await db.tournament.findFirst({
+    where: { id: params.id, ...getAdminTournamentAccessWhere(session) },
     include: {
       stages: {
         orderBy: { orderIndex: "asc" },

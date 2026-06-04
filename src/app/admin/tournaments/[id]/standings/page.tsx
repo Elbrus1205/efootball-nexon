@@ -1,15 +1,16 @@
 ﻿import { ParticipantStatus, StageType } from "@prisma/client";
 import { notFound } from "next/navigation";
+import { getAdminTournamentAccessWhere } from "@/lib/admin-tournament-access";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { StandingsManager } from "@/components/admin/standings-manager";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function AdminTournamentStandingsPage({ params }: { params: { id: string } }) {
-  await requireAnyPermission(["tournaments.manageParticipants", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
+  const session = await requireAnyPermission(["tournaments.manageParticipants", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
-  const tournament = await db.tournament.findUnique({
-    where: { id: params.id },
+  const tournament = await db.tournament.findFirst({
+    where: { id: params.id, ...getAdminTournamentAccessWhere(session) },
     include: {
       stages: {
         where: { type: StageType.GROUP_STAGE },

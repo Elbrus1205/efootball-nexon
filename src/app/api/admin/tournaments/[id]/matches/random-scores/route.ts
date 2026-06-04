@@ -1,5 +1,6 @@
 ﻿import { AdminActionType, MatchStatus, StageType } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { syncUserAchievementsForUsers } from "@/lib/achievements";
 import { db } from "@/lib/db";
@@ -114,6 +115,7 @@ async function fallbackAdvancePlayoffWinner(matchId: string) {
 
 export async function POST(_request: Request, { params }: { params: { id: string } }) {
   const session = await requirePermission("matches.generate");
+  await assertCanManageTournament(session, params.id);
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
     include: {

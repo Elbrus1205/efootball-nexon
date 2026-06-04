@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { getRequestBaseUrl } from "@/lib/affiliate";
+import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { addArchivedTournamentStats } from "@/lib/home-stats";
@@ -19,6 +20,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const method = formData.get("_method");
   const redirectUrl = new URL("/admin/tournaments", getRequestBaseUrl(request));
   try {
+    await assertCanManageTournament(session, params.id);
+
     if (method === "delete") {
       if (session.user.role === UserRole.TRAINEE) {
         throw new Error("Практикант не может удалять турниры.");

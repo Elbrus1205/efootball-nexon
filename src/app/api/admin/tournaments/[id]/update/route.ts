@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { NotificationType, Prisma, TournamentFormat, TournamentStatus, UserRole } from "@prisma/client";
 import { getRequestBaseUrl } from "@/lib/affiliate";
+import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { parseFormatBlueprintJson } from "@/lib/format-blueprint";
@@ -18,6 +19,7 @@ function resolveUpdatedStatus(status: TournamentStatus, startsAt: Date, autoOpen
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const session = await requirePermission("tournaments.createEdit");
+  await assertCanManageTournament(session, params.id);
 
   const formData = await request.formData();
   const body = tournamentBuilderSchema.parse({

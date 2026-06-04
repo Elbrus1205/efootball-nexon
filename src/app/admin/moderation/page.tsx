@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { matchStatusLabel, matchStatusVariant } from "@/lib/admin-display";
+import { getAdminTournamentAccessWhere } from "@/lib/admin-tournament-access";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
@@ -46,10 +47,10 @@ function SubmissionPill({
 }
 
 export default async function AdminModerationPage() {
-  await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
+  const session = await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
   const disputedMatches = await db.match.findMany({
-    where: { status: MatchStatus.DISPUTED },
+    where: { status: MatchStatus.DISPUTED, tournament: getAdminTournamentAccessWhere(session) },
     include: {
       tournament: true,
       player1: true,

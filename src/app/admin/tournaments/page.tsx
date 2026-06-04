@@ -23,6 +23,7 @@ import {
   tournamentStatusLabel,
   tournamentStatusVariant,
 } from "@/lib/admin-display";
+import { getAdminTournamentAccessWhere } from "@/lib/admin-tournament-access";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { shouldSyncTournamentRegistrationLifecycle, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
@@ -43,9 +44,10 @@ export default async function AdminTournamentsPage({
 }) {
   const session = await requireAnyPermission(["tournaments.createEdit", "tournaments.manageParticipants", "tournaments.manageStructure", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
   const canDeleteTournaments = session.user.role !== UserRole.TRAINEE;
+  const tournamentAccessWhere = getAdminTournamentAccessWhere(session);
 
   const syncCandidates = await db.tournament.findMany({
-    where: { status: { in: [TournamentStatus.DRAFT, TournamentStatus.REGISTRATION_OPEN] } },
+    where: { ...tournamentAccessWhere, status: { in: [TournamentStatus.DRAFT, TournamentStatus.REGISTRATION_OPEN] } },
     select: {
       id: true,
       status: true,
@@ -61,6 +63,7 @@ export default async function AdminTournamentsPage({
   );
 
   const tournaments = await db.tournament.findMany({
+    where: tournamentAccessWhere,
     select: {
       id: true,
       title: true,

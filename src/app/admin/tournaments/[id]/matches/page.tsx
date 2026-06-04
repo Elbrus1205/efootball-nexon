@@ -4,14 +4,15 @@ import { notFound } from "next/navigation";
 import { MatchManager } from "@/components/admin/match-manager";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getAdminTournamentAccessWhere } from "@/lib/admin-tournament-access";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
 export default async function AdminTournamentMatchesPage({ params }: { params: { id: string } }) {
-  await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
+  const session = await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
-  const tournament = await db.tournament.findUnique({
-    where: { id: params.id },
+  const tournament = await db.tournament.findFirst({
+    where: { id: params.id, ...getAdminTournamentAccessWhere(session) },
     select: {
       id: true,
       title: true,

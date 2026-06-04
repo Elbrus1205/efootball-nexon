@@ -6,16 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { matchStatusLabel, matchStatusVariant } from "@/lib/admin-display";
+import { getAdminTournamentAccessWhere } from "@/lib/admin-tournament-access";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { formatDate } from "@/lib/utils";
 
 export default async function AdminModerationWorkspacePage({ params }: { params: { id: string } }) {
-  await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
+  const session = await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
-  const match = await db.match.findUnique({
-    where: { id: params.id },
+  const match = await db.match.findFirst({
+    where: { id: params.id, tournament: getAdminTournamentAccessWhere(session) },
     include: {
       tournament: true,
       player1: true,

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
@@ -7,7 +8,8 @@ function normalizeQuery(value: string | null) {
 }
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
-  await requirePermission("tournaments.manageParticipants");
+  const session = await requirePermission("tournaments.manageParticipants");
+  await assertCanManageTournament(session, params.id);
 
   const { searchParams } = new URL(request.url);
   const query = normalizeQuery(searchParams.get("q"));

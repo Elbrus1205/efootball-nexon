@@ -1,15 +1,16 @@
 ﻿import { StageType } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { ParticipantManager } from "@/components/admin/participant-manager";
+import { getAdminTournamentAccessWhere } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
 export default async function AdminTournamentParticipantsPage({ params }: { params: { id: string } }) {
-  await requirePermission("tournaments.manageParticipants");
+  const session = await requirePermission("tournaments.manageParticipants");
 
   const [tournament, participants, stages] = await Promise.all([
-    db.tournament.findUnique({
-      where: { id: params.id },
+    db.tournament.findFirst({
+      where: { id: params.id, ...getAdminTournamentAccessWhere(session) },
       select: { id: true },
     }),
     db.tournamentRegistration.findMany({

@@ -1,5 +1,6 @@
 import { AdminActionType, UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
@@ -23,6 +24,7 @@ function parseDeadlineDate(value: string) {
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const session = await requireRole(staffRoles);
+  await assertCanManageTournament(session, params.id);
   const parsed = roundDeadlineSchema.safeParse(await request.json().catch(() => ({})));
 
   if (!parsed.success) {

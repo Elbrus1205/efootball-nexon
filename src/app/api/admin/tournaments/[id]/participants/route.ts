@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { MatchStatus, NotificationType, ParticipantStatus } from "@prisma/client";
+import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requireAnyPermission, requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
@@ -31,7 +32,8 @@ async function tournamentRequiresTelegram(tournamentId: string) {
 }
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
-  await requireAnyPermission(["tournaments.manageParticipants", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
+  const session = await requireAnyPermission(["tournaments.manageParticipants", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
+  await assertCanManageTournament(session, params.id);
 
   const participants = await db.tournamentRegistration.findMany({
     where: { tournamentId: params.id },
@@ -65,6 +67,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const session = await requirePermission("tournaments.manageParticipants");
+  await assertCanManageTournament(session, params.id);
   const body = participantManageSchema.parse(await request.json());
 
   if (body.action === "add" && body.userId) {
@@ -107,8 +110,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 
   if (body.action === "remove" && body.registrationId) {
-    const before = await db.tournamentRegistration.findUnique({ where: { id: body.registrationId } });
-    await db.tournamentRegistration.delete({ where: { id: body.registrationId } });
+    const before = await db.tournamentRegistration.findFirst({ where: { id: body.registrationId, tournamentId: params.id } });
+
+    if (!before) {
+      return NextResponse.json({ error: "Участник турнира не найден." }, { status: 404 });
+    }
+
+    await db.tournamentRegistration.delete({ where: { id: before.id } });
     await logAdminAction({
       adminId: session.user.id,
       tournamentId: params.id,
@@ -306,9 +314,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 
   if (body.action === "seed" && body.registrationId) {
-    const before = await db.tournamentRegistration.findUnique({ where: { id: body.registrationId } });
+    const before = await db.tournamentRegistration.findFirst({ where: { id: body.registrationId, tournamentId: params.id } });
+
+    if (!before) {
+      return NextResponse.json({ error: "Участник турнира не найден." }, { status: 404 });
+    }
+
     const registration = await db.tournamentRegistration.update({
-      where: { id: body.registrationId },
+      where: { id: before.id },
       data: {
         seed: body.seed ?? null,
         groupId: body.groupId || null,
@@ -339,9 +352,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 
   if (body.action === "status" && body.registrationId && body.status) {
-    const before = await db.tournamentRegistration.findUnique({ where: { id: body.registrationId } });
+    const before = await db.tournamentRegistration.findFirst({ where: { id: body.registrationId, tournamentId: params.id } });
+
+    if (!before) {
+      return NextResponse.json({ error: "Участник турнира не найден." }, { status: 404 });
+    }
+
     const registration = await db.tournamentRegistration.update({
-      where: { id: body.registrationId },
+      where: { id: before.id },
       data: { status: body.status },
       include: { user: true, group: true },
     });

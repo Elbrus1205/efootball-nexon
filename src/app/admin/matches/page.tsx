@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { matchStatusLabel, matchStatusVariant } from "@/lib/admin-display";
+import { getAdminTournamentAccessWhere } from "@/lib/admin-tournament-access";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
@@ -16,9 +17,10 @@ function matchRoundLabel(match: { round: number; stage?: { type: StageType } | n
 }
 
 export default async function AdminMatchesPage() {
-  await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
+  const session = await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
   const matches = await db.match.findMany({
+    where: { tournament: getAdminTournamentAccessWhere(session) },
     include: {
       tournament: true,
       stage: true,

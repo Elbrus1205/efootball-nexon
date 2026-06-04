@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { MatchStatus, NotificationType } from "@prisma/client";
 import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
+import { assertCanManageMatch } from "@/lib/admin-tournament-access";
 import { syncUserAchievementsForUsers } from "@/lib/achievements";
 import { db } from "@/lib/db";
 import { requireAnyPermission } from "@/lib/auth/session";
@@ -39,6 +40,7 @@ async function createMatchOutcomeNotifications(match: {
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const session = await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
+  await assertCanManageMatch(session, params.id);
 
   const formData = await request.formData();
   const returnTo = String(formData.get("returnTo") || `/admin/matches/${params.id}`);

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { NotificationType } from "@prisma/client";
+import { assertCanManageMatch } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
@@ -9,6 +10,7 @@ import { scheduleUpdateSchema } from "@/lib/validators";
 export async function PATCH(request: Request) {
   const session = await requirePermission("schedule.manage");
   const body = scheduleUpdateSchema.parse(await request.json());
+  await assertCanManageMatch(session, body.matchId);
 
   const existing = await db.matchSchedule.findFirst({
     where: { matchId: body.matchId },

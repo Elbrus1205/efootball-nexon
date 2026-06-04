@@ -4,14 +4,15 @@ import { notFound } from "next/navigation";
 import { RoundDeadlineManager } from "@/components/admin/round-deadline-manager";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getAdminTournamentAccessWhere } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
 export default async function AdminTournamentDeadlinesPage({ params }: { params: { id: string } }) {
-  await requirePermission("tournaments.manageDeadlines");
+  const session = await requirePermission("tournaments.manageDeadlines");
 
-  const tournament = await db.tournament.findUnique({
-    where: { id: params.id },
+  const tournament = await db.tournament.findFirst({
+    where: { id: params.id, ...getAdminTournamentAccessWhere(session) },
     include: {
       matches: {
         select: {

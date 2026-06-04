@@ -1,4 +1,5 @@
 ﻿import { notFound } from "next/navigation";
+import { getAdminTournamentAccessWhere } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { TournamentBuilderForm } from "@/components/admin/tournament-builder-form";
@@ -11,10 +12,10 @@ function toInputDate(value?: Date | null) {
 }
 
 export default async function AdminTournamentEditPage({ params }: { params: { id: string } }) {
-  await requirePermission("tournaments.createEdit");
+  const session = await requirePermission("tournaments.createEdit");
 
-  const tournament = await db.tournament.findUnique({
-    where: { id: params.id },
+  const tournament = await db.tournament.findFirst({
+    where: { id: params.id, ...getAdminTournamentAccessWhere(session) },
   });
 
   if (!tournament) notFound();

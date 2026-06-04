@@ -12,6 +12,7 @@ import {
   tournamentStatusLabel,
   tournamentStatusVariant,
 } from "@/lib/admin-display";
+import { getAdminTournamentAccessWhere } from "@/lib/admin-tournament-access";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
@@ -155,8 +156,8 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
   const canDeleteTournament = session.user.role !== UserRole.TRAINEE;
 
   const [tournament, availableClubs] = await Promise.all([
-    db.tournament.findUnique({
-      where: { id: params.id },
+    db.tournament.findFirst({
+      where: { id: params.id, ...getAdminTournamentAccessWhere(session) },
       select: {
         id: true,
         title: true,

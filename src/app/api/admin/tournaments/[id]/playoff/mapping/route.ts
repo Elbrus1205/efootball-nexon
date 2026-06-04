@@ -1,13 +1,24 @@
 ﻿import { AdminActionType } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
+import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { savePlayoffMapping } from "@/lib/services/tournaments";
 import { playoffMappingSchema } from "@/lib/validators";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const session = await requirePermission("tournaments.manageStructure");
+  await assertCanManageTournament(session, params.id);
   const body = playoffMappingSchema.parse(await request.json());
+  const bracket = await db.playoffBracket.findFirst({
+    where: { id: body.bracketId, tournamentId: params.id },
+    select: { id: true },
+  });
+
+  if (!bracket) {
+    return NextResponse.json({ error: "Сетка турнира не найдена." }, { status: 404 });
+  }
 
   const slots = await savePlayoffMapping({
     tournamentId: params.id,

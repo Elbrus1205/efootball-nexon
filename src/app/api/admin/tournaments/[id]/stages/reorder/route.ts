@@ -1,5 +1,6 @@
 ﻿import { AdminActionType } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
@@ -7,10 +8,21 @@ import { stageReorderSchema } from "@/lib/validators";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const session = await requirePermission("tournaments.manageStructure");
+  await assertCanManageTournament(session, params.id);
   const body = stageReorderSchema.parse({
     ...(await request.json()),
     tournamentId: params.id,
   });
+  const stageCount = await db.tournamentStage.count({
+    where: {
+      tournamentId: params.id,
+      id: { in: body.stageIds },
+    },
+  });
+
+  if (stageCount !== body.stageIds.length) {
+    return NextResponse.json({ error: "Этап турнира не найден." }, { status: 404 });
+  }
 
   const before = await db.tournamentStage.findMany({
     where: { tournamentId: params.id },

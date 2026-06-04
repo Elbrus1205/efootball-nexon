@@ -1,5 +1,6 @@
 import { MatchStatus, Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { assertCanManageMatch } from "@/lib/admin-tournament-access";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
@@ -8,6 +9,7 @@ import { matchUpdateSchema } from "@/lib/validators";
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const session = await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
+  await assertCanManageMatch(session, params.id);
   const body = matchUpdateSchema.parse(await request.json());
 
   const before = await db.match.findUnique({
