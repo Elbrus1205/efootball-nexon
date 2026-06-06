@@ -3,13 +3,7 @@ import { getAdminTournamentAccessWhere } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { TournamentBuilderForm } from "@/components/admin/tournament-builder-form";
-
-function toInputDate(value?: Date | null) {
-  if (!value) return "";
-  const date = new Date(value);
-  const pad = (num: number) => String(num).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
+import { formatMoscowDateTimeLocalInput } from "@/lib/utils";
 
 export default async function AdminTournamentEditPage({ params }: { params: { id: string } }) {
   const session = await requirePermission("tournaments.createEdit");
@@ -28,9 +22,9 @@ export default async function AdminTournamentEditPage({ params }: { params: { id
         initialValues={{
           title: tournament.title,
           rules: tournament.rules,
-          startsAt: toInputDate(tournament.startsAt),
-          endsAt: toInputDate(tournament.endsAt),
-          registrationEndsAt: toInputDate(tournament.registrationEndsAt),
+          startsAt: formatMoscowDateTimeLocalInput(tournament.startsAt),
+          endsAt: formatMoscowDateTimeLocalInput(tournament.endsAt),
+          registrationEndsAt: formatMoscowDateTimeLocalInput(tournament.registrationEndsAt),
           maxParticipants: tournament.maxParticipants,
           participantMode: tournament.participantMode,
           rosterSize: tournament.rosterSize,

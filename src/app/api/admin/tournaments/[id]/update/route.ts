@@ -8,6 +8,7 @@ import { parseFormatBlueprintJson } from "@/lib/format-blueprint";
 import { createNotificationForAllUsers } from "@/lib/services/notifications";
 import { resolveAutoRegistrationStatus } from "@/lib/services/tournaments";
 import { tournamentBuilderSchema } from "@/lib/validators";
+import { parseMoscowDateTimeLocal } from "@/lib/utils";
 
 function checkboxValue(value: FormDataEntryValue | null) {
   return value === "true" || value === "on";
@@ -64,7 +65,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   });
 
   const formatBlueprint = parseFormatBlueprintJson(typeof body.formatBlueprintJson === "string" ? body.formatBlueprintJson : "");
-  const startsAt = new Date(body.startsAt);
+  const startsAt = parseMoscowDateTimeLocal(body.startsAt);
   const status = resolveUpdatedStatus(body.status, startsAt, body.autoOpenRegistration);
   const isTest = body.isTest || session.user.role === UserRole.TRAINEE;
 

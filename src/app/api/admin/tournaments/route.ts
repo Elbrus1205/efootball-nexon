@@ -13,7 +13,7 @@ import {
   resolveAutoRegistrationStatus,
 } from "@/lib/services/tournaments";
 import { tournamentBuilderSchema } from "@/lib/validators";
-import { slugify } from "@/lib/utils";
+import { parseMoscowDateTimeLocal, slugify } from "@/lib/utils";
 
 function checkboxValue(value: FormDataEntryValue | null) {
   return value === "true" || value === "on";
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
 
     const body = parsed.data;
     const formatBlueprint = parseFormatBlueprintJson(typeof body.formatBlueprintJson === "string" ? body.formatBlueprintJson : "");
-    const startsAt = new Date(body.startsAt);
+    const startsAt = parseMoscowDateTimeLocal(body.startsAt);
     const activeSeason = await getActiveSeason();
     const status = resolveInitialStatus(body.status, startsAt, body.autoOpenRegistration);
     const isTest = body.isTest || session.user.role === UserRole.TRAINEE;

@@ -2,6 +2,7 @@ import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
 const MOSCOW_TIME_ZONE = "Europe/Moscow";
+const MOSCOW_UTC_OFFSET_HOURS = 3;
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -52,6 +53,47 @@ export function formatDate(date: Date | string, dateFormat = "d MMM yyyy, HH:mm"
     hour: "2-digit",
     minute: "2-digit",
   }).format(parsed);
+}
+
+export function parseMoscowDateTimeLocal(value: string) {
+  const trimmed = value.trim();
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(trimmed);
+
+  if (!match) {
+    return new Date(trimmed);
+  }
+
+  const [, year, month, day, hour, minute, second = "00"] = match;
+  return new Date(
+    Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour) - MOSCOW_UTC_OFFSET_HOURS,
+      Number(minute),
+      Number(second),
+    ),
+  );
+}
+
+export function formatMoscowDateTimeLocalInput(value?: Date | string | null) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: MOSCOW_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const byType = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
+
+  return `${byType.year}-${byType.month}-${byType.day}T${byType.hour}:${byType.minute}`;
 }
 
 export function getInitials(value?: string | null) {
