@@ -3403,6 +3403,18 @@ export async function resolveConfirmedMatch(matchId: string) {
   const aggregatePlayer2 = confirmedBaseLegs.reduce((sum, item) => sum + (item.player2Score ?? 0), 0);
 
   if (aggregatePlayer1 === aggregatePlayer2) {
+    if (
+      match.winnerId &&
+      match.winnerEntryId &&
+      match.player1PenaltyScore !== null &&
+      match.player2PenaltyScore !== null &&
+      match.player1PenaltyScore !== match.player2PenaltyScore
+    ) {
+      const { loserId, loserEntryId } = getMatchWinnerAndLoser(match);
+      await advanceResolvedWinnerForMatch(match.id, match.winnerId, loserId, match.winnerEntryId, loserEntryId);
+      return;
+    }
+
     if (!penaltyMatch) {
       await createPenaltyMatch(match);
     }

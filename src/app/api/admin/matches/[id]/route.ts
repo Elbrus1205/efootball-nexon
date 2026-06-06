@@ -1,4 +1,4 @@
-import { MatchStatus, Prisma } from "@prisma/client";
+import { MatchStatus, Prisma, type Match } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { assertCanManageMatch } from "@/lib/admin-tournament-access";
 import { requireAnyPermission } from "@/lib/auth/session";
@@ -25,9 +25,24 @@ function resolveWinner(params: {
   player1PenaltyScore: number | null;
   player2PenaltyScore: number | null;
   requiresWinner: boolean;
+  forcePenaltyWinner?: boolean;
 }) {
   if (params.player1Score === null || params.player2Score === null) {
     return { winnerId: null, winnerEntryId: null };
+  }
+
+  if (params.forcePenaltyWinner) {
+    if (
+      params.player1PenaltyScore === null ||
+      params.player2PenaltyScore === null ||
+      params.player1PenaltyScore === params.player2PenaltyScore
+    ) {
+      throw new Error("PENALTY_REQUIRED");
+    }
+
+    return params.player1PenaltyScore > params.player2PenaltyScore
+      ? { winnerId: params.player1Id, winnerEntryId: params.participant1EntryId }
+      : { winnerId: params.player2Id, winnerEntryId: params.participant2EntryId };
   }
 
   if (params.player1Score > params.player2Score) {
@@ -53,6 +68,48 @@ function resolveWinner(params: {
   return params.player1PenaltyScore > params.player2PenaltyScore
     ? { winnerId: params.player1Id, winnerEntryId: params.participant1EntryId }
     : { winnerId: params.player2Id, winnerEntryId: params.participant2EntryId };
+}
+
+function isMultiLegPlayoffCandidate(match: Match) {
+  return Boolean(match.bracketId && match.seriesKey && !match.isPenaltyTiebreak && !(match.seriesWinsRequired && match.seriesWinsRequired > 1));
+}
+
+function sortSeriesMatches(a: Match, b: Match) {
+  return (
+    (a.legNumber ?? 1) - (b.legNumber ?? 1) ||
+    a.matchNumber - b.matchNumber ||
+    a.createdAt.getTime() - b.createdAt.getTime() ||
+    a.id.localeCompare(b.id)
+  );
+}
+
+async function getMultiLegPenaltyDecision(match: Match, nextPlayer1Score: number | null, nextPlayer2Score: number | null) {
+  if (!isMultiLegPlayoffCandidate(match) || !match.seriesKey) {
+    return null;
+  }
+
+  const seriesMatches = (
+    await db.match.findMany({
+      where: { seriesKey: match.seriesKey, isPenaltyTiebreak: false },
+    })
+  ).sort(sortSeriesMatches);
+
+  if (seriesMatches.length <= 1) {
+    return null;
+  }
+
+  const lastMatch = seriesMatches[seriesMatches.length - 1];
+  const matchesWithNextScore = seriesMatches.map((item) =>
+    item.id === match.id ? { ...item, player1Score: nextPlayer1Score, player2Score: nextPlayer2Score } : item,
+  );
+  const allScoresKnown = matchesWithNextScore.every((item) => item.player1Score !== null && item.player2Score !== null);
+  const aggregatePlayer1 = matchesWithNextScore.reduce((sum, item) => sum + (item.player1Score ?? 0), 0);
+  const aggregatePlayer2 = matchesWithNextScore.reduce((sum, item) => sum + (item.player2Score ?? 0), 0);
+
+  return {
+    isLastMatch: lastMatch?.id === match.id,
+    aggregateTied: allScoresKnown && aggregatePlayer1 === aggregatePlayer2,
+  };
 }
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
@@ -90,9 +147,12 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const nextPlayer1PenaltyScore = "player1PenaltyScore" in body ? body.player1PenaltyScore ?? null : before.player1PenaltyScore;
   const nextPlayer2PenaltyScore = "player2PenaltyScore" in body ? body.player2PenaltyScore ?? null : before.player2PenaltyScore;
   const nextStatus = "status" in body && body.status ? (body.status as MatchStatus) : before.status;
+  const multiLegPenaltyDecision = await getMultiLegPenaltyDecision(before, nextPlayer1Score, nextPlayer2Score);
 
   if (nextStatus === MatchStatus.CONFIRMED || nextStatus === MatchStatus.FINISHED) {
     try {
+      const forcePenaltyWinner = Boolean(multiLegPenaltyDecision?.isLastMatch && multiLegPenaltyDecision.aggregateTied);
+      const requiresWinner = multiLegPenaltyDecision ? forcePenaltyWinner : matchRequiresWinner(before);
       const winner = resolveWinner({
         player1Id: nextPlayer1Id,
         player2Id: nextPlayer2Id,
@@ -102,7 +162,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         player2Score: nextPlayer2Score,
         player1PenaltyScore: nextPlayer1PenaltyScore,
         player2PenaltyScore: nextPlayer2PenaltyScore,
-        requiresWinner: matchRequiresWinner(before),
+        requiresWinner,
+        forcePenaltyWinner,
       });
 
       data.winner = winner.winnerId ? { connect: { id: winner.winnerId } } : { disconnect: true };

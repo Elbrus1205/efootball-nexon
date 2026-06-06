@@ -29,6 +29,9 @@ type MatchItem = {
   matchNumber: number;
   status: MatchStatus;
   scheduledAt: string | null;
+  createdAt: string;
+  seriesKey: string | null;
+  legNumber: number | null;
   player1Score: number | null;
   player2Score: number | null;
   player1PenaltyScore: number | null;
@@ -79,8 +82,49 @@ function matchRequiresWinner(match: MatchItem) {
   return Boolean(match.bracketId) || match.stage?.type === StageType.PLAYOFF || match.isPenaltyTiebreak || Boolean(match.seriesWinsRequired && match.seriesWinsRequired > 1);
 }
 
-function matchNeedsPenalty(match: MatchItem) {
-  return matchRequiresWinner(match) && match.player1Score !== null && match.player2Score !== null && match.player1Score === match.player2Score;
+function hasMatchScore(match: MatchItem) {
+  return match.player1Score !== null && match.player2Score !== null;
+}
+
+function sortSeriesMatches(a: MatchItem, b: MatchItem) {
+  return (
+    (a.legNumber ?? 1) - (b.legNumber ?? 1) ||
+    a.matchNumber - b.matchNumber ||
+    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() ||
+    a.id.localeCompare(b.id)
+  );
+}
+
+function getRegularSeriesMatches(match: MatchItem, matches: MatchItem[]) {
+  if (!match.seriesKey) return [match];
+  return matches
+    .filter((item) => item.seriesKey === match.seriesKey && !item.isPenaltyTiebreak)
+    .sort(sortSeriesMatches);
+}
+
+function isMultiLegPlayoffSeries(match: MatchItem, matches: MatchItem[]) {
+  if (!match.bracketId || !match.seriesKey || match.isPenaltyTiebreak || (match.seriesWinsRequired && match.seriesWinsRequired > 1)) {
+    return false;
+  }
+
+  return getRegularSeriesMatches(match, matches).length > 1;
+}
+
+function matchNeedsPenalty(match: MatchItem, matches: MatchItem[]) {
+  if (!matchRequiresWinner(match) || !hasMatchScore(match)) return false;
+
+  if (!isMultiLegPlayoffSeries(match, matches)) {
+    return match.player1Score === match.player2Score;
+  }
+
+  const seriesMatches = getRegularSeriesMatches(match, matches);
+  const lastMatch = seriesMatches[seriesMatches.length - 1];
+  if (lastMatch?.id !== match.id || !seriesMatches.every(hasMatchScore)) return false;
+
+  const aggregatePlayer1 = seriesMatches.reduce((sum, item) => sum + (item.player1Score ?? 0), 0);
+  const aggregatePlayer2 = seriesMatches.reduce((sum, item) => sum + (item.player2Score ?? 0), 0);
+
+  return aggregatePlayer1 === aggregatePlayer2;
 }
 
 function scoreFromInput(value: string) {
@@ -378,7 +422,7 @@ export function MatchManager({
               {roundMatches.map((match) => {
                 const selectedParticipantOne = match.participant1EntryId ? participantById.get(match.participant1EntryId) ?? null : null;
                 const selectedParticipantTwo = match.participant2EntryId ? participantById.get(match.participant2EntryId) ?? null : null;
-                const needsPenalty = matchNeedsPenalty(match);
+                const needsPenalty = matchNeedsPenalty(match, orderedMatches);
                 const penaltyComplete =
                   needsPenalty &&
                   match.player1PenaltyScore !== null &&

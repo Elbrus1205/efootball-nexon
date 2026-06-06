@@ -774,6 +774,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
           winnerId: true,
           player1Score: true,
           player2Score: true,
+          player1PenaltyScore: true,
+          player2PenaltyScore: true,
           status: true,
           player1: { select: { id: true, name: true, email: true } },
           player2: { select: { id: true, name: true, email: true } },
@@ -1327,6 +1329,8 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                     isConfirmed={match.status === MatchStatus.CONFIRMED || match.status === MatchStatus.FINISHED}
                     confirmedPlayer1Score={match.player1Score}
                     confirmedPlayer2Score={match.player2Score}
+                    confirmedPlayer1PenaltyScore={match.player1PenaltyScore}
+                    confirmedPlayer2PenaltyScore={match.player2PenaltyScore}
                     canSubmit={canSubmitScore}
                     waitingForOpponent={match.submissions.some((submission) => submission.submittedById === currentUserId && submission.status === "PENDING")}
                     attemptsLeft={Math.max(

@@ -25,6 +25,8 @@ type MyMatchCardProps = {
   isConfirmed: boolean;
   confirmedPlayer1Score?: number | null;
   confirmedPlayer2Score?: number | null;
+  confirmedPlayer1PenaltyScore?: number | null;
+  confirmedPlayer2PenaltyScore?: number | null;
   canSubmit: boolean;
   waitingForOpponent: boolean;
   attemptsLeft: number;
@@ -76,6 +78,8 @@ export function MyMatchCard({
   isConfirmed,
   confirmedPlayer1Score,
   confirmedPlayer2Score,
+  confirmedPlayer1PenaltyScore,
+  confirmedPlayer2PenaltyScore,
   canSubmit,
   waitingForOpponent,
   attemptsLeft,
@@ -106,6 +110,11 @@ export function MyMatchCard({
     confirmedPlayer1Score !== undefined &&
     confirmedPlayer2Score !== null &&
     confirmedPlayer2Score !== undefined;
+  const hasConfirmedPenaltyScore =
+    confirmedPlayer1PenaltyScore !== null &&
+    confirmedPlayer1PenaltyScore !== undefined &&
+    confirmedPlayer2PenaltyScore !== null &&
+    confirmedPlayer2PenaltyScore !== undefined;
 
   const onSubmit = () => {
     startTransition(async () => {
@@ -180,6 +189,11 @@ export function MyMatchCard({
             )}
             {isConfirmed ? (
               <div className="text-[10px] font-medium uppercase tracking-[0.12em] text-emerald-400">Подтверждён</div>
+            ) : null}
+            {hasConfirmedPenaltyScore ? (
+              <div className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                пен. {confirmedPlayer1PenaltyScore}:{confirmedPlayer2PenaltyScore}
+              </div>
             ) : null}
           </div>
 
