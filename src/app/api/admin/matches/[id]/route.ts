@@ -147,12 +147,17 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const nextPlayer1PenaltyScore = "player1PenaltyScore" in body ? body.player1PenaltyScore ?? null : before.player1PenaltyScore;
   const nextPlayer2PenaltyScore = "player2PenaltyScore" in body ? body.player2PenaltyScore ?? null : before.player2PenaltyScore;
   const nextStatus = "status" in body && body.status ? (body.status as MatchStatus) : before.status;
+  const statusExplicitlyChanged = "status" in body && Boolean(body.status);
   const multiLegPenaltyDecision = await getMultiLegPenaltyDecision(before, nextPlayer1Score, nextPlayer2Score);
 
   if (nextStatus === MatchStatus.CONFIRMED || nextStatus === MatchStatus.FINISHED) {
     try {
-      const forcePenaltyWinner = Boolean(multiLegPenaltyDecision?.isLastMatch && multiLegPenaltyDecision.aggregateTied);
-      const requiresWinner = multiLegPenaltyDecision ? forcePenaltyWinner : matchRequiresWinner(before);
+      const scoreTied = nextPlayer1Score !== null && nextPlayer2Score !== null && nextPlayer1Score === nextPlayer2Score;
+      const scoreEditNeedsPenalty = multiLegPenaltyDecision
+        ? Boolean(multiLegPenaltyDecision.isLastMatch && multiLegPenaltyDecision.aggregateTied)
+        : matchRequiresWinner(before) && scoreTied;
+      const forcePenaltyWinner = statusExplicitlyChanged && Boolean(multiLegPenaltyDecision?.isLastMatch && multiLegPenaltyDecision.aggregateTied);
+      const requiresWinner = statusExplicitlyChanged ? (multiLegPenaltyDecision ? forcePenaltyWinner : matchRequiresWinner(before)) : false;
       const winner = resolveWinner({
         player1Id: nextPlayer1Id,
         player2Id: nextPlayer2Id,
@@ -168,6 +173,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
       data.winner = winner.winnerId ? { connect: { id: winner.winnerId } } : { disconnect: true };
       data.winningEntry = winner.winnerEntryId ? { connect: { id: winner.winnerEntryId } } : { disconnect: true };
+      if (!statusExplicitlyChanged && scoreEditNeedsPenalty) {
+        data.status = before.scheduledAt ? MatchStatus.SCHEDULED : MatchStatus.READY;
+      }
     } catch (error) {
       if (error instanceof Error && error.message === "PENALTY_REQUIRED") {
         return NextResponse.json({ error: "Для ничьей в этом матче нужно указать пенальти с победителем." }, { status: 400 });

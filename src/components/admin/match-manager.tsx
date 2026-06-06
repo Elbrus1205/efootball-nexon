@@ -331,7 +331,13 @@ export function MatchManager({
           body: JSON.stringify(payload),
         });
 
-        if (!response.ok) router.refresh();
+        const result = await response.json().catch(() => null);
+        if (response.ok && result?.match && typeof result.match === "object") {
+          patchLocalMatch(matchId, result.match as Record<string, unknown>);
+          return;
+        }
+
+        router.refresh();
       } catch {
         router.refresh();
       }
