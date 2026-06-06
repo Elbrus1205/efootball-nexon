@@ -36,6 +36,8 @@ type BracketMatch = {
   winnerId: string | null;
   player1Score: number | null;
   player2Score: number | null;
+  player1PenaltyScore: number | null;
+  player2PenaltyScore: number | null;
   status: MatchStatus;
   player1: BracketUser | null;
   player2: BracketUser | null;
@@ -174,6 +176,16 @@ function getSeriesWinner(series: BracketSeries) {
   const aggregatePlayer2 = confirmedBaseMatches.reduce((sum, item) => sum + (item.player2Score ?? 0), 0);
 
   if (aggregatePlayer1 === aggregatePlayer2) {
+    const decidingMatch = confirmedBaseMatches[confirmedBaseMatches.length - 1];
+    if (
+      decidingMatch?.winnerId &&
+      decidingMatch.player1PenaltyScore !== null &&
+      decidingMatch.player2PenaltyScore !== null &&
+      decidingMatch.player1PenaltyScore !== decidingMatch.player2PenaltyScore
+    ) {
+      return decidingMatch.winnerId;
+    }
+
     return null;
   }
 
@@ -195,7 +207,24 @@ function getAggregateScore(series: BracketSeries) {
 
 function getPenaltyScores(series: BracketSeries) {
   if (!series.penaltyMatch || !isResolvedMatch(series.penaltyMatch)) {
-    return null;
+    const decidingMatch = [...series.regularMatches]
+      .filter(isResolvedMatch)
+      .sort((a, b) => (a.legNumber ?? 1) - (b.legNumber ?? 1) || a.matchNumber - b.matchNumber)
+      .at(-1);
+
+    if (
+      !decidingMatch ||
+      decidingMatch.player1PenaltyScore === null ||
+      decidingMatch.player2PenaltyScore === null ||
+      decidingMatch.player1PenaltyScore === decidingMatch.player2PenaltyScore
+    ) {
+      return null;
+    }
+
+    return {
+      player1: decidingMatch.player1PenaltyScore,
+      player2: decidingMatch.player2PenaltyScore,
+    };
   }
 
   if (series.penaltyMatch.player1Score === null || series.penaltyMatch.player2Score === null) {
@@ -210,11 +239,13 @@ function getPenaltyScores(series: BracketSeries) {
 
 function BracketTeamRow({ side }: { side: BracketSide }) {
   const isLoser = side.isResolved && !side.isWinner;
+  const hasPenalty = Boolean(side.penaltyText);
 
   return (
     <div
       className={cn(
-        "relative grid min-h-10 grid-cols-[30px_minmax(0,1fr)_58px] items-center gap-2 px-2.5 py-1.5 text-zinc-200 transition",
+        "relative grid min-h-10 grid-cols-[30px_minmax(0,1fr)_68px] items-center gap-2 px-2.5 py-1.5 text-zinc-200 transition",
+        hasPenalty && "min-h-11",
         side.isChampion &&
           "min-h-11 overflow-hidden bg-[linear-gradient(100deg,rgba(250,204,21,0.26),rgba(245,158,11,0.16),rgba(255,255,255,0.05))] shadow-[inset_0_0_34px_rgba(250,204,21,0.24)]",
         side.isWinner && !side.isChampion && "bg-emerald-400/10",
@@ -283,7 +314,7 @@ function BracketTeamRow({ side }: { side: BracketSide }) {
         )}
       </div>
 
-      <div className="relative z-10 flex items-baseline justify-end gap-1 text-right">
+      <div className="relative z-10 flex min-w-0 flex-col items-end justify-center gap-0.5 text-right">
         <span
           className={cn(
             "text-base font-black leading-none text-white",
@@ -294,8 +325,14 @@ function BracketTeamRow({ side }: { side: BracketSide }) {
           {side.score ?? "-"}
         </span>
         {side.penaltyText ? (
-          <span className={cn("text-[11px] font-black leading-none text-amber-300", side.isChampion && "text-amber-100", isLoser && "text-zinc-600")}>
-            ({side.penaltyText})
+          <span
+            className={cn(
+              "inline-flex max-w-full items-center rounded-full border border-amber-300/35 bg-amber-300/10 px-1.5 py-[1px] text-[9px] font-black uppercase leading-none tracking-[0.12em] text-amber-200 shadow-[0_0_12px_rgba(251,191,36,0.12)]",
+              side.isChampion && "border-amber-100/55 bg-amber-200/15 text-amber-100",
+              isLoser && "border-zinc-700/50 bg-zinc-900/60 text-zinc-500 shadow-none",
+            )}
+          >
+            пен {side.penaltyText}
           </span>
         ) : null}
       </div>
