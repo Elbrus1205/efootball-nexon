@@ -264,12 +264,12 @@ export function RegisterTournamentButton({
       </div>
 
       {isOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-2xl space-y-5 p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm sm:p-4">
+          <Card className="flex max-h-[92svh] w-full max-w-3xl flex-col gap-4 overflow-hidden p-4 sm:gap-5 sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-xl font-semibold text-white">Выберите клуб</h3>
-                <p className="mt-2 text-sm text-zinc-400">
+                <p className="mt-1.5 max-w-xl text-sm leading-6 text-zinc-400 sm:mt-2">
                   Один клуб может быть только у одного участника. Уже занятые клубы недоступны для выбора.
                 </p>
               </div>
@@ -292,7 +292,7 @@ export function RegisterTournamentButton({
             ) : null}
 
             {clubSelectionMode === ClubSelectionMode.PLAYER_PICK ? (
-            <div className="grid max-h-[60vh] gap-3 overflow-y-auto sm:grid-cols-2">
+            <div className="grid min-h-0 flex-1 grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3 sm:gap-3">
               {clubs.map((club) => {
                 const taken = takenClubSlugs.includes(club.slug);
                 const selected = selectedClubSlug === club.slug;
@@ -303,21 +303,27 @@ export function RegisterTournamentButton({
                     type="button"
                     disabled={taken}
                     onClick={() => setSelectedClubSlug(club.slug)}
-                    className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition ${
+                    className={`group flex min-h-[112px] flex-col items-center justify-center gap-2 rounded-xl border px-2.5 py-3 text-center transition sm:min-h-[118px] sm:px-3 ${
                       taken
                         ? "cursor-not-allowed border-white/10 bg-white/5 opacity-50"
                         : selected
-                          ? "border-primary bg-primary/10"
-                          : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"
+                          ? "border-primary bg-primary/15 shadow-[0_0_0_1px_rgba(218,183,106,0.18),0_14px_28px_rgba(185,148,79,0.1)]"
+                          : "border-white/10 bg-white/[0.03] hover:border-primary/40 hover:bg-white/[0.06]"
                     }`}
                   >
-                    <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-black/20">
+                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-black/30 transition sm:h-14 sm:w-14 ${
+                      selected ? "border-primary/60" : "border-white/10 group-hover:border-white/20"
+                    }`}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={club.imagePath} alt={club.name} className="h-full w-full object-contain p-1" />
                     </div>
-                    <div className="min-w-0">
-                      <div className="font-medium text-white">{club.name}</div>
-                      <div className="mt-1 text-sm text-zinc-500">{taken ? "Клуб уже занят" : "Доступен для выбора"}</div>
+                    <div className="min-w-0 space-y-1">
+                      <div className="line-clamp-2 text-xs font-semibold leading-snug text-white sm:text-sm">{club.name}</div>
+                      <div className={`text-[10px] font-medium leading-tight sm:text-xs ${
+                        taken ? "text-red-300/80" : selected ? "text-primary" : "text-zinc-500"
+                      }`}>
+                        {taken ? "Клуб уже занят" : selected ? "Выбран" : "Свободен"}
+                      </div>
                     </div>
                   </button>
                 );
@@ -325,15 +331,16 @@ export function RegisterTournamentButton({
             </div>
             ) : null}
 
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-col gap-3 border-t border-white/10 pt-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-sm text-zinc-400">
                 {availableClubs.length ? `Свободно клубов: ${availableClubs.length}` : "Свободных клубов больше нет."}
               </div>
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setIsOpen(false)}>
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
+                <Button variant="outline" className="h-11 px-3" onClick={() => setIsOpen(false)}>
                   Отмена
                 </Button>
                 <Button
+                  className="h-11 px-3"
                   onClick={clubSelectionMode === ClubSelectionMode.PLAYER_PICK ? submitSelectedClub : () => submit(undefined)}
                   disabled={
                     isPending ||
