@@ -1,5 +1,5 @@
 import Pusher from "pusher";
-import { NotificationType, Prisma } from "@prisma/client";
+import { NotificationType } from "@prisma/client";
 import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
 import { isTelegramRecipientUnavailableError, sendTelegramMessage } from "@/lib/telegram-bot";
@@ -58,32 +58,43 @@ export async function createNotification({
     }
   }
 
-  let notification;
+  const notificationSelect = {
+    user: {
+      select: {
+        telegramId: true,
+      },
+    },
+  };
 
-  try {
-    notification = await db.notification.create({
-      data: { userId, title: safeTitle, body: safeBody, type, link, dedupeKey },
-      include: {
-        user: {
-          select: {
-            telegramId: true,
-          },
+  let notification = null;
+  let shouldDeliver = true;
+
+  if (dedupeKey) {
+    const created = await db.notification.createMany({
+      data: [{ userId, title: safeTitle, body: safeBody, type, link, dedupeKey }],
+      skipDuplicates: true,
+    });
+
+    notification = await db.notification.findUnique({
+      where: {
+        userId_dedupeKey: {
+          userId,
+          dedupeKey,
         },
       },
+      include: notificationSelect,
     });
-  } catch (error) {
-    if (dedupeKey && error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      const existing = await db.notification.findFirst({
-        where: { userId, dedupeKey },
-        orderBy: { createdAt: "desc" },
-      });
 
-      if (existing) {
-        return existing;
-      }
-    }
+    shouldDeliver = created.count > 0;
+  } else {
+    notification = await db.notification.create({
+      data: { userId, title: safeTitle, body: safeBody, type, link, dedupeKey },
+      include: notificationSelect,
+    });
+  }
 
-    throw error;
+  if (!notification) {
+    throw new Error("Failed to create or load notification");
   }
 
   const payload = {
@@ -97,13 +108,13 @@ export async function createNotification({
     createdAt: notification.createdAt,
   };
 
-  if (pusher) {
+  if (shouldDeliver && pusher) {
     await pusher.trigger(`user-${userId}`, "notification:new", payload).catch((error) => {
       console.error("Failed to push notification", error);
     });
   }
 
-  if (!skipTelegram && notification.user.telegramId && process.env.TELEGRAM_BOT_TOKEN) {
+  if (shouldDeliver && !skipTelegram && notification.user.telegramId && process.env.TELEGRAM_BOT_TOKEN) {
     const absoluteLink = buildAbsoluteNotificationLink(link);
     await sendTelegramMessage({
       chatId: notification.user.telegramId,
@@ -120,10 +131,12 @@ export async function createNotification({
         : undefined,
     }).catch((error) => {
       if (isTelegramRecipientUnavailableError(error)) {
-        console.warn("Telegram notification skipped: recipient is unavailable", {
-          userId,
-          telegramId: notification.user.telegramId,
-        });
+        if (process.env.TELEGRAM_DEBUG === "true") {
+          console.warn("Telegram notification skipped: recipient is unavailable", {
+            userId,
+            telegramId: notification.user.telegramId,
+          });
+        }
         return;
       }
 
