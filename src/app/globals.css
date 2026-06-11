@@ -1216,7 +1216,7 @@ body a[role="button"]:not(:disabled):hover {
   align-self: center;
   width: min(100%, 860px);
   margin-inline: auto;
-  padding-top: 1.5vh;
+  padding-top: 1vh;
   text-align: center;
 }
 
@@ -1619,7 +1619,7 @@ body a[role="button"]:not(:disabled):hover {
 
   .home-premium-phrases {
     height: 4.35rem;
-    margin-top: 0.6rem;
+    margin-top: 0.4rem;
   }
 
   .home-premium-title {
