@@ -1437,10 +1437,7 @@ body a[role="button"]:not(:disabled):hover {
 .home-premium-lower {
   position: relative;
   z-index: 2;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(20rem, 0.58fr);
-  gap: clamp(0.8rem, 2vw, 1rem);
-  align-items: stretch;
+  display: block;
   opacity: 0;
   transform: translateY(18px);
   animation: home-fade-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) 1.65s forwards;
@@ -1501,116 +1498,6 @@ body a[role="button"]:not(:disabled):hover {
   color: rgba(244, 242, 235, 0.54);
   font-size: 0.72rem;
   font-weight: 600;
-}
-
-.home-active-tournament {
-  position: relative;
-  display: flex;
-  min-height: 100%;
-  flex-direction: column;
-  justify-content: space-between;
-  overflow: hidden;
-  border: 1px solid rgba(185, 148, 79, 0.28);
-  border-radius: 16px;
-  background:
-    linear-gradient(135deg, rgba(185, 148, 79, 0.14), transparent 42%),
-    linear-gradient(180deg, rgba(20, 20, 20, 0.86), rgba(7, 7, 7, 0.82));
-  padding: clamp(1rem, 2vw, 1.25rem);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 22px 54px rgba(0, 0, 0, 0.24);
-  backdrop-filter: blur(18px);
-}
-
-.home-active-tournament::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.055), transparent);
-  opacity: 0.45;
-}
-
-.home-active-tournament-header {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.home-active-tournament-header svg {
-  color: #d8b76a;
-}
-
-.home-active-kicker {
-  color: rgba(216, 183, 106, 0.9);
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.home-active-tournament h2 {
-  margin-top: 0.35rem;
-  color: #f7f4ec;
-  font-size: clamp(1.35rem, 2.8vw, 2rem);
-  font-weight: 900;
-  letter-spacing: 0;
-}
-
-.home-active-details {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  gap: 0.7rem;
-  margin-top: 1.1rem;
-}
-
-.home-active-details div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  padding-bottom: 0.62rem;
-}
-
-.home-active-details span {
-  color: rgba(244, 242, 235, 0.58);
-  font-size: 0.78rem;
-}
-
-.home-active-details strong {
-  color: #f7f4ec;
-  font-size: 0.85rem;
-  font-weight: 800;
-  text-align: right;
-}
-
-.home-tournament-link {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  min-height: 2.85rem;
-  align-items: center;
-  justify-content: center;
-  gap: 0.55rem;
-  margin-top: 1rem;
-  border: 1px solid rgba(226, 196, 116, 0.42);
-  border-radius: 14px;
-  background: rgba(185, 148, 79, 0.12);
-  color: #e5c575;
-  font-size: 0.78rem;
-  font-weight: 850;
-  text-transform: uppercase;
-  transition: transform 0.28s ease, border-color 0.28s ease, background-color 0.28s ease, color 0.28s ease;
-}
-
-.home-tournament-link:hover {
-  transform: translateY(-2px);
-  border-color: rgba(226, 196, 116, 0.78);
-  background: rgba(185, 148, 79, 0.18);
-  color: #fff2c8;
 }
 
 @keyframes home-bg-drift {
@@ -1767,25 +1654,6 @@ body a[role="button"]:not(:disabled):hover {
 
   .home-premium-stat {
     padding: 0.78rem;
-  }
-
-  .home-active-tournament {
-    border-radius: 14px;
-    padding: 0.9rem;
-  }
-
-  .home-active-details {
-    gap: 0.58rem;
-  }
-
-  .home-active-details div {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 0.18rem;
-  }
-
-  .home-active-details strong {
-    text-align: left;
   }
 
   .home-stat-head {

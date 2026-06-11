@@ -23,9 +23,10 @@ const heroPhrases = [
 ];
 
 const telegramHref = process.env.NEXT_PUBLIC_SUPPORT_TELEGRAM_URL ?? "https://t.me/efootball_nexon";
+const marketHref = "https://t.me/eFootballNexonMarketBot";
 
 export default async function HomePage() {
-  const [totalUsers, completedTournaments, playedMatches, victoryCup, archivedHomeStats] = await Promise.all([
+  const [totalUsers, completedTournaments, playedMatches, archivedHomeStats] = await Promise.all([
     db.user.count(),
     db.tournament.count({
       where: { status: TournamentStatus.COMPLETED, isTest: false },
@@ -36,11 +37,6 @@ export default async function HomePage() {
         tournament: { isTest: false },
       },
     }),
-    db.tournament.findFirst({
-      where: { title: { contains: "VICTORY CUP", mode: "insensitive" }, isTest: false },
-      select: { id: true },
-      orderBy: { createdAt: "desc" },
-    }),
     getArchivedHomeStats(),
   ]);
 
@@ -48,7 +44,6 @@ export default async function HomePage() {
   const tournamentsCount = completedTournaments + archivedHomeStats.tournaments;
   const matchesCount = playedMatches;
   const championsCount = Math.max(completedTournaments + archivedHomeStats.tournaments, 1);
-  const victoryCupHref = victoryCup ? `/tournaments/${victoryCup.id}` : "/tournaments";
 
   const stats = [
     { icon: Users, value: playersCount, suffix: "+", label: "игроков" },
@@ -103,7 +98,7 @@ export default async function HomePage() {
               <Send className="h-4 w-4" />
               <span>Telegram</span>
             </Link>
-            <Link href="/coins/services" className="home-social-button">
+            <Link href={marketHref} target="_blank" rel="noreferrer" className="home-social-button">
               <ShoppingBag className="h-4 w-4" />
               <span>Маркет</span>
             </Link>
@@ -129,36 +124,6 @@ export default async function HomePage() {
               </div>
             ))}
           </div>
-
-          <section className="home-active-tournament" aria-label="Активный турнир">
-            <div className="home-active-tournament-header">
-              <div>
-                <div className="home-active-kicker">Активный турнир</div>
-                <h2>VICTORY CUP</h2>
-              </div>
-              <Trophy className="h-6 w-6" />
-            </div>
-
-            <div className="home-active-details">
-              <div>
-                <span>Призовой фонд</span>
-                <strong>2000 ₽</strong>
-              </div>
-              <div>
-                <span>Участников</span>
-                <strong>32</strong>
-              </div>
-              <div>
-                <span>Формат</span>
-                <strong>Плей-офф до 3 побед</strong>
-              </div>
-            </div>
-
-            <Link href={victoryCupHref} className="home-tournament-link">
-              <span>Смотреть турнир</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </section>
         </div>
       </section>
     </main>
