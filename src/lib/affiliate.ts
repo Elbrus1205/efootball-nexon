@@ -1,32 +1,5 @@
 export const SITE_BASE_URL = "https://efootball-nexon.com";
 
-export function normalizePromoCode(value: string) {
-  return value.trim().toUpperCase().replace(/\s+/g, "");
-}
-
-export function normalizeReferralSlug(value: string) {
-  const raw = value.trim();
-
-  try {
-    const url = new URL(raw);
-    const ref = url.searchParams.get("ref");
-    if (ref) return normalizeSlug(ref);
-
-    const pathParts = url.pathname.split("/").filter(Boolean);
-    return normalizeSlug(pathParts[pathParts.length - 1] ?? raw);
-  } catch {
-    return normalizeSlug(raw.replace(/^\/?ref\//i, "").replace(/^\/?coins\?ref=/i, ""));
-  }
-}
-
-function normalizeSlug(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
 export function getRequestBaseUrl(request: Request) {
   const origin = request.headers.get("origin");
 

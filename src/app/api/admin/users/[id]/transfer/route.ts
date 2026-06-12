@@ -67,8 +67,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return redirectWithStatus(request, returnTo, "error", "Нельзя переносить аккаунт сам в себя.");
   }
 
-  const [duplicateTournamentRegistration, sourceReferralCount, targetReferralCount] = await Promise.all([
-    db.tournamentRegistration.findFirst({
+  const duplicateTournamentRegistration = await db.tournamentRegistration.findFirst({
       where: {
         userId: sourceUserId,
         tournament: {
@@ -80,10 +79,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       include: {
         tournament: { select: { title: true } },
       },
-    }),
-    db.affiliateReferral.count({ where: { userId: sourceUserId } }),
-    db.affiliateReferral.count({ where: { userId: targetUserId } }),
-  ]);
+    });
 
   if (duplicateTournamentRegistration) {
     return redirectWithStatus(
@@ -92,10 +88,6 @@ export async function POST(request: Request, { params }: { params: { id: string 
       "error",
       `Нельзя перенести: целевой аккаунт уже есть в турнире "${duplicateTournamentRegistration.tournament.title}".`,
     );
-  }
-
-  if (sourceReferralCount > 0 && targetReferralCount > 0) {
-    return redirectWithStatus(request, returnTo, "error", "Нельзя перенести: у обоих аккаунтов уже есть привязанный партнерский промокод.");
   }
 
   const result = await db.$transaction(async (tx) => {
@@ -110,9 +102,6 @@ export async function POST(request: Request, { params }: { params: { id: string 
       tx.match.updateMany({ where: { winnerId: sourceUserId }, data: { winnerId: targetUserId } }),
       tx.matchResultSubmission.updateMany({ where: { submittedById: sourceUserId }, data: { submittedById: targetUserId } }),
       tx.notification.updateMany({ where: { userId: sourceUserId }, data: { userId: targetUserId } }),
-      tx.affiliatePartner.updateMany({ where: { ownerId: sourceUserId }, data: { ownerId: targetUserId } }),
-      tx.affiliateReferral.updateMany({ where: { userId: sourceUserId }, data: { userId: targetUserId } }),
-      tx.affiliatePurchase.updateMany({ where: { buyerUserId: sourceUserId }, data: { buyerUserId: targetUserId } }),
       tx.securitySession.updateMany({ where: { userId: sourceUserId, revokedAt: null }, data: { revokedAt: new Date() } }),
       tx.session.deleteMany({ where: { userId: sourceUserId } }),
       tx.loginHistory.updateMany({ where: { userId: sourceUserId }, data: { userId: targetUserId } }),
@@ -130,13 +119,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
       wonMatches: updates[7].count,
       matchResultSubmissions: updates[8].count,
       notifications: updates[9].count,
-      affiliatePartners: updates[10].count,
-      affiliateReferrals: updates[11].count,
-      affiliatePurchases: updates[12].count,
-      revokedSecuritySessions: updates[13].count,
-      deletedSessions: updates[14].count,
-      loginHistory: updates[15].count,
-      deletedTwoFactorChallenges: updates[16].count,
+      revokedSecuritySessions: updates[10].count,
+      deletedSessions: updates[11].count,
+      loginHistory: updates[12].count,
+      deletedTwoFactorChallenges: updates[13].count,
     };
 
     await tx.adminAction.create({
@@ -164,8 +150,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     result.playerTwoMatches +
     result.wonMatches +
     result.matchResultSubmissions +
-    result.notifications +
-    result.affiliatePurchases;
+    result.notifications;
 
   return redirectWithStatus(request, returnTo, "updated", `Аккаунт перенесен. Обновлено связанных записей: ${moved}.`);
 }

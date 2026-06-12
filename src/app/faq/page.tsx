@@ -95,7 +95,7 @@ export default async function FaqPage() {
         </div>
         <h1 className="font-display text-3xl font-thin text-white sm:text-4xl">Помощь игрокам</h1>
         <p className="max-w-2xl text-sm leading-6 text-zinc-400">
-          Короткие ответы по регистрации, турнирам, матчам, профилю, связи и заказам Coins.
+          Короткие ответы по регистрации, турнирам, матчам, профилю и связи.
         </p>
       </section>
 

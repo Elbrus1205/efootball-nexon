@@ -21,7 +21,6 @@ export default async function AdminLayout({
     "profileStatuses.manage",
     "broadcasts.manage",
     "content.manage",
-    "coins.manage",
     "divisions.manage",
     "schedule.manage",
   ]);

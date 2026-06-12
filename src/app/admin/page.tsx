@@ -7,7 +7,7 @@ import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
 export default async function AdminPage() {
-  await requireAnyPermission(["admin.matchesOnly", "matches.reviewResults", "tournaments.createEdit", "users.view", "coins.manage", "content.manage", "broadcasts.manage", "profileStatuses.manage", "schedule.manage"]);
+  await requireAnyPermission(["admin.matchesOnly", "matches.reviewResults", "tournaments.createEdit", "users.view", "content.manage", "broadcasts.manage", "profileStatuses.manage", "schedule.manage"]);
 
   const [totalTournaments, activeTournaments, completedTournaments, totalParticipants, activeSeason] = await db.$transaction([
     db.tournament.count(),

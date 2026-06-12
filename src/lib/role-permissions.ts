@@ -40,7 +40,6 @@ export const rolePermissions = [
   { id: "users.view", label: "Смотреть пользователей" },
   { id: "broadcasts.manage", label: "Делать рассылки" },
   { id: "content.manage", label: "Управлять FAQ и регламентами" },
-  { id: "coins.manage", label: "Управлять магазином Coins, заказами, товарами, картами и партнёрами" },
   { id: "divisions.manage", label: "Управлять режимом Дивизион" },
 ] as const satisfies readonly RolePermission[];
 
@@ -104,7 +103,6 @@ export const defaultRolePermissions: Record<ManagedRole, RolePermissionId[]> = {
     "users.view",
     "broadcasts.manage",
     "content.manage",
-    "coins.manage",
     "divisions.manage",
   ],
 };
@@ -163,7 +161,6 @@ export const adminNavPermissions: Record<string, RolePermissionId[]> = {
   "/admin/tournaments": ["tournaments.createEdit", "tournaments.manageParticipants", "tournaments.manageStructure", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"],
   "/admin/seasons": ["tournaments.createEdit"],
   "/admin/statuses": ["profileStatuses.manage"],
-  "/admin/coins": ["coins.manage"],
   "/admin/regulations": ["content.manage"],
   "/admin/faq": ["content.manage"],
   "/admin/users": ["users.view", "users.ban", "users.changeLowerRoles"],
