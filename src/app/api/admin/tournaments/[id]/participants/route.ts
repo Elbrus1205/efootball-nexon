@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { createNotification } from "@/lib/services/notifications";
 import { recalculateGroupStandings } from "@/lib/services/tournaments";
+import { hasTelegramRegistrationContact } from "@/lib/social-links";
 import { participantManageSchema } from "@/lib/validators";
 import { formatTournamentBanMessage } from "@/lib/user-ban";
 
@@ -16,11 +17,6 @@ const replaceableMatchStatuses = [
   MatchStatus.LIVE,
   MatchStatus.REJECTED,
 ];
-
-function hasPublicTelegramUsername(value?: string | null) {
-  const username = value?.trim().replace(/^@/, "");
-  return Boolean(username && /^[A-Za-z0-9_]{5,32}$/.test(username));
-}
 
 async function tournamentRequiresTelegram(tournamentId: string) {
   const tournament = await db.tournament.findUnique({
@@ -81,7 +77,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return NextResponse.json({ error: banMessage }, { status: 403 });
     }
 
-    if ((await tournamentRequiresTelegram(params.id)) && (!user?.telegramId || !hasPublicTelegramUsername(user.telegramUsername))) {
+    if ((await tournamentRequiresTelegram(params.id)) && !hasTelegramRegistrationContact(user)) {
       return NextResponse.json(
         { error: "Для участия в этом турнире у игрока должен быть привязан Telegram с публичным @username." },
         { status: 403 },
@@ -165,7 +161,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return NextResponse.json({ error: banMessage }, { status: 403 });
     }
 
-    if ((await tournamentRequiresTelegram(params.id)) && (!replacementUser.telegramId || !hasPublicTelegramUsername(replacementUser.telegramUsername))) {
+    if ((await tournamentRequiresTelegram(params.id)) && !hasTelegramRegistrationContact(replacementUser)) {
       return NextResponse.json(
         { error: "Для замены в этом турнире у нового игрока должен быть привязан Telegram с публичным @username." },
         { status: 403 },

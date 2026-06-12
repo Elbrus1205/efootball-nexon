@@ -30,6 +30,14 @@ function normalizeTelegramUsername(value?: string | null) {
   return username && /^[A-Za-z0-9_]{5,32}$/.test(username) ? username : null;
 }
 
+export function hasPublicTelegramUsername(value?: string | null) {
+  return Boolean(normalizeTelegramUsername(value));
+}
+
+export function hasTelegramRegistrationContact(user: Pick<SocialUser, "telegramId" | "telegramUsername"> | null | undefined) {
+  return Boolean(user?.telegramId && hasPublicTelegramUsername(user.telegramUsername));
+}
+
 export function getTelegramProfileLinks(user: Pick<SocialUser, "telegramId" | "telegramUsername">): TelegramProfileLinks | null {
   const telegramUsername = normalizeTelegramUsername(user.telegramUsername);
 

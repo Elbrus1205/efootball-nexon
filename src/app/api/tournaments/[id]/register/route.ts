@@ -9,12 +9,8 @@ import { db } from "@/lib/db";
 import { hasAcceptedCurrentRegulations } from "@/lib/regulations";
 import { createNotification } from "@/lib/services/notifications";
 import { getTournamentGroupCapacityLimit, syncTournamentLifecycleStatus, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
+import { hasTelegramRegistrationContact } from "@/lib/social-links";
 import { formatTournamentBanMessage } from "@/lib/user-ban";
-
-function hasPublicTelegramUsername(value?: string | null) {
-  const username = value?.trim().replace(/^@/, "");
-  return Boolean(username && /^[A-Za-z0-9_]{5,32}$/.test(username));
-}
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const session = await requireAuth();
@@ -84,7 +80,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.json({ error: "Тестовый турнир доступен только админам." }, { status: 404 });
   }
 
-  if (!user?.telegramId || !hasPublicTelegramUsername(user.telegramUsername)) {
+  if (!hasTelegramRegistrationContact(user)) {
     return NextResponse.json(
       { error: "Для регистрации на этот турнир нужно привязать Telegram с публичным @username в настройках профиля." },
       { status: 403 },

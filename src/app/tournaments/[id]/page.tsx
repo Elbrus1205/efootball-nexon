@@ -26,7 +26,7 @@ import { db } from "@/lib/db";
 import { normalizeFormatBlueprint } from "@/lib/format-blueprint";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { shouldSyncTournamentRegistrationLifecycle, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
-import { getTelegramProfileLinks } from "@/lib/social-links";
+import { getTelegramProfileLinks, hasPublicTelegramUsername, hasTelegramRegistrationContact } from "@/lib/social-links";
 import { formatDate } from "@/lib/utils";
 
 type LeagueRow = {
@@ -927,7 +927,9 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   const isRegistrationOpen = tournament.status === TournamentStatus.REGISTRATION_OPEN;
   const isLoggedIn = Boolean(currentUserId);
   const alreadyRegistered = !!currentUserId && activeParticipants.some((entry) => entry.userId === currentUserId);
-  const needsTelegram = Boolean(isLoggedIn && (!currentUser?.telegramId || !getTelegramProfileLinks(currentUser)));
+  const needsTelegramConnection = Boolean(isLoggedIn && !currentUser?.telegramId);
+  const needsTelegramUsername = Boolean(isLoggedIn && currentUser?.telegramId && !hasPublicTelegramUsername(currentUser.telegramUsername));
+  const needsTelegram = Boolean(isLoggedIn && !hasTelegramRegistrationContact(currentUser));
   const canRegister = isLoggedIn && isRegistrationOpen && hasFreeSlots && !alreadyRegistered && !needsTelegram;
   const canCancelRegistration =
     isLoggedIn &&
@@ -1207,9 +1209,13 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
             <Button size="lg" asChild>
               <a href={`/login?callbackUrl=/tournaments/${tournament.id}`}>Войти, чтобы зарегистрироваться</a>
             </Button>
-          ) : needsTelegram ? (
+          ) : needsTelegramConnection ? (
             <Button size="lg" asChild>
               <a href="/dashboard/security">Привязать Telegram для регистрации</a>
+            </Button>
+          ) : needsTelegramUsername ? (
+            <Button size="lg" disabled>
+              Нужен публичный @username Telegram
             </Button>
           ) : (
             <Button size="lg" disabled>
