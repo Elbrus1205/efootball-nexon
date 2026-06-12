@@ -127,7 +127,7 @@ const CLUBS: ClubDefinition[] = [
   { fileName: "basel-big.png", name: "Базель" },
   { fileName: "palmeiras-big-768x768.png", name: "Палмейрас" },
   { fileName: "corinthians-big.png", name: "Коринтианс" },
-  { fileName: "santos.png", name: "Сантос" },
+  { fileName: "santos-big.png", name: "Сантос" },
   { fileName: "sao-paulo-big-768x765.png", name: "Сан-Паулу" },
   { fileName: "gremio-big.png", name: "Гремио" },
   { fileName: "boca-juniors-big.png", name: "Бока Хуниорс" },
