@@ -174,6 +174,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
         : player1Submission.player1Score < player1Submission.player2Score
           ? match.player2Id
           : null;
+    const winnerEntryId =
+      winnerId === match.player1Id
+        ? match.participant1EntryId
+        : winnerId === match.player2Id
+          ? match.participant2EntryId
+          : null;
 
     await db.match.update({
       where: { id: params.id },
@@ -182,6 +188,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         player2Score: player1Submission.player2Score,
         status: MatchStatus.CONFIRMED,
         winnerId,
+        winnerEntryId,
       },
     });
 

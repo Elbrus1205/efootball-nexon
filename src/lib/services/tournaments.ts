@@ -2356,6 +2356,7 @@ export async function recalculateGroupStandings(tournamentId: string) {
         const seriesMatches = completedMatches.filter(
           (item) =>
             item.seriesKey === match.seriesKey &&
+            !item.isPenaltyTiebreak &&
             item.participant1EntryId &&
             item.participant2EntryId &&
             item.player1Score != null &&
@@ -3214,6 +3215,9 @@ async function createPenaltyMatch(match: {
   matchNumber: number;
   bracket: string;
   seriesKey: string | null;
+  legNumber?: number | null;
+  seriesWinsRequired?: number | null;
+  seriesMatchNumber?: number | null;
   player1Id: string | null;
   player2Id: string | null;
   participant1EntryId: string | null;
@@ -3248,6 +3252,9 @@ async function createPenaltyMatch(match: {
       matchNumber: match.matchNumber,
       bracket: match.bracket,
       seriesKey: match.seriesKey,
+      legNumber: match.legNumber ?? null,
+      seriesWinsRequired: match.seriesWinsRequired ?? null,
+      seriesMatchNumber: match.seriesMatchNumber ?? null,
       isPenaltyTiebreak: true,
       isThirdPlaceMatch: match.isThirdPlaceMatch,
       player1Id: match.player1Id,
@@ -3275,11 +3282,88 @@ async function resolveBestOfSeriesIfCompleted(match: {
   }
   const winsRequired = match.seriesWinsRequired;
 
-  const seriesMatches = await db.match.findMany({
-    where: { seriesKey: match.seriesKey, isPenaltyTiebreak: false },
+  const allSeriesMatches = await db.match.findMany({
+    where: { seriesKey: match.seriesKey },
     orderBy: [{ seriesMatchNumber: "asc" }, { legNumber: "asc" }, { createdAt: "asc" }],
   });
+  const penaltyMatches = allSeriesMatches.filter((item) => item.isPenaltyTiebreak);
+  const seriesMatches = allSeriesMatches.filter((item) => !item.isPenaltyTiebreak);
+
+  for (const penaltyMatch of penaltyMatches) {
+    if (!(penaltyMatch.status === MatchStatus.CONFIRMED || penaltyMatch.status === MatchStatus.FINISHED) || !penaltyMatch.winnerId) {
+      continue;
+    }
+
+    const linkedMatch =
+      seriesMatches.find(
+        (item) =>
+          item.player1Score !== null &&
+          item.player2Score !== null &&
+          item.player1Score === item.player2Score &&
+          !item.winnerId &&
+          item.round === penaltyMatch.round &&
+          item.matchNumber === penaltyMatch.matchNumber &&
+          (item.legNumber ?? null) === (penaltyMatch.legNumber ?? null),
+      ) ??
+      seriesMatches.find(
+        (item) =>
+          item.player1Score !== null &&
+          item.player2Score !== null &&
+          item.player1Score === item.player2Score &&
+          !item.winnerId,
+      );
+
+    if (!linkedMatch) {
+      continue;
+    }
+
+    const winnerEntryId =
+      penaltyMatch.winnerId === linkedMatch.player1Id
+        ? linkedMatch.participant1EntryId
+        : penaltyMatch.winnerId === linkedMatch.player2Id
+          ? linkedMatch.participant2EntryId
+          : null;
+
+    await db.match.update({
+      where: { id: linkedMatch.id },
+      data: {
+        winnerId: penaltyMatch.winnerId,
+        winnerEntryId,
+        player1PenaltyScore: penaltyMatch.player1Score,
+        player2PenaltyScore: penaltyMatch.player2Score,
+      },
+    });
+
+    linkedMatch.winnerId = penaltyMatch.winnerId;
+    linkedMatch.winnerEntryId = winnerEntryId;
+    linkedMatch.player1PenaltyScore = penaltyMatch.player1Score;
+    linkedMatch.player2PenaltyScore = penaltyMatch.player2Score;
+  }
+
   const confirmedMatches = seriesMatches.filter((item) => item.status === MatchStatus.CONFIRMED || item.status === MatchStatus.FINISHED);
+
+  for (const seriesMatch of confirmedMatches) {
+    if (seriesMatch.winnerId || seriesMatch.player1Score === null || seriesMatch.player2Score === null || seriesMatch.player1Score !== seriesMatch.player2Score) {
+      continue;
+    }
+
+    const linkedPenalty = penaltyMatches.find(
+      (item) =>
+        item.round === seriesMatch.round &&
+        item.matchNumber === seriesMatch.matchNumber &&
+        (item.legNumber ?? null) === (seriesMatch.legNumber ?? null),
+    );
+
+    if (!linkedPenalty) {
+      await createPenaltyMatch(seriesMatch);
+    }
+
+    if (!match.bracketId) {
+      await recalculateGroupStandings(match.tournamentId);
+    }
+    return true;
+  }
+
   const winsByEntryId = new Map<string, number>();
 
   for (const seriesMatch of confirmedMatches) {
@@ -3293,7 +3377,6 @@ async function resolveBestOfSeriesIfCompleted(match: {
     if (!match.bracketId) {
       await recalculateGroupStandings(match.tournamentId);
     }
-    await syncTournamentLifecycleStatus(match.tournamentId);
     return true;
   }
 
