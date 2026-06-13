@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { Archive, CalendarRange, Crown, Medal, Shield } from "lucide-react";
+import { Archive, CalendarRange, Crown, Medal, Shield, Trophy } from "lucide-react";
+import { TournamentStatus } from "@prisma/client";
 import { Fragment } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { getCurrentSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { parsePrizePoolValue } from "@/lib/home-stats";
 import { profileStatusClassName } from "@/lib/profile-status-style";
 import { getPlayerRatings } from "@/lib/ratings";
 import { proxyTelegramAssetUrl } from "@/lib/telegram-assets";
@@ -30,6 +32,12 @@ function shouldShowRatingChange(changedAt: Date | null) {
 
 function formatRating(value: number) {
   return value.toFixed(1);
+}
+
+function formatPrizePool(value: number) {
+  return new Intl.NumberFormat("ru-RU", {
+    maximumFractionDigits: 0,
+  }).format(value);
 }
 
 function seasonChipClass(active: boolean) {
@@ -62,7 +70,18 @@ export default async function RatingsPage({
   const showAllTime = requestedSeason === "all" || (!activeSeason && !selectedSeason);
   const ratingSeason = showAllTime ? null : selectedSeason ?? activeSeason;
   const archivedSeasons = seasons.filter((season) => !season.isActive);
-  const ratings = await getPlayerRatings({ seasonId: ratingSeason?.id ?? null });
+  const [ratings, prizeTournaments] = await Promise.all([
+    getPlayerRatings({ seasonId: ratingSeason?.id ?? null }),
+    db.tournament.findMany({
+      where: {
+        isTest: false,
+        status: TournamentStatus.COMPLETED,
+        ...(ratingSeason ? { seasonId: ratingSeason.id } : {}),
+      },
+      select: { prizePool: true },
+    }),
+  ]);
+  const ratingPrizePool = Math.floor(prizeTournaments.reduce((sum, tournament) => sum + parsePrizePoolValue(tournament.prizePool), 0) * 0.1);
   const topRatings = ratings.slice(0, 10);
   const currentUserIndex = session?.user ? ratings.findIndex((player) => player.playerId === session.user.id) : -1;
   const currentUserBelowTop = currentUserIndex >= 10;
@@ -76,14 +95,32 @@ export default async function RatingsPage({
       <div className="text-sm font-semibold uppercase tracking-[0.28em] text-primary drop-shadow-[0_0_16px_rgba(59,130,246,0.65)]">Рейтинги</div>
 
       <Card className="overflow-hidden p-0">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
-          <div>
-            <div className="font-semibold text-white">Таблица рейтинга</div>
-            <div className="mt-1 text-sm text-zinc-500">{seasonCaption}</div>
+        <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(217,181,91,0.13),transparent_38%),rgba(255,255,255,0.015)] px-4 py-4 sm:px-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="text-lg font-black leading-tight text-white sm:text-xl">Таблица рейтинга</div>
+                <Badge variant={ratingSeason?.isActive ? "success" : ratingSeason ? "neutral" : "primary"} className="shrink-0">
+                  {ratingSeason ? (ratingSeason.isActive ? "Текущий сезон" : "Архив") : "Всё время"}
+                </Badge>
+              </div>
+              <div className="mt-1 text-sm text-zinc-400">{seasonCaption}</div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 sm:min-w-[280px]">
+              <div className="rounded-lg border border-[#C9A24D]/25 bg-[#C9A24D]/10 px-3 py-2">
+                <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#E7CF8F]">
+                  <Trophy className="h-3.5 w-3.5" />
+                  Призовой фонд
+                </div>
+                <div className="mt-1 truncate text-lg font-black leading-none text-white sm:text-xl">{formatPrizePool(ratingPrizePool)} ₽</div>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Игроков</div>
+                <div className="mt-1 text-lg font-black leading-none text-white sm:text-xl">{ratings.length}</div>
+              </div>
+            </div>
           </div>
-          <Badge variant={ratingSeason?.isActive ? "success" : ratingSeason ? "neutral" : "primary"}>
-            {ratingSeason ? (ratingSeason.isActive ? "Текущий сезон" : "Архив") : "Всё время"}
-          </Badge>
         </div>
 
         <div className="overflow-hidden">
