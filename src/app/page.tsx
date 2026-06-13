@@ -5,7 +5,7 @@ import { ArrowRight, Medal, Send, ShoppingBag, Swords, Trophy, Users } from "luc
 import { MatchStatus, TournamentStatus } from "@prisma/client";
 import { AnimatedCounter } from "@/components/home/animated-counter";
 import { db } from "@/lib/db";
-import { getArchivedHomeStats } from "@/lib/home-stats";
+import { getArchivedHomeStats, parsePrizePoolValue } from "@/lib/home-stats";
 
 const heroPhrases = [
   "Докажи, что ты лучший",
@@ -26,7 +26,7 @@ const telegramHref = process.env.NEXT_PUBLIC_SUPPORT_TELEGRAM_URL ?? "https://t.
 const marketHref = "https://t.me/eFootballNexonMarketBot";
 
 export default async function HomePage() {
-  const [totalUsers, completedTournaments, playedMatches, archivedHomeStats] = await Promise.all([
+  const [totalUsers, completedTournaments, playedMatches, completedTournamentPrizes, archivedHomeStats] = await Promise.all([
     db.user.count(),
     db.tournament.count({
       where: { status: TournamentStatus.COMPLETED, isTest: false },
@@ -37,19 +37,23 @@ export default async function HomePage() {
         tournament: { isTest: false },
       },
     }),
+    db.tournament.findMany({
+      where: { status: TournamentStatus.COMPLETED, isTest: false },
+      select: { prizePool: true },
+    }),
     getArchivedHomeStats(),
   ]);
 
   const playersCount = Math.max(totalUsers + archivedHomeStats.users, 240);
   const tournamentsCount = completedTournaments + archivedHomeStats.tournaments;
   const matchesCount = playedMatches;
-  const championsCount = Math.max(completedTournaments + archivedHomeStats.tournaments, 1);
+  const awardedPrizePool = archivedHomeStats.prizePool + completedTournamentPrizes.reduce((sum, tournament) => sum + parsePrizePoolValue(tournament.prizePool), 0);
 
   const stats = [
     { icon: Users, value: playersCount, suffix: "+", label: "игроков" },
     { icon: Trophy, value: tournamentsCount, suffix: "", label: "турниров проведено" },
     { icon: Swords, value: matchesCount, suffix: "", label: "сыграно матчей" },
-    { icon: Medal, value: championsCount, suffix: "", label: "чемпионов проекта" },
+    { icon: Medal, value: awardedPrizePool, suffix: " ₽", label: "разыграно призов" },
   ];
 
   return (

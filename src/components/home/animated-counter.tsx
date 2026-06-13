@@ -42,5 +42,5 @@ export function AnimatedCounter({ value, className }: AnimatedCounterProps) {
     return () => observer.disconnect();
   }, [value]);
 
-  return <span ref={nodeRef} className={className}>{count}</span>;
+  return <span ref={nodeRef} className={className}>{new Intl.NumberFormat("ru-RU").format(count)}</span>;
 }
