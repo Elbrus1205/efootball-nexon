@@ -7,6 +7,14 @@ import { MAX_SELECTED_PROFILE_STATUSES } from "@/lib/profile-status-style";
 export { MAX_SELECTED_PROFILE_STATUSES };
 
 const GOAL_MASTER_DURATION_MONTHS = 3;
+const CURRENT_CHAMPION_DURATION_DAYS = 30;
+
+export const currentChampionProfileStatusDraft = {
+  type: ProfileStatusType.CURRENT_CHAMPION,
+  title: "Действующий чемпион",
+  description: "Победитель актуального завершённого турнира. Действует 30 дней с момента выдачи.",
+  tone: ProfileStatusTone.GOLD,
+} as const;
 
 export const manualProfileStatusDrafts = [
   {
@@ -41,6 +49,16 @@ function addMonths(date: Date, months: number) {
   return nextDate;
 }
 
+function addDays(date: Date, days: number) {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + days);
+  return nextDate;
+}
+
+export function getCurrentChampionStatusExpiresAt(issuedAt = new Date()) {
+  return addDays(issuedAt, CURRENT_CHAMPION_DURATION_DAYS);
+}
+
 function getManualProfileStatusExpiresAt(type: ProfileStatusType, issuedAt: Date) {
   if (type !== ProfileStatusType.GOAL_MASTER) return null;
   return addMonths(issuedAt, GOAL_MASTER_DURATION_MONTHS);
@@ -56,6 +74,13 @@ function formatStatusExpirationDate(date: Date) {
 
 function buildProfileStatusGrantedBody(status: Pick<UserProfileStatus, "title" | "expiresAt">) {
   const base = `Администратор выдал вам статус: ${status.title}. Его можно выбрать в редакторе профиля.`;
+
+  if (!status.expiresAt) return base;
+  return `${base} Статус действует до ${formatStatusExpirationDate(status.expiresAt)}.`;
+}
+
+function buildAutomaticProfileStatusGrantedBody(status: Pick<UserProfileStatus, "title" | "expiresAt">) {
+  const base = `Вам выдан статус: ${status.title}. Его можно выбрать в редакторе профиля.`;
 
   if (!status.expiresAt) return base;
   return `${base} Статус действует до ${formatStatusExpirationDate(status.expiresAt)}.`;
@@ -243,6 +268,68 @@ export async function grantManualProfileStatuses({
   );
 
   return statuses;
+}
+
+export async function grantCurrentChampionProfileStatus({
+  userId,
+  tournamentTitle,
+  now = new Date(),
+}: {
+  userId: string;
+  tournamentTitle?: string;
+  now?: Date;
+}) {
+  const expiresAt = getCurrentChampionStatusExpiresAt(now);
+  const description = tournamentTitle
+    ? `Победитель турнира «${tournamentTitle}». Действует 30 дней с момента выдачи.`
+    : currentChampionProfileStatusDraft.description;
+  const existing = await db.userProfileStatus.findFirst({
+    where: {
+      userId,
+      seasonId: null,
+      type: currentChampionProfileStatusDraft.type,
+    },
+  });
+
+  const status = existing
+    ? await db.userProfileStatus.update({
+        where: { id: existing.id },
+        data: {
+          title: currentChampionProfileStatusDraft.title,
+          description,
+          tone: currentChampionProfileStatusDraft.tone,
+          approvalStatus: ProfileStatusApprovalStatus.APPROVED,
+          approvedAt: now,
+          expiresAt,
+          expiredNotifiedAt: null,
+          reviewedAt: null,
+          reviewedById: null,
+        },
+      })
+    : await db.userProfileStatus.create({
+        data: {
+          userId,
+          type: currentChampionProfileStatusDraft.type,
+          title: currentChampionProfileStatusDraft.title,
+          description,
+          tone: currentChampionProfileStatusDraft.tone,
+          approvalStatus: ProfileStatusApprovalStatus.APPROVED,
+          approvedAt: now,
+          expiresAt,
+          expiredNotifiedAt: null,
+        },
+      });
+
+  await createNotification({
+    userId,
+    title: "Новый статус профиля",
+    body: buildAutomaticProfileStatusGrantedBody(status),
+    type: NotificationType.SYSTEM,
+    link: "/dashboard/edit",
+    dedupeWithinHours: 168,
+  });
+
+  return status;
 }
 
 export async function notifyExpiredProfileStatuses({

@@ -21,6 +21,7 @@ function answerParagraphs(answer: string) {
 const PROFILE_STATUSES_FAQ_ID = "seed-75-profile-statuses";
 
 const profileStatusFaqBadges = [
+  { title: "Действующий чемпион", tone: ProfileStatusTone.GOLD },
   { title: "Чемпион сезона", tone: ProfileStatusTone.GOLD },
   { title: "Вице-чемпион сезона", tone: ProfileStatusTone.PURPLE },
   { title: "Бронзовый призёр", tone: ProfileStatusTone.BLUE },

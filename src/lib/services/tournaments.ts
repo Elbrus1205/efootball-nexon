@@ -14,11 +14,12 @@ import {
 import { db } from "@/lib/db";
 import { getAvailableClubs } from "@/lib/clubs";
 import { normalizeFormatBlueprint, type FormatBlueprint, type PlayoffSelectionRule } from "@/lib/format-blueprint";
+import { grantCurrentChampionProfileStatus } from "@/lib/profile-statuses";
+import { createNotification, createNotificationsForUsers } from "@/lib/services/notifications";
 
 function createGroupSourceRef(groupId: string, rank: number) {
   return `group:${groupId}:rank:${rank}`;
 }
-import { createNotification, createNotificationsForUsers } from "@/lib/services/notifications";
 
 type CustomPlayoffSettings = {
   mode: "custom";
@@ -988,9 +989,19 @@ async function notifyTournamentCompleted(tournamentId: string) {
     },
   });
 
-  if (!tournament || !tournamentNotificationsEnabled(tournament)) return;
+  if (!tournament) return;
 
-  const finalWinnerId = tournament.matches.find((match) => match.winnerId)?.winnerId ?? null;
+  const finalWinnerId = tournament.matches.find((match) => !match.isThirdPlaceMatch && match.winnerId)?.winnerId ?? null;
+
+  if (finalWinnerId && !tournament.isTest) {
+    await grantCurrentChampionProfileStatus({
+      userId: finalWinnerId,
+      tournamentTitle: tournament.title,
+    });
+  }
+
+  if (!tournamentNotificationsEnabled(tournament)) return;
+
   const participantUserIds = tournament.participants.map((participant) => participant.userId);
   const otherUserIds = participantUserIds.filter((userId) => userId !== finalWinnerId);
 
