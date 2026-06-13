@@ -1,7 +1,9 @@
-import { MatchStatus } from "@prisma/client";
+"use client";
+
+import type { MatchStatus } from "@prisma/client";
 import { GitBranch, Trophy } from "lucide-react";
 import Link from "next/link";
-import type { CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { cn } from "@/lib/utils";
 
@@ -67,6 +69,8 @@ type BracketSide = {
   isChampion: boolean;
 };
 
+const RESOLVED_MATCH_STATUSES: MatchStatus[] = ["CONFIRMED", "FINISHED"];
+
 function roundTitle(round: number, totalRounds: number) {
   const roundsRemaining = totalRounds - round;
 
@@ -109,7 +113,7 @@ function resolveClubMeta(match: BracketMatch, slot: 1 | 2, clubsByUserId: Record
 }
 
 function isResolvedMatch(match: BracketMatch) {
-  return match.status === MatchStatus.CONFIRMED || match.status === MatchStatus.FINISHED;
+  return RESOLVED_MATCH_STATUSES.includes(match.status);
 }
 
 function buildSeries(matches: BracketMatch[]) {
@@ -394,6 +398,42 @@ function BracketMatchBox({
   );
 }
 
+function MatchCountBadge({ count }: { count: number }) {
+  const label = count === 1 ? "матч" : count > 1 && count < 5 ? "матча" : "матчей";
+
+  return (
+    <span className="inline-flex shrink-0 items-center rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-100">
+      {count} {label}
+    </span>
+  );
+}
+
+function MobileRoundMatch({
+  series,
+  clubsByUserId,
+  isFinal = false,
+}: {
+  series: BracketSeries;
+  clubsByUserId: Record<string, ClubMeta>;
+  isFinal?: boolean;
+}) {
+  return (
+    <article className="overflow-hidden rounded-2xl border border-white/10 bg-black/20 shadow-[0_14px_34px_rgba(0,0,0,0.24)]">
+      <div className="flex min-h-9 items-center justify-between gap-3 border-b border-white/10 px-3 py-2">
+        <div className="min-w-0 truncate text-xs font-black uppercase tracking-[0.16em] text-zinc-300">{seriesLabel(series)}</div>
+        {series.regularMatches.length > 1 || series.penaltyMatch ? (
+          <span className="shrink-0 rounded-full border border-amber-300/20 bg-amber-300/10 px-2 py-0.5 text-[10px] font-bold text-amber-100">
+            BO / пен.
+          </span>
+        ) : null}
+      </div>
+      <div className="h-[92px]">
+        <BracketMatchBox series={series} clubsByUserId={clubsByUserId} isFinal={isFinal} />
+      </div>
+    </article>
+  );
+}
+
 function BracketConnector({
   startX,
   startY,
@@ -430,6 +470,14 @@ export function BracketView({
 
   const orderedRounds = Array.from(rounds.entries()).sort((a, b) => a[0] - b[0]);
   const totalRounds = orderedRounds.length;
+  const [activeRound, setActiveRound] = useState(orderedRounds[0]?.[0] ?? 0);
+  const activeRoundEntry = orderedRounds.find(([round]) => round === activeRound) ?? orderedRounds[0];
+  const activeRoundIndex = Math.max(
+    orderedRounds.findIndex(([round]) => round === activeRoundEntry?.[0]),
+    0,
+  );
+  const activeRoundSeries = activeRoundEntry?.[1] ?? [];
+  const shouldShowThirdPlaceOnMobile = activeRoundIndex === orderedRounds.length - 1 && thirdPlaceSeries.length > 0;
   const firstRoundSize = Math.max(orderedRounds[0]?.[1].length ?? 1, 1);
   const columnWidth = 280;
   const columnGap = 88;
@@ -448,6 +496,13 @@ export function BracketView({
 
   const getColumnX = (roundIndex: number) => roundIndex * (columnWidth + columnGap);
 
+  useEffect(() => {
+    if (!orderedRounds.length) return;
+    if (!orderedRounds.some(([round]) => round === activeRound)) {
+      setActiveRound(orderedRounds[0][0]);
+    }
+  }, [activeRound, orderedRounds]);
+
   return (
     <div className="overflow-hidden rounded-[2rem] border border-emerald-400/20 bg-[radial-gradient(circle_at_50%_45%,rgba(34,197,94,0.22),transparent_22%),radial-gradient(circle_at_18%_10%,rgba(16,185,129,0.2),transparent_26%),linear-gradient(135deg,#03180f_0%,#052817_48%,#02110b_100%)] shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
       <div className="relative overflow-hidden px-5 pb-2 pt-7 text-center sm:px-8 sm:pt-9">
@@ -457,7 +512,85 @@ export function BracketView({
           Плей-офф
         </div>
       </div>
-      <div className="overflow-x-auto px-3 pb-6 pt-4 sm:px-7 sm:pb-8 sm:pt-5">
+
+      <div className="px-3 pb-5 pt-3 md:hidden">
+        {orderedRounds.length ? (
+          <div className="space-y-4">
+            <div className="-mx-3 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex min-w-max gap-2">
+                {orderedRounds.map(([round, roundSeries]) => {
+                  const active = round === activeRoundEntry?.[0];
+
+                  return (
+                    <button
+                      key={round}
+                      type="button"
+                      onClick={() => setActiveRound(round)}
+                      className={cn(
+                        "inline-flex h-10 shrink-0 items-center gap-2 rounded-full border px-3 text-xs font-black uppercase tracking-[0.12em] transition",
+                        active
+                          ? "border-emerald-200/50 bg-emerald-300/16 text-white shadow-[0_0_24px_rgba(16,185,129,0.16)]"
+                          : "border-white/10 bg-black/25 text-zinc-400 hover:border-emerald-300/25 hover:text-zinc-100",
+                      )}
+                    >
+                      {roundTitle(round, totalRounds)}
+                      <span className={cn("rounded-full px-1.5 py-0.5 text-[10px]", active ? "bg-white/15 text-emerald-50" : "bg-white/8 text-zinc-500")}>
+                        {roundSeries.length}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate text-base font-black text-white">{roundTitle(activeRoundEntry?.[0] ?? 1, totalRounds)}</div>
+                  <div className="mt-0.5 text-xs text-zinc-400">Матчи выбранной стадии</div>
+                </div>
+                <MatchCountBadge count={activeRoundSeries.length + (shouldShowThirdPlaceOnMobile ? thirdPlaceSeries.length : 0)} />
+              </div>
+
+              <div className="grid gap-3">
+                {activeRoundSeries.map((series) => (
+                  <MobileRoundMatch
+                    key={series.key}
+                    series={series}
+                    clubsByUserId={clubsByUserId}
+                    isFinal={activeRoundIndex === orderedRounds.length - 1}
+                  />
+                ))}
+
+                {shouldShowThirdPlaceOnMobile ? (
+                  <div className="space-y-3 border-t border-white/10 pt-3">
+                    <div className="text-xs font-black uppercase tracking-[0.16em] text-amber-100">Матч за 3-е место</div>
+                    {thirdPlaceSeries.map((series) => (
+                      <MobileRoundMatch key={series.key} series={series} clubsByUserId={clubsByUserId} />
+                    ))}
+                  </div>
+                ) : null}
+
+                {!activeRoundSeries.length && !shouldShowThirdPlaceOnMobile ? (
+                  <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-5 text-center text-sm text-zinc-500">
+                    Матчи этой стадии пока не сформированы.
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-emerald-300/15 bg-emerald-300/8 px-3 py-2 text-xs leading-5 text-emerald-50/80">
+              Полная турнирная сетка доступна на версии для планшетов и ПК.
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-5 text-center text-sm text-zinc-500">
+            Сетка появится после формирования матчей.
+          </div>
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto px-3 pb-6 pt-4 sm:px-7 sm:pb-8 sm:pt-5 md:block">
         <div
           className="relative min-w-max [height:calc(var(--bracket-height)*0.78)] [width:calc(var(--bracket-width)*0.78)] sm:[height:var(--bracket-height)] sm:[width:var(--bracket-width)]"
           style={{ "--bracket-width": `${boardWidth}px`, "--bracket-height": `${totalBoardHeight}px` } as CSSProperties}
