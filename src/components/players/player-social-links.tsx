@@ -1,6 +1,13 @@
 import { TelegramProfileLink } from "@/components/telegram-profile-link";
 import type { SocialLink } from "@/lib/social-links";
 
+type PlayerSocialLink = SocialLink | {
+  id: "youtube";
+  label: "YouTube";
+  handle: string;
+  href: string;
+};
+
 function TelegramIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
@@ -13,6 +20,14 @@ function VkIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
       <path d="M13.1 18.1c-7.5 0-11.8-5.1-12-13.7h3.8c.1 6.3 2.9 9 5.1 9.5V4.4h3.6v5.4c2.2-.2 4.5-2.8 5.3-5.4h3.6c-.6 3.2-3.1 5.8-4.9 6.9 1.8.9 4.7 3.2 5.8 6.8h-4c-.8-2.5-2.9-4.4-5.8-4.7v4.7h-.5Z" />
+    </svg>
+  );
+}
+
+function YoutubeIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+      <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31.3 31.3 0 0 0 0 12a31.3 31.3 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31.3 31.3 0 0 0 24 12a31.3 31.3 0 0 0-.5-5.8ZM9.6 15.6V8.4l6.3 3.6-6.3 3.6Z" />
     </svg>
   );
 }
@@ -30,9 +45,15 @@ const socialStyles = {
     iconClassName: "bg-[#2787f5] text-white shadow-[0_8px_20px_rgba(39,135,245,0.25)]",
     icon: VkIcon,
   },
-} satisfies Record<SocialLink["id"], { label: string; className: string; iconClassName: string; icon: typeof TelegramIcon }>;
+  youtube: {
+    label: "YouTube",
+    className: "border-red-300/20 bg-red-500/10 text-red-50 hover:border-red-300/45 hover:bg-red-500/15",
+    iconClassName: "bg-red-500 text-white shadow-[0_8px_20px_rgba(239,68,68,0.24)]",
+    icon: YoutubeIcon,
+  },
+} satisfies Record<PlayerSocialLink["id"], { label: string; className: string; iconClassName: string; icon: typeof TelegramIcon }>;
 
-export function PlayerSocialLinks({ links }: { links: SocialLink[] }) {
+export function PlayerSocialLinks({ links }: { links: PlayerSocialLink[] }) {
   if (!links.length) return null;
 
   return (
@@ -42,7 +63,7 @@ export function PlayerSocialLinks({ links }: { links: SocialLink[] }) {
         {links.map((link) => {
           const style = socialStyles[link.id];
           const Icon = style.icon;
-          const className = `group flex min-w-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition ${style.className}`;
+          const className = `group flex min-w-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition ${link.id === "youtube" ? "col-span-2" : ""} ${style.className}`;
           const ariaLabel = `Открыть ${style.label}`;
           const content = (
             <>

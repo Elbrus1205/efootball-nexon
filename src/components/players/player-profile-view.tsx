@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Clock3, ExternalLink, PencilLine, Trophy, Youtube } from "lucide-react";
+import { ArrowRight, Clock3, PencilLine, Trophy } from "lucide-react";
 import { ProfileStatusType, type ProfileStatusTone, type Season, type UserRole } from "@prisma/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -103,6 +103,17 @@ export function PlayerProfileView({
   const socialLinks = getUserSocialLinks(user);
   const selectedStatuses = user.profileStatuses.filter((status) => status.selectedOrder !== null).slice(0, 3);
   const ambassadorStatus = user.profileStatuses.find((status) => status.type === ProfileStatusType.AMBASSADOR && status.youtubeUrl);
+  const profileSocialLinks = ambassadorStatus?.youtubeUrl
+    ? [
+        ...socialLinks,
+        {
+          id: "youtube" as const,
+          label: "YouTube" as const,
+          handle: ambassadorStatus.youtubeChannelTitle ?? "YouTube-канал",
+          href: ambassadorStatus.youtubeUrl,
+        },
+      ]
+    : socialLinks;
   const periodLabel = selectedSeason ? `Сезон: ${selectedSeason.name}` : "За всё время";
   const timeZoneLocalTime = formatTimeZoneLocalTime(user.timeZone);
   const registeredAt = new Intl.DateTimeFormat("ru-RU", {
@@ -167,20 +178,6 @@ export function PlayerProfileView({
                       ))}
                     </div>
                   ) : null}
-                  {ambassadorStatus?.youtubeUrl ? (
-                    <a
-                      href={ambassadorStatus.youtubeUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-2 inline-flex max-w-full items-center gap-2 rounded-lg border border-red-400/25 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-50 shadow-[0_0_22px_rgba(239,68,68,0.12)] transition hover:border-red-300/45 hover:bg-red-500/15 sm:text-sm"
-                    >
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-red-500 text-white">
-                        <Youtube className="h-4 w-4 fill-current" />
-                      </span>
-                      <span className="min-w-0 truncate">{ambassadorStatus.youtubeChannelTitle ?? "YouTube-канал"}</span>
-                      <ExternalLink className="h-3.5 w-3.5 shrink-0 text-red-100/70" />
-                    </a>
-                  ) : null}
                   {user.bio ? <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">{user.bio}</p> : null}
                 </div>
               </div>
@@ -241,9 +238,9 @@ export function PlayerProfileView({
             </div>
           </div>
 
-          {socialLinks.length > 0 ? (
+          {profileSocialLinks.length > 0 ? (
             <div className="border-b border-white/10 pb-3 sm:col-span-2 lg:col-span-4">
-              <PlayerSocialLinks links={socialLinks} />
+              <PlayerSocialLinks links={profileSocialLinks} />
             </div>
           ) : null}
         </div>
