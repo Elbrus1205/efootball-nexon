@@ -107,17 +107,13 @@ export default async function RatingsPage({
               <div className="mt-1 text-sm text-zinc-400">{seasonCaption}</div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 sm:min-w-[280px]">
-              <div className="rounded-lg border border-[#C9A24D]/25 bg-[#C9A24D]/10 px-3 py-2">
+            <div className="w-full sm:w-[280px]">
+              <div className="rounded-lg border border-[#C9A24D]/25 bg-[#C9A24D]/10 px-4 py-3">
                 <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#E7CF8F]">
                   <Trophy className="h-3.5 w-3.5" />
                   Призовой фонд
                 </div>
-                <div className="mt-1 truncate text-lg font-black leading-none text-white sm:text-xl">{formatPrizePool(ratingPrizePool)} ₽</div>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Игроков</div>
-                <div className="mt-1 text-lg font-black leading-none text-white sm:text-xl">{ratings.length}</div>
+                <div className="mt-1 truncate text-2xl font-black leading-none text-white">{formatPrizePool(ratingPrizePool)} ₽</div>
               </div>
             </div>
           </div>
