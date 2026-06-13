@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { ChangeEvent, useState, useTransition } from "react";
 import { ArrowLeft, Camera, ImagePlus, Save, ShieldCheck } from "lucide-react";
-import type { ProfileStatusTone } from "@prisma/client";
+import type { ProfileStatusTone, ProfileStatusType } from "@prisma/client";
 import { toast } from "sonner";
 import type { ClubOption } from "@/lib/clubs";
 import { PROFILE_BIO_MAX_LENGTH } from "@/lib/profile";
-import { MAX_SELECTED_PROFILE_STATUSES, profileStatusClassName } from "@/lib/profile-status-style";
+import { MAX_SELECTED_PROFILE_STATUSES } from "@/lib/profile-status-style";
+import { ProfileStatusBadge } from "@/components/profile/profile-status-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,6 +36,7 @@ export function ProfileForm({
     title: string;
     description: string;
     tone: ProfileStatusTone;
+    type: ProfileStatusType;
     selectedOrder: number | null;
   }>;
 }) {
@@ -207,9 +209,7 @@ export function ProfileForm({
                   {selectedStatuses.length ? (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {selectedStatuses.map((status) => (
-                        <span key={status.id} className={profileStatusClassName(status.tone)}>
-                          {status.title}
-                        </span>
+                        <ProfileStatusBadge key={status.id} status={status} />
                       ))}
                     </div>
                   ) : null}
@@ -308,7 +308,7 @@ export function ProfileForm({
                     }`}
                   >
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className={profileStatusClassName(status.tone)}>{status.title}</span>
+                      <ProfileStatusBadge status={status} />
                       {selected ? (
                         <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-1 text-xs font-semibold text-emerald-100">
                           <ShieldCheck className="h-3.5 w-3.5" />

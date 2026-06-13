@@ -1,19 +1,19 @@
 import Link from "next/link";
-import { ArrowRight, Clock3, PencilLine, Trophy } from "lucide-react";
-import type { ProfileStatusTone, Season, UserRole } from "@prisma/client";
+import { ArrowRight, Clock3, ExternalLink, PencilLine, Trophy, Youtube } from "lucide-react";
+import { ProfileStatusType, type ProfileStatusTone, type Season, type UserRole } from "@prisma/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PlayerCareerStatsPanel } from "@/components/players/player-career-stats";
 import { PlayerSocialLinks } from "@/components/players/player-social-links";
+import { ProfileStatusBadge } from "@/components/profile/profile-status-badge";
 import { StatsPeriodSwitcher } from "@/components/players/stats-period-switcher";
 import { UserRoleBadge } from "@/components/users/user-role-badge";
 import type { ClubOption } from "@/lib/clubs";
 import type { AchievementGroupProgress } from "@/lib/achievements";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import type { PlayerCareerStats } from "@/lib/player-stats";
-import { profileStatusClassName } from "@/lib/profile-status-style";
 import { getUserSocialLinks } from "@/lib/social-links";
 import { formatTimeZoneLabel, formatTimeZoneLocalTime } from "@/lib/time-zone";
 
@@ -21,6 +21,9 @@ type ProfileStatus = {
   id: string;
   title: string;
   tone: ProfileStatusTone;
+  type: ProfileStatusType;
+  youtubeUrl: string | null;
+  youtubeChannelTitle: string | null;
   selectedOrder: number | null;
 };
 
@@ -99,6 +102,7 @@ export function PlayerProfileView({
   const favoriteClub = clubs.find((club) => club.slug === user.favoriteTeam || club.name === user.favoriteTeam) ?? null;
   const socialLinks = getUserSocialLinks(user);
   const selectedStatuses = user.profileStatuses.filter((status) => status.selectedOrder !== null).slice(0, 3);
+  const ambassadorStatus = user.profileStatuses.find((status) => status.type === ProfileStatusType.AMBASSADOR && status.youtubeUrl);
   const periodLabel = selectedSeason ? `Сезон: ${selectedSeason.name}` : "За всё время";
   const timeZoneLocalTime = formatTimeZoneLocalTime(user.timeZone);
   const registeredAt = new Intl.DateTimeFormat("ru-RU", {
@@ -159,11 +163,23 @@ export function PlayerProfileView({
                   {selectedStatuses.length ? (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {selectedStatuses.map((status) => (
-                        <span key={status.id} className={profileStatusClassName(status.tone)}>
-                          {status.title}
-                        </span>
+                        <ProfileStatusBadge key={status.id} status={status} />
                       ))}
                     </div>
+                  ) : null}
+                  {ambassadorStatus?.youtubeUrl ? (
+                    <a
+                      href={ambassadorStatus.youtubeUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 inline-flex max-w-full items-center gap-2 rounded-lg border border-red-400/25 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-50 shadow-[0_0_22px_rgba(239,68,68,0.12)] transition hover:border-red-300/45 hover:bg-red-500/15 sm:text-sm"
+                    >
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-red-500 text-white">
+                        <Youtube className="h-4 w-4 fill-current" />
+                      </span>
+                      <span className="min-w-0 truncate">{ambassadorStatus.youtubeChannelTitle ?? "YouTube-канал"}</span>
+                      <ExternalLink className="h-3.5 w-3.5 shrink-0 text-red-100/70" />
+                    </a>
                   ) : null}
                   {user.bio ? <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">{user.bio}</p> : null}
                 </div>
@@ -238,9 +254,7 @@ export function PlayerProfileView({
         <div className="mt-1 text-sm text-zinc-500">Все подтверждённые статусы этого профиля.</div>
         <div className="mt-4 flex flex-wrap gap-2">
           {user.profileStatuses.map((status) => (
-            <span key={status.id} className={profileStatusClassName(status.tone, "min-h-7 px-2.5 py-1 text-xs sm:min-h-10 sm:px-4 sm:py-1.5 sm:text-[19px]")}>
-              {status.title}
-            </span>
+            <ProfileStatusBadge key={status.id} status={status} className="min-h-7 px-2.5 py-1 text-xs sm:min-h-10 sm:px-4 sm:py-1.5 sm:text-[19px]" />
           ))}
           {!user.profileStatuses.length ? <div className="text-sm text-zinc-500">Подтверждённых статусов пока нет.</div> : null}
         </div>

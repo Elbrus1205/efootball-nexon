@@ -1,4 +1,4 @@
-import { MatchStatus, Prisma, TournamentStatus, User, UserRole, type ProfileStatusTone } from "@prisma/client";
+import { MatchStatus, Prisma, TournamentStatus, User, UserRole, type ProfileStatusTone, type ProfileStatusType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { getSelectedProfileStatusWhere } from "@/lib/profile-status-query";
@@ -16,7 +16,7 @@ function roundToTenths(value: number) {
 }
 
 type RatingPlayer = Pick<User, "id" | "name" | "image"> & {
-  profileStatuses?: Array<{ id: string; title: string; tone: ProfileStatusTone; selectedOrder: number | null }>;
+  profileStatuses?: Array<{ id: string; title: string; tone: ProfileStatusTone; type: ProfileStatusType; selectedOrder: number | null }>;
 };
 
 type PlayerRatingOptions = {
@@ -40,7 +40,7 @@ export type PlayerRatingRow = {
   lastRatingChange: number;
   lastRatingChangeAt: Date | null;
   lastMatchAt: Date | null;
-  selectedStatuses: Array<{ id: string; title: string; tone: ProfileStatusTone }>;
+  selectedStatuses: Array<{ id: string; title: string; tone: ProfileStatusTone; type: ProfileStatusType }>;
 };
 
 function expectedScore(playerRating: number, opponentRating: number) {
@@ -69,7 +69,7 @@ function emptyRatingRow(player: RatingPlayer): PlayerRatingRow {
       .filter((status) => status.selectedOrder !== null)
       .sort((a, b) => (a.selectedOrder ?? 99) - (b.selectedOrder ?? 99))
       .slice(0, 3)
-      .map((status) => ({ id: status.id, title: status.title, tone: status.tone })),
+      .map((status) => ({ id: status.id, title: status.title, tone: status.tone, type: status.type })),
   };
 }
 
@@ -121,7 +121,7 @@ export async function getPlayerRatings(options: PlayerRatingOptions = {}) {
         image: true,
         profileStatuses: {
           where: getSelectedProfileStatusWhere(),
-          select: { id: true, title: true, tone: true, selectedOrder: true },
+          select: { id: true, title: true, tone: true, type: true, selectedOrder: true },
           orderBy: [{ selectedOrder: "asc" }],
           take: 3,
         },

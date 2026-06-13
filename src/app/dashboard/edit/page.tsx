@@ -49,6 +49,7 @@ export default async function DashboardEditPage() {
           title: status.title,
           description: status.description,
           tone: status.tone,
+          type: status.type,
           selectedOrder: status.selectedOrder,
         }))}
         clubs={clubs}

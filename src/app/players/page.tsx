@@ -5,10 +5,10 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { TelegramProfileLink } from "@/components/telegram-profile-link";
 import { UserRoleBadge } from "@/components/users/user-role-badge";
+import { ProfileStatusBadge } from "@/components/profile/profile-status-badge";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { getSelectedProfileStatusWhere } from "@/lib/profile-status-query";
-import { profileStatusClassName } from "@/lib/profile-status-style";
 import { getUserSocialLinks } from "@/lib/social-links";
 
 function VkMark({ className }: { className?: string }) {
@@ -88,9 +88,7 @@ export default async function PlayersPage({
                     {user.profileStatuses.length ? (
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {user.profileStatuses.map((status) => (
-                          <span key={status.id} className={profileStatusClassName(status.tone, "sm:min-h-6 sm:px-2 sm:text-[10px]")}>
-                            {status.title}
-                          </span>
+                          <ProfileStatusBadge key={status.id} status={status} className="sm:min-h-6 sm:px-2 sm:text-[10px]" />
                         ))}
                       </div>
                     ) : null}

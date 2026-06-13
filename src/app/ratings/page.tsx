@@ -4,10 +4,10 @@ import { TournamentStatus } from "@prisma/client";
 import { Fragment } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { ProfileStatusBadge } from "@/components/profile/profile-status-badge";
 import { getCurrentSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { parsePrizePoolValue } from "@/lib/home-stats";
-import { profileStatusClassName } from "@/lib/profile-status-style";
 import { getPlayerRatings } from "@/lib/ratings";
 import { proxyTelegramAssetUrl } from "@/lib/telegram-assets";
 import { cn, formatDate } from "@/lib/utils";
@@ -172,9 +172,7 @@ export default async function RatingsPage({
                             {player.selectedStatuses.length ? (
                               <div className="mt-1 flex flex-wrap gap-1.5">
                                 {player.selectedStatuses.map((status) => (
-                                  <span key={status.id} className={profileStatusClassName(status.tone, "min-h-6 px-2 text-[10px]")}>
-                                    {status.title}
-                                  </span>
+                                  <ProfileStatusBadge key={status.id} status={status} className="min-h-6 px-2 text-[10px]" />
                                 ))}
                               </div>
                             ) : null}

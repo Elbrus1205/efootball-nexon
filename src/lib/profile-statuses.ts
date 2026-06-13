@@ -41,6 +41,12 @@ export const manualProfileStatusDrafts = [
     description: "Статус за победу в розыгрыше за красивый гол. Действует 3 месяца с момента выдачи.",
     tone: ProfileStatusTone.PURPLE,
   },
+  {
+    type: ProfileStatusType.AMBASSADOR,
+    title: "Амбассадор",
+    description: "Официальный амбассадор eFootball Nexon с подтверждённым YouTube-каналом.",
+    tone: ProfileStatusTone.GOLD,
+  },
 ] as const;
 
 function addMonths(date: Date, months: number) {
@@ -200,10 +206,14 @@ export async function grantManualProfileStatuses({
   userId,
   adminId,
   statusTypes,
+  ambassadorYoutubeUrl,
+  ambassadorYoutubeChannelTitle,
 }: {
   userId: string;
   adminId: string;
   statusTypes: ProfileStatusType[];
+  ambassadorYoutubeUrl?: string;
+  ambassadorYoutubeChannelTitle?: string;
 }) {
   const uniqueStatusTypes = Array.from(new Set(statusTypes));
   const drafts = manualProfileStatusDrafts.filter((draft) => uniqueStatusTypes.includes(draft.type));
@@ -212,6 +222,16 @@ export async function grantManualProfileStatuses({
   const statuses = await Promise.all(
     drafts.map(async (draft) => {
       const expiresAt = getManualProfileStatusExpiresAt(draft.type, now);
+      const ambassadorData =
+        draft.type === ProfileStatusType.AMBASSADOR
+          ? {
+              youtubeUrl: ambassadorYoutubeUrl ?? null,
+              youtubeChannelTitle: ambassadorYoutubeChannelTitle ?? null,
+            }
+          : {
+              youtubeUrl: null,
+              youtubeChannelTitle: null,
+            };
       const existing = await db.userProfileStatus.findFirst({
         where: {
           userId,
@@ -233,6 +253,7 @@ export async function grantManualProfileStatuses({
             expiredNotifiedAt: null,
             reviewedAt: now,
             reviewedById: adminId,
+            ...ambassadorData,
           },
         });
       }
@@ -250,6 +271,7 @@ export async function grantManualProfileStatuses({
           expiredNotifiedAt: null,
           reviewedAt: now,
           reviewedById: adminId,
+          ...ambassadorData,
         },
       });
     }),

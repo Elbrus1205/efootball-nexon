@@ -160,6 +160,7 @@ enum ProfileStatusType {
   ACTIVE
   RELIABLE
   GOAL_MASTER
+  AMBASSADOR
 }
 
 enum ProfileStatusTone {
@@ -514,6 +515,8 @@ model UserProfileStatus {
   title          String
   description    String                      @db.Text
   tone           ProfileStatusTone           @default(GRAY)
+  youtubeUrl     String?
+  youtubeChannelTitle String?
   sourceRank     Int?
   approvalStatus ProfileStatusApprovalStatus @default(PENDING)
   selectedOrder  Int?
