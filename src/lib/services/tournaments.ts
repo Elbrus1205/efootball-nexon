@@ -3234,8 +3234,13 @@ async function createPenaltyMatch(match: {
 
   const existingPenalty = await db.match.findFirst({
     where: {
+      tournamentId: match.tournamentId,
       seriesKey: match.seriesKey,
       isPenaltyTiebreak: true,
+      round: match.round,
+      matchNumber: match.matchNumber,
+      legNumber: match.legNumber ?? null,
+      seriesMatchNumber: match.seriesMatchNumber ?? null,
     },
   });
 
@@ -3294,7 +3299,17 @@ async function resolveBestOfSeriesIfCompleted(match: {
       continue;
     }
 
+    const exactLinkedMatch = seriesMatches.find(
+      (item) =>
+        item.player1Score !== null &&
+        item.player2Score !== null &&
+        item.player1Score === item.player2Score &&
+        item.round === penaltyMatch.round &&
+        item.matchNumber === penaltyMatch.matchNumber &&
+        (item.legNumber ?? null) === (penaltyMatch.legNumber ?? null),
+    );
     const linkedMatch =
+      exactLinkedMatch ??
       seriesMatches.find(
         (item) =>
           item.player1Score !== null &&
@@ -3341,6 +3356,23 @@ async function resolveBestOfSeriesIfCompleted(match: {
   }
 
   const confirmedMatches = seriesMatches.filter((item) => item.status === MatchStatus.CONFIRMED || item.status === MatchStatus.FINISHED);
+
+  for (const seriesMatch of confirmedMatches) {
+    if (!seriesMatch.winnerId || seriesMatch.winnerEntryId) {
+      continue;
+    }
+
+    const { winnerEntryId } = getMatchWinnerAndLoser(seriesMatch);
+    if (!winnerEntryId) {
+      continue;
+    }
+
+    await db.match.update({
+      where: { id: seriesMatch.id },
+      data: { winnerEntryId },
+    });
+    seriesMatch.winnerEntryId = winnerEntryId;
+  }
 
   for (const seriesMatch of confirmedMatches) {
     if (seriesMatch.winnerId || seriesMatch.player1Score === null || seriesMatch.player2Score === null || seriesMatch.player1Score !== seriesMatch.player2Score) {
@@ -3411,7 +3443,11 @@ async function resolveBestOfSeriesIfCompleted(match: {
   });
 
   if (match.bracketId && winnerId) {
-    await advanceResolvedWinnerForMatch(match.id, winnerId, loserId, winnerEntryId, loserEntryId);
+    const advancementSource =
+      seriesMatches.find((item) => item.nextMatchId && item.nextMatchSlot) ??
+      confirmedMatches.find((item) => item.nextMatchId && item.nextMatchSlot) ??
+      winnerMatch;
+    await advanceResolvedWinnerForMatch(advancementSource.id, winnerId, loserId, winnerEntryId, loserEntryId);
   } else {
     await recalculateGroupStandings(match.tournamentId);
     await syncTournamentLifecycleStatus(match.tournamentId);

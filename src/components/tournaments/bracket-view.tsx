@@ -421,11 +421,6 @@ function MobileRoundMatch({
     <article className="overflow-hidden rounded-2xl border border-white/10 bg-black/20 shadow-[0_14px_34px_rgba(0,0,0,0.24)]">
       <div className="flex min-h-9 items-center justify-between gap-3 border-b border-white/10 px-3 py-2">
         <div className="min-w-0 truncate text-xs font-black uppercase tracking-[0.16em] text-zinc-300">{seriesLabel(series)}</div>
-        {series.regularMatches.length > 1 || series.penaltyMatch ? (
-          <span className="shrink-0 rounded-full border border-amber-300/20 bg-amber-300/10 px-2 py-0.5 text-[10px] font-bold text-amber-100">
-            BO / пен.
-          </span>
-        ) : null}
       </div>
       <div className="h-[92px]">
         <BracketMatchBox series={series} clubsByUserId={clubsByUserId} isFinal={isFinal} />
