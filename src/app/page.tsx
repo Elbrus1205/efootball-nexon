@@ -6,6 +6,7 @@ import { MatchStatus, TournamentStatus } from "@prisma/client";
 import { AnimatedCounter } from "@/components/home/animated-counter";
 import { db } from "@/lib/db";
 import { getArchivedHomeStats, parsePrizePoolValue } from "@/lib/home-stats";
+import styles from "./home.module.css";
 
 const heroPhrases = [
   "Докажи, что ты лучший",
@@ -57,31 +58,31 @@ export default async function HomePage() {
   ];
 
   return (
-    <main className="home-premium -mt-16 min-h-screen overflow-hidden sm:-mt-[72px] lg:-mt-20">
-      <div className="home-premium-bg" aria-hidden="true">
+    <main className={`${styles["home-premium"]} -mt-16 min-h-screen overflow-hidden sm:-mt-[72px] lg:-mt-20`}>
+      <div className={styles["home-premium-bg"]} aria-hidden="true">
         <Image
           src="/images-site/home-hero-football-bg.webp"
           alt=""
           fill
           priority
           sizes="100vw"
-          className="home-premium-bg-image"
+          className={styles["home-premium-bg-image"]}
         />
-        <div className="home-premium-bg-grade" />
-        <div className="home-premium-depth home-premium-depth-left" />
-        <div className="home-premium-depth home-premium-depth-right" />
+        <div className={styles["home-premium-bg-grade"]} />
+        <div className={`${styles["home-premium-depth"]} ${styles["home-premium-depth-left"]}`} />
+        <div className={`${styles["home-premium-depth"]} ${styles["home-premium-depth-right"]}`} />
       </div>
 
-      <section className="home-premium-stage">
-        <div className="home-premium-grid" aria-hidden="true" />
-        <div className="home-premium-rings" aria-hidden="true" />
+      <section className={styles["home-premium-stage"]}>
+        <div className={styles["home-premium-grid"]} aria-hidden="true" />
+        <div className={styles["home-premium-rings"]} aria-hidden="true" />
 
-        <div className="home-premium-content">
-          <div className="home-premium-phrases" aria-label="Мотивационные фразы eFootball Nexon">
+        <div className={styles["home-premium-content"]}>
+          <div className={styles["home-premium-phrases"]} aria-label="Мотивационные фразы eFootball Nexon">
             {heroPhrases.map((phrase, index) => (
               <span
                 key={phrase}
-                className="home-premium-phrase"
+                className={styles["home-premium-phrase"]}
                 style={{ "--phrase-delay": `${index * 3.6}s` } as CSSProperties}
               >
                 {phrase}
@@ -89,42 +90,42 @@ export default async function HomePage() {
             ))}
           </div>
 
-          <h1 className="home-premium-title">eFootball Nexon</h1>
-          <div className="home-premium-gold-line" />
+          <h1 className={styles["home-premium-title"]}>eFootball Nexon</h1>
+          <div className={styles["home-premium-gold-line"]} />
 
-          <div className="home-premium-actions" aria-label="Главные действия">
-            <Link href="/tournaments" className="home-main-action">
+          <div className={styles["home-premium-actions"]} aria-label="Главные действия">
+            <Link href="/tournaments" className={styles["home-main-action"]}>
               <Trophy className="h-5 w-5" />
               <span>Турниры</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
-            <Link href={telegramHref} target="_blank" rel="noreferrer" className="home-social-button">
+            <Link href={telegramHref} target="_blank" rel="noreferrer" className={styles["home-social-button"]}>
               <Send className="h-4 w-4" />
               <span>Telegram</span>
             </Link>
-            <Link href={marketHref} target="_blank" rel="noreferrer" className="home-social-button">
+            <Link href={marketHref} target="_blank" rel="noreferrer" className={styles["home-social-button"]}>
               <ShoppingBag className="h-4 w-4" />
               <span>Маркет</span>
             </Link>
           </div>
         </div>
 
-        <div className="home-premium-lower">
-          <div className="home-premium-stats" aria-label="Статистика платформы">
+        <div className={styles["home-premium-lower"]}>
+          <div className={styles["home-premium-stats"]} aria-label="Статистика платформы">
             {stats.map((stat, index) => (
               <div
                 key={stat.label}
-                className="home-premium-stat"
+                className={styles["home-premium-stat"]}
                 style={{ "--stat-delay": `${0.8 + index * 0.12}s` } as CSSProperties}
               >
-                <div className="home-stat-head">
+                <div className={styles["home-stat-head"]}>
                   <stat.icon className="h-4 w-4" />
                 </div>
-                <div className="home-stat-value">
+                <div className={styles["home-stat-value"]}>
                   <AnimatedCounter value={stat.value} />
                   {stat.suffix}
                 </div>
-                <div className="home-stat-label">{stat.label}</div>
+                <div className={styles["home-stat-label"]}>{stat.label}</div>
               </div>
             ))}
           </div>
