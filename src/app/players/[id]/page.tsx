@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { getUserAchievementProgress } from "@/lib/achievements";
 import { getPlayerCareerStats } from "@/lib/player-stats";
 import { getActiveProfileStatusWhere } from "@/lib/profile-status-query";
+import { getPlayerRatings } from "@/lib/ratings";
 
 export default async function PlayerProfilePage({
   params,
@@ -40,8 +41,14 @@ export default async function PlayerProfilePage({
   if (!user) notFound();
 
   const selectedSeason = searchParams?.season ? seasons.find((season) => season.id === searchParams.season || season.slug === searchParams.season) ?? null : null;
-  const careerStats = await getPlayerCareerStats(user.id, { seasonId: selectedSeason?.id ?? null });
-  const achievements = await getUserAchievementProgress(user.id);
+  const activeSeason = seasons.find((season) => season.isActive) ?? null;
+  const ratingSeasonId = selectedSeason?.id ?? activeSeason?.id ?? null;
+  const [careerStats, achievements, ratings] = await Promise.all([
+    getPlayerCareerStats(user.id, { seasonId: selectedSeason?.id ?? null }),
+    getUserAchievementProgress(user.id),
+    getPlayerRatings({ seasonId: ratingSeasonId }),
+  ]);
+  const rating = ratings.find((player) => player.playerId === user.id)?.rating ?? null;
 
   return (
     <PlayerProfileView
@@ -49,6 +56,7 @@ export default async function PlayerProfilePage({
       clubs={clubs}
       seasons={seasons}
       selectedSeason={selectedSeason}
+      rating={rating}
       careerStats={careerStats}
       achievements={achievements}
       basePath={`/players/${user.publicId}`}

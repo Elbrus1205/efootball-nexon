@@ -84,6 +84,9 @@ const CUSTOM_STANDING_HIGHLIGHT_STYLES = [
   },
 ] as const;
 
+const tournamentTabTriggerClass =
+  "shrink-0 whitespace-nowrap border border-white/10 bg-white/[0.04] px-3.5 py-2 text-[13px] font-bold text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-amber-300/35 hover:bg-amber-300/10 hover:text-amber-50 data-[state=active]:border-amber-300/45 data-[state=active]:bg-amber-300/15 data-[state=active]:text-amber-100 data-[state=active]:shadow-[0_0_18px_rgba(245,158,11,0.14),inset_0_1px_0_rgba(255,255,255,0.08)] sm:px-4";
+
 function scheduleMatchTime(match: { scheduledAt?: Date | string | null; createdAt: Date | string; schedules: Array<{ startsAt: Date | string }> }) {
   return new Date(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt).getTime();
 }
@@ -1227,13 +1230,13 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
 
       <Tabs defaultValue="structure">
         <div className="max-w-full overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <TabsList className="inline-flex min-w-max flex-nowrap">
-            <TabsTrigger className="shrink-0 whitespace-nowrap" value="structure">Структура турнира</TabsTrigger>
-            <TabsTrigger className="shrink-0 whitespace-nowrap" value="matches">Расписание</TabsTrigger>
-            <TabsTrigger className="shrink-0 whitespace-nowrap" value="my-matches">Мои матчи</TabsTrigger>
-            {showRosterTab ? <TabsTrigger className="shrink-0 whitespace-nowrap" value="roster">Состав</TabsTrigger> : null}
-            <TabsTrigger className="shrink-0 whitespace-nowrap" value="participants">Участники</TabsTrigger>
-            <TabsTrigger className="shrink-0 whitespace-nowrap" value="rules">Правила</TabsTrigger>
+          <TabsList className="inline-flex min-w-max flex-nowrap gap-1 border-white/10 bg-black/30 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+            <TabsTrigger className={tournamentTabTriggerClass} value="structure">Структура турнира</TabsTrigger>
+            <TabsTrigger className={tournamentTabTriggerClass} value="matches">Расписание</TabsTrigger>
+            <TabsTrigger className={tournamentTabTriggerClass} value="my-matches">Мои матчи</TabsTrigger>
+            {showRosterTab ? <TabsTrigger className={tournamentTabTriggerClass} value="roster">Состав</TabsTrigger> : null}
+            <TabsTrigger className={tournamentTabTriggerClass} value="participants">Участники</TabsTrigger>
+            <TabsTrigger className={tournamentTabTriggerClass} value="rules">Правила</TabsTrigger>
           </TabsList>
         </div>
 

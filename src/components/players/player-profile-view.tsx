@@ -50,6 +50,7 @@ type PlayerProfileViewProps = {
   clubs: ClubOption[];
   seasons: Season[];
   selectedSeason: Season | null;
+  rating: number | null;
   careerStats: PlayerCareerStats;
   achievements: AchievementGroupProgress[];
   basePath: string;
@@ -87,11 +88,23 @@ function AchievementShortcut({ achievements, href }: { achievements: Achievement
   );
 }
 
+function formatProfileRating(rating: number | null) {
+  if (rating === null) {
+    return "—";
+  }
+
+  return new Intl.NumberFormat("ru-RU", {
+    minimumFractionDigits: Number.isInteger(rating) ? 0 : 1,
+    maximumFractionDigits: 1,
+  }).format(rating);
+}
+
 export function PlayerProfileView({
   user,
   clubs,
   seasons,
   selectedSeason,
+  rating,
   careerStats,
   achievements,
   basePath,
@@ -196,8 +209,8 @@ export function PlayerProfileView({
 
         <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4 sm:p-6">
           <div className="border-b border-white/10 pb-3">
-            <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Имя</div>
-            <div className="mt-2 text-sm font-medium text-white">{displayName}</div>
+            <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Рейтинг</div>
+            <div className="mt-2 text-xl font-black leading-none text-amber-100">{formatProfileRating(rating)}</div>
           </div>
 
           <div className="border-b border-white/10 pb-3">
