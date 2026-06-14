@@ -10,17 +10,17 @@ import { AppProviders } from "@/components/providers/app-providers";
 const eFootballSans = localFont({
   src: [
     {
-      path: "./fonts/eFootballSans-Light.ttf",
+      path: "./fonts/eFootballSans-Light.woff2",
       weight: "300",
       style: "normal",
     },
     {
-      path: "./fonts/eFootballSans-Regular.ttf",
+      path: "./fonts/eFootballSans-Regular.woff2",
       weight: "400",
       style: "normal",
     },
     {
-      path: "./fonts/eFootballSans-Bold.ttf",
+      path: "./fonts/eFootballSans-Bold.woff2",
       weight: "700",
       style: "normal",
     },
@@ -32,7 +32,7 @@ const eFootballSans = localFont({
 const eFootballStencil = localFont({
   src: [
     {
-      path: "./fonts/eFootballStencil-Regular.ttf",
+      path: "./fonts/eFootballStencil-Regular.woff2",
       weight: "400",
       style: "normal",
     },
@@ -69,6 +69,7 @@ export default function RootLayout({
         <TopMailRuPixel />
         <noscript>
           <div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="https://top-fwz1.mail.ru/counter?id=3765921;js=na" style={{ position: "absolute", left: "-9999px" }} alt="Top.Mail.Ru" />
           </div>
         </noscript>

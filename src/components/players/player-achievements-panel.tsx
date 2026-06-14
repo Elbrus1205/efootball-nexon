@@ -1,4 +1,5 @@
 import { CheckCircle2, ChevronDown, Circle, Flag, ShieldCheck, Sparkles, Trophy } from "lucide-react";
+import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import type { AchievementAccent, AchievementGroupProgress } from "@/lib/achievements";
 import { cn } from "@/lib/utils";
@@ -72,8 +73,15 @@ function AchievementVisual({ group }: { group: AchievementGroupProgress }) {
 
   return (
     <div className="overflow-hidden rounded-lg border border-white/10 bg-black/40">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={group.imagePath} alt={group.currentLevel?.title ?? group.title} className="h-auto max-h-24 w-full object-contain sm:max-h-32" />
+      <Image
+        src={group.imagePath}
+        alt={group.currentLevel?.title ?? group.title}
+        width={800}
+        height={160}
+        loading="lazy"
+        sizes="(min-width: 1024px) 50vw, 100vw"
+        className="h-auto max-h-24 w-full object-contain sm:max-h-32"
+      />
     </div>
   );
 }

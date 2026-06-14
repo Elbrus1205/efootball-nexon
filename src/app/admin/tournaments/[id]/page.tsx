@@ -3,7 +3,7 @@ import { MatchStatus, ParticipantStatus, StageType, UserRole } from "@prisma/cli
 import { notFound } from "next/navigation";
 import { Activity, CalendarClock, Dices, GitBranch, History, Pencil, Swords, Trash2, Trophy, Users } from "lucide-react";
 import { RandomScoresButton } from "@/components/admin/random-scores-button";
-import { TournamentImageExporter, type ExportGroup, type ExportScheduleRound } from "@/components/admin/tournament-image-exporter";
+import { TournamentImageExporterLazy, type ExportGroup, type ExportScheduleRound } from "@/components/admin/tournament-image-exporter-lazy";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -431,7 +431,7 @@ export default async function AdminTournamentWorkspacePage({ params }: { params:
         </CardContent>
       </Card>
 
-      <TournamentImageExporter tournamentTitle={tournament.title} groups={exportGroups} rounds={exportRounds} />
+      <TournamentImageExporterLazy tournamentTitle={tournament.title} groups={exportGroups} rounds={exportRounds} />
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)] lg:items-stretch">
         <Card className="h-full overflow-hidden rounded-lg p-0">

@@ -831,6 +831,7 @@ model Match {
   schedules           MatchSchedule[]
 
   @@index([tournamentId, round, matchNumber])
+  @@index([tournamentId, seriesKey])
   @@index([stageId, status])
   @@index([groupId, status])
   @@index([bracketId, seriesKey])
@@ -847,6 +848,7 @@ model MatchSchedule {
   updatedAt DateTime  @updatedAt
   match     Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
 
+  @@index([matchId])
   @@index([startsAt])
 }
 
@@ -865,6 +867,7 @@ model MatchResultSubmission {
   match            Match             @relation(fields: [matchId], references: [id], onDelete: Cascade)
   submittedBy      User              @relation(fields: [submittedById], references: [id], onDelete: Cascade)
 
+  @@index([matchId, status])
   @@index([status, createdAt])
 }
 

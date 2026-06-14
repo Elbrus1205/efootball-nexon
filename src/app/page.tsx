@@ -60,7 +60,7 @@ export default async function HomePage() {
     <main className="home-premium -mt-16 min-h-screen overflow-hidden sm:-mt-[72px] lg:-mt-20">
       <div className="home-premium-bg" aria-hidden="true">
         <Image
-          src="/images-site/home-hero-football-bg.png"
+          src="/images-site/home-hero-football-bg.webp"
           alt=""
           fill
           priority
