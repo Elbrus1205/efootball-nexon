@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ArrowRight, Clock3, PencilLine, Trophy } from "lucide-react";
 import { ProfileStatusType, type ProfileStatusTone, type Season, type UserRole } from "@prisma/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PlayerCareerStatsPanel } from "@/components/players/player-career-stats";
@@ -54,7 +53,6 @@ type PlayerProfileViewProps = {
   careerStats: PlayerCareerStats;
   achievements: AchievementGroupProgress[];
   basePath: string;
-  badgeLabel: string;
   editHref?: string;
 };
 
@@ -108,7 +106,6 @@ export function PlayerProfileView({
   careerStats,
   achievements,
   basePath,
-  badgeLabel,
   editHref,
 }: PlayerProfileViewProps) {
   const displayName = getPlayerDisplayName(user);
@@ -139,10 +136,6 @@ export function PlayerProfileView({
 
   return (
     <div className="page-shell space-y-8">
-      <div className="space-y-3">
-        <Badge variant="primary">{badgeLabel}</Badge>
-      </div>
-
       <Card className="overflow-hidden border-white/10 bg-white/[0.03]">
         <div className="relative overflow-hidden border-b border-white/10">
           <div

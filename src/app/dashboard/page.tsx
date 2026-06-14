@@ -60,7 +60,6 @@ export default async function DashboardPage({
       careerStats={careerStats}
       achievements={achievements}
       basePath="/dashboard"
-      badgeLabel="Личный кабинет игрока"
       editHref="/dashboard/edit"
     />
   );

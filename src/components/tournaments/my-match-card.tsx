@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Clock3, Send } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
 import { Button } from "@/components/ui/button";
@@ -100,6 +100,8 @@ export function MyMatchCard({
   isDisputed,
 }: MyMatchCardProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [player1ScoreInput, setPlayer1ScoreInput] = useState("");
   const [player2ScoreInput, setPlayer2ScoreInput] = useState("");
   const [message, setMessage] = useState(helperText);
@@ -132,6 +134,9 @@ export function MyMatchCard({
       if (response.ok) {
         setPlayer1ScoreInput("");
         setPlayer2ScoreInput("");
+        const nextSearchParams = new URLSearchParams(searchParams.toString());
+        nextSearchParams.set("tab", "my-matches");
+        router.replace(`${pathname}?${nextSearchParams.toString()}`, { scroll: false });
         router.refresh();
       }
     });
@@ -246,7 +251,7 @@ export function MyMatchCard({
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-[0_4px_18px_rgba(59,130,246,0.22)] transition-all hover:bg-primary/90 hover:shadow-[0_4px_24px_rgba(59,130,246,0.3)] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40 sm:rounded-xl sm:py-3"
               >
                 <Send className="h-4 w-4" />
-                {isPending ? "Отправка..." : "Отправить результат"}
+                {isPending ? "Отправка..." : "Подтвердить результат"}
               </button>
             </div>
 

@@ -60,7 +60,6 @@ export default async function PlayerProfilePage({
       careerStats={careerStats}
       achievements={achievements}
       basePath={`/players/${user.publicId}`}
-      badgeLabel="Профиль игрока"
     />
   );
 }

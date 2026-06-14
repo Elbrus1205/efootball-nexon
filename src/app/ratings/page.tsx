@@ -172,7 +172,11 @@ export default async function RatingsPage({
                             {player.selectedStatuses.length ? (
                               <div className="mt-1 flex flex-wrap gap-1.5">
                                 {player.selectedStatuses.map((status) => (
-                                  <ProfileStatusBadge key={status.id} status={status} className="min-h-6 px-2 text-[10px]" />
+                                  <ProfileStatusBadge
+                                    key={status.id}
+                                    status={status}
+                                    className="min-h-3 px-1 py-0 text-[5px] sm:min-h-3 sm:px-1 sm:py-0 sm:text-[5px] [&_.profile-status-youtube-icon]:h-2 [&_.profile-status-youtube-icon]:w-3 sm:[&_.profile-status-youtube-icon]:h-2 sm:[&_.profile-status-youtube-icon]:w-3"
+                                  />
                                 ))}
                               </div>
                             ) : null}

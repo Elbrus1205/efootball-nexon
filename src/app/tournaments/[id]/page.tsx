@@ -87,6 +87,17 @@ const CUSTOM_STANDING_HIGHLIGHT_STYLES = [
 const tournamentTabTriggerClass =
   "shrink-0 whitespace-nowrap border border-white/10 bg-white/[0.04] px-3.5 py-2 text-[13px] font-bold text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-amber-300/35 hover:bg-amber-300/10 hover:text-amber-50 data-[state=active]:border-amber-300/45 data-[state=active]:bg-amber-300/15 data-[state=active]:text-amber-100 data-[state=active]:shadow-[0_0_18px_rgba(245,158,11,0.14),inset_0_1px_0_rgba(255,255,255,0.08)] sm:px-4";
 
+const tournamentTabValues = ["structure", "matches", "my-matches", "roster", "participants", "rules"] as const;
+type TournamentTabValue = (typeof tournamentTabValues)[number];
+
+function isTournamentTabValue(value?: string): value is TournamentTabValue {
+  return Boolean(value && (tournamentTabValues as readonly string[]).includes(value));
+}
+
+function normalizeSearchText(value: string | null | undefined) {
+  return (value ?? "").trim().toLowerCase();
+}
+
 function scheduleMatchTime(match: { scheduledAt?: Date | string | null; createdAt: Date | string; schedules: Array<{ startsAt: Date | string }> }) {
   return new Date(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt).getTime();
 }
@@ -652,7 +663,13 @@ function canSeeTestTournaments(role?: string | null) {
   return role === "FOUNDER" || role === "ADMIN" || role === "ORGANIZER" || role === "JUDGE" || role === "TRAINEE";
 }
 
-export default async function TournamentDetailsPage({ params }: { params: { id: string } }) {
+export default async function TournamentDetailsPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams?: { tab?: string; participantSearch?: string };
+}) {
   const pageStart = performance.now();
   noStore();
   const sessionStart = performance.now();
@@ -926,6 +943,32 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   const activeParticipants = tournament.participants.filter(
     (entry) => entry.status !== ParticipantStatus.REMOVED && entry.status !== ParticipantStatus.REJECTED,
   );
+  const participantSearch = (searchParams?.participantSearch ?? "").trim();
+  const normalizedParticipantSearch = normalizeSearchText(participantSearch);
+  const participantSearchMatches = (entry: (typeof activeParticipants)[number]) => {
+    if (!normalizedParticipantSearch) return true;
+
+    const playerName = getPlayerDisplayName(entry.user);
+    const clubName = resolveClubName(entry, clubsBySlug, playerName);
+    const rosterMembers = entry.rosterMembers.flatMap((member) => [
+      getPlayerDisplayName(member.user),
+      member.user.email,
+      member.user.telegramUsername,
+    ]);
+    const searchableValues = [
+      playerName,
+      entry.user.email,
+      entry.user.telegramUsername,
+      entry.clubName,
+      entry.clubSlug,
+      entry.teamName,
+      clubName,
+      ...rosterMembers,
+    ];
+
+    return searchableValues.some((value) => normalizeSearchText(value).includes(normalizedParticipantSearch));
+  };
+  const filteredParticipants = activeParticipants.filter(participantSearchMatches);
   const hasFreeSlots = activeParticipants.length < tournament.maxParticipants;
   const isRegistrationOpen = tournament.status === TournamentStatus.REGISTRATION_OPEN;
   const isLoggedIn = Boolean(currentUserId);
@@ -1096,6 +1139,11 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
   }));
   const currentRosterMembership = tournament.rosterMembers[0] ?? null;
   const showRosterTab = tournament.participantMode !== "SINGLE";
+  const requestedTournamentTab = searchParams?.tab;
+  const defaultTournamentTab =
+    isTournamentTabValue(requestedTournamentTab) && (requestedTournamentTab !== "roster" || showRosterTab)
+      ? requestedTournamentTab
+      : "structure";
   const renderRosterCards = (entries: typeof activeParticipants) => (
     <div className="grid gap-4 md:grid-cols-2">
       {entries.map((entry) => {
@@ -1171,7 +1219,7 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
         Ваш состав появится здесь после регистрации или принятия приглашения.
       </Card>
     );
-  const allRosterCards = renderRosterCards(activeParticipants);
+  const allRosterCards = renderRosterCards(filteredParticipants);
 
   logTiming("tournament-page", pageStart);
 
@@ -1228,10 +1276,10 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
         ) : null}
       </div>
 
-      <Tabs defaultValue="structure">
+      <Tabs defaultValue={defaultTournamentTab}>
         <div className="max-w-full overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <TabsList className="inline-flex min-w-max flex-nowrap gap-1 border-white/10 bg-black/30 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-            <TabsTrigger className={tournamentTabTriggerClass} value="structure">Структура турнира</TabsTrigger>
+            <TabsTrigger className={tournamentTabTriggerClass} value="structure">Структура</TabsTrigger>
             <TabsTrigger className={tournamentTabTriggerClass} value="matches">Расписание</TabsTrigger>
             <TabsTrigger className={tournamentTabTriggerClass} value="my-matches">Мои матчи</TabsTrigger>
             {showRosterTab ? <TabsTrigger className={tournamentTabTriggerClass} value="roster">Состав</TabsTrigger> : null}
@@ -1426,11 +1474,41 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
         ) : null}
 
         <TabsContent value="participants">
-          {showRosterTab ? (
-            allRosterCards
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {activeParticipants.map((entry) => {
+          <div className="space-y-4">
+            <form className="grid gap-2 rounded-2xl border border-white/10 bg-black/25 p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+              <input type="hidden" name="tab" value="participants" />
+              <input
+                type="search"
+                name="participantSearch"
+                defaultValue={participantSearch}
+                placeholder="Найти по клубу или нику"
+                className="h-11 min-w-0 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-white outline-none transition placeholder:text-zinc-600 focus:border-amber-300/45 focus:bg-black/30"
+              />
+              <Button type="submit" variant="secondary" className="h-11 rounded-xl px-4">
+                Найти
+              </Button>
+              {participantSearch ? (
+                <a
+                  href={`/tournaments/${tournament.id}?tab=participants`}
+                  className="inline-flex h-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-4 text-sm font-semibold text-zinc-300 transition hover:border-white/20 hover:bg-white/[0.06] hover:text-white"
+                >
+                  Сбросить
+                </a>
+              ) : null}
+            </form>
+
+            {participantSearch ? (
+              <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">
+                Найдено: {filteredParticipants.length} из {activeParticipants.length}
+              </div>
+            ) : null}
+
+            {filteredParticipants.length ? (
+              showRosterTab ? (
+                allRosterCards
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {filteredParticipants.map((entry) => {
                 const telegramProfile = getTelegramProfileLinks(entry.user);
                 const playerName = getPlayerDisplayName(entry.user);
 
@@ -1465,9 +1543,13 @@ export default async function TournamentDetailsPage({ params }: { params: { id: 
                     )}
                   </Card>
                 );
-              })}
-            </div>
-          )}
+                  })}
+                </div>
+              )
+            ) : (
+              <Card className="p-6 text-sm text-zinc-500">Участники по этому запросу не найдены.</Card>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="rules">
