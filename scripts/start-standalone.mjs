@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 
@@ -50,6 +50,7 @@ function makeWritable(dir) {
 }
 
 const serverPath = existsSync(dockerServer) ? dockerServer : standaloneServer;
+const runtimeDatabaseScript = path.join(root, "scripts", "ensure-runtime-database.mjs");
 
 if (!existsSync(serverPath)) {
   console.error("Standalone server was not found. Run `npm run build` before `npm start`.");
@@ -70,6 +71,20 @@ for (const cacheRoot of [
   path.join(standaloneDir, ".next", "cache", "fetch-cache"),
 ]) {
   makeWritable(cacheRoot);
+}
+
+if (existsSync(runtimeDatabaseScript)) {
+  const result = spawnSync(process.execPath, [runtimeDatabaseScript], {
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      NODE_ENV: process.env.NODE_ENV || "production",
+    },
+  });
+
+  if (result.status !== 0) {
+    process.exit(result.status ?? 1);
+  }
 }
 
 const child = spawn(process.execPath, [serverPath], {

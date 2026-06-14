@@ -45,7 +45,11 @@ export async function GET(request: NextRequest) {
     }
 
     const contentType = imageResponse.headers.get("content-type") ?? "image/jpeg";
-    const body = await imageResponse.arrayBuffer();
+    const body = await imageResponse.arrayBuffer().catch(() => null);
+    if (!body) {
+      return NextResponse.json({ error: "Image is unavailable." }, { status: 502 });
+    }
+
     if (body.byteLength > maxImageBytes) {
       return NextResponse.json({ error: "Image is too large." }, { status: 413 });
     }
@@ -81,10 +85,10 @@ export async function GET(request: NextRequest) {
       "User-Agent": "Mozilla/5.0 efootball-nexon image proxy",
       Accept: "image/avif,image/webp,image/png,image/jpeg,image/*,*/*;q=0.8",
     },
-  });
+  }).catch(() => null);
 
-  if (!response.ok) {
-    return NextResponse.json({ error: "Image is unavailable." }, { status: response.status });
+  if (!response?.ok) {
+    return NextResponse.json({ error: "Image is unavailable." }, { status: response?.status ?? 502 });
   }
 
   const contentType = response.headers.get("content-type") ?? "";
@@ -97,7 +101,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Image is too large." }, { status: 413 });
   }
 
-  const body = await response.arrayBuffer();
+  const body = await response.arrayBuffer().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ error: "Image is unavailable." }, { status: 502 });
+  }
+
   if (body.byteLength > maxImageBytes) {
     return NextResponse.json({ error: "Image is too large." }, { status: 413 });
   }
