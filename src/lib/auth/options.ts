@@ -17,6 +17,7 @@ import { verifyTwoFactorChallenge } from "@/lib/two-factor";
 import { generateUniqueDisplayName } from "@/lib/user-names";
 
 const TELEGRAM_ADMIN_ID = "6595067194";
+const MAX_SESSION_IMAGE_LENGTH = 2048;
 const FALLBACK_SECURITY_CONTEXT = {
   device: "Текущее устройство",
   platform: "Не определено",
@@ -24,6 +25,13 @@ const FALLBACK_SECURITY_CONTEXT = {
   ipAddress: null,
   userAgent: "Неизвестное устройство",
 };
+
+function toSessionImage(value?: string | null) {
+  if (!value) return null;
+  if (value.startsWith("data:")) return null;
+  if (value.length > MAX_SESSION_IMAGE_LENGTH) return null;
+  return value;
+}
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db) as never,
@@ -506,6 +514,7 @@ export const authOptions: NextAuthOptions = {
         token.telegramUsername = user.telegramUsername;
         token.isBanned = user.isBanned;
         token.authSessionId = user.authSessionId ?? token.authSessionId;
+        token.picture = toSessionImage(user.image);
       }
 
       if (token.sub) {
@@ -539,7 +548,7 @@ export const authOptions: NextAuthOptions = {
           token.role = dbUser.role;
           token.telegramUsername = dbUser.telegramUsername;
           token.isBanned = dbUser.isBanned;
-          token.picture = dbUser.image;
+          token.picture = toSessionImage(dbUser.image);
           token.name = dbUser.name ?? token.name;
           token.email = dbUser.email ?? token.email;
         }
