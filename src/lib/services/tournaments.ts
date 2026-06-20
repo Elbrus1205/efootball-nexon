@@ -14,6 +14,7 @@ import {
 import { db } from "@/lib/db";
 import { getAvailableClubs } from "@/lib/clubs";
 import { normalizeFormatBlueprint, type FormatBlueprint, type PlayoffSelectionRule } from "@/lib/format-blueprint";
+import { applyTournamentAbsenceRatingPenalty } from "@/lib/ratings";
 import { grantCurrentChampionProfileStatus } from "@/lib/profile-statuses";
 import { createNotification, createNotificationsForUsers } from "@/lib/services/notifications";
 
@@ -2115,6 +2116,8 @@ export async function generateTournamentMatches(tournamentId: string) {
   }
 
   if (tournament.status === TournamentStatus.REGISTRATION_CLOSED || tournament.status === TournamentStatus.AWAITING_START) {
+    await applyTournamentAbsenceRatingPenalty(tournamentId);
+
     await db.tournament.update({
       where: { id: tournamentId },
       data: {
@@ -2882,6 +2885,8 @@ export async function closeTournamentRegistration(tournamentId: string) {
     },
   });
 
+  await applyTournamentAbsenceRatingPenalty(tournamentId);
+
   if (!tournamentNotificationsEnabled(tournament)) {
     return db.tournament.findUnique({ where: { id: tournamentId } });
   }
@@ -3009,6 +3014,7 @@ export async function startTournament(tournamentId: string) {
       data: { status: StageStatus.ACTIVE },
     });
   }
+  await applyTournamentAbsenceRatingPenalty(tournamentId);
 
   await db.tournament.update({
     where: { id: tournamentId },
@@ -3096,6 +3102,10 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
         : null;
 
   if (nextDateStatus) {
+    if (nextDateStatus === TournamentStatus.AWAITING_START) {
+      await applyTournamentAbsenceRatingPenalty(tournamentId);
+    }
+
     return db.tournament.update({
       where: { id: tournamentId },
       data: {
@@ -3177,6 +3187,10 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
     }
 
     return tournament;
+  }
+
+  if (nextStatus === TournamentStatus.AWAITING_START) {
+    await applyTournamentAbsenceRatingPenalty(tournamentId);
   }
 
   const updatedTournament = await db.tournament.update({

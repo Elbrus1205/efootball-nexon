@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { DeleteUserAccountForm } from "@/components/admin/delete-user-account-form";
 import { TransferUserAccountForm } from "@/components/admin/transfer-user-account-form";
+import { UserResetActions } from "@/components/admin/user-reset-actions";
 
 type UsersFilter = "all" | "permanent" | "temporary" | "warnings";
 
@@ -245,6 +246,7 @@ export default async function AdminUsersPage({
 
                   <div className="grid gap-3 lg:col-span-2 xl:col-span-1">
                     <TransferUserAccountForm userId={user.id} returnTo={returnTo} disabled={isCurrentUser} />
+                    <UserResetActions userId={user.id} returnTo={returnTo} disabled={isCurrentUser} />
                     <DeleteUserAccountForm userId={user.id} disabled={isCurrentUser} />
                   </div>
                 </div>

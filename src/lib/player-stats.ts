@@ -1,6 +1,8 @@
 import { MatchStatus, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 
+const PLAYER_STATS_RESET_PREFIX = "playerStatsResetAt:";
+
 export type PlayerCareerStats = {
   played: number;
   wins: number;
@@ -32,12 +34,28 @@ type PlayerCareerStatsOptions = {
 };
 
 export async function getPlayerCareerStats(playerId: string, options: PlayerCareerStatsOptions = {}): Promise<PlayerCareerStats> {
+  const resetSetting = await db.siteContent.findUnique({
+    where: { key: `${PLAYER_STATS_RESET_PREFIX}${playerId}` },
+    select: { body: true },
+  });
+  const resetAt = resetSetting?.body ? new Date(resetSetting.body) : null;
+  const validResetAt = resetAt && !Number.isNaN(resetAt.getTime()) ? resetAt : null;
+
   const where: Prisma.MatchWhereInput = {
     isPenaltyTiebreak: false,
     status: { in: [MatchStatus.CONFIRMED, MatchStatus.FINISHED] },
     player1Score: { not: null },
     player2Score: { not: null },
-    OR: [{ player1Id: playerId }, { player2Id: playerId }],
+    AND: [
+      { OR: [{ player1Id: playerId }, { player2Id: playerId }] },
+      ...(validResetAt
+        ? [
+            {
+              OR: [{ finishedAt: { gte: validResetAt } }, { finishedAt: null, updatedAt: { gte: validResetAt } }],
+            },
+          ]
+        : []),
+    ],
   };
 
   if (options.seasonId) {
