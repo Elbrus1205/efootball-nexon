@@ -175,7 +175,7 @@ export default async function RatingsPage({
                                   <ProfileStatusBadge
                                     key={status.id}
                                     status={status}
-                                    className="min-h-3 px-1 py-0 text-[5px] sm:min-h-3 sm:px-1 sm:py-0 sm:text-[5px] [&_.profile-status-youtube-icon]:h-2 [&_.profile-status-youtube-icon]:w-3 sm:[&_.profile-status-youtube-icon]:h-2 sm:[&_.profile-status-youtube-icon]:w-3"
+                                    className="profile-status-badge--rating [&_.profile-status-youtube-icon]:h-2 [&_.profile-status-youtube-icon]:w-3 sm:[&_.profile-status-youtube-icon]:h-2 sm:[&_.profile-status-youtube-icon]:w-3"
                                   />
                                 ))}
                               </div>

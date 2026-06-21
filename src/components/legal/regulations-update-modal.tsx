@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { CheckCircle2, FileText, X } from "lucide-react";
+import { CheckCircle2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -76,41 +76,34 @@ export function RegulationsUpdateModal() {
   }
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/65 px-2 pb-2 pt-10 backdrop-blur-sm sm:items-center sm:p-6">
-      <div className="flex max-h-[88dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0b0f17] text-white shadow-[0_22px_80px_rgba(0,0,0,0.58)] sm:max-h-[86vh]">
-        <div className="flex items-start gap-3 border-b border-white/10 bg-[#111827] px-4 py-3 sm:px-5 sm:py-4">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-sky-300/20 bg-sky-400/10 text-sky-200">
-            <FileText className="h-5 w-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="text-base font-black leading-tight sm:text-lg">Регламент обновлен</div>
-            <p className="mt-1 text-xs leading-5 text-zinc-400 sm:text-sm">
-              Прочитайте изменения. Новые и измененные строки выделены.
-            </p>
+    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/75 px-3 pb-3 pt-8 backdrop-blur-md sm:items-center sm:p-6">
+      <div className="flex max-h-[90dvh] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-white/10 bg-[#0b0b0b] text-white shadow-[0_24px_90px_rgba(0,0,0,0.7)] sm:max-h-[84vh]">
+        <div className="border-b border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.015))] px-4 py-3 sm:px-5">
+          <div className="flex items-start gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#C9A24D]/30 bg-[#C9A24D]/12 text-[#E7CF8F]">
+              <FileText className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-base font-black leading-tight text-white sm:text-lg">Регламент обновлён</div>
+              <p className="mt-1 max-w-md text-xs leading-5 text-zinc-400">
+                Прочитайте и подтвердите новую версию, чтобы продолжить участие на платформе.
+              </p>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/20 text-zinc-400 transition hover:bg-white/10 hover:text-white"
-            aria-label="Закрыть"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+            <span className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-1">v{payload.regulations.version}</span>
+            {changedCount ? <span className="rounded-md border border-[#C9A24D]/25 bg-[#C9A24D]/10 px-2 py-1 text-[#E7CF8F]">Изменений: {changedCount}</span> : null}
+          </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 sm:px-5 sm:py-4">
-          {changedCount ? (
-            <div className="mb-3 inline-flex rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-1 text-xs font-bold text-amber-100">
-              Изменений: {changedCount}
-            </div>
-          ) : null}
-          <div className="rounded-xl border border-white/10 bg-black/20 p-3 text-[13px] leading-6 text-zinc-300 sm:p-4 sm:text-sm sm:leading-7">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 sm:px-5">
+          <div className="rounded-lg border border-white/10 bg-white/[0.025] p-2 text-[12px] leading-5 text-zinc-300 sm:p-3 sm:text-sm sm:leading-6">
             {lines.map((line, index) => (
               <p
                 key={`${index}-${line.text.slice(0, 18)}`}
                 className={cn(
-                  "whitespace-pre-wrap rounded-lg px-2 py-1.5",
-                  line.changed ? "border border-amber-300/25 bg-amber-300/12 text-amber-50" : "text-zinc-300",
+                  "whitespace-pre-wrap rounded-md px-2 py-1",
+                  line.changed ? "border border-[#C9A24D]/25 bg-[#C9A24D]/10 text-[#F4E5B3]" : "text-zinc-300",
                 )}
               >
                 {line.text || " "}
@@ -119,8 +112,8 @@ export function RegulationsUpdateModal() {
           </div>
         </div>
 
-        <div className="shrink-0 space-y-3 border-t border-white/10 bg-[#0f141f] px-4 py-3 sm:px-5 sm:py-4">
-          <label className="flex items-start gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold leading-5 text-zinc-300 sm:text-sm">
+        <div className="shrink-0 space-y-3 border-t border-white/10 bg-[#101010] px-3 py-3 sm:px-5">
+          <label className="flex items-start gap-2 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-xs font-semibold leading-5 text-zinc-300 sm:text-sm">
             <input
               type="checkbox"
               checked={checked}
@@ -129,19 +122,15 @@ export function RegulationsUpdateModal() {
             />
             <span>Я прочитал актуальный регламент и принимаю его условия.</span>
           </label>
-          {error ? <div className="rounded-xl border border-rose-400/25 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{error}</div> : null}
-          <div className="grid grid-cols-2 gap-2">
+          {error ? <div className="rounded-lg border border-rose-400/25 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{error}</div> : null}
+          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
             <Link
               href="/regulations"
-              onClick={() => setOpen(false)}
-              className="col-span-2 inline-flex h-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-bold text-sky-100 transition hover:bg-white/[0.08]"
+              className="inline-flex h-10 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm font-bold text-zinc-200 transition hover:bg-white/[0.08]"
             >
               Открыть страницу регламента
             </Link>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="h-11 rounded-xl">
-              Позже
-            </Button>
-            <Button type="button" disabled={pending || !checked} onClick={accept} className="h-11 rounded-xl gap-2">
+            <Button type="button" disabled={pending || !checked} onClick={accept} className="h-10 rounded-lg gap-2 px-5">
               <CheckCircle2 className="h-4 w-4" />
               {pending ? "..." : "Принять"}
             </Button>
