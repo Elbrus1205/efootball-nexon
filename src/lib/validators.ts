@@ -244,6 +244,8 @@ export const tournamentBuilderSchema = z.object({
 export const resultSubmissionSchema = z.object({
   player1Score: z.coerce.number().min(0).max(99),
   player2Score: z.coerce.number().min(0).max(99),
+  player1PenaltyScore: z.coerce.number().min(0).max(99).optional(),
+  player2PenaltyScore: z.coerce.number().min(0).max(99).optional(),
   comment: z.string().max(500).optional().or(z.literal("")),
 });
 

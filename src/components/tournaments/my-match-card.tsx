@@ -17,6 +17,8 @@ type SubmissionState = {
 type SubmittedScore = {
   player1Score: number;
   player2Score: number;
+  player1PenaltyScore?: number | null;
+  player2PenaltyScore?: number | null;
 };
 
 type MyMatchCardProps = {
@@ -28,6 +30,7 @@ type MyMatchCardProps = {
   confirmedPlayer1PenaltyScore?: number | null;
   confirmedPlayer2PenaltyScore?: number | null;
   canSubmit: boolean;
+  requiresPenaltyOnDraw: boolean;
   waitingForOpponent: boolean;
   attemptsLeft: number;
   helperText: string;
@@ -54,6 +57,13 @@ function submissionToneClass(tone: SubmissionState["tone"]) {
   return "border-white/10 bg-white/5 text-zinc-400";
 }
 
+function formatSubmittedScore(score: SubmittedScore) {
+  const regularScore = `${score.player1Score}:${score.player2Score}`;
+  if (score.player1PenaltyScore === null || score.player1PenaltyScore === undefined) return regularScore;
+  if (score.player2PenaltyScore === null || score.player2PenaltyScore === undefined) return regularScore;
+  return `${regularScore} (${score.player1PenaltyScore}:${score.player2PenaltyScore})`;
+}
+
 function SubmissionBadge({ state, score, hidden }: { state: SubmissionState; score?: SubmittedScore; hidden?: boolean }) {
   if (hidden) return null;
 
@@ -64,7 +74,7 @@ function SubmissionBadge({ state, score, hidden }: { state: SubmissionState; sco
         <>
           <span className="mx-1.5 text-current/45">•</span>
           <span className="font-semibold text-white">
-            {score.player1Score}:{score.player2Score}
+            {formatSubmittedScore(score)}
           </span>
         </>
       ) : null}
@@ -81,6 +91,7 @@ export function MyMatchCard({
   confirmedPlayer1PenaltyScore,
   confirmedPlayer2PenaltyScore,
   canSubmit,
+  requiresPenaltyOnDraw,
   waitingForOpponent,
   attemptsLeft,
   helperText,
@@ -104,6 +115,7 @@ export function MyMatchCard({
   const searchParams = useSearchParams();
   const [player1ScoreInput, setPlayer1ScoreInput] = useState("");
   const [player2ScoreInput, setPlayer2ScoreInput] = useState("");
+  const [drawScore, setDrawScore] = useState<SubmittedScore | null>(null);
   const [message, setMessage] = useState(helperText);
   const [isPending, startTransition] = useTransition();
 
@@ -117,23 +129,45 @@ export function MyMatchCard({
     confirmedPlayer1PenaltyScore !== undefined &&
     confirmedPlayer2PenaltyScore !== null &&
     confirmedPlayer2PenaltyScore !== undefined;
+  const isPenaltyInputStep = Boolean(drawScore);
+  const inputLabel = isPenaltyInputStep ? "Счёт пенальти" : "Счёт матча";
 
   const onSubmit = () => {
+    const player1Score = Number(player1ScoreInput);
+    const player2Score = Number(player2ScoreInput);
+
+    if (!drawScore && requiresPenaltyOnDraw && player1Score === player2Score) {
+      setDrawScore({ player1Score, player2Score });
+      setPlayer1ScoreInput("");
+      setPlayer2ScoreInput("");
+      setMessage(`Ничья ${player1Score}:${player2Score}. Теперь в этих же полях укажите счёт пенальти.`);
+      return;
+    }
+
     startTransition(async () => {
       setMessage("Сохранение результата...");
+      const payload = drawScore
+        ? {
+            player1Score: drawScore.player1Score,
+            player2Score: drawScore.player2Score,
+            player1PenaltyScore: player1Score,
+            player2PenaltyScore: player2Score,
+          }
+        : {
+            player1Score,
+            player2Score,
+          };
       const response = await fetch(`/api/matches/${id}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          player1Score: Number(player1ScoreInput),
-          player2Score: Number(player2ScoreInput),
-        }),
+        body: JSON.stringify(payload),
       });
       const result = await response.json().catch(() => ({ error: "Не удалось обработать ответ сервера." }));
       setMessage(result.message ?? result.error ?? "Не удалось сохранить результат.");
       if (response.ok) {
         setPlayer1ScoreInput("");
         setPlayer2ScoreInput("");
+        setDrawScore(null);
         const nextSearchParams = new URLSearchParams(searchParams.toString());
         nextSearchParams.set("tab", "my-matches");
         router.replace(`${pathname}?${nextSearchParams.toString()}`, { scroll: false });
@@ -221,7 +255,11 @@ export function MyMatchCard({
           <div className="mt-4 space-y-3">
             <div className="space-y-2.5">
               {/* Score inputs centered */}
-              <div className="flex items-center justify-center">
+              <div className="flex flex-col items-center justify-center gap-2">
+                <div className="text-center text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-500">
+                  {inputLabel}
+                  {drawScore ? <span className="ml-2 normal-case tracking-normal text-primary">{drawScore.player1Score}:{drawScore.player2Score}</span> : null}
+                </div>
                 <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-black/25 px-5 py-2.5 sm:rounded-xl sm:px-6 sm:py-3">
                   <input
                     type="number"
@@ -247,11 +285,16 @@ export function MyMatchCard({
               {/* Submit button full width */}
               <button
                 onClick={onSubmit}
-                disabled={isPending || player1ScoreInput === "" || player2ScoreInput === ""}
+                disabled={
+                  isPending ||
+                  player1ScoreInput === "" ||
+                  player2ScoreInput === "" ||
+                  (isPenaltyInputStep && player1ScoreInput === player2ScoreInput)
+                }
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-[0_4px_18px_rgba(59,130,246,0.22)] transition-all hover:bg-primary/90 hover:shadow-[0_4px_24px_rgba(59,130,246,0.3)] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40 sm:rounded-xl sm:py-3"
               >
                 <Send className="h-4 w-4" />
-                {isPending ? "Отправка..." : "Подтвердить результат"}
+                {isPending ? "Отправка..." : isPenaltyInputStep ? "Отправить результат" : "Подтвердить результат"}
               </button>
             </div>
 

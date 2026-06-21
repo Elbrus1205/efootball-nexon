@@ -10,6 +10,10 @@ import { resultSubmissionSchema } from "@/lib/validators";
 const AUTO_MISMATCH_COMMENT = "AUTO_MISMATCH";
 const AUTO_CONFIRMED_COMMENT = "AUTO_CONFIRMED";
 
+function hasPenaltyScores(body: { player1PenaltyScore?: number; player2PenaltyScore?: number }) {
+  return body.player1PenaltyScore !== undefined && body.player2PenaltyScore !== undefined;
+}
+
 async function createMatchOutcomeNotifications(match: {
   tournamentId: string;
   tournament: { title: string; notificationsEnabled?: boolean | null };
@@ -49,6 +53,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         orderBy: { createdAt: "desc" },
       },
       tournament: true,
+      playoffBracket: { select: { legsCount: true } },
     },
   });
 
@@ -91,6 +96,20 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.json({ error: "В серии пенальти не может быть ничьей." }, { status: 400 });
   }
 
+  const isSingleLegPlayoffMatch = Boolean(match.bracketId) && !match.isPenaltyTiebreak && (match.playoffBracket?.legsCount ?? 1) <= 1;
+  const isPlayoffScoreDraw = isSingleLegPlayoffMatch && body.player1Score === body.player2Score;
+  if (isPlayoffScoreDraw && !hasPenaltyScores(body)) {
+    return NextResponse.json({ error: "Для ничьей в плей-офф укажите счёт пенальти." }, { status: 400 });
+  }
+
+  if (hasPenaltyScores(body) && body.player1PenaltyScore === body.player2PenaltyScore) {
+    return NextResponse.json({ error: "В серии пенальти не может быть ничьей." }, { status: 400 });
+  }
+
+  if (!isPlayoffScoreDraw && hasPenaltyScores(body)) {
+    return NextResponse.json({ error: "Пенальти можно указать только при ничьей в матче плей-офф." }, { status: 400 });
+  }
+
   const pendingOwnSubmission = match.submissions.find(
     (submission) => submission.submittedById === session.user.id && submission.status === MatchResultStatus.PENDING,
   );
@@ -101,6 +120,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
         data: {
           player1Score: body.player1Score,
           player2Score: body.player2Score,
+          player1PenaltyScore: body.player1PenaltyScore ?? null,
+          player2PenaltyScore: body.player2PenaltyScore ?? null,
           comment: body.comment || null,
         },
       })
@@ -110,6 +131,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
           submittedById: session.user.id,
           player1Score: body.player1Score,
           player2Score: body.player2Score,
+          player1PenaltyScore: body.player1PenaltyScore ?? null,
+          player2PenaltyScore: body.player2PenaltyScore ?? null,
           comment: body.comment || null,
           status: MatchResultStatus.PENDING,
         },
@@ -154,7 +177,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   const scoresMatch =
     player1Submission.player1Score === player2Submission.player1Score &&
-    player1Submission.player2Score === player2Submission.player2Score;
+    player1Submission.player2Score === player2Submission.player2Score &&
+    (player1Submission.player1PenaltyScore ?? null) === (player2Submission.player1PenaltyScore ?? null) &&
+    (player1Submission.player2PenaltyScore ?? null) === (player2Submission.player2PenaltyScore ?? null);
 
   if (scoresMatch) {
     await db.matchResultSubmission.updateMany({
@@ -173,7 +198,11 @@ export async function POST(request: Request, { params }: { params: { id: string 
         ? match.player1Id
         : player1Submission.player1Score < player1Submission.player2Score
           ? match.player2Id
-          : null;
+          : (player1Submission.player1PenaltyScore ?? -1) > (player1Submission.player2PenaltyScore ?? -1)
+            ? match.player1Id
+            : (player1Submission.player1PenaltyScore ?? -1) < (player1Submission.player2PenaltyScore ?? -1)
+              ? match.player2Id
+              : null;
     const winnerEntryId =
       winnerId === match.player1Id
         ? match.participant1EntryId
@@ -186,6 +215,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       data: {
         player1Score: player1Submission.player1Score,
         player2Score: player1Submission.player2Score,
+        player1PenaltyScore: player1Submission.player1PenaltyScore,
+        player2PenaltyScore: player1Submission.player2PenaltyScore,
         status: MatchStatus.CONFIRMED,
         winnerId,
         winnerEntryId,

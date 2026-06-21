@@ -797,6 +797,7 @@ export default async function TournamentDetailsPage({
           player1PenaltyScore: true,
           player2PenaltyScore: true,
           status: true,
+          playoffBracket: { select: { legsCount: true } },
           player1: { select: { id: true, name: true, email: true } },
           player2: { select: { id: true, name: true, email: true } },
           participant1Entry: {
@@ -925,7 +926,17 @@ export default async function TournamentDetailsPage({
       ? db.matchResultSubmission.findMany({
           where: { matchId: { in: myMatchIds } },
           orderBy: { createdAt: "desc" },
-          select: { id: true, matchId: true, submittedById: true, status: true, moderatorComment: true, player1Score: true, player2Score: true },
+          select: {
+            id: true,
+            matchId: true,
+            submittedById: true,
+            status: true,
+            moderatorComment: true,
+            player1Score: true,
+            player2Score: true,
+            player1PenaltyScore: true,
+            player2PenaltyScore: true,
+          },
         })
       : Promise.resolve([]),
     getAvailableClubs(),
@@ -1376,7 +1387,8 @@ export default async function TournamentDetailsPage({
                 const player1LatestSubmission = match.submissions.find((submission) => submission.submittedById === sideOne.playerId);
                 const player2LatestSubmission = match.submissions.find((submission) => submission.submittedById === sideTwo.playerId);
                 const matchDeadline = getMatchDeadline(match);
-                const canSubmitScore = isMatchOpenForScore(match);
+                const waitingForOpponent = match.submissions.some((submission) => submission.submittedById === currentUserId && submission.status === "PENDING");
+                const canSubmitScore = isMatchOpenForScore(match) && !waitingForOpponent;
 
                 return (
                   <MyMatchCard
@@ -1389,7 +1401,8 @@ export default async function TournamentDetailsPage({
                     confirmedPlayer1PenaltyScore={match.player1PenaltyScore}
                     confirmedPlayer2PenaltyScore={match.player2PenaltyScore}
                     canSubmit={canSubmitScore}
-                    waitingForOpponent={match.submissions.some((submission) => submission.submittedById === currentUserId && submission.status === "PENDING")}
+                    requiresPenaltyOnDraw={Boolean(match.bracketId) && !match.isPenaltyTiebreak && (match.playoffBracket?.legsCount ?? 1) <= 1}
+                    waitingForOpponent={waitingForOpponent}
                     attemptsLeft={Math.max(
                       0,
                       3 -
@@ -1428,6 +1441,8 @@ export default async function TournamentDetailsPage({
                         ? {
                             player1Score: player1LatestSubmission.player1Score,
                             player2Score: player1LatestSubmission.player2Score,
+                            player1PenaltyScore: player1LatestSubmission.player1PenaltyScore,
+                            player2PenaltyScore: player1LatestSubmission.player2PenaltyScore,
                           }
                         : undefined
                     }
@@ -1445,6 +1460,8 @@ export default async function TournamentDetailsPage({
                         ? {
                             player1Score: player2LatestSubmission.player1Score,
                             player2Score: player2LatestSubmission.player2Score,
+                            player1PenaltyScore: player2LatestSubmission.player1PenaltyScore,
+                            player2PenaltyScore: player2LatestSubmission.player2PenaltyScore,
                           }
                         : undefined
                     }

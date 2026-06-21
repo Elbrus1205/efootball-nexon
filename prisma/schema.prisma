@@ -860,6 +860,8 @@ model MatchResultSubmission {
   comment          String?           @db.Text
   player1Score     Int
   player2Score     Int
+  player1PenaltyScore Int?
+  player2PenaltyScore Int?
   status           MatchResultStatus @default(PENDING)
   moderatorComment String?           @db.Text
   createdAt        DateTime          @default(now())
