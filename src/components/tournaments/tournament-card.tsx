@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight, CalendarDays, Trophy, Users } from "lucide-react";
 import { TournamentStatus } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
@@ -27,9 +28,11 @@ type TournamentCardTournament = {
 export function TournamentCard({
   tournament,
   participantsCount,
+  priorityImage = false,
 }: {
   tournament: TournamentCardTournament;
   participantsCount: number;
+  priorityImage?: boolean;
 }) {
   const status = statusMap[tournament.status];
 
@@ -38,8 +41,15 @@ export function TournamentCard({
       <Card className="flex h-full flex-col justify-between overflow-hidden transition hover:-translate-y-1 hover:border-primary/30">
         {tournament.coverImage ? (
           <div className="-mx-5 -mt-5 mb-5 h-40 overflow-hidden border-b border-white/10 bg-white/[0.03]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={tournament.coverImage} alt={tournament.title} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+            <Image
+              src={tournament.coverImage}
+              alt={tournament.title}
+              width={640}
+              height={360}
+              sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
+              priority={priorityImage}
+              className="h-full w-full object-cover"
+            />
           </div>
         ) : null}
         <CardHeader>

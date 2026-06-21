@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
+import Script from "next/script";
 
 type TelegramWebApp = {
   initData?: string;
@@ -41,8 +42,19 @@ export function TelegramMiniAppAutoLogin() {
   const router = useRouter();
   const pathname = usePathname();
   const attemptedRef = useRef(false);
+  const [shouldLoadTelegram, setShouldLoadTelegram] = useState(false);
 
   useEffect(() => {
+    setShouldLoadTelegram(
+      Boolean((window as Window & { Telegram?: { WebApp?: TelegramWebApp } }).Telegram?.WebApp) ||
+        navigator.userAgent.toLowerCase().includes("telegram") ||
+        window.location.hash.includes("tgWebApp") ||
+        window.location.search.includes("tgWebApp"),
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!shouldLoadTelegram) return;
     if (status !== "unauthenticated" || attemptedRef.current) return;
 
     attemptedRef.current = true;
@@ -77,7 +89,7 @@ export function TelegramMiniAppAutoLogin() {
     return () => {
       cancelled = true;
     };
-  }, [pathname, router, status]);
+  }, [pathname, router, shouldLoadTelegram, status]);
 
-  return null;
+  return shouldLoadTelegram ? <Script src="https://telegram.org/js/telegram-web-app.js?62" strategy="afterInteractive" /> : null;
 }

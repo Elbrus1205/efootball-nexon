@@ -34,14 +34,15 @@ type TournamentListRow = {
   maxParticipants: number;
   prizePool: string | null;
   hasCoverImage: boolean;
+  updatedAt: Date;
   isTest: boolean;
   autoOpenRegistration: boolean;
   registrationStartsAt: Date | null;
   participantsCount: number;
 };
 
-function getTournamentCoverUrl(tournament: Pick<TournamentListRow, "id" | "hasCoverImage">) {
-  return tournament.hasCoverImage ? `/api/tournaments/${tournament.id}/cover` : null;
+function getTournamentCoverUrl(tournament: Pick<TournamentListRow, "id" | "hasCoverImage" | "updatedAt">) {
+  return tournament.hasCoverImage ? `/api/tournaments/${tournament.id}/cover?v=${tournament.updatedAt.getTime()}` : null;
 }
 
 function loadTournamentList(showTestTournaments: boolean) {
@@ -56,6 +57,7 @@ function loadTournamentList(showTestTournaments: boolean) {
       t."maxParticipants",
       t."prizePool",
       (t."coverImage" IS NOT NULL AND t."coverImage" <> '') AS "hasCoverImage",
+      t."updatedAt",
       t."isTest",
       t."autoOpenRegistration",
       t."registrationStartsAt",
@@ -106,14 +108,15 @@ export default async function TournamentsPage() {
     <div className="page-shell space-y-8">
       <div className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Турниры</div>
 
-      <DivisionPreviewCard canOpen={canOpenDivisions} coverImage={divisionSettings.coverImage} />
+      <DivisionPreviewCard canOpen={canOpenDivisions} coverImage={canOpenDivisions ? divisionSettings.coverImage : null} />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {tournamentList.map((tournament) => (
+        {tournamentList.map((tournament, index) => (
           <TournamentCard
             key={tournament.id}
             tournament={{ ...tournament, coverImage: getTournamentCoverUrl(tournament) }}
             participantsCount={tournament.participantsCount}
+            priorityImage={index === 0}
           />
         ))}
       </div>

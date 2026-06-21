@@ -24,5 +24,5 @@ export function TopMailRuPixel() {
     });
   }, [pathname]);
 
-  return <Script id="tmr-code" src="https://top-fwz1.mail.ru/js/code.js" strategy="afterInteractive" />;
+  return <Script id="tmr-code" src="https://top-fwz1.mail.ru/js/code.js" strategy="lazyOnload" />;
 }
