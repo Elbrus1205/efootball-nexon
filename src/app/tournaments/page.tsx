@@ -45,6 +45,10 @@ function getTournamentCoverUrl(tournament: Pick<TournamentListRow, "id" | "hasCo
   return tournament.hasCoverImage ? `/api/tournaments/${tournament.id}/cover?v=${tournament.updatedAt.getTime()}` : null;
 }
 
+function getDivisionCoverUrl(settings: { coverImage: string | null; updatedAt: Date | null }) {
+  return settings.coverImage && settings.updatedAt ? `/api/divisions/cover?v=${settings.updatedAt.getTime()}` : null;
+}
+
 function loadTournamentList(showTestTournaments: boolean) {
   const whereClause = showTestTournaments ? Prisma.empty : Prisma.sql`WHERE t."isTest" = false`;
 
@@ -88,7 +92,7 @@ export default async function TournamentsPage() {
     loadTournamentList(showTestTournaments).finally(() => logTiming("load-tournament-list", tournamentListStart)),
     canOpenDivisions
       ? getDivisionPreviewSettings().finally(() => logTiming("load-division-settings", divisionSettingsStart))
-      : Promise.resolve({ coverImage: null }),
+      : Promise.resolve({ coverImage: null, updatedAt: null }),
   ]);
 
   const syncStart = performance.now();
@@ -108,7 +112,7 @@ export default async function TournamentsPage() {
     <div className="page-shell space-y-8">
       <div className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Турниры</div>
 
-      <DivisionPreviewCard canOpen={canOpenDivisions} coverImage={canOpenDivisions ? divisionSettings.coverImage : null} />
+      <DivisionPreviewCard canOpen={canOpenDivisions} coverImage={canOpenDivisions ? getDivisionCoverUrl(divisionSettings) : null} priorityImage />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {tournamentList.map((tournament, index) => (

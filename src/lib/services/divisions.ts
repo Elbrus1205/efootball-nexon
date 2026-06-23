@@ -43,8 +43,8 @@ export async function getDivisionPreviewSettings() {
   return (
     (await db.divisionSettings.findUnique({
       where: { id: "default" },
-      select: { coverImage: true },
-    })) ?? { coverImage: null }
+      select: { coverImage: true, updatedAt: true },
+    })) ?? { coverImage: null, updatedAt: null }
   );
 }
 

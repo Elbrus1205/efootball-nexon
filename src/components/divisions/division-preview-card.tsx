@@ -1,8 +1,9 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Lock, Swords } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function DivisionPreviewCard({ canOpen, coverImage }: { canOpen: boolean; coverImage?: string | null }) {
+export function DivisionPreviewCard({ canOpen, coverImage, priorityImage = false }: { canOpen: boolean; coverImage?: string | null; priorityImage?: boolean }) {
   const content = (
     <div
       className={cn(
@@ -12,14 +13,13 @@ export function DivisionPreviewCard({ canOpen, coverImage }: { canOpen: boolean;
       aria-disabled={!canOpen}
     >
       {coverImage ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           src={coverImage}
           alt=""
-          className={cn(
-            "absolute inset-0 h-full w-full object-cover transition duration-300",
-            !canOpen && "scale-105 blur-[3px] grayscale opacity-55",
-          )}
+          fill
+          priority={priorityImage}
+          sizes="(min-width: 1280px) 1216px, (min-width: 768px) calc(100vw - 48px), calc(100vw - 32px)"
+          className={cn("object-cover transition duration-300", !canOpen && "scale-105 blur-[3px] grayscale opacity-55")}
         />
       ) : (
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_62%_18%,rgba(255,255,255,0.95),transparent_15%),radial-gradient(circle_at_72%_46%,rgba(14,165,233,0.95),transparent_24%),radial-gradient(circle_at_34%_24%,rgba(168,85,247,0.7),transparent_22%),radial-gradient(circle_at_40%_78%,rgba(34,211,238,0.75),transparent_22%),linear-gradient(135deg,#050716_0%,#10104f_42%,#05040d_100%)]" />

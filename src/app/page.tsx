@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
+import { unstable_cache } from "next/cache";
 import { ArrowRight, Medal, Send, ShoppingBag, Swords, Trophy, Users } from "lucide-react";
 import { MatchStatus, TournamentStatus } from "@prisma/client";
 import { AnimatedCounter } from "@/components/home/animated-counter";
@@ -26,29 +27,44 @@ const heroPhrases = [
 const telegramHref = process.env.NEXT_PUBLIC_SUPPORT_TELEGRAM_URL ?? "https://t.me/efootball_nexon";
 const marketHref = "https://t.me/eFootballNexonMarketBot";
 
-export default async function HomePage() {
-  const [totalUsers, completedTournaments, playedMatches, completedTournamentPrizes, archivedHomeStats] = await Promise.all([
-    db.user.count(),
-    db.tournament.count({
-      where: { status: TournamentStatus.COMPLETED, isTest: false },
-    }),
-    db.match.count({
-      where: {
-        status: MatchStatus.CONFIRMED,
-        tournament: { isTest: false },
-      },
-    }),
-    db.tournament.findMany({
-      where: { status: TournamentStatus.COMPLETED, isTest: false },
-      select: { prizePool: true },
-    }),
-    getArchivedHomeStats(),
-  ]);
+const getHomeStats = unstable_cache(
+  async () => {
+    const [totalUsers, completedTournaments, playedMatches, completedTournamentPrizes, archivedHomeStats] = await Promise.all([
+      db.user.count(),
+      db.tournament.count({
+        where: { status: TournamentStatus.COMPLETED, isTest: false },
+      }),
+      db.match.count({
+        where: {
+          status: MatchStatus.CONFIRMED,
+          tournament: { isTest: false },
+        },
+      }),
+      db.tournament.findMany({
+        where: { status: TournamentStatus.COMPLETED, isTest: false },
+        select: { prizePool: true },
+      }),
+      getArchivedHomeStats(),
+    ]);
 
-  const playersCount = Math.max(totalUsers + archivedHomeStats.users, 240);
-  const tournamentsCount = completedTournaments + archivedHomeStats.tournaments;
-  const matchesCount = playedMatches;
-  const awardedPrizePool = archivedHomeStats.prizePool + completedTournamentPrizes.reduce((sum, tournament) => sum + parsePrizePoolValue(tournament.prizePool), 0);
+    const playersCount = Math.max(totalUsers + archivedHomeStats.users, 240);
+    const tournamentsCount = completedTournaments + archivedHomeStats.tournaments;
+    const matchesCount = playedMatches;
+    const awardedPrizePool = archivedHomeStats.prizePool + completedTournamentPrizes.reduce((sum, tournament) => sum + parsePrizePoolValue(tournament.prizePool), 0);
+
+    return {
+      playersCount,
+      tournamentsCount,
+      matchesCount,
+      awardedPrizePool,
+    };
+  },
+  ["home-page-stats"],
+  { revalidate: 300 },
+);
+
+export default async function HomePage() {
+  const { playersCount, tournamentsCount, matchesCount, awardedPrizePool } = await getHomeStats();
 
   const stats = [
     { icon: Users, value: playersCount, suffix: "+", label: "игроков" },
