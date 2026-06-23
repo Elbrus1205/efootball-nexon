@@ -257,14 +257,14 @@ export function FormatBlueprintBuilder({
               min={2}
               max={32}
               value={blueprint.participantsPerGroup ?? ""}
-              onChange={(event) =>
-                setBlueprint((current) =>
-                  normalizeFormatBlueprint({
-                    ...current,
-                    participantsPerGroup: event.target.value ? Number(event.target.value) : null,
-                  }),
-                )
-              }
+              onChange={(event) => {
+                const rawValue = event.target.value;
+                setBlueprint((current) => ({
+                  ...current,
+                  participantsPerGroup: rawValue ? Number(rawValue) : null,
+                }));
+              }}
+              onBlur={() => setBlueprint((current) => normalizeFormatBlueprint(current))}
               placeholder="Авто"
             />
           </div>
