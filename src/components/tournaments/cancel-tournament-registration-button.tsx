@@ -32,15 +32,15 @@ export function CancelTournamentRegistrationButton({ tournamentId }: { tournamen
   };
 
   return (
-    <div className="flex w-full flex-col items-start space-y-2">
+    <div className="flex w-full flex-col items-start gap-2">
       <Button
         size="sm"
         variant="outline"
         onClick={cancelRegistration}
         disabled={isPending}
-        className="w-full justify-center border-rose-400/25 bg-transparent text-rose-200 hover:border-rose-300/45 hover:bg-rose-500/10 hover:text-rose-50 sm:w-auto"
+        className="h-8 w-auto justify-center rounded-lg border-rose-400/25 bg-transparent px-3 text-xs font-semibold text-rose-200 hover:border-rose-300/45 hover:bg-rose-500/10 hover:text-rose-50"
       >
-        {isPending ? "Отмена..." : "Отменить"}
+        {isPending ? "Отмена..." : "Отменить регистрацию"}
       </Button>
       {message ? <div className="text-sm text-red-300">{message}</div> : null}
     </div>

@@ -19,7 +19,6 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { getAvailableClubs } from "@/lib/clubs";
 import {
   playoffTypeLabel,
-  tournamentFormatLabel,
   tournamentStatusLabel,
   tournamentStatusVariant,
 } from "@/lib/admin-display";
@@ -1103,13 +1102,9 @@ export default async function TournamentDetailsPage({
         ]
       : []),
   ];
-  const tournamentStructureLabel = structureOptions.length
-    ? structureOptions.map((option) => option.title).join(" + ")
-    : tournamentFormatLabel[tournament.format];
   const tournamentMetaItems = [
     { label: "Старт", value: formatDate(tournament.startsAt) },
     { label: "Участники", value: `${activeParticipants.length}/${tournament.maxParticipants}` },
-    { label: "Формат", value: tournamentFormatLabel[tournament.format] },
     { label: "Режим", value: participantModeLabel(tournament.participantMode, tournament.rosterSize) },
   ];
   const participantClubMap = Object.fromEntries(
@@ -1253,7 +1248,13 @@ export default async function TournamentDetailsPage({
   return (
     <div className="page-shell space-y-8">
       <Card className="overflow-hidden rounded-lg border-primary/15 bg-white/[0.025] p-0">
-        <div className="grid gap-5 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-stretch lg:p-6">
+        <div
+          className={
+            canCancelRegistration
+              ? "grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_190px] lg:items-start lg:p-6"
+              : "grid gap-5 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-stretch lg:p-6"
+          }
+        >
           <div className="min-w-0 space-y-4">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <Badge variant={tournamentStatusVariant[tournament.status]} className="shrink-0">
@@ -1273,12 +1274,9 @@ export default async function TournamentDetailsPage({
               <h1 className="max-w-full break-words font-display text-[30px] font-thin uppercase leading-[0.95] tracking-normal text-white sm:text-5xl lg:text-6xl">
                 {tournament.title}
               </h1>
-              <div className="mt-3 text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-                {tournamentStructureLabel}
-              </div>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-2 sm:grid-cols-3">
               {tournamentMetaItems.map((item) => (
                 <div key={item.label} className="min-w-0 rounded-lg border border-white/10 bg-black/20 px-3 py-2.5">
                   <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">{item.label}</div>
@@ -1288,7 +1286,7 @@ export default async function TournamentDetailsPage({
             </div>
           </div>
 
-          <div className="rounded-lg border border-white/10 bg-black/25 p-4">
+          <div className={canCancelRegistration ? "rounded-lg border border-white/10 bg-black/25 p-2.5 lg:self-start" : "rounded-lg border border-white/10 bg-black/25 p-4"}>
             {canRegister ? (
               <div className="space-y-3">
                 <div>
@@ -1306,17 +1304,7 @@ export default async function TournamentDetailsPage({
                 />
               </div>
             ) : canCancelRegistration ? (
-              <div className="space-y-3">
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-300">Ваш статус</div>
-                  <div className="mt-1 flex items-center gap-2 text-lg font-semibold text-white">
-                    <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_14px_rgba(110,231,183,0.55)]" />
-                    Вы зарегистрированы
-                  </div>
-                  <div className="mt-1 text-sm leading-5 text-zinc-400">Место в турнире закреплено. Отмена доступна до старта активной стадии.</div>
-                </div>
-                <CancelTournamentRegistrationButton tournamentId={tournament.id} />
-              </div>
+              <CancelTournamentRegistrationButton tournamentId={tournament.id} />
             ) : isRegistrationOpen ? (
               <div className="space-y-3">
                 <div>
