@@ -67,6 +67,7 @@ type BracketSide = {
   isResolved: boolean;
   isWinner: boolean;
   isChampion: boolean;
+  isCurrentUser: boolean;
 };
 
 const RESOLVED_MATCH_STATUSES: MatchStatus[] = ["CONFIRMED", "FINISHED"];
@@ -114,6 +115,10 @@ function resolveClubMeta(match: BracketMatch, slot: 1 | 2, clubsByUserId: Record
 
 function isResolvedMatch(match: BracketMatch) {
   return RESOLVED_MATCH_STATUSES.includes(match.status);
+}
+
+function getBracketSideUserId(match: BracketMatch, slot: 1 | 2) {
+  return slot === 1 ? match.participant1Entry?.userId ?? match.player1Id : match.participant2Entry?.userId ?? match.player2Id;
 }
 
 function buildSeries(matches: BracketMatch[]) {
@@ -252,6 +257,7 @@ function BracketTeamRow({ side }: { side: BracketSide }) {
         hasPenalty && "min-h-11",
         side.isChampion &&
           "min-h-11 overflow-hidden bg-[linear-gradient(100deg,rgba(250,204,21,0.26),rgba(245,158,11,0.16),rgba(255,255,255,0.05))] shadow-[inset_0_0_34px_rgba(250,204,21,0.24)]",
+        side.isCurrentUser && !side.isChampion && "bg-primary/10 ring-1 ring-inset ring-primary/35",
         side.isWinner && !side.isChampion && "bg-emerald-400/10",
         isLoser && "bg-zinc-950/55 opacity-55 grayscale",
       )}
@@ -348,10 +354,12 @@ function BracketMatchBox({
   series,
   clubsByUserId,
   isFinal = false,
+  currentUserId,
 }: {
   series: BracketSeries;
   clubsByUserId: Record<string, ClubMeta>;
   isFinal?: boolean;
+  currentUserId?: string | null;
 }) {
   const match = series.referenceMatch;
   const playerOneClub = resolveClubMeta(match, 1, clubsByUserId);
@@ -360,6 +368,9 @@ function BracketMatchBox({
   const penaltyScores = getPenaltyScores(series);
   const seriesWinnerId = getSeriesWinner(series);
   const isSeriesResolved = Boolean(seriesWinnerId);
+  const sideOneUserId = getBracketSideUserId(match, 1);
+  const sideTwoUserId = getBracketSideUserId(match, 2);
+  const isCurrentUserMatch = Boolean(currentUserId && (sideOneUserId === currentUserId || sideTwoUserId === currentUserId));
 
   const sides: [BracketSide, BracketSide] = [
     {
@@ -372,6 +383,7 @@ function BracketMatchBox({
       isResolved: isSeriesResolved,
       isWinner: Boolean(seriesWinnerId && seriesWinnerId === match.player1Id),
       isChampion: Boolean(isFinal && seriesWinnerId && seriesWinnerId === match.player1Id),
+      isCurrentUser: Boolean(currentUserId && sideOneUserId === currentUserId),
     },
     {
       playerId: match.player2?.id,
@@ -383,13 +395,17 @@ function BracketMatchBox({
       isResolved: isSeriesResolved,
       isWinner: Boolean(seriesWinnerId && seriesWinnerId === match.player2Id),
       isChampion: Boolean(isFinal && seriesWinnerId && seriesWinnerId === match.player2Id),
+      isCurrentUser: Boolean(currentUserId && sideTwoUserId === currentUserId),
     },
   ];
 
   return (
     <div
       data-match-label={seriesLabel(series)}
-      className="flex h-full flex-col justify-center overflow-hidden rounded-xl border border-emerald-200/70 bg-emerald-950/60 shadow-[0_0_28px_rgba(16,185,129,0.14)] backdrop-blur"
+      className={cn(
+        "flex h-full flex-col justify-center overflow-hidden rounded-xl border border-emerald-200/70 bg-emerald-950/60 shadow-[0_0_28px_rgba(16,185,129,0.14)] backdrop-blur",
+        isCurrentUserMatch && "border-primary/80 shadow-[0_0_34px_rgba(218,183,106,0.28)]",
+      )}
     >
       <BracketTeamRow side={sides[0]} />
       <div className="h-px bg-emerald-200/35" />
@@ -412,10 +428,12 @@ function MobileRoundMatch({
   series,
   clubsByUserId,
   isFinal = false,
+  currentUserId,
 }: {
   series: BracketSeries;
   clubsByUserId: Record<string, ClubMeta>;
   isFinal?: boolean;
+  currentUserId?: string | null;
 }) {
   return (
     <article className="overflow-hidden rounded-2xl border border-white/10 bg-black/20 shadow-[0_14px_34px_rgba(0,0,0,0.24)]">
@@ -423,7 +441,7 @@ function MobileRoundMatch({
         <div className="min-w-0 truncate text-xs font-black uppercase tracking-[0.16em] text-zinc-300">{seriesLabel(series)}</div>
       </div>
       <div className="h-[92px]">
-        <BracketMatchBox series={series} clubsByUserId={clubsByUserId} isFinal={isFinal} />
+        <BracketMatchBox series={series} clubsByUserId={clubsByUserId} isFinal={isFinal} currentUserId={currentUserId} />
       </div>
     </article>
   );
@@ -449,9 +467,11 @@ function BracketConnector({
 export function BracketView({
   matches,
   clubsByUserId = {},
+  currentUserId,
 }: {
   matches: BracketMatch[];
   clubsByUserId?: Record<string, ClubMeta>;
+  currentUserId?: string | null;
 }) {
   const seriesList = buildSeries(matches);
   const thirdPlaceSeries = seriesList.filter((series) => series.isThirdPlaceMatch);
@@ -482,6 +502,11 @@ export function BracketView({
   const boardWidth = orderedRounds.length * columnWidth + Math.max(orderedRounds.length - 1, 0) * columnGap;
   const boardHeight = Math.max(firstRoundSize * slotHeight, 260);
   const totalBoardHeight = titleHeight + boardHeight;
+  const playerPath = currentUserId
+    ? mainSeriesList
+        .filter((series) => getBracketSideUserId(series.referenceMatch, 1) === currentUserId || getBracketSideUserId(series.referenceMatch, 2) === currentUserId)
+        .sort((a, b) => a.round - b.round || a.matchNumber - b.matchNumber)
+    : [];
 
   const getCenterY = (roundIndex: number, matchIndex: number) => {
     const step = slotHeight * 2 ** roundIndex;
@@ -507,6 +532,39 @@ export function BracketView({
           Плей-офф
         </div>
       </div>
+
+      {playerPath.length ? (
+        <div className="px-3 pb-2 sm:px-7">
+          <div className="rounded-2xl border border-primary/25 bg-black/25 p-3 sm:p-4">
+            <div className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">Путь игрока</div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {playerPath.map((series) => {
+                const match = series.referenceMatch;
+                const opponent = getBracketSideUserId(match, 1) === currentUserId ? match.player2 : match.player1;
+                const winnerId = getSeriesWinner(series);
+                const resultLabel = winnerId ? (winnerId === currentUserId ? "Победа" : "Поражение") : "Ожидает";
+                const resultClass = winnerId
+                  ? winnerId === currentUserId
+                    ? "border-emerald-300/25 bg-emerald-400/10 text-emerald-100"
+                    : "border-rose-300/25 bg-rose-500/10 text-rose-100"
+                  : "border-white/10 bg-white/[0.04] text-zinc-300";
+
+                return (
+                  <div key={series.key} className="min-w-0 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">{roundTitle(series.round, totalRounds)}</span>
+                      <span className={cn("shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold", resultClass)}>{resultLabel}</span>
+                    </div>
+                    <div className="mt-1 truncate text-sm font-semibold text-white">
+                      {opponent ? getPlayerDisplayName(opponent) : "Соперник не назначен"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="px-3 pb-5 pt-3 md:hidden">
         {orderedRounds.length ? (
@@ -554,6 +612,7 @@ export function BracketView({
                     series={series}
                     clubsByUserId={clubsByUserId}
                     isFinal={activeRoundIndex === orderedRounds.length - 1}
+                    currentUserId={currentUserId}
                   />
                 ))}
 
@@ -561,7 +620,7 @@ export function BracketView({
                   <div className="space-y-3 border-t border-white/10 pt-3">
                     <div className="text-xs font-black uppercase tracking-[0.16em] text-amber-100">Матч за 3-е место</div>
                     {thirdPlaceSeries.map((series) => (
-                      <MobileRoundMatch key={series.key} series={series} clubsByUserId={clubsByUserId} />
+                      <MobileRoundMatch key={series.key} series={series} clubsByUserId={clubsByUserId} currentUserId={currentUserId} />
                     ))}
                   </div>
                 ) : null}
@@ -651,7 +710,7 @@ export function BracketView({
                       height: matchHeight,
                     }}
                   >
-                    <BracketMatchBox series={series} clubsByUserId={clubsByUserId} isFinal={roundIndex === orderedRounds.length - 1} />
+                    <BracketMatchBox series={series} clubsByUserId={clubsByUserId} isFinal={roundIndex === orderedRounds.length - 1} currentUserId={currentUserId} />
                   </div>
                 ))}
               </div>
@@ -667,7 +726,7 @@ export function BracketView({
             <div className="grid origin-top-left scale-[0.78] gap-4 sm:scale-100" style={{ width: columnWidth }}>
               {thirdPlaceSeries.map((series) => (
                 <div key={series.key} style={{ height: matchHeight }}>
-                  <BracketMatchBox series={series} clubsByUserId={clubsByUserId} />
+                  <BracketMatchBox series={series} clubsByUserId={clubsByUserId} currentUserId={currentUserId} />
                 </div>
               ))}
             </div>

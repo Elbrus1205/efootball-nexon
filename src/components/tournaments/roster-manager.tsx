@@ -1,7 +1,7 @@
 "use client";
 
-import { TeamInviteStatus, TournamentParticipantMode } from "@prisma/client";
-import { Check, Send, X } from "lucide-react";
+import { TeamInviteStatus, TournamentParticipantMode, TournamentStatus } from "@prisma/client";
+import { Check, Send, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
@@ -18,11 +18,13 @@ export function RosterManager({
   tournamentId,
   participantMode,
   rosterSize,
+  tournamentStatus,
   currentMembership,
 }: {
   tournamentId: string;
   participantMode: TournamentParticipantMode;
   rosterSize: number;
+  tournamentStatus: TournamentStatus;
   currentMembership:
     | {
         id: string;
@@ -53,9 +55,13 @@ export function RosterManager({
     return null;
   }
 
-  const canInvite = currentMembership.isCaptain && currentMembership.status === TeamInviteStatus.ACCEPTED && activeMembers.length < rosterSize;
+  const canManageRoster =
+    currentMembership.isCaptain &&
+    currentMembership.status === TeamInviteStatus.ACCEPTED &&
+    tournamentStatus === TournamentStatus.REGISTRATION_OPEN;
+  const canInvite = canManageRoster && activeMembers.length < rosterSize;
 
-  if (currentMembership.status !== TeamInviteStatus.PENDING && !canInvite && !message) {
+  if (currentMembership.status !== TeamInviteStatus.PENDING && !canManageRoster && !message) {
     return null;
   }
 
@@ -90,6 +96,26 @@ export function RosterManager({
         return;
       }
       setNickname("");
+      router.refresh();
+    });
+  };
+
+  const removeMember = (memberId: string, status: TeamInviteStatus) => {
+    const confirmed = window.confirm(status === TeamInviteStatus.PENDING ? "Отменить приглашение игрока?" : "Удалить игрока из состава?");
+    if (!confirmed) return;
+
+    startTransition(async () => {
+      setMessage("");
+      const response = await fetch(`/api/tournaments/${tournamentId}/roster/invite`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId }),
+      });
+      const result = await response.json().catch(() => ({ error: "Не удалось изменить состав." }));
+      if (!response.ok) {
+        setMessage(result.error ?? "Не удалось изменить состав.");
+        return;
+      }
       router.refresh();
     });
   };
@@ -130,6 +156,39 @@ export function RosterManager({
             <Send className="h-4 w-4" />
             Пригласить
           </Button>
+        </div>
+      ) : null}
+
+      {canManageRoster ? (
+        <div className="grid gap-2">
+          {activeMembers.map((member) => {
+            const memberName = member.user.name?.trim() || member.user.email || "Игрок";
+            const canRemoveMember = !member.isCaptain;
+
+            return (
+              <div key={member.id} className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/25 px-3 py-2.5">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-white">{memberName}</div>
+                  <div className="mt-0.5 text-xs text-zinc-500">
+                    {member.isCaptain ? "Капитан" : member.status === TeamInviteStatus.ACCEPTED ? "В составе" : "Приглашение отправлено"}
+                  </div>
+                </div>
+
+                {canRemoveMember ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={isPending}
+                    className="h-8 shrink-0 gap-1.5 rounded-lg border-rose-400/25 px-2 text-xs text-rose-100 hover:border-rose-300/45 hover:bg-rose-500/10"
+                    onClick={() => removeMember(member.id, member.status)}
+                  >
+                    {member.status === TeamInviteStatus.PENDING ? <X className="h-3.5 w-3.5" /> : <Trash2 className="h-3.5 w-3.5" />}
+                    {member.status === TeamInviteStatus.PENDING ? "Отменить" : "Удалить"}
+                  </Button>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
       ) : null}
 

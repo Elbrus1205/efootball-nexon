@@ -796,6 +796,24 @@ function buildRoundStartBody(params: {
   ].join("\n");
 }
 
+function formatDeadlineReminderBody(params: {
+  tournamentTitle: string;
+  stageName: string;
+  stageType: StageType;
+  round: number;
+  opponentName: string;
+  deadlineAt: Date;
+}) {
+  const unit = roundUnitForStage(params.stageType).toLowerCase();
+  const deadline = formatScheduleDate(params.deadlineAt);
+
+  return [
+    `${params.tournamentTitle}: до дедлайна осталось меньше 6 часов.`,
+    `${params.stageName}, ${unit} ${params.round}. Соперник: ${params.opponentName}.`,
+    `Дедлайн: ${deadline} МСК.`,
+  ].join("\n");
+}
+
 export async function notifyActiveTournamentRoundsStarted(tournamentId: string) {
   const tournament = await db.tournament.findUnique({
     where: { id: tournamentId },
@@ -882,7 +900,102 @@ export async function notifyActiveTournamentRoundsStarted(tournamentId: string) 
   }
 }
 
-async function notifyMatchReady(matchId: string) {
+export async function notifyUpcomingRoundDeadlineReminders({ userId }: { userId?: string } = {}) {
+  const now = new Date();
+  const reminderWindowEnd = new Date(now.getTime() + 6 * 60 * 60 * 1000);
+  const deadlines = await db.roundDeadline.findMany({
+    where: {
+      deadlineAt: {
+        gt: now,
+        lte: reminderWindowEnd,
+      },
+      tournament: {
+        status: TournamentStatus.IN_PROGRESS,
+        notificationsEnabled: true,
+      },
+    },
+    select: {
+      id: true,
+      round: true,
+      deadlineAt: true,
+      tournament: {
+        select: {
+          id: true,
+          title: true,
+          notificationsEnabled: true,
+        },
+      },
+      stage: {
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          matches: {
+            where: {
+              isPenaltyTiebreak: false,
+              player1Id: { not: null },
+              player2Id: { not: null },
+              status: { notIn: Array.from(TERMINAL_MATCH_STATUSES) },
+            },
+            select: {
+              id: true,
+              round: true,
+              player1Id: true,
+              player2Id: true,
+              player1: { select: { name: true, email: true } },
+              player2: { select: { name: true, email: true } },
+            },
+          },
+        },
+      },
+    },
+    orderBy: { deadlineAt: "asc" },
+  });
+
+  let notifiedCount = 0;
+
+  for (const deadline of deadlines) {
+    if (!tournamentNotificationsEnabled(deadline.tournament)) continue;
+
+    const matches = deadline.stage.matches.filter((match) => match.round === deadline.round);
+    for (const match of matches) {
+      const sides = [
+        {
+          userId: match.player1Id,
+          opponentName: match.player2 ? getPlayerName(match.player2) : "соперник",
+        },
+        {
+          userId: match.player2Id,
+          opponentName: match.player1 ? getPlayerName(match.player1) : "соперник",
+        },
+      ].filter((side): side is { userId: string; opponentName: string } => Boolean(side.userId && (!userId || side.userId === userId)));
+
+      for (const side of sides) {
+        await createNotification({
+          userId: side.userId,
+          title: "Дедлайн через 6 часов",
+          body: formatDeadlineReminderBody({
+            tournamentTitle: deadline.tournament.title,
+            stageName: deadline.stage.name,
+            stageType: deadline.stage.type,
+            round: deadline.round,
+            opponentName: side.opponentName,
+            deadlineAt: deadline.deadlineAt,
+          }),
+          type: NotificationType.MATCH,
+          link: `/tournaments/${deadline.tournament.id}?tab=my-matches`,
+          dedupeKey: `deadline-6h:${deadline.id}:${match.id}`,
+          dedupeWithinHours: 24 * 365,
+        });
+        notifiedCount += 1;
+      }
+    }
+  }
+
+  return { notifiedCount };
+}
+
+export async function notifyMatchReady(matchId: string) {
   const match = await db.match.findUnique({
     where: { id: matchId },
     include: {
@@ -911,19 +1024,21 @@ async function notifyMatchReady(matchId: string) {
   await Promise.all([
     createNotification({
       userId: match.player1Id,
-      title: "Матч определён",
+      title: "Новый соперник",
       body: `${match.tournament.title}: ${descriptor}. Ваш соперник: ${getPlayerName(match.player2)}.${scheduleText}`,
       type: NotificationType.MATCH,
       link: `/tournaments/${match.tournamentId}`,
-      dedupeWithinHours: 12,
+      dedupeKey: `match-ready:${match.id}`,
+      dedupeWithinHours: 24 * 365,
     }),
     createNotification({
       userId: match.player2Id,
-      title: "Матч определён",
+      title: "Новый соперник",
       body: `${match.tournament.title}: ${descriptor}. Ваш соперник: ${getPlayerName(match.player1)}.${scheduleText}`,
       type: NotificationType.MATCH,
       link: `/tournaments/${match.tournamentId}`,
-      dedupeWithinHours: 12,
+      dedupeKey: `match-ready:${match.id}`,
+      dedupeWithinHours: 24 * 365,
     }),
   ]);
 }

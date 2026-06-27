@@ -1,5 +1,5 @@
 import { ClubSelectionMode, MatchStatus, ParticipantStatus, StageType, TournamentFormat, TournamentParticipantMode, TournamentStatus } from "@prisma/client";
-import { Send } from "lucide-react";
+import { AlertTriangle, Send } from "lucide-react";
 import { unstable_noStore as noStore } from "next/cache";
 import { notFound } from "next/navigation";
 import { BracketView } from "@/components/tournaments/bracket-view";
@@ -25,6 +25,7 @@ import {
 import { db } from "@/lib/db";
 import { normalizeFormatBlueprint } from "@/lib/format-blueprint";
 import { getPlayerDisplayName } from "@/lib/player-name";
+import { RELIABILITY_REGISTRATION_THRESHOLD } from "@/lib/services/reliability";
 import { shouldSyncTournamentRegistrationLifecycle, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { getTelegramProfileLinks, hasPublicTelegramUsername, hasTelegramRegistrationContact } from "@/lib/social-links";
 import { formatDate } from "@/lib/utils";
@@ -926,7 +927,15 @@ export default async function TournamentDetailsPage({
 
   const [currentUser, rawSubmissions, availableClubs] = await Promise.all([
     currentUserId
-      ? db.user.findUnique({ where: { id: currentUserId }, select: { telegramId: true, telegramUsername: true } })
+      ? db.user.findUnique({
+          where: { id: currentUserId },
+          select: {
+            telegramId: true,
+            telegramUsername: true,
+            reliabilityScore: true,
+            reliabilityRestrictedUntil: true,
+          },
+        })
       : Promise.resolve(null),
     myMatchIds.length
       ? db.matchResultSubmission.findMany({
@@ -993,7 +1002,20 @@ export default async function TournamentDetailsPage({
   const needsTelegramConnection = Boolean(isLoggedIn && !currentUser?.telegramId);
   const needsTelegramUsername = Boolean(isLoggedIn && currentUser?.telegramId && !hasPublicTelegramUsername(currentUser.telegramUsername));
   const needsTelegram = Boolean(isLoggedIn && !hasTelegramRegistrationContact(currentUser));
-  const canRegister = isLoggedIn && isRegistrationOpen && hasFreeSlots && !alreadyRegistered && !needsTelegram;
+  const reliabilityRestrictedUntil =
+    currentUser?.reliabilityRestrictedUntil && currentUser.reliabilityRestrictedUntil > new Date() ? currentUser.reliabilityRestrictedUntil : null;
+  const isReliabilityRestrictedForRegistration = Boolean(
+    currentUser && (currentUser.reliabilityScore < RELIABILITY_REGISTRATION_THRESHOLD || reliabilityRestrictedUntil),
+  );
+  const reliabilityRestrictionText = currentUser && isReliabilityRestrictedForRegistration
+    ? reliabilityRestrictedUntil
+      ? `Регистрация временно ограничена до ${new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "long", year: "numeric" }).format(reliabilityRestrictedUntil)}. Надежность: ${currentUser.reliabilityScore}/100.`
+      : `Регистрация временно ограничена: надежность ${currentUser.reliabilityScore}/100. Минимум для участия — ${RELIABILITY_REGISTRATION_THRESHOLD}.`
+    : null;
+  const reliabilityWarningText = currentUser && !isReliabilityRestrictedForRegistration && currentUser.reliabilityScore < 80
+    ? `Надежность ${currentUser.reliabilityScore}/100 ниже стабильного уровня. Участвовать можно, но техпоражения могут ограничить регистрацию в будущие турниры.`
+    : null;
+  const canRegister = isLoggedIn && isRegistrationOpen && hasFreeSlots && !alreadyRegistered && !needsTelegram && !isReliabilityRestrictedForRegistration;
   const canCancelRegistration =
     isLoggedIn &&
     alreadyRegistered &&
@@ -1139,6 +1161,7 @@ export default async function TournamentDetailsPage({
     key: section.key,
     title: section.title,
     deadlineLabel: section.deadlineAt ? formatDate(section.deadlineAt) : null,
+    deadlineAt: section.deadlineAt ? new Date(section.deadlineAt).toISOString() : null,
     matches: section.matches.map((match) => {
       const sideOne = resolveMatchSide(match, 1);
       const sideTwo = resolveMatchSide(match, 2);
@@ -1293,6 +1316,12 @@ export default async function TournamentDetailsPage({
                   <div className="mt-1 text-lg font-semibold text-white">Заявка открыта</div>
                   <div className="mt-1 text-sm leading-5 text-zinc-400">Выберите клуб и подтвердите участие в турнире.</div>
                 </div>
+                {reliabilityWarningText ? (
+                  <div className="flex gap-2 rounded-lg border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-sm leading-5 text-amber-100">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{reliabilityWarningText}</span>
+                  </div>
+                ) : null}
                 <RegisterTournamentButton
                   tournamentId={tournament.id}
                   clubSelectionMode={tournament.clubSelectionMode ?? ClubSelectionMode.ADMIN_RANDOM}
@@ -1317,11 +1346,15 @@ export default async function TournamentDetailsPage({
                           ? "Нужен @username"
                           : alreadyRegistered
                             ? "Вы уже зарегистрированы"
+                            : reliabilityRestrictionText
+                              ? "Ограничена надежность"
                             : hasFreeSlots
                               ? "Регистрация недоступна"
                               : "Лимит достигнут"}
                   </div>
-                  <div className="mt-1 text-sm leading-5 text-zinc-400">Проверьте требование ниже и продолжите регистрацию.</div>
+                  <div className="mt-1 text-sm leading-5 text-zinc-400">
+                    {reliabilityRestrictionText ?? "Проверьте требование ниже и продолжите регистрацию."}
+                  </div>
                 </div>
                 {!isLoggedIn ? (
                   <Button size="lg" asChild className="w-full">
@@ -1334,6 +1367,10 @@ export default async function TournamentDetailsPage({
                 ) : needsTelegramUsername ? (
                   <Button size="lg" disabled className="w-full">
                     Нужен публичный @username
+                  </Button>
+                ) : !alreadyRegistered && reliabilityRestrictionText ? (
+                  <Button size="lg" disabled className="w-full">
+                    Надежность {currentUser?.reliabilityScore ?? 0}/100
                   </Button>
                 ) : (
                   <Button size="lg" disabled className="w-full">
@@ -1428,7 +1465,7 @@ export default async function TournamentDetailsPage({
                       {playoffStages.length > 1 ? (
                         <div className="text-sm uppercase tracking-[0.24em] text-zinc-500">{stage.name}</div>
                       ) : null}
-                      <BracketView matches={tournament.matches.filter((match) => match.stageId === stage.id)} clubsByUserId={participantClubMap} />
+                      <BracketView matches={tournament.matches.filter((match) => match.stageId === stage.id)} clubsByUserId={participantClubMap} currentUserId={currentUserId} />
                     </div>
                   ))}
                 </div>
@@ -1550,6 +1587,7 @@ export default async function TournamentDetailsPage({
                 tournamentId={tournament.id}
                 participantMode={tournament.participantMode}
                 rosterSize={tournament.rosterSize}
+                tournamentStatus={tournament.status}
                 currentMembership={currentRosterMembership}
               />
               {currentRosterCards}

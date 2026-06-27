@@ -60,13 +60,20 @@ export function RegisterTournamentButton({
   );
   const filteredClubs = useMemo(() => {
     const query = normalizeClubSearch(clubSearch);
-    if (!query) return clubs;
+    const source = query
+      ? clubs.filter((club) => {
+          const searchable = [club.name, club.slug, club.imagePath].map(normalizeClubSearch).join(" ");
+          return searchable.includes(query);
+        })
+      : clubs;
 
-    return clubs.filter((club) => {
-      const searchable = [club.name, club.slug, club.imagePath].map(normalizeClubSearch).join(" ");
-      return searchable.includes(query);
+    return [...source].sort((a, b) => {
+      const aTaken = takenClubSlugs.includes(a.slug);
+      const bTaken = takenClubSlugs.includes(b.slug);
+      if (aTaken !== bTaken) return Number(aTaken) - Number(bTaken);
+      return a.name.localeCompare(b.name, "ru");
     });
-  }, [clubSearch, clubs]);
+  }, [clubSearch, clubs, takenClubSlugs]);
 
   const loadRegulations = async () => {
     const response = await fetch("/api/regulations/acceptance", { cache: "no-store" });

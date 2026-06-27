@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 type ScheduleSide = {
   playerId: string | null;
@@ -31,6 +32,7 @@ export type TournamentScheduleSection = {
   key: string;
   title: string;
   deadlineLabel: string | null;
+  deadlineAt: string | null;
   matches: TournamentScheduleMatch[];
 };
 
@@ -49,6 +51,47 @@ function pluralMatches(count: number) {
   if (mod10 === 1 && mod100 !== 11) return `${count} матч`;
   if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} матча`;
   return `${count} матчей`;
+}
+
+function formatLiveDeadline(deadlineAt: string | null) {
+  if (!deadlineAt) return null;
+
+  const deadline = new Date(deadlineAt);
+  if (Number.isNaN(deadline.getTime())) return null;
+
+  const diffMs = deadline.getTime() - Date.now();
+  const absMs = Math.abs(diffMs);
+  const hours = Math.floor(absMs / (60 * 60 * 1000));
+  const minutes = Math.max(1, Math.round((absMs % (60 * 60 * 1000)) / (60 * 1000)));
+
+  if (diffMs <= 0) {
+    return {
+      label: hours > 0 ? `Просрочено на ${hours} ч ${minutes} мин` : `Просрочено на ${minutes} мин`,
+      tone: "danger" as const,
+    };
+  }
+
+  if (hours < 1) {
+    return { label: `Осталось ${minutes} мин`, tone: "danger" as const };
+  }
+
+  if (hours < 6) {
+    return { label: `Осталось ${hours} ч ${minutes} мин`, tone: "warning" as const };
+  }
+
+  if (hours < 24) {
+    return { label: `Сегодня, осталось ${hours} ч`, tone: "today" as const };
+  }
+
+  const days = Math.floor(hours / 24);
+  return { label: `Осталось ${days} д ${hours % 24} ч`, tone: "neutral" as const };
+}
+
+function deadlineToneClass(tone: NonNullable<ReturnType<typeof formatLiveDeadline>>["tone"]) {
+  if (tone === "danger") return "border-rose-400/30 bg-rose-500/10 text-rose-100";
+  if (tone === "warning") return "border-amber-300/30 bg-amber-300/10 text-amber-100";
+  if (tone === "today") return "border-primary/30 bg-primary/10 text-primary";
+  return "border-white/10 bg-white/[0.04] text-zinc-300";
 }
 
 export function TournamentScheduleView({ sections }: { sections: TournamentScheduleSection[] }) {
@@ -181,18 +224,31 @@ export function TournamentScheduleView({ sections }: { sections: TournamentSched
         <div className="space-y-6 sm:space-y-8">
           {filteredSections.map((section) => (
             <section key={section.key} className="space-y-4 rounded-lg border border-white/10 bg-white/[0.04] p-4 sm:p-5">
+              {(() => {
+                const liveDeadline = formatLiveDeadline(section.deadlineAt);
+
+                return (
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
                 <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-zinc-300">{section.title}</h3>
                 <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.16em]">
                   {section.deadlineLabel ? (
-                    <div className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-primary">
-                      <Clock3 className="h-3.5 w-3.5" />
-                      Дедлайн: {section.deadlineLabel}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {liveDeadline ? (
+                        <div className={cn("inline-flex items-center gap-2 rounded-full border px-3 py-1 font-semibold", deadlineToneClass(liveDeadline.tone))}>
+                          <Clock3 className="h-3.5 w-3.5" />
+                          {liveDeadline.label}
+                        </div>
+                      ) : null}
+                      <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1 text-zinc-400">
+                        Дедлайн: {section.deadlineLabel}
+                      </div>
                     </div>
                   ) : null}
                   <div className="text-zinc-500">{pluralMatches(section.matches.length)}</div>
                 </div>
               </div>
+                );
+              })()}
 
               <div className="divide-y divide-white/10">
                 {section.matches.map((match, matchIndex) => {

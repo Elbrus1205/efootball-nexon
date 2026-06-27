@@ -5,7 +5,7 @@ import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { applyTechnicalLossPenalty, recordConfirmedMatchReliability } from "@/lib/services/reliability";
-import { recalculateGroupStandings, resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
+import { notifyMatchReady, recalculateGroupStandings, resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { matchUpdateSchema } from "@/lib/validators";
 
 function matchRequiresWinner(match: {
@@ -212,6 +212,15 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   if (standingsRelevantChange) {
     await recalculateGroupStandings(before.tournamentId);
+  }
+
+  const opponentsChanged =
+    before.player1Id !== updated.player1Id ||
+    before.player2Id !== updated.player2Id ||
+    before.participant1EntryId !== updated.participant1EntryId ||
+    before.participant2EntryId !== updated.participant2EntryId;
+  if (opponentsChanged && updated.player1Id && updated.player2Id && updated.status !== MatchStatus.CANCELLED) {
+    await notifyMatchReady(updated.id);
   }
 
   if (updated.status === MatchStatus.CONFIRMED || updated.status === MatchStatus.FINISHED) {
