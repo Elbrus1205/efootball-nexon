@@ -227,13 +227,23 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (updated.status === MatchStatus.FORFEIT) {
     const loserId = getForfeitLoserId(updated);
     if (loserId) {
-      await applyTechnicalLossPenalty({
+      const dedupeKey = `match-forfeit:${updated.id}`;
+      const technicalLossReason = "technicalLossReason" in body && body.technicalLossReason ? body.technicalLossReason : undefined;
+      const result = await applyTechnicalLossPenalty({
         userId: loserId,
         matchId: updated.id,
         tournamentId: updated.tournamentId,
         actorId: session.user.id,
-        dedupeKey: `match-forfeit:${updated.id}`,
+        dedupeKey,
+        reason: technicalLossReason,
       });
+
+      if (!result.created && technicalLossReason) {
+        await db.reliabilityEvent.updateMany({
+          where: { userId: loserId, dedupeKey },
+          data: { reason: technicalLossReason },
+        });
+      }
     }
   }
 

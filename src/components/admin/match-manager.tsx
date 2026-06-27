@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { MatchStatus, StageType } from "@prisma/client";
-import { CalendarClock, ExternalLink, GripVertical, MessageSquare, Search, Shield, ShieldAlert } from "lucide-react";
+import { ExternalLink, GripVertical, Search, Shield, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
@@ -53,13 +53,6 @@ type MatchItem = {
   stage?: { name: string | null; type: StageType } | null;
   group?: { name: string } | null;
 };
-
-function toInputDate(value?: string | null) {
-  if (!value) return "";
-  const date = new Date(value);
-  const pad = (num: number) => String(num).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
 
 function isTourMatch(match: MatchItem) {
   return match.stage?.type === StageType.GROUP_STAGE || match.stage?.type === StageType.LEAGUE || Boolean(match.group);
@@ -160,6 +153,15 @@ function FieldLabel({ children }: { children: ReactNode }) {
   return <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">{children}</div>;
 }
 
+const technicalLossReasonOptions = [
+  { value: "Техническое поражение: игрок не явился на матч.", label: "Не явился" },
+  { value: "Техническое поражение: игрок отказался играть матч.", label: "Отказался" },
+  { value: "Техническое поражение: нарушение правил матча.", label: "Нарушение правил" },
+  { value: "Техническое поражение: админская замена или форфейт.", label: "Форфейт" },
+] as const;
+
+const defaultTechnicalLossReason = technicalLossReasonOptions[0].value;
+
 function MatchSideSelect({
   label,
   value,
@@ -176,19 +178,20 @@ function MatchSideSelect({
   onChange: (participantId: string) => void;
 }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-black/20 p-2.5 transition hover:border-primary/25">
-      <div className="mb-2 flex min-w-0 items-center gap-2">
-        <TeamBadge participant={selected} />
-        <div className="min-w-0 flex-1">
+    <div className="flex min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-black/20 p-2 transition hover:border-primary/25">
+      <TeamBadge participant={selected} />
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center gap-2">
           <FieldLabel>{label}</FieldLabel>
-          <div className="truncate text-sm font-semibold leading-tight text-white">{participantName(selected)}</div>
-          <div className="truncate text-xs leading-tight text-zinc-500">{participantClubName(selected)}</div>
+          <div className="min-w-0 truncate text-xs font-medium text-zinc-500">{participantClubName(selected)}</div>
         </div>
+        <div className="truncate text-sm font-semibold leading-tight text-white">{participantName(selected)}</div>
       </div>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-9 w-full rounded-lg border border-white/10 bg-[#0A0A0A] px-3 text-sm text-white outline-none transition focus:border-primary/60"
+        aria-label={`Сменить ${label.toLowerCase()}`}
+        className="h-9 w-[118px] shrink-0 rounded-lg border border-white/10 bg-[#0A0A0A] px-2 text-xs text-white outline-none transition focus:border-primary/60 sm:w-44 sm:px-3 sm:text-sm"
       >
         <option value="">{placeholder}</option>
         {participants.map((participant) => (
@@ -217,6 +220,7 @@ export function MatchManager({
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [roundFilter, setRoundFilter] = useState<string>(() => (matches[0]?.round ? String(matches[0].round) : "all"));
+  const [technicalLossReasonByMatch, setTechnicalLossReasonByMatch] = useState<Record<string, string>>({});
 
   const participantById = useMemo(() => new Map(participants.map((participant) => [participant.id, participant])), [participants]);
   const participantSearchTokens = (participant?: ParticipantOption | null) => [participant?.clubName, participant?.clubSlug, participant?.user.name].filter(Boolean);
@@ -389,7 +393,7 @@ export function MatchManager({
         <div className="grid gap-3 lg:grid-cols-[1fr_220px_180px]">
           <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-            <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по игроку, клубу, группе, стадии или заметке" className="pl-10" />
+            <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по игроку, клубу, группе или стадии" className="pl-10" />
           </div>
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-11 rounded-xl border border-white/10 bg-white/5 px-4 text-sm text-white">
             <option value="all">Все статусы</option>
@@ -428,6 +432,7 @@ export function MatchManager({
               {roundMatches.map((match) => {
                 const selectedParticipantOne = match.participant1EntryId ? participantById.get(match.participant1EntryId) ?? null : null;
                 const selectedParticipantTwo = match.participant2EntryId ? participantById.get(match.participant2EntryId) ?? null : null;
+                const technicalLossReason = technicalLossReasonByMatch[match.id] ?? defaultTechnicalLossReason;
                 const needsPenalty = matchNeedsPenalty(match, orderedMatches);
                 const penaltyComplete =
                   needsPenalty &&
@@ -475,12 +480,39 @@ export function MatchManager({
                           </Badge>
                           <select
                             value={match.status}
-                            onChange={(event) => saveMatch(match.id, { status: event.target.value })}
+                            onChange={(event) => {
+                              const nextStatus = event.target.value;
+                              saveMatch(
+                                match.id,
+                                nextStatus === MatchStatus.FORFEIT ? { status: nextStatus, technicalLossReason } : { status: nextStatus },
+                              );
+                            }}
                             className="h-9 rounded-lg border border-white/10 bg-[#0A0A0A] px-3 text-sm text-white outline-none transition focus:border-primary/60"
                           >
                             {Object.values(MatchStatus).map((status) => (
                               <option key={status} value={status}>
                                 {matchStatusLabel[status] ?? status}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="grid gap-2 sm:grid-cols-[110px_minmax(0,1fr)] sm:items-center">
+                          <FieldLabel>Причина ТП</FieldLabel>
+                          <select
+                            value={technicalLossReason}
+                            onChange={(event) => {
+                              const nextReason = event.target.value;
+                              setTechnicalLossReasonByMatch((current) => ({ ...current, [match.id]: nextReason }));
+                              if (match.status === MatchStatus.FORFEIT) {
+                                saveMatch(match.id, { status: MatchStatus.FORFEIT, technicalLossReason: nextReason });
+                              }
+                            }}
+                            className="h-9 rounded-lg border border-white/10 bg-[#0A0A0A] px-3 text-sm text-white outline-none transition focus:border-primary/60"
+                          >
+                            {technicalLossReasonOptions.map((reason) => (
+                              <option key={reason.value} value={reason.value}>
+                                {reason.label}
                               </option>
                             ))}
                           </select>
@@ -517,18 +549,6 @@ export function MatchManager({
                           />
                         </div>
 
-                        <div className="grid gap-2">
-                          <FieldLabel>Дата и время</FieldLabel>
-                          <div className="relative">
-                            <CalendarClock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-                            <Input
-                              type="datetime-local"
-                              defaultValue={toInputDate(match.scheduledAt)}
-                              className="h-9 rounded-lg bg-black/30 pl-9 text-xs sm:text-sm"
-                              onBlur={(event) => saveMatch(match.id, { scheduledAt: event.target.value })}
-                            />
-                          </div>
-                        </div>
                       </div>
 
                       <div className="grid gap-3">
@@ -587,24 +607,6 @@ export function MatchManager({
                             </div>
                           </div>
                         ) : null}
-
-                        <div className="grid gap-2">
-                          <FieldLabel>Комментарий</FieldLabel>
-                          <div className="relative">
-                            <MessageSquare className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-                            <Input
-                              type="text"
-                              defaultValue={match.notes ?? ""}
-                              placeholder="Комментарий к матчу"
-                              className="h-9 rounded-lg bg-black/30 pl-9"
-                              onBlur={(event) => saveMatch(match.id, { notes: event.target.value })}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="truncate rounded-xl border border-white/10 bg-white/[0.025] px-3 py-2 text-xs text-zinc-400">
-                          {participantName(selectedParticipantOne)} vs {participantName(selectedParticipantTwo)}
-                        </div>
 
                         <div className="sticky bottom-2 z-20 grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-[#080808]/95 p-2 backdrop-blur lg:static lg:flex lg:flex-wrap lg:border-0 lg:bg-transparent lg:p-0">
                           <Button
