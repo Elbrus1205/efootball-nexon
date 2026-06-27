@@ -1,4 +1,4 @@
-import { ClubSelectionMode, MatchStatus, ParticipantStatus, StageType, TournamentFormat, TournamentStatus } from "@prisma/client";
+import { ClubSelectionMode, MatchStatus, ParticipantStatus, StageType, TournamentFormat, TournamentParticipantMode, TournamentStatus } from "@prisma/client";
 import { Send } from "lucide-react";
 import { unstable_noStore as noStore } from "next/cache";
 import { notFound } from "next/navigation";
@@ -19,6 +19,7 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { getAvailableClubs } from "@/lib/clubs";
 import {
   playoffTypeLabel,
+  tournamentFormatLabel,
   tournamentStatusLabel,
   tournamentStatusVariant,
 } from "@/lib/admin-display";
@@ -96,6 +97,12 @@ function isTournamentTabValue(value?: string): value is TournamentTabValue {
 
 function normalizeSearchText(value: string | null | undefined) {
   return (value ?? "").trim().toLowerCase();
+}
+
+function participantModeLabel(mode: TournamentParticipantMode, rosterSize: number) {
+  if (mode === TournamentParticipantMode.SINGLE) return "1x1";
+  if (mode === TournamentParticipantMode.COOP) return `${rosterSize}x${rosterSize}`;
+  return `Команды ${rosterSize}`;
 }
 
 function scheduleMatchTime(match: { scheduledAt?: Date | string | null; createdAt: Date | string; schedules: Array<{ startsAt: Date | string }> }) {
@@ -1096,6 +1103,15 @@ export default async function TournamentDetailsPage({
         ]
       : []),
   ];
+  const tournamentStructureLabel = structureOptions.length
+    ? structureOptions.map((option) => option.title).join(" + ")
+    : tournamentFormatLabel[tournament.format];
+  const tournamentMetaItems = [
+    { label: "Старт", value: formatDate(tournament.startsAt) },
+    { label: "Участники", value: `${activeParticipants.length}/${tournament.maxParticipants}` },
+    { label: "Формат", value: tournamentFormatLabel[tournament.format] },
+    { label: "Режим", value: participantModeLabel(tournament.participantMode, tournament.rosterSize) },
+  ];
   const participantClubMap = Object.fromEntries(
     tournament.participants.map((entry) => [
       entry.userId,
@@ -1236,56 +1252,118 @@ export default async function TournamentDetailsPage({
 
   return (
     <div className="page-shell space-y-8">
-      <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
-        <div className="space-y-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
-            <h1 className="min-w-0 max-w-full break-words font-display text-4xl font-thin text-white">{tournament.title}</h1>
-            <Badge variant={tournamentStatusVariant[tournament.status]} className="shrink-0">
-              {tournamentStatusLabel[tournament.status]}
-            </Badge>
-            {tournament.playoffType ? (
-              <Badge variant="neutral" className="shrink-0">
-                {playoffTypeLabel[tournament.playoffType] ?? tournament.playoffType}
+      <Card className="overflow-hidden rounded-lg border-primary/15 bg-white/[0.025] p-0">
+        <div className="grid gap-5 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-stretch lg:p-6">
+          <div className="min-w-0 space-y-4">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <Badge variant={tournamentStatusVariant[tournament.status]} className="shrink-0">
+                {tournamentStatusLabel[tournament.status]}
               </Badge>
-            ) : null}
+              <Badge variant="neutral" className="shrink-0">
+                {participantModeLabel(tournament.participantMode, tournament.rosterSize)}
+              </Badge>
+              {tournament.playoffType ? (
+                <Badge variant="neutral" className="shrink-0">
+                  {playoffTypeLabel[tournament.playoffType] ?? tournament.playoffType}
+                </Badge>
+              ) : null}
+            </div>
+
+            <div className="min-w-0">
+              <h1 className="max-w-full break-words font-display text-[30px] font-thin uppercase leading-[0.95] tracking-normal text-white sm:text-5xl lg:text-6xl">
+                {tournament.title}
+              </h1>
+              <div className="mt-3 text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+                {tournamentStructureLabel}
+              </div>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {tournamentMetaItems.map((item) => (
+                <div key={item.label} className="min-w-0 rounded-lg border border-white/10 bg-black/20 px-3 py-2.5">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">{item.label}</div>
+                  <div className="mt-1 truncate text-sm font-semibold text-zinc-100">{item.value}</div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-6 text-sm text-zinc-400">
-            <span>Старт: {formatDate(tournament.startsAt)}</span>
-            <span>Участники: {activeParticipants.length}/{tournament.maxParticipants}</span>
+
+          <div className="rounded-lg border border-white/10 bg-black/25 p-4">
+            {canRegister ? (
+              <div className="space-y-3">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Участие</div>
+                  <div className="mt-1 text-lg font-semibold text-white">Заявка открыта</div>
+                  <div className="mt-1 text-sm leading-5 text-zinc-400">Выберите клуб и подтвердите участие в турнире.</div>
+                </div>
+                <RegisterTournamentButton
+                  tournamentId={tournament.id}
+                  clubSelectionMode={tournament.clubSelectionMode ?? ClubSelectionMode.ADMIN_RANDOM}
+                  participantMode={tournament.participantMode}
+                  rosterSize={tournament.rosterSize}
+                  clubs={availableClubs}
+                  takenClubSlugs={takenClubSlugs}
+                />
+              </div>
+            ) : canCancelRegistration ? (
+              <div className="space-y-3">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-300">Ваш статус</div>
+                  <div className="mt-1 flex items-center gap-2 text-lg font-semibold text-white">
+                    <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_14px_rgba(110,231,183,0.55)]" />
+                    Вы зарегистрированы
+                  </div>
+                  <div className="mt-1 text-sm leading-5 text-zinc-400">Место в турнире закреплено. Отмена доступна до старта активной стадии.</div>
+                </div>
+                <CancelTournamentRegistrationButton tournamentId={tournament.id} />
+              </div>
+            ) : isRegistrationOpen ? (
+              <div className="space-y-3">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Участие</div>
+                  <div className="mt-1 text-lg font-semibold text-white">
+                    {!isLoggedIn
+                      ? "Нужен вход"
+                      : needsTelegramConnection
+                        ? "Нужен Telegram"
+                        : needsTelegramUsername
+                          ? "Нужен @username"
+                          : alreadyRegistered
+                            ? "Вы уже зарегистрированы"
+                            : hasFreeSlots
+                              ? "Регистрация недоступна"
+                              : "Лимит достигнут"}
+                  </div>
+                  <div className="mt-1 text-sm leading-5 text-zinc-400">Проверьте требование ниже и продолжите регистрацию.</div>
+                </div>
+                {!isLoggedIn ? (
+                  <Button size="lg" asChild className="w-full">
+                    <a href={`/login?callbackUrl=/tournaments/${tournament.id}`}>Войти, чтобы зарегистрироваться</a>
+                  </Button>
+                ) : needsTelegramConnection ? (
+                  <Button size="lg" asChild className="w-full">
+                    <a href="/dashboard/security">Привязать Telegram</a>
+                  </Button>
+                ) : needsTelegramUsername ? (
+                  <Button size="lg" disabled className="w-full">
+                    Нужен публичный @username
+                  </Button>
+                ) : (
+                  <Button size="lg" disabled className="w-full">
+                    {alreadyRegistered ? "Вы уже зарегистрированы" : hasFreeSlots ? "Регистрация недоступна" : "Лимит достигнут"}
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">Участие</div>
+                <div className="mt-1 text-lg font-semibold text-white">Регистрация закрыта</div>
+                <div className="mt-1 text-sm leading-5 text-zinc-400">Следите за расписанием и стадиями турнира.</div>
+              </div>
+            )}
           </div>
         </div>
-
-        {canRegister ? (
-          <RegisterTournamentButton
-            tournamentId={tournament.id}
-            clubSelectionMode={tournament.clubSelectionMode ?? ClubSelectionMode.ADMIN_RANDOM}
-            participantMode={tournament.participantMode}
-            rosterSize={tournament.rosterSize}
-            clubs={availableClubs}
-            takenClubSlugs={takenClubSlugs}
-          />
-        ) : canCancelRegistration ? (
-          <CancelTournamentRegistrationButton tournamentId={tournament.id} />
-        ) : isRegistrationOpen ? (
-          !isLoggedIn ? (
-            <Button size="lg" asChild>
-              <a href={`/login?callbackUrl=/tournaments/${tournament.id}`}>Войти, чтобы зарегистрироваться</a>
-            </Button>
-          ) : needsTelegramConnection ? (
-            <Button size="lg" asChild>
-              <a href="/dashboard/security">Привязать Telegram для регистрации</a>
-            </Button>
-          ) : needsTelegramUsername ? (
-            <Button size="lg" disabled>
-              Нужен публичный @username Telegram
-            </Button>
-          ) : (
-            <Button size="lg" disabled>
-              {alreadyRegistered ? "Вы уже зарегистрированы" : hasFreeSlots ? "Регистрация недоступна" : "Лимит достигнут"}
-            </Button>
-          )
-        ) : null}
-      </div>
+      </Card>
 
       <Tabs defaultValue={defaultTournamentTab}>
         <div className="max-w-full overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
