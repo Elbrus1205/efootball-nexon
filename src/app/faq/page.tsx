@@ -3,6 +3,7 @@ import { FaqAttachmentKind, ProfileStatusTone } from "@prisma/client";
 import { Card } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { profileStatusClassName } from "@/lib/profile-status-style";
+import { RELIABILITY_MAX_SCORE, RELIABILITY_RECOVERY_SCORE_CAP, RELIABILITY_REGISTRATION_THRESHOLD, RELIABILITY_RESTRICTION_DAYS } from "@/lib/services/reliability";
 
 function attachmentIcon(kind: FaqAttachmentKind) {
   if (kind === FaqAttachmentKind.IMAGE) return ImageIcon;
@@ -73,6 +74,50 @@ const accountSecurityFaqItems = [
   },
 ] as const;
 
+const reliabilityFaqItems = [
+  {
+    title: "Что такое надежность?",
+    paragraphs: [
+      `Надежность - это показатель дисциплины игрока от 0 до ${RELIABILITY_MAX_SCORE}. Он показывает, насколько стабильно игрок подтверждает результаты, доигрывает матчи без технических поражений и не создает спорные ситуации.`,
+      "Система нужна не для наказаний ради наказаний, а для защиты турниров: участники быстрее понимают, кому можно доверять расписание матча, а администрация видит повторяющиеся нарушения.",
+      "Показатель виден в профиле сразу под рейтингом. Там же отображаются текущий статус, серии подтверждений, чистые матчи подряд и последние изменения надежности.",
+    ],
+  },
+  {
+    title: "Какие бывают статусы надежности?",
+    paragraphs: [
+      `90-${RELIABILITY_MAX_SCORE} - отличная надежность. Игрок стабильно закрывает матчи без нарушений.`,
+      "80-89 - хорошая надежность. Игрок допущен к турнирам, но системе уже есть что отслеживать.",
+      `${RELIABILITY_REGISTRATION_THRESHOLD}-79 - допущен. Игрок может регистрироваться, но ему важно избегать технических поражений и спорных результатов.`,
+      `Ниже ${RELIABILITY_REGISTRATION_THRESHOLD} - ограничен. Регистрация в новые турниры временно закрывается, пока ограничение не закончится или показатель не будет восстановлен правилами системы.`,
+    ],
+  },
+  {
+    title: "Как повысить надежность?",
+    paragraphs: [
+      "Подтверждайте результаты вовремя и без задержек. За каждые 10 подтверждений подряд система добавляет +3 к надежности.",
+      "Играйте матчи без технических поражений и нарушений. За каждые 10 чистых матчей подряд система добавляет +4 к надежности.",
+      `Надежность не растет выше ${RELIABILITY_MAX_SCORE}. Если у игрока уже максимум, бонусы фиксируются в истории, но итоговое значение остается ${RELIABILITY_MAX_SCORE}/100.`,
+    ],
+  },
+  {
+    title: "За что надежность снижается?",
+    paragraphs: [
+      "Техническое поражение снижает надежность на 8 пунктов. Это применяется, когда матч завершен форфейтом и система определила проигравшую сторону.",
+      "Если за последние 30 дней уже было техническое поражение, повторное нарушение жестче влияет на профиль: при надежности 80 и выше показатель опускается до 80, а при надежности ниже 80 снимается еще 10 пунктов.",
+      "Негативные события сбрасывают серии подтверждений и чистых матчей. Поэтому после нарушения бонусные серии нужно набирать заново.",
+    ],
+  },
+  {
+    title: "Что происходит при ограничении?",
+    paragraphs: [
+      `Если надежность падает ниже ${RELIABILITY_REGISTRATION_THRESHOLD}, регистрация в новые турниры закрывается на ${RELIABILITY_RESTRICTION_DAYS} дней. Уже сохраненная история матчей и статистика не удаляются.`,
+      `После окончания срока система восстанавливает игрока для повторного допуска: надежность повышается на 10 пунктов, но не выше ${RELIABILITY_RECOVERY_SCORE_CAP}. Если этого достаточно для порога допуска, ограничение снимается.`,
+      "Ограничение не скрывает профиль и не удаляет достижения. Оно только защищает новые турниры от повторных срывов регистрации и матчей.",
+    ],
+  },
+] as const;
+
 export default async function FaqPage() {
   const items = await db.faqItem.findMany({
     where: { isPublished: true },
@@ -111,6 +156,34 @@ export default async function FaqPage() {
 
           <div className="grid gap-3">
             {accountSecurityFaqItems.map((item) => (
+              <details key={item.title} className="group rounded-3xl border border-white/10 bg-white/[0.04] p-5 shadow-glow open:bg-white/[0.06]">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-semibold text-white">
+                  <span>{item.title}</span>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/20 text-lg leading-none text-primary transition group-open:rotate-45">
+                    +
+                  </span>
+                </summary>
+
+                <div className="mt-4 space-y-3 text-sm leading-6 text-zinc-300">
+                  {item.paragraphs.map((paragraph) => (
+                    <p key={paragraph}>{paragraph}</p>
+                  ))}
+                </div>
+              </details>
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+              <LifeBuoy className="h-4 w-4" />
+            </div>
+            <h2 className="text-xl font-semibold text-white">Надежность</h2>
+          </div>
+
+          <div className="grid gap-3">
+            {reliabilityFaqItems.map((item) => (
               <details key={item.title} className="group rounded-3xl border border-white/10 bg-white/[0.04] p-5 shadow-glow open:bg-white/[0.06]">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-semibold text-white">
                   <span>{item.title}</span>

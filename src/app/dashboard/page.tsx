@@ -50,7 +50,9 @@ export default async function DashboardPage({
     getPlayerRatings({ seasonId: ratingSeasonId }),
     getReliabilitySummary(user.id),
   ]);
-  const rating = ratings.find((player) => player.playerId === user.id)?.rating ?? null;
+  const ratingIndex = ratings.findIndex((player) => player.playerId === user.id);
+  const rating = ratingIndex >= 0 ? ratings[ratingIndex].rating : null;
+  const ratingPlace = ratingIndex >= 0 ? ratingIndex + 1 : null;
 
   return (
     <PlayerProfileView
@@ -59,6 +61,7 @@ export default async function DashboardPage({
       seasons={seasons}
       selectedSeason={selectedSeason}
       rating={rating}
+      ratingPlace={ratingPlace}
       careerStats={careerStats}
       achievements={achievements}
       reliability={reliability}

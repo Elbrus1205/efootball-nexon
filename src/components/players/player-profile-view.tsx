@@ -51,6 +51,7 @@ type PlayerProfileViewProps = {
   seasons: Season[];
   selectedSeason: Season | null;
   rating: number | null;
+  ratingPlace: number | null;
   careerStats: PlayerCareerStats;
   achievements: AchievementGroupProgress[];
   reliability: ReliabilitySummary | null;
@@ -99,6 +100,21 @@ function formatProfileRating(rating: number | null) {
   }).format(rating);
 }
 
+function RatingValue({ rating, ratingPlace }: { rating: number | null; ratingPlace: number | null }) {
+  const formattedRating = formatProfileRating(rating);
+
+  return (
+    <div className="mt-2 flex min-w-0 items-start gap-1 text-xl font-black leading-none text-amber-100">
+      <span>{formattedRating}</span>
+      {ratingPlace ? (
+        <sup className="relative top-[-0.35em] text-[0.55em] font-black leading-none text-primary" aria-label={`место ${ratingPlace}`}>
+          {ratingPlace}
+        </sup>
+      ) : null}
+    </div>
+  );
+}
+
 function ReliabilityPanel({ reliability }: { reliability: ReliabilitySummary | null }) {
   if (!reliability) return null;
 
@@ -119,7 +135,7 @@ function ReliabilityPanel({ reliability }: { reliability: ReliabilitySummary | n
     : null;
 
   return (
-    <Card className="overflow-hidden rounded-lg border-white/10 bg-white/[0.03] p-5 sm:p-6">
+    <div className="mt-5 overflow-hidden rounded-lg border border-white/10 bg-black/20 p-4 sm:p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -174,7 +190,7 @@ function ReliabilityPanel({ reliability }: { reliability: ReliabilitySummary | n
           ))}
         </div>
       ) : null}
-    </Card>
+    </div>
   );
 }
 
@@ -184,6 +200,7 @@ export function PlayerProfileView({
   seasons,
   selectedSeason,
   rating,
+  ratingPlace,
   careerStats,
   achievements,
   reliability,
@@ -283,9 +300,10 @@ export function PlayerProfileView({
         </div>
 
         <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4 sm:p-6">
-          <div className="border-b border-white/10 pb-3">
+          <div className="border-b border-white/10 pb-4 sm:col-span-2 lg:col-span-4">
             <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Рейтинг</div>
-            <div className="mt-2 text-xl font-black leading-none text-amber-100">{formatProfileRating(rating)}</div>
+            <RatingValue rating={rating} ratingPlace={ratingPlace} />
+            <ReliabilityPanel reliability={reliability} />
           </div>
 
           <div className="border-b border-white/10 pb-3">
@@ -333,8 +351,6 @@ export function PlayerProfileView({
           ) : null}
         </div>
       </Card>
-
-      <ReliabilityPanel reliability={reliability} />
 
       <Card className="rounded-lg p-5">
         <div className="font-semibold text-white">Статусы профиля</div>
