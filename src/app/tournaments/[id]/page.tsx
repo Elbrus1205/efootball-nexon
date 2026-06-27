@@ -1071,15 +1071,16 @@ export default async function TournamentDetailsPage({
       : [];
 
   const takenClubSlugs = activeParticipants.map((entry) => entry.clubSlug).filter(Boolean) as string[];
-  const structureSectionTitle = tournament.format === TournamentFormat.CUSTOM ? groupStage?.name?.trim() || "Лиги" : "Группы";
+  const isLeagueStructure = tournament.format === TournamentFormat.LEAGUE || tournament.format === TournamentFormat.ROUND_ROBIN;
+  const structureSectionTitle = tournament.format === TournamentFormat.CUSTOM ? groupStage?.name?.trim() || "Лиги" : isLeagueStructure ? "Лига" : "Группы";
   const customStandingHighlights = buildCustomStandingHighlights(tournament);
   const structureOptions: TournamentStructureOption[] = [
     ...(groupStage
       ? [
           {
             id: "groups",
-            title: "Групповой этап",
-            caption: pluralRu(groupStage.groups.length, "группа", "группы", "групп"),
+            title: isLeagueStructure ? "Лига" : "Групповой этап",
+            caption: isLeagueStructure ? "Общая таблица" : pluralRu(groupStage.groups.length, "группа", "группы", "групп"),
           },
         ]
       : []),
@@ -1397,7 +1398,9 @@ export default async function TournamentDetailsPage({
                               highlights={customStandingHighlights.get(group.orderIndex) ?? []}
                             />
                           ) : (
-                            <div className="px-4 py-4 text-sm text-zinc-500">Участники группы появятся здесь после регистрации или распределения.</div>
+                            <div className="px-4 py-4 text-sm text-zinc-500">
+                              {isLeagueStructure ? "Участники лиги появятся здесь после регистрации или распределения." : "Участники группы появятся здесь после регистрации или распределения."}
+                            </div>
                           )}
                           <EmptyGroupSlots slots={emptySlots} />
                         </Card>
