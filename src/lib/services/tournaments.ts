@@ -1333,29 +1333,38 @@ async function createPlayoffMatches({
 
   if (thirdPlaceMatch && type !== PlayoffType.DOUBLE && rounds >= 2) {
     const semifinalLegs = createdMatches.filter((match) => match.round === rounds - 1 && match.legNumber === 1);
-    const thirdPlace = await db.match.create({
-      data: {
-        tournamentId,
-        stageId,
-        bracketId,
-        round: rounds,
-        matchNumber: 2,
-        bracket: "upper",
-        seriesKey: createSeriesKey(bracketId, "upper", rounds, 2, "third-place"),
-        legNumber: 1,
-        seriesWinsRequired,
-        seriesMatchNumber: seriesWinsRequired ? 1 : null,
-        isThirdPlaceMatch: true,
-        status: MatchStatus.PENDING,
-      },
-    });
+    const thirdPlaceSeriesKey = createSeriesKey(bracketId, "upper", rounds, 2, "third-place");
+    const thirdPlaceMatches = await Promise.all(
+      Array.from({ length: effectiveLegsCount }, (_, index) => {
+        const legNumber = index + 1;
+
+        return db.match.create({
+          data: {
+            tournamentId,
+            stageId,
+            bracketId,
+            round: rounds,
+            matchNumber: 2,
+            bracket: "upper",
+            seriesKey: thirdPlaceSeriesKey,
+            legNumber,
+            seriesWinsRequired,
+            seriesMatchNumber: seriesWinsRequired ? legNumber : null,
+            isThirdPlaceMatch: true,
+            status: MatchStatus.PENDING,
+          },
+        });
+      }),
+    );
+    const firstThirdPlaceMatch = thirdPlaceMatches[0];
+    if (!firstThirdPlaceMatch) return;
 
     await Promise.all(
       semifinalLegs.slice(0, 2).map((semifinal, index) =>
         db.match.updateMany({
           where: { seriesKey: semifinal.seriesKey },
           data: {
-            loserNextMatchId: thirdPlace.id,
+            loserNextMatchId: firstThirdPlaceMatch.id,
             loserNextMatchSlot: index === 0 ? 1 : 2,
           },
         }),
@@ -1372,6 +1381,8 @@ async function ensureGroupsPlayoffBracketShape(params: {
   legsCount: number;
   thirdPlaceMatch: boolean;
   bracketSize: number;
+  matchupFormat?: MatchupFormat;
+  bestOfWins?: number;
 }) {
   const existingMatches = await db.match.findMany({
     where: { bracketId: params.bracketId },
@@ -1400,9 +1411,20 @@ async function ensureGroupsPlayoffBracketShape(params: {
       legsCount: params.legsCount,
       thirdPlaceMatch: params.thirdPlaceMatch,
       sizeOverride: params.bracketSize,
+      matchupFormat: params.matchupFormat,
+      bestOfWins: params.bestOfWins,
     });
     return;
   }
+
+  await ensureThirdPlaceSeriesShape({
+    tournamentId: params.tournamentId,
+    stageId: params.stageId,
+    bracketId: params.bracketId,
+    rounds: Math.log2(params.bracketSize),
+    thirdPlaceMatch: params.thirdPlaceMatch && params.type !== PlayoffType.DOUBLE,
+    seriesWinsRequired: params.matchupFormat === MatchupFormat.BEST_OF ? Math.max(2, Math.min(params.bestOfWins ?? 1, 9)) : null,
+  });
 
   if (existingRoundOneMatches === expectedRoundOneMatches) {
     return;
@@ -1442,7 +1464,70 @@ async function ensureGroupsPlayoffBracketShape(params: {
     legsCount: params.legsCount,
     thirdPlaceMatch: params.thirdPlaceMatch,
     sizeOverride: params.bracketSize,
+    matchupFormat: params.matchupFormat,
+    bestOfWins: params.bestOfWins,
   });
+}
+
+async function ensureThirdPlaceSeriesShape({
+  tournamentId,
+  stageId,
+  bracketId,
+  rounds,
+  thirdPlaceMatch,
+  seriesWinsRequired,
+}: {
+  tournamentId: string;
+  stageId: string;
+  bracketId: string;
+  rounds: number;
+  thirdPlaceMatch: boolean;
+  seriesWinsRequired: number | null;
+}) {
+  if (!thirdPlaceMatch || !seriesWinsRequired || seriesWinsRequired <= 1 || rounds < 2) {
+    return;
+  }
+
+  const seriesKey = createSeriesKey(bracketId, "upper", rounds, 2, "third-place");
+  const expectedMatchesCount = seriesWinsRequired * 2 - 1;
+  const existingThirdPlaceMatches = await db.match.findMany({
+    where: {
+      bracketId,
+      seriesKey,
+      isThirdPlaceMatch: true,
+      isPenaltyTiebreak: false,
+    },
+    orderBy: [{ legNumber: "asc" }, { createdAt: "asc" }],
+  });
+  const existingLegNumbers = new Set(existingThirdPlaceMatches.map((match) => match.legNumber ?? 1));
+  const referenceMatch = existingThirdPlaceMatches[0];
+
+  for (let legNumber = 1; legNumber <= expectedMatchesCount; legNumber += 1) {
+    if (existingLegNumbers.has(legNumber)) {
+      continue;
+    }
+
+    await db.match.create({
+      data: {
+        tournamentId,
+        stageId,
+        bracketId,
+        round: rounds,
+        matchNumber: 2,
+        bracket: "upper",
+        seriesKey,
+        legNumber,
+        seriesWinsRequired,
+        seriesMatchNumber: legNumber,
+        isThirdPlaceMatch: true,
+        participant1EntryId: referenceMatch?.participant1EntryId,
+        participant2EntryId: referenceMatch?.participant2EntryId,
+        player1Id: referenceMatch?.player1Id,
+        player2Id: referenceMatch?.player2Id,
+        status: referenceMatch?.player1Id && referenceMatch?.player2Id ? MatchStatus.READY : MatchStatus.PENDING,
+      },
+    });
+  }
 }
 
 async function createCustomFormatStages(params: {
@@ -1714,10 +1799,20 @@ async function ensureCustomPlayoffMatchesGenerated(tournamentId: string) {
 
   for (const stage of tournament.stages) {
     if (!stage.bracket) continue;
-    if (stage.bracket.matches.length) continue;
-
     const customSettings = parseCustomBracketSettings(stage.bracket.settingsJson);
     if (!customSettings) continue;
+
+    if (stage.bracket.matches.length) {
+      await ensureThirdPlaceSeriesShape({
+        tournamentId,
+        stageId: stage.id,
+        bracketId: stage.bracket.id,
+        rounds: Math.log2(stage.bracket.size),
+        thirdPlaceMatch: stage.bracket.thirdPlaceMatch && stage.bracket.type !== PlayoffType.DOUBLE,
+        seriesWinsRequired: tournament.matchupFormat === MatchupFormat.BEST_OF ? Math.max(2, Math.min(tournament.bestOfWins, 9)) : null,
+      });
+      continue;
+    }
 
     await createPlayoffMatches({
       tournamentId,
@@ -1728,6 +1823,8 @@ async function ensureCustomPlayoffMatchesGenerated(tournamentId: string) {
       legsCount: stage.bracket.legsCount,
       thirdPlaceMatch: stage.bracket.thirdPlaceMatch,
       sizeOverride: nextPowerOfTwo(Math.max(customSettings.upperEntriesCount, customSettings.lowerEntriesCount, 2)),
+      matchupFormat: tournament.matchupFormat,
+      bestOfWins: tournament.bestOfWins,
     });
   }
 }
@@ -2094,7 +2191,17 @@ export async function generateTournamentMatches(tournamentId: string) {
         continue;
       } else {
         const existingCount = await db.match.count({ where: { bracketId: stage.bracket.id } });
-        if (existingCount > 0) continue;
+        if (existingCount > 0) {
+          await ensureThirdPlaceSeriesShape({
+            tournamentId,
+            stageId: stage.id,
+            bracketId: stage.bracket.id,
+            rounds: Math.log2(stage.bracket.size),
+            thirdPlaceMatch: stage.bracket.thirdPlaceMatch && stage.bracket.type !== PlayoffType.DOUBLE,
+            seriesWinsRequired: tournament.matchupFormat === MatchupFormat.BEST_OF ? Math.max(2, Math.min(tournament.bestOfWins, 9)) : null,
+          });
+          continue;
+        }
         const playoffEntries =
           tournament.format === TournamentFormat.GROUPS_PLAYOFF
             ? []
@@ -2584,6 +2691,8 @@ export async function generatePlayoffFromGroups(tournamentId: string) {
     legsCount: playoffStage.bracket.legsCount,
     thirdPlaceMatch: playoffStage.bracket.thirdPlaceMatch,
     bracketSize,
+    matchupFormat: tournament.matchupFormat,
+    bestOfWins: tournament.bestOfWins,
   });
 
   const roundOneMatches = await db.match.findMany({

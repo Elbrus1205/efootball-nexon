@@ -22,6 +22,21 @@ type RegulationsPayload = {
   };
 };
 
+function formatRegulationsVersion(version: string, updatedAt?: string | null) {
+  const date = new Date(updatedAt ?? version);
+  if (Number.isNaN(date.getTime())) {
+    return version;
+  }
+
+  return new Intl.DateTimeFormat("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
 export function RegulationsUpdateModal() {
   const { status } = useSession();
   const [payload, setPayload] = useState<RegulationsPayload | null>(null);
@@ -54,6 +69,7 @@ export function RegulationsUpdateModal() {
     ? payload.regulations.highlights
     : payload.regulations.body.split("\n").map((text) => ({ text, changed: false }));
   const changedCount = lines.filter((line) => line.changed).length;
+  const versionLabel = formatRegulationsVersion(payload.regulations.version, payload.regulations.updatedAt);
 
   function accept() {
     startTransition(async () => {
@@ -91,7 +107,7 @@ export function RegulationsUpdateModal() {
             </div>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
-            <span className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-1">v{payload.regulations.version}</span>
+            <span className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-1">Версия от {versionLabel}</span>
             {changedCount ? <span className="rounded-md border border-[#C9A24D]/25 bg-[#C9A24D]/10 px-2 py-1 text-[#E7CF8F]">Изменений: {changedCount}</span> : null}
           </div>
         </div>
