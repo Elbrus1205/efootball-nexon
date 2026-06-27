@@ -1271,7 +1271,7 @@ export default async function TournamentDetailsPage({
             </div>
 
             <div className="min-w-0">
-              <h1 className="max-w-full break-words font-display text-[30px] font-thin uppercase leading-[0.95] tracking-normal text-white sm:text-5xl lg:text-6xl">
+              <h1 className="max-w-full break-words font-display text-[20px] font-thin uppercase leading-[0.95] tracking-normal text-white sm:text-[32px] lg:text-[40px]">
                 {tournament.title}
               </h1>
             </div>
