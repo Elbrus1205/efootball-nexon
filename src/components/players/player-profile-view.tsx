@@ -124,72 +124,24 @@ function ReliabilityPanel({ reliability }: { reliability: ReliabilitySummary | n
     allowed: "border-amber-300/30 bg-amber-400/10 text-amber-100",
     restricted: "border-red-300/30 bg-red-500/10 text-red-200",
   } satisfies Record<ReliabilitySummary["status"]["tone"], string>;
-  const restrictedUntilDate = reliability.restrictedUntil && reliability.restrictedUntil > new Date() ? reliability.restrictedUntil : null;
-  const progressWidth = `${Math.min(100, Math.max(0, reliability.score))}%`;
-  const restrictedUntil = restrictedUntilDate
-    ? new Intl.DateTimeFormat("ru-RU", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-      }).format(restrictedUntilDate)
-    : null;
+  const StatusIcon = reliability.status.tone === "restricted" ? AlertTriangle : ShieldCheck;
 
   return (
-    <div className="mt-5 overflow-hidden rounded-lg border border-white/10 bg-black/20 p-4 sm:p-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-4">
+      <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-amber-300/20 bg-amber-300/10 text-amber-200">
-              <ShieldCheck className="h-4 w-4" />
-            </span>
-            <div>
-              <div className="text-sm font-semibold uppercase tracking-[0.16em] text-zinc-500">Надежность</div>
-              <div className="mt-1 text-2xl font-black leading-none text-white">{reliability.score}/100</div>
-            </div>
+          <div className="text-sm font-semibold uppercase tracking-[0.16em] text-zinc-500">Надежность</div>
+          <div className="mt-2 flex items-baseline gap-1 text-2xl font-black leading-none text-white">
+            <span>{reliability.score}</span>
+            <span className="text-sm font-bold text-zinc-500">/100</span>
           </div>
         </div>
 
-        <div className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold ${statusClasses[reliability.status.tone]}`}>
-          {restrictedUntilDate ? <AlertTriangle className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+        <div className={`inline-flex w-fit shrink-0 items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold ${statusClasses[reliability.status.tone]}`}>
+          <StatusIcon className="h-3.5 w-3.5" />
           {reliability.status.label}
         </div>
       </div>
-
-      <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10">
-        <div className="h-full rounded-full bg-gradient-to-r from-red-400 via-amber-300 to-emerald-300" style={{ width: progressWidth }} />
-      </div>
-
-      {restrictedUntil ? (
-        <div className="mt-4 rounded-lg border border-red-300/15 bg-red-500/10 px-3 py-2 text-sm font-medium leading-5 text-red-100">
-          Регистрация в новые турниры ограничена до {restrictedUntil}. После срока система добавит +10 к надежности.
-        </div>
-      ) : null}
-
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-lg border border-white/10 bg-black/20 p-3">
-          <div className="text-xs uppercase tracking-[0.16em] text-zinc-500">Подтверждения подряд</div>
-          <div className="mt-2 text-xl font-black text-white">{reliability.confirmStreak}/10</div>
-          <div className="mt-1 text-xs text-zinc-500">За каждые 10 без задержек: +3</div>
-        </div>
-        <div className="rounded-lg border border-white/10 bg-black/20 p-3">
-          <div className="text-xs uppercase tracking-[0.16em] text-zinc-500">Чистые матчи подряд</div>
-          <div className="mt-2 text-xl font-black text-white">{reliability.cleanMatchStreak}/10</div>
-          <div className="mt-1 text-xs text-zinc-500">За каждые 10 без ТП: +4</div>
-        </div>
-      </div>
-
-      {reliability.recentEvents.length ? (
-        <div className="mt-5 space-y-2">
-          {reliability.recentEvents.map((event) => (
-            <div key={event.id} className="flex items-start justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.025] px-3 py-2">
-              <div className="min-w-0 text-sm leading-5 text-zinc-300">{event.reason}</div>
-              <div className={event.delta >= 0 ? "shrink-0 text-sm font-black text-emerald-200" : "shrink-0 text-sm font-black text-red-200"}>
-                {event.delta > 0 ? `+${event.delta}` : event.delta}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : null}
     </div>
   );
 }
