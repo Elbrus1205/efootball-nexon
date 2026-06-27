@@ -7,6 +7,7 @@ import { getPlayerCareerStats } from "@/lib/player-stats";
 import { getActiveProfileStatusWhere } from "@/lib/profile-status-query";
 import { notifyExpiredProfileStatuses } from "@/lib/profile-statuses";
 import { getPlayerRatings } from "@/lib/ratings";
+import { getReliabilitySummary } from "@/lib/services/reliability";
 
 export default async function DashboardPage({
   searchParams,
@@ -43,10 +44,11 @@ export default async function DashboardPage({
   const selectedSeason = searchParams?.season ? seasons.find((season) => season.id === searchParams.season || season.slug === searchParams.season) ?? null : null;
   const activeSeason = seasons.find((season) => season.isActive) ?? null;
   const ratingSeasonId = selectedSeason?.id ?? activeSeason?.id ?? null;
-  const [careerStats, achievements, ratings] = await Promise.all([
+  const [careerStats, achievements, ratings, reliability] = await Promise.all([
     getPlayerCareerStats(user.id, { seasonId: selectedSeason?.id ?? null }),
     getUserAchievementProgress(user.id),
     getPlayerRatings({ seasonId: ratingSeasonId }),
+    getReliabilitySummary(user.id),
   ]);
   const rating = ratings.find((player) => player.playerId === user.id)?.rating ?? null;
 
@@ -59,6 +61,7 @@ export default async function DashboardPage({
       rating={rating}
       careerStats={careerStats}
       achievements={achievements}
+      reliability={reliability}
       basePath="/dashboard"
       editHref="/dashboard/edit"
     />

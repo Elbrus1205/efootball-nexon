@@ -5,6 +5,7 @@ import { requireAnyPermission, requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { createNotification } from "@/lib/services/notifications";
+import { formatReliabilityRegistrationRestriction, syncReliabilityRestriction } from "@/lib/services/reliability";
 import { recalculateGroupStandings } from "@/lib/services/tournaments";
 import { hasTelegramRegistrationContact } from "@/lib/social-links";
 import { participantManageSchema } from "@/lib/validators";
@@ -75,6 +76,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     if (banMessage) {
       return NextResponse.json({ error: banMessage }, { status: 403 });
+    }
+
+    const syncedReliability = await syncReliabilityRestriction(body.userId);
+    const reliabilityRestriction = formatReliabilityRegistrationRestriction(syncedReliability);
+    if (reliabilityRestriction) {
+      return NextResponse.json({ error: reliabilityRestriction }, { status: 403 });
     }
 
     if ((await tournamentRequiresTelegram(params.id)) && !hasTelegramRegistrationContact(user)) {
@@ -159,6 +166,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     if (banMessage) {
       return NextResponse.json({ error: banMessage }, { status: 403 });
+    }
+
+    const syncedReliability = await syncReliabilityRestriction(replacementUser.id);
+    const reliabilityRestriction = formatReliabilityRegistrationRestriction(syncedReliability);
+    if (reliabilityRestriction) {
+      return NextResponse.json({ error: reliabilityRestriction }, { status: 403 });
     }
 
     if ((await tournamentRequiresTelegram(params.id)) && !hasTelegramRegistrationContact(replacementUser)) {

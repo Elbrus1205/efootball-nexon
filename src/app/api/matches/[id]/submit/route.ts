@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth/session";
 import { syncUserAchievementsForUsers } from "@/lib/achievements";
 import { db } from "@/lib/db";
 import { createNotification } from "@/lib/services/notifications";
+import { recordConfirmedMatchReliability } from "@/lib/services/reliability";
 import { recalculateGroupStandings, resolveConfirmedMatch } from "@/lib/services/tournaments";
 import { resultSubmissionSchema } from "@/lib/validators";
 
@@ -225,6 +226,11 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     await recalculateGroupStandings(match.tournamentId);
     await resolveConfirmedMatch(match.id);
+    await recordConfirmedMatchReliability({
+      userIds: [match.player1Id, match.player2Id],
+      matchId: match.id,
+      tournamentId: match.tournamentId,
+    });
 
     await createMatchOutcomeNotifications(
       { ...match, winnerId },

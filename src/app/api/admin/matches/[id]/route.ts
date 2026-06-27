@@ -4,6 +4,7 @@ import { assertCanManageMatch } from "@/lib/admin-tournament-access";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
+import { applyTechnicalLossPenalty, recordConfirmedMatchReliability } from "@/lib/services/reliability";
 import { recalculateGroupStandings, resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { matchUpdateSchema } from "@/lib/validators";
 
@@ -72,6 +73,14 @@ function resolveWinner(params: {
 
 function isMultiLegPlayoffCandidate(match: Match) {
   return Boolean(match.bracketId && match.seriesKey && !match.isPenaltyTiebreak && !(match.seriesWinsRequired && match.seriesWinsRequired > 1));
+}
+
+function getForfeitLoserId(match: Pick<Match, "player1Id" | "player2Id" | "winnerId" | "player1Score" | "player2Score">) {
+  if (match.winnerId && match.player1Id === match.winnerId) return match.player2Id;
+  if (match.winnerId && match.player2Id === match.winnerId) return match.player1Id;
+  if (match.player1Score !== null && match.player2Score !== null && match.player1Score > match.player2Score) return match.player2Id;
+  if (match.player1Score !== null && match.player2Score !== null && match.player2Score > match.player1Score) return match.player1Id;
+  return null;
 }
 
 function sortSeriesMatches(a: Match, b: Match) {
@@ -207,7 +216,25 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   if (updated.status === MatchStatus.CONFIRMED || updated.status === MatchStatus.FINISHED) {
     await resolveConfirmedMatch(updated.id);
+    await recordConfirmedMatchReliability({
+      userIds: [updated.player1Id, updated.player2Id],
+      matchId: updated.id,
+      tournamentId: updated.tournamentId,
+    });
     await syncTournamentLifecycleStatus(updated.tournamentId);
+  }
+
+  if (updated.status === MatchStatus.FORFEIT) {
+    const loserId = getForfeitLoserId(updated);
+    if (loserId) {
+      await applyTechnicalLossPenalty({
+        userId: loserId,
+        matchId: updated.id,
+        tournamentId: updated.tournamentId,
+        actorId: session.user.id,
+        dedupeKey: `match-forfeit:${updated.id}`,
+      });
+    }
   }
 
   await logAdminAction({

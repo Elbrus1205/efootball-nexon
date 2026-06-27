@@ -7,6 +7,7 @@ import { requireAuth } from "@/lib/auth/session";
 import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
 import { hasAcceptedCurrentRegulations } from "@/lib/regulations";
+import { formatReliabilityRegistrationRestriction, syncReliabilityRestriction } from "@/lib/services/reliability";
 import { createNotification } from "@/lib/services/notifications";
 import { getTournamentGroupCapacityLimit, syncTournamentLifecycleStatus, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
 import { hasTelegramRegistrationContact } from "@/lib/social-links";
@@ -22,6 +23,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   if (banMessage) {
     return NextResponse.json({ error: banMessage }, { status: 403 });
+  }
+
+  const syncedReliability = await syncReliabilityRestriction(session.user.id);
+  const reliabilityRestriction = formatReliabilityRegistrationRestriction(syncedReliability);
+  if (reliabilityRestriction) {
+    return NextResponse.json({ error: reliabilityRestriction }, { status: 403 });
   }
 
   const hasAcceptedRegulations = await hasAcceptedCurrentRegulations(session.user.id);
