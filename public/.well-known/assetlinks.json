@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.efootballnexon.app",
+      "sha256_cert_fingerprints": [
+        "33:25:9F:46:EB:93:8A:A5:32:C7:47:C7:2D:42:00:3A:98:2B:0F:82:FF:70:19:49:80:52:FA:F5:D5:CE:87:A3"
+      ]
+    }
+  }
+]
