@@ -502,11 +502,6 @@ export function BracketView({
   const boardWidth = orderedRounds.length * columnWidth + Math.max(orderedRounds.length - 1, 0) * columnGap;
   const boardHeight = Math.max(firstRoundSize * slotHeight, 260);
   const totalBoardHeight = titleHeight + boardHeight;
-  const playerPath = currentUserId
-    ? mainSeriesList
-        .filter((series) => getBracketSideUserId(series.referenceMatch, 1) === currentUserId || getBracketSideUserId(series.referenceMatch, 2) === currentUserId)
-        .sort((a, b) => a.round - b.round || a.matchNumber - b.matchNumber)
-    : [];
 
   const getCenterY = (roundIndex: number, matchIndex: number) => {
     const step = slotHeight * 2 ** roundIndex;
@@ -532,39 +527,6 @@ export function BracketView({
           Плей-офф
         </div>
       </div>
-
-      {playerPath.length ? (
-        <div className="px-3 pb-2 sm:px-7">
-          <div className="rounded-2xl border border-primary/25 bg-black/25 p-3 sm:p-4">
-            <div className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">Путь игрока</div>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {playerPath.map((series) => {
-                const match = series.referenceMatch;
-                const opponent = getBracketSideUserId(match, 1) === currentUserId ? match.player2 : match.player1;
-                const winnerId = getSeriesWinner(series);
-                const resultLabel = winnerId ? (winnerId === currentUserId ? "Победа" : "Поражение") : "Ожидает";
-                const resultClass = winnerId
-                  ? winnerId === currentUserId
-                    ? "border-emerald-300/25 bg-emerald-400/10 text-emerald-100"
-                    : "border-rose-300/25 bg-rose-500/10 text-rose-100"
-                  : "border-white/10 bg-white/[0.04] text-zinc-300";
-
-                return (
-                  <div key={series.key} className="min-w-0 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">{roundTitle(series.round, totalRounds)}</span>
-                      <span className={cn("shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold", resultClass)}>{resultLabel}</span>
-                    </div>
-                    <div className="mt-1 truncate text-sm font-semibold text-white">
-                      {opponent ? getPlayerDisplayName(opponent) : "Соперник не назначен"}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      ) : null}
 
       <div className="px-3 pb-5 pt-3 md:hidden">
         {orderedRounds.length ? (

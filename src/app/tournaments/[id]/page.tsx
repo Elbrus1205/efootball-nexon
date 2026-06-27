@@ -1264,6 +1264,7 @@ export default async function TournamentDetailsPage({
       </Card>
     );
   const allRosterCards = renderRosterCards(filteredParticipants);
+  const showTournamentActionPanel = canRegister || canCancelRegistration || isRegistrationOpen;
 
   logTiming("tournament-page", pageStart);
 
@@ -1272,7 +1273,9 @@ export default async function TournamentDetailsPage({
       <Card className="overflow-hidden rounded-lg border-primary/15 bg-white/[0.025] p-0">
         <div
           className={
-            canCancelRegistration
+            !showTournamentActionPanel
+              ? "p-4 sm:p-5 lg:p-6"
+              : canCancelRegistration
               ? "grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_190px] lg:items-start lg:p-6"
               : "grid gap-5 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-stretch lg:p-6"
           }
@@ -1308,6 +1311,7 @@ export default async function TournamentDetailsPage({
             </div>
           </div>
 
+          {showTournamentActionPanel ? (
           <div className={canCancelRegistration ? "rounded-lg border border-white/10 bg-black/25 p-2.5 lg:self-start" : "rounded-lg border border-white/10 bg-black/25 p-4"}>
             {canRegister ? (
               <div className="space-y-3">
@@ -1378,14 +1382,9 @@ export default async function TournamentDetailsPage({
                   </Button>
                 )}
               </div>
-            ) : (
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">Участие</div>
-                <div className="mt-1 text-lg font-semibold text-white">Регистрация закрыта</div>
-                <div className="mt-1 text-sm leading-5 text-zinc-400">Следите за расписанием и стадиями турнира.</div>
-              </div>
-            )}
+            ) : null}
           </div>
+          ) : null}
         </div>
       </Card>
 
