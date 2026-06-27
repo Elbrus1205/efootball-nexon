@@ -154,13 +154,14 @@ function FieldLabel({ children }: { children: ReactNode }) {
 }
 
 const technicalLossReasonOptions = [
+  { value: "", label: "—" },
   { value: "Техническое поражение: игрок не явился на матч.", label: "Не явился" },
   { value: "Техническое поражение: игрок отказался играть матч.", label: "Отказался" },
   { value: "Техническое поражение: нарушение правил матча.", label: "Нарушение правил" },
   { value: "Техническое поражение: админская замена или форфейт.", label: "Форфейт" },
 ] as const;
 
-const defaultTechnicalLossReason = technicalLossReasonOptions[0].value;
+const defaultTechnicalLossReason = "";
 
 function MatchSideSelect({
   label,
