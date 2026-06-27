@@ -1,7 +1,7 @@
 "use client";
 
 import { ClubSelectionMode, TournamentParticipantMode } from "@prisma/client";
-import { CheckCircle2, ScrollText, X } from "lucide-react";
+import { CheckCircle2, Search, ScrollText, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,10 @@ type RegulationsState = {
 
 type AfterRegulationsAction = "register" | "choose-club";
 
+function normalizeClubSearch(value: string) {
+  return value.trim().toLowerCase().replace(/ё/g, "е");
+}
+
 export function RegisterTournamentButton({
   tournamentId,
   clubSelectionMode,
@@ -39,6 +43,7 @@ export function RegisterTournamentButton({
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedClubSlug, setSelectedClubSlug] = useState("");
+  const [clubSearch, setClubSearch] = useState("");
   const [teamName, setTeamName] = useState("");
   const [message, setMessage] = useState("");
   const [regulations, setRegulations] = useState<RegulationsState | null>(null);
@@ -53,6 +58,15 @@ export function RegisterTournamentButton({
     () => clubs.filter((club) => !takenClubSlugs.includes(club.slug)),
     [clubs, takenClubSlugs],
   );
+  const filteredClubs = useMemo(() => {
+    const query = normalizeClubSearch(clubSearch);
+    if (!query) return clubs;
+
+    return clubs.filter((club) => {
+      const searchable = [club.name, club.slug, club.imagePath].map(normalizeClubSearch).join(" ");
+      return searchable.includes(query);
+    });
+  }, [clubSearch, clubs]);
 
   const loadRegulations = async () => {
     const response = await fetch("/api/regulations/acceptance", { cache: "no-store" });
@@ -292,43 +306,64 @@ export function RegisterTournamentButton({
             ) : null}
 
             {clubSelectionMode === ClubSelectionMode.PLAYER_PICK ? (
-            <div className="grid min-h-0 flex-1 grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3 sm:gap-3">
-              {clubs.map((club) => {
-                const taken = takenClubSlugs.includes(club.slug);
-                const selected = selectedClubSlug === club.slug;
+              <>
+                <label className="block space-y-2">
+                  <span className="text-sm font-medium text-zinc-200">Поиск клуба</span>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                    <input
+                      value={clubSearch}
+                      onChange={(event) => setClubSearch(event.target.value)}
+                      className="h-11 w-full rounded-2xl border border-white/10 bg-black/40 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-primary/60"
+                      placeholder="Введите название клуба"
+                    />
+                  </div>
+                </label>
 
-                return (
-                  <button
-                    key={club.slug}
-                    type="button"
-                    disabled={taken}
-                    onClick={() => setSelectedClubSlug(club.slug)}
-                    className={`group flex min-h-[112px] flex-col items-center justify-center gap-2 rounded-xl border px-2.5 py-3 text-center transition sm:min-h-[118px] sm:px-3 ${
-                      taken
-                        ? "cursor-not-allowed border-white/10 bg-white/5 opacity-50"
-                        : selected
-                          ? "border-primary bg-primary/15 shadow-[0_0_0_1px_rgba(218,183,106,0.18),0_14px_28px_rgba(185,148,79,0.1)]"
-                          : "border-white/10 bg-white/[0.03] hover:border-primary/40 hover:bg-white/[0.06]"
-                    }`}
-                  >
-                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-black/30 transition sm:h-14 sm:w-14 ${
-                      selected ? "border-primary/60" : "border-white/10 group-hover:border-white/20"
-                    }`}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={club.imagePath} alt={club.name} className="h-full w-full object-contain p-1" />
+                <div className="grid min-h-0 flex-1 grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3 sm:gap-3">
+                  {filteredClubs.map((club) => {
+                    const taken = takenClubSlugs.includes(club.slug);
+                    const selected = selectedClubSlug === club.slug;
+
+                    return (
+                      <button
+                        key={club.slug}
+                        type="button"
+                        disabled={taken}
+                        onClick={() => setSelectedClubSlug(club.slug)}
+                        className={`group flex min-h-[112px] flex-col items-center justify-center gap-2 rounded-xl border px-2.5 py-3 text-center transition sm:min-h-[118px] sm:px-3 ${
+                          taken
+                            ? "cursor-not-allowed border-white/10 bg-white/5 opacity-50"
+                            : selected
+                              ? "border-primary bg-primary/15 shadow-[0_0_0_1px_rgba(218,183,106,0.18),0_14px_28px_rgba(185,148,79,0.1)]"
+                              : "border-white/10 bg-white/[0.03] hover:border-primary/40 hover:bg-white/[0.06]"
+                        }`}
+                      >
+                        <div
+                          className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-black/30 transition sm:h-14 sm:w-14 ${
+                            selected ? "border-primary/60" : "border-white/10 group-hover:border-white/20"
+                          }`}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={club.imagePath} alt={club.name} className="h-full w-full object-contain p-1" />
+                        </div>
+                        <div className="min-w-0 space-y-1">
+                          <div className="line-clamp-2 text-xs font-semibold leading-snug text-white sm:text-sm">{club.name}</div>
+                          <div className={`text-[10px] font-medium leading-tight sm:text-xs ${taken ? "text-red-300/80" : selected ? "text-primary" : "text-zinc-500"}`}>
+                            {taken ? "Клуб уже занят" : selected ? "Выбран" : "Свободен"}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+
+                  {!filteredClubs.length ? (
+                    <div className="col-span-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-6 text-center text-sm text-zinc-500 sm:col-span-3">
+                      Клубы по запросу не найдены.
                     </div>
-                    <div className="min-w-0 space-y-1">
-                      <div className="line-clamp-2 text-xs font-semibold leading-snug text-white sm:text-sm">{club.name}</div>
-                      <div className={`text-[10px] font-medium leading-tight sm:text-xs ${
-                        taken ? "text-red-300/80" : selected ? "text-primary" : "text-zinc-500"
-                      }`}>
-                        {taken ? "Клуб уже занят" : selected ? "Выбран" : "Свободен"}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                  ) : null}
+                </div>
+              </>
             ) : null}
 
             <div className="flex flex-col gap-3 border-t border-white/10 pt-3 sm:flex-row sm:items-center sm:justify-between">
