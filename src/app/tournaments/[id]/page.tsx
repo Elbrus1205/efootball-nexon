@@ -1104,8 +1104,6 @@ export default async function TournamentDetailsPage({
   ];
   const tournamentMetaItems = [
     { label: "Старт", value: formatDate(tournament.startsAt) },
-    { label: "Участники", value: `${activeParticipants.length}/${tournament.maxParticipants}` },
-    { label: "Режим", value: participantModeLabel(tournament.participantMode, tournament.rosterSize) },
   ];
   const participantClubMap = Object.fromEntries(
     tournament.participants.map((entry) => [
