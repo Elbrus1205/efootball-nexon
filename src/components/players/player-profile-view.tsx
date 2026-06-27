@@ -115,8 +115,10 @@ function RatingValue({ rating, ratingPlace }: { rating: number | null; ratingPla
   );
 }
 
-function ReliabilityPanel({ reliability }: { reliability: ReliabilitySummary | null }) {
-  if (!reliability) return null;
+function ReliabilityValue({ reliability }: { reliability: ReliabilitySummary | null }) {
+  if (!reliability) {
+    return <div className="mt-2 text-xl font-black leading-none text-white">—</div>;
+  }
 
   const statusClasses = {
     excellent: "border-emerald-300/30 bg-emerald-400/10 text-emerald-200",
@@ -127,20 +129,14 @@ function ReliabilityPanel({ reliability }: { reliability: ReliabilitySummary | n
   const StatusIcon = reliability.status.tone === "restricted" ? AlertTriangle : ShieldCheck;
 
   return (
-    <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="text-sm font-semibold uppercase tracking-[0.16em] text-zinc-500">Надежность</div>
-          <div className="mt-2 flex items-baseline gap-1 text-2xl font-black leading-none text-white">
-            <span>{reliability.score}</span>
-            <span className="text-sm font-bold text-zinc-500">/100</span>
-          </div>
-        </div>
-
-        <div className={`inline-flex w-fit shrink-0 items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold ${statusClasses[reliability.status.tone]}`}>
+    <div className="mt-2 flex min-w-0 flex-wrap items-center justify-between gap-2">
+      <div className="flex items-baseline gap-1 text-xl font-black leading-none text-white">
+        <span>{reliability.score}</span>
+        <span className="text-xs font-bold text-zinc-500">/100</span>
+      </div>
+      <div className={`inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold leading-none ${statusClasses[reliability.status.tone]}`}>
           <StatusIcon className="h-3.5 w-3.5" />
           {reliability.status.label}
-        </div>
       </div>
     </div>
   );
@@ -252,10 +248,14 @@ export function PlayerProfileView({
         </div>
 
         <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4 sm:p-6">
-          <div className="border-b border-white/10 pb-4 sm:col-span-2 lg:col-span-4">
+          <div className="border-b border-white/10 pb-3">
             <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Рейтинг</div>
             <RatingValue rating={rating} ratingPlace={ratingPlace} />
-            <ReliabilityPanel reliability={reliability} />
+          </div>
+
+          <div className="border-b border-white/10 pb-3">
+            <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Надежность</div>
+            <ReliabilityValue reliability={reliability} />
           </div>
 
           <div className="border-b border-white/10 pb-3">
