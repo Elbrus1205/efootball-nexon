@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, Clock3, Send } from "lucide-react";
+import { AlertTriangle, Check, Clock3, Send } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
@@ -54,7 +54,14 @@ function submissionToneClass(tone: SubmissionState["tone"]) {
   if (tone === "success") return "border-emerald-400/20 bg-emerald-400/10 text-emerald-300";
   if (tone === "danger") return "border-red-400/20 bg-red-400/10 text-red-300";
   if (tone === "retry") return "border-amber-400/20 bg-amber-400/10 text-amber-300";
-  return "border-white/10 bg-white/5 text-zinc-400";
+  return "border-white/10 bg-white/[0.04] text-zinc-400";
+}
+
+function compactSubmissionLabel(state: SubmissionState) {
+  if (state.tone === "success") return state.label.includes("подтверж") ? "Подтвержден" : "Отправлен";
+  if (state.tone === "danger") return "Спор";
+  if (state.tone === "retry") return "Повторить";
+  return "Ждет счет";
 }
 
 function formatSubmittedScore(score: SubmittedScore) {
@@ -68,14 +75,18 @@ function SubmissionBadge({ state, score, hidden }: { state: SubmissionState; sco
   if (hidden) return null;
 
   return (
-    <div className={cn("mt-2 rounded-lg border px-2 py-1 text-center text-[10px] leading-[1.4]", submissionToneClass(state.tone))}>
-      <span>{state.label}</span>
+    <div
+      className={cn(
+        "mt-1.5 flex max-w-full items-center justify-center gap-1 overflow-hidden rounded-md border px-1.5 py-0.5 text-center text-[10px] leading-[1.35]",
+        submissionToneClass(state.tone),
+      )}
+      title={score ? `${state.label}: ${formatSubmittedScore(score)}` : state.label}
+    >
+      <span className="truncate">{compactSubmissionLabel(state)}</span>
       {score ? (
         <>
-          <span className="mx-1.5 text-current/45">•</span>
-          <span className="font-semibold text-white">
-            {formatSubmittedScore(score)}
-          </span>
+          <span className="shrink-0 opacity-40">•</span>
+          <span className="shrink-0 font-semibold text-white">{formatSubmittedScore(score)}</span>
         </>
       ) : null}
     </div>
@@ -130,7 +141,6 @@ export function MyMatchCard({
     confirmedPlayer2PenaltyScore !== null &&
     confirmedPlayer2PenaltyScore !== undefined;
   const isPenaltyInputStep = Boolean(drawScore);
-  const inputLabel = isPenaltyInputStep ? "Счёт пенальти" : "Счёт матча";
 
   const onSubmit = () => {
     const player1Score = Number(player1ScoreInput);
@@ -176,26 +186,29 @@ export function MyMatchCard({
     });
   };
 
+  const submitDisabled =
+    isPending ||
+    player1ScoreInput === "" ||
+    player2ScoreInput === "" ||
+    (isPenaltyInputStep && player1ScoreInput === player2ScoreInput);
+
   return (
     <Card
       className={cn(
-        "overflow-hidden p-0 transition",
-        isConfirmed && "border-emerald-400/40 shadow-[0_0_32px_rgba(52,211,153,0.12)]",
-        isDisputed && "border-red-400/30",
+        "overflow-hidden rounded-lg border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.018))] p-0 shadow-[0_14px_40px_rgba(0,0,0,0.22)] transition",
+        isConfirmed && "border-emerald-400/25",
+        isDisputed && "border-red-400/30 shadow-[0_14px_40px_rgba(127,29,29,0.14)]",
       )}
     >
-      {/* Header strip */}
       {meta ? (
-        <div className="flex items-center gap-2 border-b border-white/[0.07] bg-white/[0.02] px-4 py-2.5 text-xs text-zinc-500">
-          <Clock3 className="h-3.5 w-3.5 shrink-0" />
-          <span>{meta}</span>
+        <div className="flex items-center gap-1.5 border-b border-white/[0.06] bg-black/20 px-3 py-1.5 text-[11px] text-zinc-500 sm:px-3.5">
+          <Clock3 className="h-3 w-3 shrink-0 text-primary/70" />
+          <span className="truncate">{meta}</span>
         </div>
       ) : null}
 
-      <div className="p-3 sm:p-5">
-        {/* Match grid */}
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2 sm:gap-4">
-          {/* Player 1 */}
+      <div className="p-2.5 sm:p-3.5">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 sm:gap-3">
           <div className="min-w-0">
             <ClubPlayerLine
               playerId={player1Id}
@@ -209,34 +222,33 @@ export function MyMatchCard({
             <SubmissionBadge state={player1SubmissionState} score={player1SubmittedScore} hidden={player1SubmissionState.tone === "success" && isConfirmed} />
           </div>
 
-          {/* Score */}
-          <div className="flex flex-col items-center justify-start gap-1 pt-0.5 self-start">
+          <div className="flex min-w-[3.8rem] shrink-0 flex-col items-center gap-1 sm:min-w-[4.4rem]">
             {hasConfirmedScore ? (
-              <div className="flex items-center gap-1">
-                <span className="min-w-[1.75rem] rounded-lg bg-white/[0.06] px-2 py-1 text-center text-base font-bold text-white sm:text-lg">
+              <div className="flex items-center gap-1 rounded-md border border-primary/15 bg-primary/[0.08] px-1.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                <span className="min-w-[1.55rem] text-center text-lg font-black tabular-nums text-primary sm:min-w-[1.8rem]">
                   {confirmedPlayer1Score}
                 </span>
-                <span className="text-xs font-semibold text-zinc-500">:</span>
-                <span className="min-w-[1.75rem] rounded-lg bg-white/[0.06] px-2 py-1 text-center text-base font-bold text-white sm:text-lg">
+                <span className="text-xs font-semibold text-zinc-600">:</span>
+                <span className="min-w-[1.55rem] text-center text-lg font-black tabular-nums text-primary sm:min-w-[1.8rem]">
                   {confirmedPlayer2Score}
                 </span>
               </div>
             ) : (
-              <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-semibold tracking-[0.2em] text-zinc-400">
-                VS
-              </div>
+              <div className="rounded-md border border-white/10 bg-black/20 px-2.5 py-1 text-[10px] font-black tracking-[0.22em] text-zinc-500 sm:px-3">VS</div>
             )}
-            {isConfirmed ? (
-              <div className="text-[10px] font-medium uppercase tracking-[0.12em] text-emerald-400">Подтверждён</div>
-            ) : null}
             {hasConfirmedPenaltyScore ? (
-              <div className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                пен. {confirmedPlayer1PenaltyScore}:{confirmedPlayer2PenaltyScore}
+              <div className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold text-primary">
+                пен {confirmedPlayer1PenaltyScore}:{confirmedPlayer2PenaltyScore}
+              </div>
+            ) : null}
+            {isConfirmed ? (
+              <div className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-emerald-400">
+                <Check className="h-3 w-3" />
+                Готово
               </div>
             ) : null}
           </div>
 
-          {/* Player 2 */}
           <div className="min-w-0">
             <ClubPlayerLine
               playerId={player2Id}
@@ -250,92 +262,82 @@ export function MyMatchCard({
           </div>
         </div>
 
-        {/* Score input */}
         {canSubmit ? (
-          <div className="mt-4 space-y-3">
-            <div className="space-y-2.5">
-              {/* Score inputs centered */}
-              <div className="flex flex-col items-center justify-center gap-2">
-                <div className="text-center text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-500">
-                  {inputLabel}
-                  {drawScore ? <span className="ml-2 normal-case tracking-normal text-primary">{drawScore.player1Score}:{drawScore.player2Score}</span> : null}
-                </div>
-                <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-black/25 px-5 py-2.5 sm:rounded-xl sm:px-6 sm:py-3">
-                  <input
-                    type="number"
-                    min={0}
-                    max={99}
-                    placeholder="0"
-                    value={player1ScoreInput}
-                    onChange={(e) => setPlayer1ScoreInput(e.target.value)}
-                    className="w-10 bg-transparent text-center text-xl font-bold text-white outline-none placeholder:text-zinc-600 [appearance:textfield] sm:w-12 sm:text-2xl [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                  />
-                  <span className="text-xl font-semibold text-zinc-500">:</span>
-                  <input
-                    type="number"
-                    min={0}
-                    max={99}
-                    placeholder="0"
-                    value={player2ScoreInput}
-                    onChange={(e) => setPlayer2ScoreInput(e.target.value)}
-                    className="w-10 bg-transparent text-center text-xl font-bold text-white outline-none placeholder:text-zinc-600 [appearance:textfield] sm:w-12 sm:text-2xl [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                  />
-                </div>
-              </div>
-              {/* Submit button full width */}
-              <button
-                onClick={onSubmit}
-                disabled={
-                  isPending ||
-                  player1ScoreInput === "" ||
-                  player2ScoreInput === "" ||
-                  (isPenaltyInputStep && player1ScoreInput === player2ScoreInput)
-                }
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-[0_4px_18px_rgba(59,130,246,0.22)] transition-all hover:bg-primary/90 hover:shadow-[0_4px_24px_rgba(59,130,246,0.3)] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40 sm:rounded-xl sm:py-3"
-              >
-                <Send className="h-4 w-4" />
-                {isPending ? "Отправка..." : isPenaltyInputStep ? "Отправить результат" : "Подтвердить результат"}
-              </button>
+          <div className="mt-2.5 grid grid-cols-[auto_minmax(0,1fr)] gap-2 sm:mt-3 sm:gap-2.5">
+            <div className="flex h-10 items-center justify-center gap-2.5 rounded-lg border border-white/10 bg-black/35 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-11 sm:px-4">
+              <input
+                type="number"
+                min={0}
+                max={99}
+                placeholder="0"
+                aria-label={isPenaltyInputStep ? "Пенальти, ваш счёт" : "Ваш счёт"}
+                value={player1ScoreInput}
+                onChange={(e) => setPlayer1ScoreInput(e.target.value)}
+                className="w-8 bg-transparent text-center text-xl font-black tabular-nums text-white caret-primary outline-none placeholder:text-zinc-700 [appearance:textfield] focus:text-primary sm:w-10 sm:text-2xl [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
+              <span className="text-base font-semibold text-zinc-600 sm:text-lg">:</span>
+              <input
+                type="number"
+                min={0}
+                max={99}
+                placeholder="0"
+                aria-label={isPenaltyInputStep ? "Пенальти, счёт соперника" : "Счёт соперника"}
+                value={player2ScoreInput}
+                onChange={(e) => setPlayer2ScoreInput(e.target.value)}
+                className="w-8 bg-transparent text-center text-xl font-black tabular-nums text-white caret-primary outline-none placeholder:text-zinc-700 [appearance:textfield] focus:text-primary sm:w-10 sm:text-2xl [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
+              {isPenaltyInputStep ? (
+                <span className="ml-0.5 hidden text-[10px] font-semibold uppercase tracking-[0.14em] text-primary sm:inline">пен</span>
+              ) : null}
             </div>
 
-            {/* Helper info */}
-            <div className="flex items-start gap-2.5 rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2.5">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" />
-              <div className="min-w-0 flex-1">
-                <p className="text-xs leading-relaxed text-zinc-400">{message}</p>
-                {attemptsLeft > 0 && !waitingForOpponent ? (
-                  <div className="mt-1.5 inline-flex items-center rounded-full border border-white/10 bg-black/20 px-2.5 py-0.5 text-[10px] font-medium text-zinc-500">
-                    Осталось попыток: {attemptsLeft}
-                  </div>
-                ) : null}
+            <button
+              onClick={onSubmit}
+              disabled={submitDisabled}
+              className="group inline-flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-black text-black shadow-[0_2px_18px_rgba(212,175,55,0.22)] transition-all hover:bg-primary/90 hover:shadow-[0_2px_24px_rgba(212,175,55,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 active:scale-[0.98] disabled:pointer-events-none disabled:bg-white/10 disabled:text-zinc-500 disabled:shadow-none sm:h-11 sm:gap-2 sm:px-5 sm:text-sm"
+            >
+              <Send className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              <span className="truncate">{isPending ? "Отправка..." : isPenaltyInputStep ? "Отправить" : "Подтвердить"}</span>
+            </button>
+          </div>
+        ) : null}
+
+        {canSubmit ? (
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <p className="min-w-0 flex-1 truncate text-[11px] leading-snug text-zinc-500">{message}</p>
+            {attemptsLeft > 0 && !waitingForOpponent ? (
+              <div className="flex shrink-0 items-center gap-1.5" title={`Осталось попыток: ${attemptsLeft}`}>
+                <span className="hidden text-[10px] uppercase tracking-[0.1em] text-zinc-600 sm:inline">Попытки</span>
+                <span className="flex gap-1">
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      className={cn("h-1.5 w-1.5 rounded-full", i < attemptsLeft ? "bg-primary" : "bg-white/15")}
+                    />
+                  ))}
+                </span>
               </div>
-            </div>
+            ) : null}
           </div>
         ) : waitingForOpponent ? (
-          <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2.5">
-            <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" />
-            <div>
-              <p className="text-xs font-medium text-zinc-300">Ожидание соперника</p>
-              <p className="mt-0.5 text-xs text-zinc-500">Ваш результат отправлен. Ждём подтверждения от оппонента.</p>
-            </div>
+          <div className="mt-2.5 flex items-center gap-2 rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-1.5 text-[11px] text-zinc-400 sm:px-3 sm:py-2">
+            <Clock3 className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
+            <span>Результат отправлен — ждём подтверждения соперника.</span>
           </div>
         ) : isDisputed ? (
-          <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-red-400/20 bg-red-500/[0.07] px-3 py-2.5">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
-            <div className="flex-1">
-              <p className="text-xs font-medium text-red-300">Спорный матч</p>
-              <p className="mt-0.5 text-xs text-red-200/70">
-                Игроки трижды не совпали по счёту. Результат выставляет администрация.
-              </p>
-              <Button asChild variant="outline" size="sm" className="mt-2.5 border-red-300/20 bg-red-500/10 text-red-100 hover:bg-red-500/20">
-                <Link href={disputeHref}>Открыть спор</Link>
-              </Button>
+          <div className="mt-2.5 flex items-center justify-between gap-2 rounded-lg border border-red-400/20 bg-red-500/[0.07] px-2.5 py-1.5 sm:px-3 sm:py-2">
+            <div className="flex min-w-0 items-center gap-2 text-[11px] text-red-200/80">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-red-400" />
+              <span className="truncate">Спор — результат выставит администрация.</span>
             </div>
+            <Button asChild variant="outline" size="sm" className="h-8 shrink-0 border-red-300/20 bg-red-500/10 px-3 text-xs text-red-100 hover:bg-red-500/20 hover:text-white">
+              <Link href={disputeHref}>Открыть спор</Link>
+            </Button>
           </div>
         ) : !isConfirmed && helperText ? (
-          <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2.5">
-            <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" />
-            <p className="text-xs leading-relaxed text-zinc-400">{helperText}</p>
+          <div className="mt-2.5 flex items-center gap-2 rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-1.5 text-[11px] leading-snug text-zinc-400 sm:px-3 sm:py-2">
+            <Clock3 className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
+            <span>{helperText}</span>
           </div>
         ) : null}
       </div>
