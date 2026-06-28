@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { db } from "@/lib/db";
 import { sendTelegramMessage } from "@/lib/telegram-bot";
+import { tgEmoji } from "@/lib/telegram-emoji";
 import type { SecurityContext } from "@/lib/auth/security";
 
 export const TWO_FACTOR_CHALLENGE_TTL_MS = 10 * 60 * 1000;
@@ -36,6 +37,21 @@ function getPurposeLabel(purpose: string) {
   }
 }
 
+function getPurposeEmoji(purpose: string) {
+  switch (purpose) {
+    case "LOGIN":
+      return tgEmoji("lock");
+    case "ENABLE_2FA":
+      return tgEmoji("shield");
+    case "DISABLE_2FA":
+      return tgEmoji("warning");
+    case "ACCOUNT_DELETION":
+      return tgEmoji("trash");
+    default:
+      return tgEmoji("shield");
+  }
+}
+
 function formatTelegramTwoFactorMessage(params: {
   code: string;
   purpose: string;
@@ -47,22 +63,17 @@ function formatTelegramTwoFactorMessage(params: {
   const purposeLabel = getPurposeLabel(params.purpose);
 
   return [
-    "<b>eFootball Nexon</b>",
+    `${tgEmoji("gamepad")} <b>eFootball Nexon</b>`,
     "",
-    `Код для ${purposeLabel}:`,
+    `${getPurposeEmoji(params.purpose)} <b>Код для ${purposeLabel}</b>`,
     `<blockquote><tg-spoiler><b>${escapeHtml(params.code)}</b></tg-spoiler></blockquote>`,
-    "Нажмите на скрытый код, чтобы открыть его.",
+    `${tgEmoji("eyes")} <i>Нажмите на скрытый код, чтобы открыть его.</i>`,
     "",
-    "<b>Запрос выполнен с устройства:</b>",
-    `${escapeHtml(device)}`,
+    `${tgEmoji("monitor")} <b>Устройство:</b> ${escapeHtml(device)}`,
+    `${tgEmoji("location")} <b>Локация:</b> ${escapeHtml(location)}`,
+    `${tgEmoji("globe")} <b>IP:</b> <code>${escapeHtml(ipAddress)}</code>`,
     "",
-    "<b>Локация:</b>",
-    `${escapeHtml(location)}`,
-    "",
-    "<b>IP:</b>",
-    `<code>${escapeHtml(ipAddress)}</code>`,
-    "",
-    "Введите этот код на сайте. Он действует 10 минут.",
+    `${tgEmoji("hourglass")} Код действует 10 минут. Никому его не сообщайте.`,
   ].join("\n");
 }
 

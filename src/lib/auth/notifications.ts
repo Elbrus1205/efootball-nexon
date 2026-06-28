@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { createNotification } from "@/lib/services/notifications";
 import { isTelegramRecipientUnavailableError, sendTelegramMessage } from "@/lib/telegram-bot";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
+import { tgEmoji } from "@/lib/telegram-emoji";
 
 type AuthNotificationProvider = "email" | "vkid" | "telegram";
 
@@ -105,34 +106,34 @@ async function sendLoginTelegramNotification(params: {
 
   const profileName = params.user.name || params.user.email || `Игрок #${params.user.publicId}`;
   const text = [
-    "<b>🔐 Вход в аккаунт</b>",
-    "<blockquote>Если это были не вы, срочно смените пароль и завершите лишние сессии в настройках безопасности.</blockquote>",
+    `${tgEmoji("lock")} <b>Вход в аккаунт</b>`,
+    `<blockquote>${tgEmoji("warning")} Если это были не вы — срочно смените пароль и завершите лишние сессии в настройках безопасности.</blockquote>`,
     "",
-    `<b>Аккаунт</b>: ${escapeTelegramHtml(profileName)}`,
-    `<b>ID игрока</b>: <code>${escapeTelegramHtml(params.user.publicId)}</code>`,
-    `<b>Способ входа</b>: ${escapeTelegramHtml(getProviderLabel(params.provider))}`,
-    `<b>Дата и время</b>: ${escapeTelegramHtml(formatDateTime(new Date()))}`,
+    `${tgEmoji("smile")} <b>Аккаунт:</b> ${escapeTelegramHtml(profileName)}`,
+    `${tgEmoji("bookmark")} <b>ID игрока:</b> <code>${escapeTelegramHtml(params.user.publicId)}</code>`,
+    `${tgEmoji("link")} <b>Способ входа:</b> ${escapeTelegramHtml(getProviderLabel(params.provider))}`,
+    `${tgEmoji("calendar")} <b>Дата и время:</b> ${escapeTelegramHtml(formatDateTime(new Date()))}`,
     "",
-    "<b>Данные входа</b>",
-    `IP: <code>${escapeTelegramHtml(params.context.ipAddress || "не определен")}</code>`,
-    `Устройство: ${escapeTelegramHtml(params.context.device || "не определено")}`,
-    `Платформа: ${escapeTelegramHtml(params.context.platform || "не определена")}`,
-    `Локация: ${escapeTelegramHtml(params.context.location || "не определена")}`,
-    `User-Agent: <code>${escapeTelegramHtml(limitText(params.context.userAgent || "не определен", 700))}</code>`,
+    `${tgEmoji("monitor")} <b>Данные входа</b>`,
+    `${tgEmoji("globe")} IP: <code>${escapeTelegramHtml(params.context.ipAddress || "не определен")}</code>`,
+    `${tgEmoji("gamepad")} Устройство: ${escapeTelegramHtml(params.context.device || "не определено")}`,
+    `${tgEmoji("gear")} Платформа: ${escapeTelegramHtml(params.context.platform || "не определена")}`,
+    `${tgEmoji("location")} Локация: ${escapeTelegramHtml(params.context.location || "не определена")}`,
+    `${tgEmoji("paperclip")} User-Agent: <code>${escapeTelegramHtml(limitText(params.context.userAgent || "не определен", 700))}</code>`,
     "",
-    "<b>Привязки</b>",
-    `Email: ${escapeTelegramHtml(params.user.email || "не привязан")}`,
-    `Email подтвержден: ${params.user.emailVerified ? "да" : "нет"}`,
-    `Telegram: ${escapeTelegramHtml(params.user.telegramUsername ? `@${params.user.telegramUsername}` : "привязан")}`,
-    `VK: ${params.user.vkId ? "привязан" : "не привязан"}`,
-    `Роль: ${escapeTelegramHtml(params.user.role)}`,
+    `${tgEmoji("shield")} <b>Привязки</b>`,
+    `${tgEmoji("envelope")} Email: ${escapeTelegramHtml(params.user.email || "не привязан")}`,
+    `${params.user.emailVerified ? tgEmoji("check") : tgEmoji("cross")} Email подтвержден: ${params.user.emailVerified ? "да" : "нет"}`,
+    `${tgEmoji("speechBubble")} Telegram: ${escapeTelegramHtml(params.user.telegramUsername ? `@${params.user.telegramUsername}` : "привязан")}`,
+    `${params.user.vkId ? tgEmoji("check") : tgEmoji("cross")} VK: ${params.user.vkId ? "привязан" : "не привязан"}`,
+    `${tgEmoji("crown")} Роль: ${escapeTelegramHtml(params.user.role)}`,
   ].join("\n");
 
   await sendTelegramMessage({
     chatId: params.user.telegramId,
     text,
     disableWebPagePreview: true,
-    replyMarkup: buildTelegramButton("Открыть безопасность", "/dashboard/security"),
+    replyMarkup: buildTelegramButton("🛡 Открыть безопасность", "/dashboard/security"),
   }).catch((error) => {
     if (isTelegramRecipientUnavailableError(error)) {
       console.warn("Login Telegram notification skipped: recipient is unavailable", {
@@ -168,14 +169,14 @@ export async function sendEmailVerificationReminder(user: UserForSecurityNotific
   await sendTelegramMessage({
     chatId: user.telegramId,
     text: [
-      "<b>🛡️ Подтвердите email</b>",
-      "<blockquote>Ради безопасности аккаунта подтвердите email. Это поможет восстановить доступ и получать важные сообщения.</blockquote>",
+      `${tgEmoji("shield")} <b>Подтвердите email</b>`,
+      `<blockquote>${tgEmoji("bulb")} Ради безопасности аккаунта подтвердите email. Это поможет восстановить доступ и получать важные сообщения.</blockquote>`,
       "",
-      `<b>Email</b>: ${escapeTelegramHtml(user.email)}`,
-      `<b>Напоминание</b>: не чаще 1 раза в 24 часа`,
+      `${tgEmoji("envelope")} <b>Email:</b> ${escapeTelegramHtml(user.email)}`,
+      `${tgEmoji("hourglass")} <b>Напоминание:</b> не чаще 1 раза в 24 часа`,
     ].join("\n"),
     disableWebPagePreview: true,
-    replyMarkup: buildTelegramButton("Подтвердить email", "/dashboard/security"),
+    replyMarkup: buildTelegramButton("✉️ Подтвердить email", "/dashboard/security"),
   }).catch((error) => {
     if (isTelegramRecipientUnavailableError(error)) {
       console.warn("Email verification Telegram reminder skipped: recipient is unavailable", {

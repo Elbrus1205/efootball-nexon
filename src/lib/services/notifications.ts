@@ -4,6 +4,7 @@ import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
 import { isTelegramRecipientUnavailableError, sendTelegramMessage } from "@/lib/telegram-bot";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
+import { tgEmoji } from "@/lib/telegram-emoji";
 import { repairMojibake } from "@/lib/text-encoding";
 
 const pusher =
@@ -217,17 +218,30 @@ function buildTelegramNotificationText(type: NotificationType, title: string, bo
   const safeTitle = escapeTelegramHtml(title);
   const safeBody = escapeTelegramHtml(body);
   const typeLabel = getTelegramNotificationTypeLabel(type);
+  const typeEmoji = getTelegramNotificationEmoji(type);
+  const brand = `${tgEmoji("gamepad")} <b>eFootball Nexon</b>`;
 
   if (!safeBody) {
-    return [`<b>eFootball Nexon</b>`, `<b>${safeTitle}</b>`, `<i>${typeLabel}</i>`].join("\n");
+    return [
+      brand,
+      `${typeEmoji} <b>${safeTitle}</b>`,
+      `${tgEmoji("sparkles")} <i>${typeLabel}</i>`,
+    ].join("\n\n");
   }
 
   return [
-    `<b>eFootball Nexon</b>`,
-    `<b>${safeTitle}</b>`,
+    brand,
+    `${typeEmoji} <b>${safeTitle}</b>`,
     `<blockquote>${safeBody}</blockquote>`,
-    `<i>${typeLabel}</i>`,
+    `${tgEmoji("sparkles")} <i>${typeLabel}</i>`,
   ].join("\n\n");
+}
+
+function getTelegramNotificationEmoji(type: NotificationType) {
+  if (type === NotificationType.TOURNAMENT) return tgEmoji("crown");
+  if (type === NotificationType.MATCH) return tgEmoji("fire");
+  if (type === NotificationType.RESULT) return tgEmoji("chart");
+  return tgEmoji("bell");
 }
 
 function getTelegramNotificationTypeLabel(type: NotificationType) {
@@ -238,10 +252,10 @@ function getTelegramNotificationTypeLabel(type: NotificationType) {
 }
 
 function getTelegramNotificationButtonText(type: NotificationType) {
-  if (type === NotificationType.TOURNAMENT) return "Открыть турнир";
-  if (type === NotificationType.MATCH) return "Открыть матч";
-  if (type === NotificationType.RESULT) return "Открыть результат";
-  return "Открыть на сайте";
+  if (type === NotificationType.TOURNAMENT) return "🏆 Открыть турнир";
+  if (type === NotificationType.MATCH) return "🎮 Открыть матч";
+  if (type === NotificationType.RESULT) return "📊 Открыть результат";
+  return "🌐 Открыть на сайте";
 }
 
 function buildAbsoluteNotificationLink(link?: string | null) {
