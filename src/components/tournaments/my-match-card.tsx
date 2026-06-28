@@ -221,46 +221,51 @@ export function MyMatchCard({
           </div>
 
           <div className="flex min-w-[3.4rem] shrink-0 flex-col items-center gap-1 self-start sm:min-w-[3.8rem] sm:gap-1.5">
-            {player1ClubBadgePath || player2ClubBadgePath ? (
-              <div aria-hidden className="h-8 w-8 sm:h-9 sm:w-9" />
-            ) : null}
-            {hasConfirmedScore ? (
-              <div className="flex items-center gap-1 rounded-md border border-primary/15 bg-primary/[0.08] px-1.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-                <span className="min-w-[1.55rem] text-center text-lg font-black tabular-nums text-primary sm:min-w-[1.8rem]">
-                  {confirmedPlayer1Score}
-                </span>
-                <span className="text-xs font-semibold text-zinc-600">:</span>
-                <span className="min-w-[1.55rem] text-center text-lg font-black tabular-nums text-primary sm:min-w-[1.8rem]">
-                  {confirmedPlayer2Score}
-                </span>
-              </div>
-            ) : canSubmit ? (
-              <div className="flex items-center gap-0.5 rounded-md border border-white/10 bg-black/35 px-2 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-                <input
-                  type="number"
-                  min={0}
-                  max={99}
-                  placeholder="0"
-                  aria-label={isPenaltyInputStep ? "Пенальти, ваш счёт" : "Ваш счёт"}
-                  value={player1ScoreInput}
-                  onChange={(e) => setPlayer1ScoreInput(e.target.value)}
-                  className="w-6 bg-transparent text-center text-lg font-black tabular-nums text-white caret-primary outline-none placeholder:text-zinc-700 [appearance:textfield] focus:text-primary [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                />
-                <span className="text-sm font-semibold text-zinc-600">:</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={99}
-                  placeholder="0"
-                  aria-label={isPenaltyInputStep ? "Пенальти, счёт соперника" : "Счёт соперника"}
-                  value={player2ScoreInput}
-                  onChange={(e) => setPlayer2ScoreInput(e.target.value)}
-                  className="w-6 bg-transparent text-center text-lg font-black tabular-nums text-white caret-primary outline-none placeholder:text-zinc-700 [appearance:textfield] focus:text-primary [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                />
-              </div>
-            ) : (
-              <div className="rounded-md border border-white/10 bg-black/20 px-2.5 py-1 text-[10px] font-black tracking-[0.22em] text-zinc-500 sm:px-3">VS</div>
-            )}
+            <div
+              className={cn(
+                "flex items-center justify-center",
+                // Match the club badge row height so the score centers against the badge + name block, not the nicknames.
+                (player1ClubBadgePath || player2ClubBadgePath) && "min-h-8 sm:min-h-9",
+              )}
+            >
+              {hasConfirmedScore ? (
+                <div className="flex items-center gap-1 rounded-md border border-primary/15 bg-primary/[0.08] px-1.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                  <span className="min-w-[1.55rem] text-center text-lg font-black tabular-nums text-primary sm:min-w-[1.8rem]">
+                    {confirmedPlayer1Score}
+                  </span>
+                  <span className="text-xs font-semibold text-zinc-600">:</span>
+                  <span className="min-w-[1.55rem] text-center text-lg font-black tabular-nums text-primary sm:min-w-[1.8rem]">
+                    {confirmedPlayer2Score}
+                  </span>
+                </div>
+              ) : canSubmit ? (
+                <div className="flex items-center gap-1 rounded-md border border-white/10 bg-black/35 px-2.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                  <input
+                    type="number"
+                    min={0}
+                    max={99}
+                    placeholder="0"
+                    aria-label={isPenaltyInputStep ? "Пенальти, ваш счёт" : "Ваш счёт"}
+                    value={player1ScoreInput}
+                    onChange={(e) => setPlayer1ScoreInput(e.target.value)}
+                    className="w-7 bg-transparent text-center text-xl font-black tabular-nums text-white caret-primary outline-none placeholder:text-zinc-700 [appearance:textfield] focus:text-primary [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                  <span className="text-base font-semibold text-zinc-600">:</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={99}
+                    placeholder="0"
+                    aria-label={isPenaltyInputStep ? "Пенальти, счёт соперника" : "Счёт соперника"}
+                    value={player2ScoreInput}
+                    onChange={(e) => setPlayer2ScoreInput(e.target.value)}
+                    className="w-7 bg-transparent text-center text-xl font-black tabular-nums text-white caret-primary outline-none placeholder:text-zinc-700 [appearance:textfield] focus:text-primary [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                </div>
+              ) : (
+                <div className="rounded-md border border-white/10 bg-black/20 px-2.5 py-1 text-[10px] font-black tracking-[0.22em] text-zinc-500 sm:px-3">VS</div>
+              )}
+            </div>
             {canSubmit && !hasConfirmedScore && isPenaltyInputStep ? (
               <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-primary">пен</span>
             ) : null}
