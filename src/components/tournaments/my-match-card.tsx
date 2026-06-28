@@ -195,7 +195,7 @@ export function MyMatchCard({
   return (
     <Card
       className={cn(
-        "-mx-4 overflow-hidden rounded-none border-x-0 border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.018))] p-0 shadow-[0_14px_40px_rgba(0,0,0,0.22)] transition sm:mx-0 sm:rounded-lg sm:border-x",
+        "overflow-hidden rounded-lg border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.018))] p-0 shadow-[0_14px_40px_rgba(0,0,0,0.22)] transition",
         isConfirmed && "border-emerald-400/25",
         isDisputed && "border-red-400/30 shadow-[0_14px_40px_rgba(127,29,29,0.14)]",
       )}
@@ -208,21 +208,22 @@ export function MyMatchCard({
       ) : null}
 
       <div className="p-2.5 sm:p-3.5">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 sm:gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-1.5 sm:gap-3">
           <div className="min-w-0">
             <ClubPlayerLine
               playerId={player1Id}
               playerName={player1Name}
               clubName={player1ClubName}
               badgePath={player1ClubBadgePath}
-              align="center"
-              compact
-              reverse
+              stack
             />
             <SubmissionBadge state={player1SubmissionState} score={player1SubmittedScore} hidden={player1SubmissionState.tone === "success" && isConfirmed} />
           </div>
 
-          <div className="flex min-w-[3.4rem] shrink-0 flex-col items-center gap-1 sm:min-w-[3.8rem]">
+          <div className="flex min-w-[3.4rem] shrink-0 flex-col items-center gap-1 self-start sm:min-w-[3.8rem] sm:gap-1.5">
+            {player1ClubBadgePath || player2ClubBadgePath ? (
+              <div aria-hidden className="h-8 w-8 sm:h-9 sm:w-9" />
+            ) : null}
             {hasConfirmedScore ? (
               <div className="flex items-center gap-1 rounded-md border border-primary/15 bg-primary/[0.08] px-1.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                 <span className="min-w-[1.55rem] text-center text-lg font-black tabular-nums text-primary sm:min-w-[1.8rem]">
@@ -282,8 +283,7 @@ export function MyMatchCard({
               playerName={player2Name}
               clubName={player2ClubName}
               badgePath={player2ClubBadgePath}
-              align="center"
-              compact
+              stack
             />
             <SubmissionBadge state={player2SubmissionState} score={player2SubmittedScore} hidden={player2SubmissionState.tone === "success" && isConfirmed} />
           </div>
@@ -293,7 +293,7 @@ export function MyMatchCard({
           <button
             onClick={onSubmit}
             disabled={submitDisabled}
-            className="mt-2.5 inline-flex h-10 w-full items-center justify-center rounded-lg bg-primary px-3 text-xs font-black uppercase tracking-[0.08em] text-black shadow-[0_2px_18px_rgba(212,175,55,0.22)] transition-all hover:bg-primary/90 hover:shadow-[0_2px_24px_rgba(212,175,55,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 active:scale-[0.99] disabled:pointer-events-none disabled:bg-white/10 disabled:text-zinc-500 disabled:shadow-none sm:mt-3 sm:h-11 sm:text-sm"
+            className="mt-2.5 inline-flex h-10 w-full items-center justify-center rounded-lg bg-primary px-3 text-[10px] font-black uppercase tracking-[0.08em] text-black shadow-[0_2px_18px_rgba(212,175,55,0.22)] transition-all hover:bg-primary/90 hover:shadow-[0_2px_24px_rgba(212,175,55,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 active:scale-[0.99] disabled:pointer-events-none disabled:bg-white/10 disabled:text-zinc-500 disabled:shadow-none sm:mt-3 sm:h-11 sm:text-[11px]"
           >
             <span className="truncate">{isPending ? "Отправка..." : isPenaltyInputStep ? "Отправить" : "Подтвердить"}</span>
           </button>
