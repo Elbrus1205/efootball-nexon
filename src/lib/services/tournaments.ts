@@ -7,7 +7,9 @@ import {
   PlayoffType,
   StageStatus,
   StageType,
+  TeamInviteStatus,
   TournamentFormat,
+  TournamentParticipantMode,
   TournamentStatus,
   type TournamentStage,
 } from "@prisma/client";
@@ -3082,6 +3084,8 @@ export async function setBracketSlot(input: {
 }
 
 export async function closeTournamentRegistration(tournamentId: string) {
+  await removeIncompleteRosterRegistrations(tournamentId);
+
   const tournament = await db.tournament.findUnique({
     where: { id: tournamentId },
     include: {
@@ -3133,6 +3137,8 @@ export async function closeTournamentRegistration(tournamentId: string) {
 }
 
 export async function startTournament(tournamentId: string) {
+  await removeIncompleteRosterRegistrations(tournamentId);
+
   const tournament = await db.tournament.findUnique({
     where: { id: tournamentId },
     include: {
@@ -3269,6 +3275,102 @@ export async function startTournament(tournamentId: string) {
   return db.tournament.findUnique({ where: { id: tournamentId } });
 }
 
+async function removeIncompleteRosterRegistrations(tournamentId: string) {
+  const tournament = await db.tournament.findUnique({
+    where: { id: tournamentId },
+    select: {
+      id: true,
+      title: true,
+      participantMode: true,
+      rosterSize: true,
+      notificationsEnabled: true,
+      participants: {
+        where: {
+          status: { in: [ParticipantStatus.PENDING, ParticipantStatus.CONFIRMED, ParticipantStatus.WAITLIST] },
+        },
+        select: {
+          id: true,
+          userId: true,
+          rosterMembers: {
+            select: {
+              id: true,
+              userId: true,
+              status: true,
+              isCaptain: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!tournament || tournament.participantMode === TournamentParticipantMode.SINGLE) {
+    return { removedCount: 0 };
+  }
+
+  const incompleteRegistrations = tournament.participants.filter((participant) => {
+    const acceptedMembersCount = participant.rosterMembers.filter((member) => member.status === TeamInviteStatus.ACCEPTED).length;
+    return acceptedMembersCount < tournament.rosterSize;
+  });
+
+  if (!incompleteRegistrations.length) {
+    return { removedCount: 0 };
+  }
+
+  const now = new Date();
+  const registrationIds = incompleteRegistrations.map((participant) => participant.id);
+
+  await db.$transaction(async (tx) => {
+    await tx.tournamentRegistration.updateMany({
+      where: {
+        id: { in: registrationIds },
+        status: { not: ParticipantStatus.REMOVED },
+      },
+      data: {
+        status: ParticipantStatus.REMOVED,
+        groupId: null,
+        seed: null,
+        stageSeed: null,
+        checkedInAt: null,
+      },
+    });
+
+    await tx.tournamentRegistrationMember.updateMany({
+      where: {
+        registrationId: { in: registrationIds },
+        status: TeamInviteStatus.PENDING,
+      },
+      data: {
+        status: TeamInviteStatus.DECLINED,
+        respondedAt: now,
+      },
+    });
+  });
+
+  if (tournamentNotificationsEnabled(tournament)) {
+    await Promise.all(
+      incompleteRegistrations.map((participant) => {
+        const captain = participant.rosterMembers.find((member) => member.isCaptain) ?? participant.rosterMembers[0];
+        return captain
+          ? createNotification({
+              userId: captain.userId,
+              title: "Состав снят с турнира",
+              body: `${tournament.title}: состав не был укомплектован до закрытия регистрации, поэтому заявка удалена из турнира.`,
+              type: NotificationType.TOURNAMENT,
+              link: `/tournaments/${tournament.id}`,
+              dedupeKey: `incomplete-roster-removed:${participant.id}`,
+              dedupeWithinHours: 24 * 365,
+            })
+          : Promise.resolve(null);
+      }),
+    );
+  }
+
+  await syncTournamentPreviewGroups(tournamentId).catch(() => null);
+
+  return { removedCount: incompleteRegistrations.length };
+}
+
 export async function syncTournamentLifecycleStatus(tournamentId: string) {
   const tournament = await db.tournament.findUnique({
     where: { id: tournamentId },
@@ -3327,6 +3429,7 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
 
   if (nextDateStatus) {
     if (nextDateStatus === TournamentStatus.AWAITING_START) {
+      await removeIncompleteRosterRegistrations(tournamentId);
       await applyTournamentAbsenceRatingPenalty(tournamentId);
     }
 
@@ -3414,6 +3517,7 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
   }
 
   if (nextStatus === TournamentStatus.AWAITING_START) {
+    await removeIncompleteRosterRegistrations(tournamentId);
     await applyTournamentAbsenceRatingPenalty(tournamentId);
   }
 
