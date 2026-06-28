@@ -1,4 +1,5 @@
 import { ClubSelectionMode, MatchStatus, ParticipantStatus, StageType, TournamentFormat, TournamentParticipantMode, TournamentStatus } from "@prisma/client";
+import type { Metadata } from "next";
 import { AlertTriangle, Send } from "lucide-react";
 import { unstable_noStore as noStore } from "next/cache";
 import { notFound } from "next/navigation";
@@ -9,6 +10,7 @@ import { MyMatchCard } from "@/components/tournaments/my-match-card";
 import { RegisterTournamentButton } from "@/components/tournaments/register-tournament-button";
 import { RosterManager } from "@/components/tournaments/roster-manager";
 import { TournamentScheduleView } from "@/components/tournaments/tournament-schedule-view";
+import { TournamentHeroStats } from "@/components/tournaments/tournament-hero-stats";
 import { TournamentStructureSwitcher, type TournamentStructureOption } from "@/components/tournaments/tournament-structure-switcher";
 import { TelegramProfileLink } from "@/components/telegram-profile-link";
 import { Badge } from "@/components/ui/badge";
@@ -16,9 +18,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentSession } from "@/lib/auth/session";
+import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { getAvailableClubs } from "@/lib/clubs";
 import {
   playoffTypeLabel,
+  tournamentFormatLabel,
   tournamentStatusLabel,
   tournamentStatusVariant,
 } from "@/lib/admin-display";
@@ -650,11 +654,72 @@ function logTiming(label: string, start: number) {
   console.log(`${label}: ${(performance.now() - start).toFixed(3)}ms`);
 }
 
-export async function generateMetadata({ params }: { params: { id: string } }) {
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const metadataStart = performance.now();
-  const tournament = await db.tournament.findUnique({ where: { id: params.id }, select: { title: true } });
+  const tournament = await db.tournament.findUnique({
+    where: { id: params.id },
+    select: {
+      title: true,
+      description: true,
+      coverImage: true,
+      prizePool: true,
+      status: true,
+      startsAt: true,
+      maxParticipants: true,
+      format: true,
+      isTest: true,
+    },
+  });
   logTiming("tournament-metadata", metadataStart);
-  return tournament ? { title: tournament.title } : { title: "Турнир не найден" };
+
+  if (!tournament) {
+    return { title: "Турнир не найден" };
+  }
+
+  const title = `${tournament.title} — турнир по eFootball Mobile`;
+  const prizeText = tournament.prizePool ? `Призовой фонд: ${tournament.prizePool}. ` : "";
+  const description =
+    (tournament.description?.trim()
+      ? `${tournament.description.trim().slice(0, 150)} `
+      : `Онлайн-турнир по eFootball Mobile на платформе eFootball Nexon. `) +
+    `${prizeText}Регистрация, турнирная сетка, рейтинг и расписание матчей.`;
+
+  const baseUrl = getConfiguredSiteBaseUrl();
+  const canonical = baseUrl ? new URL(`/tournaments/${params.id}`, baseUrl).toString() : undefined;
+  const ogImage = tournament.coverImage
+    ? baseUrl
+      ? new URL(tournament.coverImage, baseUrl).toString()
+      : tournament.coverImage
+    : undefined;
+
+  return {
+    title,
+    description,
+    keywords: [
+      "турниры eFootball Mobile",
+      "киберспорт eFootball",
+      "регистрация на турнир",
+      "eFootball Nexon",
+      tournament.title,
+    ],
+    ...(tournament.isTest ? { robots: { index: false, follow: false } } : {}),
+    alternates: canonical ? { canonical } : undefined,
+    openGraph: {
+      title,
+      description,
+      ...(canonical ? { url: canonical } : {}),
+      siteName: "eFootball Nexon",
+      type: "website",
+      locale: "ru_RU",
+      ...(ogImage ? { images: [{ url: ogImage, width: 1200, height: 630, alt: `Турнир ${tournament.title}` }] } : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      ...(ogImage ? { images: [ogImage] } : {}),
+    },
+  };
 }
 
 function shouldSyncTournamentBeforeView(tournament: {
@@ -709,6 +774,10 @@ export default async function TournamentDetailsPage({
       id: true,
       title: true,
       rules: true,
+      description: true,
+      coverImage: true,
+      prizePool: true,
+      endsAt: true,
       status: true,
       isTest: true,
       startsAt: true,
@@ -1125,9 +1194,47 @@ export default async function TournamentDetailsPage({
         ]
       : []),
   ];
-  const tournamentMetaItems = [
+  const heroStatItems = [
     { label: "Старт", value: formatDate(tournament.startsAt) },
+    { label: "Формат", value: tournamentFormatLabel[tournament.format] ?? String(tournament.format) },
+    {
+      label: "Участников",
+      value: `${activeParticipants.length} / ${tournament.maxParticipants}`,
+      countTo: activeParticipants.length,
+      suffix: ` / ${tournament.maxParticipants}`,
+    },
+    ...(tournament.prizePool?.trim()
+      ? [{ label: "Призовой фонд", value: tournament.prizePool.trim(), accent: true as const }]
+      : []),
   ];
+
+  const isTournamentLive = tournament.status === TournamentStatus.IN_PROGRESS;
+
+  const tournamentJsonLd = tournament.isTest
+    ? null
+    : (() => {
+        const baseUrl = getConfiguredSiteBaseUrl();
+        const url = baseUrl ? new URL(`/tournaments/${tournament.id}`, baseUrl).toString() : undefined;
+        const eventStatus = "https://schema.org/EventScheduled";
+
+        return {
+          "@context": "https://schema.org",
+          "@type": "SportsEvent",
+          name: tournament.title,
+          sport: "Esports — eFootball Mobile",
+          ...(tournament.description?.trim() ? { description: tournament.description.trim().slice(0, 280) } : {}),
+          startDate: tournament.startsAt.toISOString(),
+          ...(tournament.endsAt ? { endDate: tournament.endsAt.toISOString() } : {}),
+          eventStatus,
+          eventAttendanceMode: "https://schema.org/OnlineEventAttendanceMode",
+          ...(url ? { location: { "@type": "VirtualLocation", url } } : {}),
+          organizer: { "@type": "Organization", name: "eFootball Nexon", ...(baseUrl ? { url: baseUrl } : {}) },
+          maximumAttendeeCapacity: tournament.maxParticipants,
+          ...(tournament.coverImage
+            ? { image: baseUrl ? new URL(tournament.coverImage, baseUrl).toString() : tournament.coverImage }
+            : {}),
+        };
+      })();
   const participantClubMap = Object.fromEntries(
     tournament.participants.map((entry) => [
       entry.userId,
@@ -1270,7 +1377,12 @@ export default async function TournamentDetailsPage({
 
   return (
     <div className="page-shell space-y-8">
-      <Card className="overflow-hidden rounded-lg border-primary/15 bg-white/[0.025] p-0">
+      {tournamentJsonLd ? (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(tournamentJsonLd) }} />
+      ) : null}
+      <Card className="relative isolate overflow-hidden rounded-lg border-primary/15 bg-white/[0.025] p-0">
+        <div className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_15%_-20%,rgba(212,175,55,0.12),transparent_45%)]" />
         <div
           className={
             !showTournamentActionPanel
@@ -1283,6 +1395,9 @@ export default async function TournamentDetailsPage({
           <div className="min-w-0 space-y-4">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <Badge variant={tournamentStatusVariant[tournament.status]} className="shrink-0">
+                {isTournamentLive ? (
+                  <span className="mr-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-current align-middle" />
+                ) : null}
                 {tournamentStatusLabel[tournament.status]}
               </Badge>
               <Badge variant="neutral" className="shrink-0">
@@ -1301,14 +1416,7 @@ export default async function TournamentDetailsPage({
               </h1>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-3">
-              {tournamentMetaItems.map((item) => (
-                <div key={item.label} className="min-w-0 rounded-lg border border-white/10 bg-black/20 px-3 py-2.5">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">{item.label}</div>
-                  <div className="mt-1 truncate text-sm font-semibold text-zinc-100">{item.value}</div>
-                </div>
-              ))}
-            </div>
+            <TournamentHeroStats items={heroStatItems} />
           </div>
 
           {showTournamentActionPanel ? (
