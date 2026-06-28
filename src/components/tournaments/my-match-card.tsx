@@ -305,16 +305,19 @@ export function MyMatchCard({
         ) : null}
 
         {canSubmit ? (
-          <div className="mt-2 flex items-start justify-between gap-2">
+          <div className="mt-2 flex items-center justify-between gap-2">
             <p className="min-w-0 flex-1 text-[11px] leading-snug text-zinc-500">{message}</p>
             {attemptsLeft > 0 && !waitingForOpponent ? (
-              <div className="flex shrink-0 items-center gap-1.5 pt-0.5" title={`Осталось попыток: ${attemptsLeft}`}>
+              <div className="flex shrink-0 items-center gap-1.5" title={`Осталось попыток: ${attemptsLeft}`}>
                 <span className="hidden text-[10px] uppercase tracking-[0.1em] text-zinc-600 sm:inline">Попытки</span>
                 <span className="flex gap-1">
                   {[0, 1, 2].map((i) => (
                     <span
                       key={i}
-                      className={cn("h-1.5 w-1.5 rounded-full", i < attemptsLeft ? "bg-primary" : "bg-white/15")}
+                      className={cn(
+                        "h-1.5 w-1.5 rounded-full",
+                        i < attemptsLeft ? "bg-emerald-400" : "bg-red-500",
+                      )}
                     />
                   ))}
                 </span>
