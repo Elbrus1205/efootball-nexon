@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, Check, Clock3, Send } from "lucide-react";
+import { AlertTriangle, Check, Clock3 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
@@ -195,7 +195,7 @@ export function MyMatchCard({
   return (
     <Card
       className={cn(
-        "overflow-hidden rounded-lg border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.018))] p-0 shadow-[0_14px_40px_rgba(0,0,0,0.22)] transition",
+        "-mx-4 overflow-hidden rounded-none border-x-0 border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.018))] p-0 shadow-[0_14px_40px_rgba(0,0,0,0.22)] transition sm:mx-0 sm:rounded-lg sm:border-x",
         isConfirmed && "border-emerald-400/25",
         isDisputed && "border-red-400/30 shadow-[0_14px_40px_rgba(127,29,29,0.14)]",
       )}
@@ -222,7 +222,7 @@ export function MyMatchCard({
             <SubmissionBadge state={player1SubmissionState} score={player1SubmittedScore} hidden={player1SubmissionState.tone === "success" && isConfirmed} />
           </div>
 
-          <div className="flex min-w-[3.8rem] shrink-0 flex-col items-center gap-1 sm:min-w-[4.4rem]">
+          <div className="flex min-w-[3.4rem] shrink-0 flex-col items-center gap-1 sm:min-w-[3.8rem]">
             {hasConfirmedScore ? (
               <div className="flex items-center gap-1 rounded-md border border-primary/15 bg-primary/[0.08] px-1.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                 <span className="min-w-[1.55rem] text-center text-lg font-black tabular-nums text-primary sm:min-w-[1.8rem]">
@@ -233,9 +233,36 @@ export function MyMatchCard({
                   {confirmedPlayer2Score}
                 </span>
               </div>
+            ) : canSubmit ? (
+              <div className="flex items-center gap-0.5 rounded-md border border-white/10 bg-black/35 px-1.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                <input
+                  type="number"
+                  min={0}
+                  max={99}
+                  placeholder="0"
+                  aria-label={isPenaltyInputStep ? "Пенальти, ваш счёт" : "Ваш счёт"}
+                  value={player1ScoreInput}
+                  onChange={(e) => setPlayer1ScoreInput(e.target.value)}
+                  className="w-5 bg-transparent text-center text-sm font-black tabular-nums text-white caret-primary outline-none placeholder:text-zinc-700 [appearance:textfield] focus:text-primary [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                <span className="text-xs font-semibold text-zinc-600">:</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={99}
+                  placeholder="0"
+                  aria-label={isPenaltyInputStep ? "Пенальти, счёт соперника" : "Счёт соперника"}
+                  value={player2ScoreInput}
+                  onChange={(e) => setPlayer2ScoreInput(e.target.value)}
+                  className="w-5 bg-transparent text-center text-sm font-black tabular-nums text-white caret-primary outline-none placeholder:text-zinc-700 [appearance:textfield] focus:text-primary [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+              </div>
             ) : (
               <div className="rounded-md border border-white/10 bg-black/20 px-2.5 py-1 text-[10px] font-black tracking-[0.22em] text-zinc-500 sm:px-3">VS</div>
             )}
+            {canSubmit && !hasConfirmedScore && isPenaltyInputStep ? (
+              <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-primary">пен</span>
+            ) : null}
             {hasConfirmedPenaltyScore ? (
               <div className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold text-primary">
                 пен {confirmedPlayer1PenaltyScore}:{confirmedPlayer2PenaltyScore}
@@ -263,43 +290,13 @@ export function MyMatchCard({
         </div>
 
         {canSubmit ? (
-          <div className="mt-2.5 grid grid-cols-[auto_minmax(0,1fr)] gap-2 sm:mt-3 sm:gap-2.5">
-            <div className="flex h-10 items-center justify-center gap-2.5 rounded-lg border border-white/10 bg-black/35 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-11 sm:px-4">
-              <input
-                type="number"
-                min={0}
-                max={99}
-                placeholder="0"
-                aria-label={isPenaltyInputStep ? "Пенальти, ваш счёт" : "Ваш счёт"}
-                value={player1ScoreInput}
-                onChange={(e) => setPlayer1ScoreInput(e.target.value)}
-                className="w-8 bg-transparent text-center text-xl font-black tabular-nums text-white caret-primary outline-none placeholder:text-zinc-700 [appearance:textfield] focus:text-primary sm:w-10 sm:text-2xl [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-              />
-              <span className="text-base font-semibold text-zinc-600 sm:text-lg">:</span>
-              <input
-                type="number"
-                min={0}
-                max={99}
-                placeholder="0"
-                aria-label={isPenaltyInputStep ? "Пенальти, счёт соперника" : "Счёт соперника"}
-                value={player2ScoreInput}
-                onChange={(e) => setPlayer2ScoreInput(e.target.value)}
-                className="w-8 bg-transparent text-center text-xl font-black tabular-nums text-white caret-primary outline-none placeholder:text-zinc-700 [appearance:textfield] focus:text-primary sm:w-10 sm:text-2xl [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-              />
-              {isPenaltyInputStep ? (
-                <span className="ml-0.5 hidden text-[10px] font-semibold uppercase tracking-[0.14em] text-primary sm:inline">пен</span>
-              ) : null}
-            </div>
-
-            <button
-              onClick={onSubmit}
-              disabled={submitDisabled}
-              className="group inline-flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-black text-black shadow-[0_2px_18px_rgba(212,175,55,0.22)] transition-all hover:bg-primary/90 hover:shadow-[0_2px_24px_rgba(212,175,55,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 active:scale-[0.98] disabled:pointer-events-none disabled:bg-white/10 disabled:text-zinc-500 disabled:shadow-none sm:h-11 sm:gap-2 sm:px-5 sm:text-sm"
-            >
-              <Send className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-              <span className="truncate">{isPending ? "Отправка..." : isPenaltyInputStep ? "Отправить" : "Подтвердить"}</span>
-            </button>
-          </div>
+          <button
+            onClick={onSubmit}
+            disabled={submitDisabled}
+            className="mt-2.5 inline-flex h-10 w-full items-center justify-center rounded-lg bg-primary px-3 text-xs font-black uppercase tracking-[0.08em] text-black shadow-[0_2px_18px_rgba(212,175,55,0.22)] transition-all hover:bg-primary/90 hover:shadow-[0_2px_24px_rgba(212,175,55,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 active:scale-[0.99] disabled:pointer-events-none disabled:bg-white/10 disabled:text-zinc-500 disabled:shadow-none sm:mt-3 sm:h-11 sm:text-sm"
+          >
+            <span className="truncate">{isPending ? "Отправка..." : isPenaltyInputStep ? "Отправить" : "Подтвердить"}</span>
+          </button>
         ) : null}
 
         {canSubmit ? (
