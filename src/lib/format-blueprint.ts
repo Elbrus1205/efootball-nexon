@@ -25,6 +25,7 @@ export type FormatBlueprint = {
   openingStageMode: OpeningStageMode;
   divisionsCount: number;
   roundsCount: number;
+  openingRoundsCount: number | null;
   participantsPerGroup: number | null;
   playoffs: PlayoffStageBlueprint[];
 };
@@ -68,6 +69,7 @@ export function createDefaultFormatBlueprint(): FormatBlueprint {
     openingStageMode: "GROUPS",
     divisionsCount: 4,
     roundsCount: 1,
+    openingRoundsCount: null,
     participantsPerGroup: null,
     playoffs: [
       createDefaultPlayoffStage({
@@ -101,6 +103,10 @@ export function normalizeFormatBlueprint(input: unknown): FormatBlueprint {
     value.openingStageMode === "LEAGUE" || value.openingStageMode === "NONE" ? value.openingStageMode : "GROUPS";
   const divisionsCount = Math.max(1, Math.min(16, Number(value.divisionsCount ?? 1) || 1));
   const roundsCount = Math.max(1, Math.min(6, Number(value.roundsCount ?? 1) || 1));
+  const openingRoundsCount =
+    value.openingRoundsCount === null || value.openingRoundsCount === undefined || value.openingRoundsCount === 0
+      ? null
+      : Math.max(1, Math.min(128, Number(value.openingRoundsCount) || 1));
   const participantsPerGroup =
     value.participantsPerGroup === null || value.participantsPerGroup === undefined || value.participantsPerGroup === 0
       ? null
@@ -129,6 +135,7 @@ export function normalizeFormatBlueprint(input: unknown): FormatBlueprint {
     openingStageMode,
     divisionsCount,
     roundsCount,
+    openingRoundsCount,
     participantsPerGroup,
     playoffs: openingStageMode === "NONE" && !normalizedPlayoffs.length ? createDefaultFormatBlueprint().playoffs : normalizedPlayoffs,
   };

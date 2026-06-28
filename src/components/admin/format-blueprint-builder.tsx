@@ -250,6 +250,27 @@ export function FormatBlueprintBuilder({
 
         {hasOpeningStage ? (
           <div className="space-y-2">
+            <Label htmlFor="openingRoundsCount">{blueprint.openingStageMode === "LEAGUE" ? "Туров в лиге" : "Туров в групповом этапе"}</Label>
+            <NumberInput
+              value={blueprint.openingRoundsCount}
+              min={1}
+              max={128}
+              placeholder="Авто"
+              onValueChange={(value) => {
+                setBlueprint((current) =>
+                  normalizeFormatBlueprint({
+                    ...current,
+                    openingRoundsCount: value,
+                  }),
+                );
+              }}
+            />
+            <div className="text-xs leading-5 text-zinc-500">Оставьте пустым для автоматического расчета по количеству участников.</div>
+          </div>
+        ) : null}
+
+        {hasOpeningStage ? (
+          <div className="space-y-2">
             <Label htmlFor="participantsPerGroup">{blueprint.openingStageMode === "LEAGUE" ? "Игроков в лиге" : "Игроков в группе"}</Label>
             <Input
               id="participantsPerGroup"

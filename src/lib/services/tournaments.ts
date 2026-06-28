@@ -1665,7 +1665,7 @@ async function createCustomFormatStages(params: {
   if (hasOpeningStage) {
     const participantsPerDivision =
       params.blueprint.participantsPerGroup ?? Math.max(2, Math.ceil(params.tournament.maxParticipants / params.blueprint.divisionsCount));
-    const openingToursCount = getRoundRobinToursCount(participantsPerDivision);
+    const openingToursCount = params.blueprint.openingRoundsCount ?? getRoundRobinToursCount(participantsPerDivision);
 
     const leagueStage = await db.tournamentStage.create({
       data: {
@@ -2214,7 +2214,8 @@ export async function syncTournamentPreviewGroups(tournamentId: string) {
     blueprint && blueprint.openingStageMode !== "NONE"
       ? blueprint.participantsPerGroup ?? Math.max(2, Math.ceil(tournament.maxParticipants / blueprint.divisionsCount))
       : groupStage.participantsPerGroup;
-  const expectedToursCount = getRoundRobinToursCount(expectedParticipantsPerGroup ?? Math.max(tournament.participants.length, 1));
+  const expectedToursCount =
+    blueprint?.openingRoundsCount ?? getRoundRobinToursCount(expectedParticipantsPerGroup ?? Math.max(tournament.participants.length, 1));
   const extraEmptyGroups = groupStage.groups.filter(
     (group) => group.orderIndex > expectedGroupsCount && group.members.length === 0 && group._count.matches === 0,
   );
