@@ -1,4 +1,4 @@
-import { MatchStatus, Prisma } from "@prisma/client";
+import { MatchStatus, Prisma, TeamInviteStatus, TournamentParticipantMode } from "@prisma/client";
 import { db } from "@/lib/db";
 
 const PLAYER_STATS_RESET_PREFIX = "playerStatsResetAt:";
@@ -41,13 +41,32 @@ export async function getPlayerCareerStats(playerId: string, options: PlayerCare
   const resetAt = resetSetting?.body ? new Date(resetSetting.body) : null;
   const validResetAt = resetAt && !Number.isNaN(resetAt.getTime()) ? resetAt : null;
 
+  const tournamentWhere: Prisma.TournamentWhereInput = {};
+  if (options.seasonId) {
+    tournamentWhere.seasonId = options.seasonId;
+  }
+
   const where: Prisma.MatchWhereInput = {
     isPenaltyTiebreak: false,
     status: { in: [MatchStatus.CONFIRMED, MatchStatus.FINISHED] },
     player1Score: { not: null },
     player2Score: { not: null },
+    ...(options.seasonId ? { tournament: tournamentWhere } : {}),
     AND: [
-      { OR: [{ player1Id: playerId }, { player2Id: playerId }] },
+      {
+        OR: [
+          { player1Id: playerId },
+          { player2Id: playerId },
+          {
+            tournament: { ...tournamentWhere, participantMode: TournamentParticipantMode.COOP },
+            participant1Entry: { rosterMembers: { some: { userId: playerId, status: TeamInviteStatus.ACCEPTED } } },
+          },
+          {
+            tournament: { ...tournamentWhere, participantMode: TournamentParticipantMode.COOP },
+            participant2Entry: { rosterMembers: { some: { userId: playerId, status: TeamInviteStatus.ACCEPTED } } },
+          },
+        ],
+      },
       ...(validResetAt
         ? [
             {
@@ -58,17 +77,30 @@ export async function getPlayerCareerStats(playerId: string, options: PlayerCare
     ],
   };
 
-  if (options.seasonId) {
-    where.tournament = { seasonId: options.seasonId };
-  }
-
   const matches = await db.match.findMany({
     where,
     select: {
+      tournament: { select: { participantMode: true } },
       player1Id: true,
       player2Id: true,
       player1Score: true,
       player2Score: true,
+      participant1Entry: {
+        select: {
+          rosterMembers: {
+            where: { status: TeamInviteStatus.ACCEPTED },
+            select: { userId: true },
+          },
+        },
+      },
+      participant2Entry: {
+        select: {
+          rosterMembers: {
+            where: { status: TeamInviteStatus.ACCEPTED },
+            select: { userId: true },
+          },
+        },
+      },
     },
   });
 
@@ -77,7 +109,15 @@ export async function getPlayerCareerStats(playerId: string, options: PlayerCare
   for (const match of matches) {
     if (match.player1Score === null || match.player2Score === null) continue;
 
-    const isPlayerOne = match.player1Id === playerId;
+    const isCoopMatch = match.tournament.participantMode === TournamentParticipantMode.COOP;
+    const isPlayerOne =
+      match.player1Id === playerId ||
+      (isCoopMatch && match.participant1Entry?.rosterMembers.some((member) => member.userId === playerId) === true);
+    const isPlayerTwo =
+      match.player2Id === playerId ||
+      (isCoopMatch && match.participant2Entry?.rosterMembers.some((member) => member.userId === playerId) === true);
+    if (!isPlayerOne && !isPlayerTwo) continue;
+
     const goalsFor = isPlayerOne ? match.player1Score : match.player2Score;
     const goalsAgainst = isPlayerOne ? match.player2Score : match.player1Score;
 

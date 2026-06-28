@@ -1,4 +1,15 @@
-import { MatchStatus, ParticipantStatus, Prisma, TeamInviteStatus, TournamentStatus, User, UserRole, type ProfileStatusTone, type ProfileStatusType } from "@prisma/client";
+import {
+  MatchStatus,
+  ParticipantStatus,
+  Prisma,
+  TeamInviteStatus,
+  TournamentParticipantMode,
+  TournamentStatus,
+  User,
+  UserRole,
+  type ProfileStatusTone,
+  type ProfileStatusType,
+} from "@prisma/client";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { getSelectedProfileStatusWhere } from "@/lib/profile-status-query";
@@ -24,6 +35,26 @@ function roundToTenths(value: number) {
 type RatingPlayer = Pick<User, "id" | "name" | "image"> & {
   profileStatuses?: Array<{ id: string; title: string; tone: ProfileStatusTone; type: ProfileStatusType; selectedOrder: number | null }>;
 };
+
+type RatingMatchSideSource = {
+  tournament: { participantMode: TournamentParticipantMode };
+  player1: RatingPlayer | null;
+  player2: RatingPlayer | null;
+  participant1Entry: { rosterMembers: Array<{ user: RatingPlayer }> } | null;
+  participant2Entry: { rosterMembers: Array<{ user: RatingPlayer }> } | null;
+};
+
+const ratingPlayerSelect = {
+  id: true,
+  name: true,
+  image: true,
+  profileStatuses: {
+    where: getSelectedProfileStatusWhere(),
+    select: { id: true, title: true, tone: true, type: true, selectedOrder: true },
+    orderBy: [{ selectedOrder: "asc" }],
+    take: 3,
+  },
+} satisfies Prisma.UserSelect;
 
 type PlayerRatingOptions = {
   seasonId?: string | null;
@@ -93,6 +124,26 @@ function applyTournamentBonus(row: PlayerRatingRow, bonus: number) {
   row.rating += bonus;
 }
 
+function uniqueRatingPlayers(players: RatingPlayer[]) {
+  const seen = new Set<string>();
+  return players.filter((player) => {
+    if (seen.has(player.id)) return false;
+    seen.add(player.id);
+    return true;
+  });
+}
+
+function getRatingMatchSidePlayers(match: RatingMatchSideSource, side: 1 | 2) {
+  const fallback = side === 1 ? match.player1 : match.player2;
+  const entry = side === 1 ? match.participant1Entry : match.participant2Entry;
+
+  if (match.tournament.participantMode === TournamentParticipantMode.COOP && entry?.rosterMembers.length) {
+    return uniqueRatingPlayers(entry.rosterMembers.map((member) => member.user));
+  }
+
+  return fallback ? [fallback] : [];
+}
+
 function matchDate(match: { finishedAt?: Date | null; updatedAt: Date; createdAt: Date }) {
   return match.finishedAt ?? match.updatedAt ?? match.createdAt;
 }
@@ -139,24 +190,33 @@ export async function getPlayerRatings(options: PlayerRatingOptions = {}) {
   const [players, matches, completedTournaments, ratingSettings] = await db.$transaction([
     db.user.findMany({
       where: { role: UserRole.PLAYER, isBanned: false },
-      select: {
-        id: true,
-        name: true,
-        image: true,
-        profileStatuses: {
-          where: getSelectedProfileStatusWhere(),
-          select: { id: true, title: true, tone: true, type: true, selectedOrder: true },
-          orderBy: [{ selectedOrder: "asc" }],
-          take: 3,
-        },
-      },
+      select: ratingPlayerSelect,
       orderBy: { createdAt: "asc" },
     }),
     db.match.findMany({
       where: matchWhere,
       include: {
-        player1: { select: { id: true, name: true, image: true } },
-        player2: { select: { id: true, name: true, image: true } },
+        tournament: { select: { participantMode: true } },
+        player1: { select: ratingPlayerSelect },
+        player2: { select: ratingPlayerSelect },
+        participant1Entry: {
+          select: {
+            rosterMembers: {
+              where: { status: TeamInviteStatus.ACCEPTED },
+              select: { user: { select: ratingPlayerSelect } },
+              orderBy: [{ isCaptain: "desc" }, { invitedAt: "asc" }],
+            },
+          },
+        },
+        participant2Entry: {
+          select: {
+            rosterMembers: {
+              where: { status: TeamInviteStatus.ACCEPTED },
+              select: { user: { select: ratingPlayerSelect } },
+              orderBy: [{ isCaptain: "desc" }, { invitedAt: "asc" }],
+            },
+          },
+        },
       },
       orderBy: [{ finishedAt: "asc" }, { updatedAt: "asc" }, { createdAt: "asc" }],
     }),
@@ -173,9 +233,28 @@ export async function getPlayerRatings(options: PlayerRatingOptions = {}) {
             isPenaltyTiebreak: false,
           },
           include: {
-            player1: { select: { id: true, name: true, image: true } },
-            player2: { select: { id: true, name: true, image: true } },
-            winner: { select: { id: true, name: true, image: true } },
+            tournament: { select: { participantMode: true } },
+            player1: { select: ratingPlayerSelect },
+            player2: { select: ratingPlayerSelect },
+            winner: { select: ratingPlayerSelect },
+            participant1Entry: {
+              select: {
+                rosterMembers: {
+                  where: { status: TeamInviteStatus.ACCEPTED },
+                  select: { user: { select: ratingPlayerSelect } },
+                  orderBy: [{ isCaptain: "desc" }, { invitedAt: "asc" }],
+                },
+              },
+            },
+            participant2Entry: {
+              select: {
+                rosterMembers: {
+                  where: { status: TeamInviteStatus.ACCEPTED },
+                  select: { user: { select: ratingPlayerSelect } },
+                  orderBy: [{ isCaptain: "desc" }, { invitedAt: "asc" }],
+                },
+              },
+            },
           },
           orderBy: [{ round: "desc" }, { matchNumber: "asc" }],
         },
@@ -227,54 +306,57 @@ export async function getPlayerRatings(options: PlayerRatingOptions = {}) {
   function applyMatchRating(match: (typeof matches)[number]) {
     if (!match.player1 || !match.player2 || match.player1Score === null || match.player2Score === null) return;
 
-    const playerOne = ensurePlayer(rows, match.player1);
-    const playerTwo = ensurePlayer(rows, match.player2);
-    const playerOneRatingBefore = playerOne.rating;
-    const playerTwoRatingBefore = playerTwo.rating;
-    const playerOneExpected = expectedScore(playerOneRatingBefore, playerTwoRatingBefore);
-    const playerTwoExpected = expectedScore(playerTwoRatingBefore, playerOneRatingBefore);
+    const sideOnePlayers = getRatingMatchSidePlayers(match, 1);
+    const sideTwoPlayers = getRatingMatchSidePlayers(match, 2);
+    if (!sideOnePlayers.length || !sideTwoPlayers.length) return;
+
+    const sideOneRows = sideOnePlayers.map((player) => ensurePlayer(rows, player));
+    const sideTwoRows = sideTwoPlayers.map((player) => ensurePlayer(rows, player));
+    const sideOneRatingBefore = sideOneRows.reduce((sum, row) => sum + row.rating, 0) / sideOneRows.length;
+    const sideTwoRatingBefore = sideTwoRows.reduce((sum, row) => sum + row.rating, 0) / sideTwoRows.length;
+    const sideOneExpected = expectedScore(sideOneRatingBefore, sideTwoRatingBefore);
+    const sideTwoExpected = expectedScore(sideTwoRatingBefore, sideOneRatingBefore);
     const playerOneScore = match.player1Score > match.player2Score ? 1 : match.player1Score === match.player2Score ? 0.5 : 0;
     const playerTwoScore = 1 - playerOneScore;
-    const playerOneDelta = K_FACTOR * (playerOneScore - playerOneExpected);
-    const playerTwoDelta = K_FACTOR * (playerTwoScore - playerTwoExpected);
+    const sideOneDelta = K_FACTOR * (playerOneScore - sideOneExpected);
+    const sideTwoDelta = K_FACTOR * (playerTwoScore - sideTwoExpected);
     const playedAt = matchDate(match);
+    const sideOneGoals = match.player1Score;
+    const sideTwoGoals = match.player2Score;
 
-    playerOne.matchRating = Math.max(0, playerOne.matchRating + playerOneDelta);
-    playerTwo.matchRating = Math.max(0, playerTwo.matchRating + playerTwoDelta);
-    playerOne.rating = Math.max(0, playerOneRatingBefore + playerOneDelta);
-    playerTwo.rating = Math.max(0, playerTwoRatingBefore + playerTwoDelta);
-    playerOne.lastRatingChange = playerOneDelta;
-    playerTwo.lastRatingChange = playerTwoDelta;
-    playerOne.lastRatingChangeAt = playedAt;
-    playerTwo.lastRatingChangeAt = playedAt;
+    sideOneRows.forEach((row) => {
+      row.matchRating = Math.max(0, row.matchRating + sideOneDelta);
+      row.rating = Math.max(0, row.rating + sideOneDelta);
+      row.lastRatingChange = sideOneDelta;
+      row.lastRatingChangeAt = playedAt;
 
-    const countPlayerOneStats = shouldCountStats(match.player1.id, playedAt);
-    const countPlayerTwoStats = shouldCountStats(match.player2.id, playedAt);
-    if (countPlayerOneStats) {
-      playerOne.played += 1;
-      playerOne.goalsFor += match.player1Score;
-      playerOne.goalsAgainst += match.player2Score;
-      playerOne.goalDifference = playerOne.goalsFor - playerOne.goalsAgainst;
-      playerOne.lastMatchAt = !playerOne.lastMatchAt || playedAt > playerOne.lastMatchAt ? playedAt : playerOne.lastMatchAt;
-    }
-    if (countPlayerTwoStats) {
-      playerTwo.played += 1;
-      playerTwo.goalsFor += match.player2Score;
-      playerTwo.goalsAgainst += match.player1Score;
-      playerTwo.goalDifference = playerTwo.goalsFor - playerTwo.goalsAgainst;
-      playerTwo.lastMatchAt = !playerTwo.lastMatchAt || playedAt > playerTwo.lastMatchAt ? playedAt : playerTwo.lastMatchAt;
-    }
+      if (!shouldCountStats(row.playerId, playedAt)) return;
+      row.played += 1;
+      row.goalsFor += sideOneGoals;
+      row.goalsAgainst += sideTwoGoals;
+      row.goalDifference = row.goalsFor - row.goalsAgainst;
+      row.lastMatchAt = !row.lastMatchAt || playedAt > row.lastMatchAt ? playedAt : row.lastMatchAt;
+      if (playerOneScore === 1) row.wins += 1;
+      else if (playerOneScore === 0) row.losses += 1;
+      else row.draws += 1;
+    });
 
-    if (playerOneScore === 1) {
-      if (countPlayerOneStats) playerOne.wins += 1;
-      if (countPlayerTwoStats) playerTwo.losses += 1;
-    } else if (playerOneScore === 0) {
-      if (countPlayerTwoStats) playerTwo.wins += 1;
-      if (countPlayerOneStats) playerOne.losses += 1;
-    } else {
-      if (countPlayerOneStats) playerOne.draws += 1;
-      if (countPlayerTwoStats) playerTwo.draws += 1;
-    }
+    sideTwoRows.forEach((row) => {
+      row.matchRating = Math.max(0, row.matchRating + sideTwoDelta);
+      row.rating = Math.max(0, row.rating + sideTwoDelta);
+      row.lastRatingChange = sideTwoDelta;
+      row.lastRatingChangeAt = playedAt;
+
+      if (!shouldCountStats(row.playerId, playedAt)) return;
+      row.played += 1;
+      row.goalsFor += sideTwoGoals;
+      row.goalsAgainst += sideOneGoals;
+      row.goalDifference = row.goalsFor - row.goalsAgainst;
+      row.lastMatchAt = !row.lastMatchAt || playedAt > row.lastMatchAt ? playedAt : row.lastMatchAt;
+      if (playerTwoScore === 1) row.wins += 1;
+      else if (playerTwoScore === 0) row.losses += 1;
+      else row.draws += 1;
+    });
   }
 
   const ratingEvents: Array<
@@ -299,34 +381,55 @@ export async function getPlayerRatings(options: PlayerRatingOptions = {}) {
     const bonusDate = tournament.endsAt ?? (finalMatch ? matchDate(finalMatch) : tournament.updatedAt);
 
     if (finalMatch?.winner) {
-      ratingEvents.push({
-        type: "bonus",
-        date: bonusDate,
-        order: 1,
-        player: finalMatch.winner,
-        bonus: TOURNAMENT_BONUSES.champion,
-      });
+      const championSide = finalMatch.winnerId === finalMatch.player1Id ? 1 : finalMatch.winnerId === finalMatch.player2Id ? 2 : null;
+      const finalistSide = championSide === 1 ? 2 : championSide === 2 ? 1 : null;
 
-      const finalist = finalMatch.winnerId === finalMatch.player1Id ? finalMatch.player2 : finalMatch.player1;
-      if (finalist) {
+      if (championSide) {
+        getRatingMatchSidePlayers(finalMatch, championSide).forEach((player) => {
+          ratingEvents.push({
+            type: "bonus",
+            date: bonusDate,
+            order: 1,
+            player,
+            bonus: TOURNAMENT_BONUSES.champion,
+          });
+        });
+      } else {
         ratingEvents.push({
           type: "bonus",
           date: bonusDate,
-          order: 2,
-          player: finalist,
-          bonus: TOURNAMENT_BONUSES.finalist,
+          order: 1,
+          player: finalMatch.winner,
+          bonus: TOURNAMENT_BONUSES.champion,
+        });
+      }
+
+      if (finalistSide) {
+        getRatingMatchSidePlayers(finalMatch, finalistSide).forEach((player) => {
+          ratingEvents.push({
+            type: "bonus",
+            date: bonusDate,
+            order: 2,
+            player,
+            bonus: TOURNAMENT_BONUSES.finalist,
+          });
         });
       }
     }
 
     if (thirdPlaceMatch?.winner) {
-      ratingEvents.push({
-        type: "bonus",
-        date: bonusDate,
-        order: 3,
-        player: thirdPlaceMatch.winner,
-        bonus: TOURNAMENT_BONUSES.thirdPlace,
-      });
+      const thirdPlaceSide = thirdPlaceMatch.winnerId === thirdPlaceMatch.player1Id ? 1 : thirdPlaceMatch.winnerId === thirdPlaceMatch.player2Id ? 2 : null;
+      if (thirdPlaceSide) {
+        getRatingMatchSidePlayers(thirdPlaceMatch, thirdPlaceSide).forEach((player) => {
+          ratingEvents.push({
+            type: "bonus",
+            date: bonusDate,
+            order: 3,
+            player,
+            bonus: TOURNAMENT_BONUSES.thirdPlace,
+          });
+        });
+      }
     }
   }
 
