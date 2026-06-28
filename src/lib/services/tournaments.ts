@@ -1193,6 +1193,7 @@ async function createRoundRobinMatchesForEntries({
   entries,
   roundsCount,
   roundsMode = "cycles",
+  matchesPerOpponent,
   matchupFormat = MatchupFormat.SINGLE_MATCH,
   bestOfWins = 1,
 }: {
@@ -1202,6 +1203,7 @@ async function createRoundRobinMatchesForEntries({
   entries: { id: string; userId: string }[];
   roundsCount?: number | null;
   roundsMode?: "cycles" | "series";
+  matchesPerOpponent?: number | null;
   matchupFormat?: MatchupFormat;
   bestOfWins?: number;
 }) {
@@ -1226,10 +1228,11 @@ async function createRoundRobinMatchesForEntries({
   let slots: ({ id: string; userId: string } | null)[] = entries.length % 2 === 0 ? [...entries] : [...entries, null];
   const roundsPerCycle = Math.max(slots.length - 1, 1);
   const requestedCount = Math.max(roundsCount ?? 1, 1);
+  const requestedMatchesPerOpponent = Math.max(matchesPerOpponent ?? requestedCount, 1);
   const seriesWinsRequired = matchupFormat === MatchupFormat.BEST_OF ? Math.max(2, Math.min(bestOfWins, 9)) : null;
   const bestOfMatchesPerPair = seriesWinsRequired ? seriesWinsRequired * 2 - 1 : null;
-  const matchesPerPair = bestOfMatchesPerPair ?? (roundsMode === "series" ? Math.min(requestedCount, 6) : 1);
-  const totalTours = roundsMode === "series" ? roundsPerCycle : requestedCount * roundsPerCycle;
+  const matchesPerPair = bestOfMatchesPerPair ?? (roundsMode === "series" ? Math.min(requestedMatchesPerOpponent, 6) : 1);
+  const totalTours = roundsMode === "series" ? requestedCount : requestedCount * roundsPerCycle;
   const maxMatchesPerPair = bestOfMatchesPerPair ?? (roundsMode === "series" ? matchesPerPair : requestedCount);
   const pairMatchesCount = new Map<string, number>();
 
@@ -2319,7 +2322,8 @@ export async function generateTournamentMatches(tournamentId: string) {
         tournamentId,
         stageId: stage.id,
         entries: tournament.participants.map((entry) => ({ id: entry.id, userId: entry.userId })),
-        roundsCount: getCustomStageMatchesPerOpponent(stage, tournament.formatBlueprintJson) ?? stage.roundsCount,
+        roundsCount: stage.roundsCount,
+        matchesPerOpponent: getCustomStageMatchesPerOpponent(stage, tournament.formatBlueprintJson),
         roundsMode: isCustomTourCountStage(stage) ? "series" : "cycles",
         matchupFormat: tournament.matchupFormat,
         bestOfWins: tournament.bestOfWins,
@@ -2337,7 +2341,8 @@ export async function generateTournamentMatches(tournamentId: string) {
           stageId: stage.id,
           groupId: group.id,
           entries: members,
-          roundsCount: getCustomStageMatchesPerOpponent(stage, tournament.formatBlueprintJson) ?? stage.roundsCount,
+          roundsCount: stage.roundsCount,
+          matchesPerOpponent: getCustomStageMatchesPerOpponent(stage, tournament.formatBlueprintJson),
           roundsMode: isCustomTourCountStage(stage) ? "series" : "cycles",
           matchupFormat: tournament.matchupFormat,
           bestOfWins: tournament.bestOfWins,
