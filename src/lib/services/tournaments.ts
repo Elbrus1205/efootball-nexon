@@ -2191,6 +2191,7 @@ export async function syncTournamentPreviewGroups(tournamentId: string) {
             include: {
               members: { where: { status: ParticipantStatus.CONFIRMED } },
               standings: true,
+              _count: { select: { matches: true } },
             },
             orderBy: { orderIndex: "asc" },
           },
@@ -2204,7 +2205,49 @@ export async function syncTournamentPreviewGroups(tournamentId: string) {
   const groupStage = tournament.stages[0];
   if (!groupStage) return null;
 
-  const expectedGroupsCount = groupStage.groupsCount ?? 1;
+  const blueprint = tournament.format === TournamentFormat.CUSTOM ? normalizeFormatBlueprint(tournament.formatBlueprintJson) : null;
+  const expectedGroupsCount =
+    blueprint && blueprint.openingStageMode !== "NONE"
+      ? blueprint.divisionsCount
+      : groupStage.groupsCount ?? 1;
+  const expectedParticipantsPerGroup =
+    blueprint && blueprint.openingStageMode !== "NONE"
+      ? blueprint.participantsPerGroup ?? Math.max(2, Math.ceil(tournament.maxParticipants / blueprint.divisionsCount))
+      : groupStage.participantsPerGroup;
+  const expectedToursCount = getRoundRobinToursCount(expectedParticipantsPerGroup ?? Math.max(tournament.participants.length, 1));
+  const extraEmptyGroups = groupStage.groups.filter(
+    (group) => group.orderIndex > expectedGroupsCount && group.members.length === 0 && group._count.matches === 0,
+  );
+
+  if (groupStage.groupsCount !== expectedGroupsCount || groupStage.participantsPerGroup !== expectedParticipantsPerGroup) {
+    await db.tournamentStage.update({
+      where: { id: groupStage.id },
+      data: {
+        groupsCount: expectedGroupsCount,
+        participantsPerGroup: expectedParticipantsPerGroup,
+        ...(blueprint
+          ? {
+              roundsCount: expectedToursCount,
+              settingsJson: {
+                mode: blueprint.openingStageMode === "LEAGUE" ? "custom-league" : "custom-groups",
+                divisionsCount: expectedGroupsCount,
+                roundsCount: expectedToursCount,
+                matchesPerOpponent: blueprint.roundsCount,
+                participantsPerGroup: blueprint.participantsPerGroup,
+              },
+            }
+          : {}),
+      },
+    });
+  }
+
+  if (extraEmptyGroups.length) {
+    const extraGroupIds = extraEmptyGroups.map((group) => group.id);
+    await db.groupStanding.deleteMany({ where: { groupId: { in: extraGroupIds } } });
+    await db.tournamentGroup.deleteMany({ where: { id: { in: extraGroupIds } } });
+    return assignParticipantsToGroups(tournamentId, { mode: "auto" });
+  }
+
   let createdMissingGroups = false;
   if (groupStage.groups.length < expectedGroupsCount) {
     for (let index = groupStage.groups.length; index < expectedGroupsCount; index += 1) {
