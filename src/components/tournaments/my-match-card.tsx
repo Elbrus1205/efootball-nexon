@@ -235,7 +235,7 @@ export function MyMatchCard({
                 </span>
               </div>
             ) : canSubmit ? (
-              <div className="flex items-center gap-0.5 rounded-md border border-white/10 bg-black/35 px-1.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+              <div className="flex items-center gap-0.5 rounded-md border border-white/10 bg-black/35 px-2 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                 <input
                   type="number"
                   min={0}
@@ -244,9 +244,9 @@ export function MyMatchCard({
                   aria-label={isPenaltyInputStep ? "Пенальти, ваш счёт" : "Ваш счёт"}
                   value={player1ScoreInput}
                   onChange={(e) => setPlayer1ScoreInput(e.target.value)}
-                  className="w-5 bg-transparent text-center text-sm font-black tabular-nums text-white caret-primary outline-none placeholder:text-zinc-700 [appearance:textfield] focus:text-primary [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  className="w-6 bg-transparent text-center text-lg font-black tabular-nums text-white caret-primary outline-none placeholder:text-zinc-700 [appearance:textfield] focus:text-primary [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
-                <span className="text-xs font-semibold text-zinc-600">:</span>
+                <span className="text-sm font-semibold text-zinc-600">:</span>
                 <input
                   type="number"
                   min={0}
@@ -255,7 +255,7 @@ export function MyMatchCard({
                   aria-label={isPenaltyInputStep ? "Пенальти, счёт соперника" : "Счёт соперника"}
                   value={player2ScoreInput}
                   onChange={(e) => setPlayer2ScoreInput(e.target.value)}
-                  className="w-5 bg-transparent text-center text-sm font-black tabular-nums text-white caret-primary outline-none placeholder:text-zinc-700 [appearance:textfield] focus:text-primary [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  className="w-6 bg-transparent text-center text-lg font-black tabular-nums text-white caret-primary outline-none placeholder:text-zinc-700 [appearance:textfield] focus:text-primary [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
               </div>
             ) : (
@@ -300,10 +300,10 @@ export function MyMatchCard({
         ) : null}
 
         {canSubmit ? (
-          <div className="mt-2 flex items-center justify-between gap-2">
-            <p className="min-w-0 flex-1 truncate text-[11px] leading-snug text-zinc-500">{message}</p>
+          <div className="mt-2 flex items-start justify-between gap-2">
+            <p className="min-w-0 flex-1 text-[11px] leading-snug text-zinc-500">{message}</p>
             {attemptsLeft > 0 && !waitingForOpponent ? (
-              <div className="flex shrink-0 items-center gap-1.5" title={`Осталось попыток: ${attemptsLeft}`}>
+              <div className="flex shrink-0 items-center gap-1.5 pt-0.5" title={`Осталось попыток: ${attemptsLeft}`}>
                 <span className="hidden text-[10px] uppercase tracking-[0.1em] text-zinc-600 sm:inline">Попытки</span>
                 <span className="flex gap-1">
                   {[0, 1, 2].map((i) => (
