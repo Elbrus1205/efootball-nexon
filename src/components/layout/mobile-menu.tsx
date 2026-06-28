@@ -185,11 +185,11 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
           )}
           onClick={(event) => event.stopPropagation()}
         >
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-300/65 to-transparent" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#b9944f]/65 to-transparent" />
           {!session?.user ? (
             <div className="relative border-b border-white/10 px-4 py-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-300/25 bg-amber-400/10 text-amber-100 shadow-[0_0_28px_rgba(245,158,11,0.14)]">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#b9944f]/30 bg-[#b9944f]/10 text-[#e7cf8f] shadow-[0_0_28px_rgba(185,148,79,0.16)]">
                   <User2 className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -212,20 +212,20 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
                     key={link.href}
                     href={link.href}
                     className={cn(
-                      "group flex min-h-[60px] items-center gap-3 overflow-hidden rounded-[1.4rem] px-3.5 py-3 text-zinc-200 transition-[background-color,transform,color,box-shadow,border-color] duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70",
+                      "group flex min-h-[60px] items-center gap-3 overflow-hidden rounded-2xl px-3.5 py-3 text-zinc-200 transition-[background-color,transform,color,box-shadow,border-color] duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9944f]/60",
                       "hover:bg-white/[0.055] hover:text-white active:scale-[0.985]",
                       open && "animate-mobile-menu-item",
                       active &&
-                        "bg-sky-400/[0.08] text-white shadow-[inset_0_0_0_1px_rgba(96,165,250,0.24),0_10px_24px_rgba(2,6,23,0.16)]",
+                        "bg-[#b9944f]/[0.1] text-white shadow-[inset_0_0_0_1px_rgba(185,148,79,0.28),0_10px_24px_rgba(0,0,0,0.22)]",
                     )}
                     style={{ animationDelay: `${100 + index * 46}ms` }}
                     onClick={closeMenu}
                   >
                     <span
                       className={cn(
-                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border text-zinc-300 transition duration-300",
+                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-zinc-300 transition duration-300",
                         active
-                          ? "border-sky-300/18 bg-sky-400/12 text-sky-100 shadow-[0_10px_28px_rgba(56,189,248,0.12)]"
+                          ? "border-[#b9944f]/30 bg-[#b9944f]/12 text-[#e7cf8f] shadow-[0_10px_28px_rgba(185,148,79,0.14)]"
                           : "border-white/10 bg-white/[0.03] group-hover:border-white/15 group-hover:bg-white/[0.07] group-hover:text-white",
                       )}
                     >
@@ -234,7 +234,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
 
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold">{link.label}</span>
-                      <span className={cn("mt-0.5 block text-xs", active ? "text-sky-100/70" : "text-zinc-500 group-hover:text-zinc-400")}>
+                      <span className={cn("mt-0.5 block text-xs", active ? "text-[#e7cf8f]/70" : "text-zinc-500 group-hover:text-zinc-400")}>
                         {meta.caption}
                       </span>
                     </span>
@@ -242,7 +242,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
                     <span
                       className={cn(
                         "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition duration-300",
-                        active ? "bg-sky-400/12 text-sky-100" : "text-white/30 group-hover:bg-white/[0.06] group-hover:text-white/75",
+                        active ? "bg-[#b9944f]/12 text-[#e7cf8f]" : "text-white/30 group-hover:bg-white/[0.06] group-hover:text-white/75",
                       )}
                     >
                       <ArrowRight className="h-4 w-4 transition duration-300 group-hover:translate-x-0.5" />
@@ -259,15 +259,15 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
                 <Link
                   href="/login"
                   onClick={() => setOpen(false)}
-                  className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] px-3 text-sm font-bold text-white transition hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+                  className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.045] px-3 text-sm font-bold text-white transition hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9944f]/60"
                 >
-                  <LogIn className="h-4 w-4 text-sky-200" />
+                  <LogIn className="h-4 w-4 text-[#e7cf8f]" />
                   Войти
                 </Link>
                 <Link
                   href="/register"
                   onClick={() => setOpen(false)}
-                  className="registration-cta flex min-h-12 items-center justify-center rounded-2xl border border-amber-300/30 bg-amber-400/10 px-3 text-sm font-black text-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/70"
+                  className="registration-cta flex min-h-12 items-center justify-center rounded-xl border border-[#b9944f]/30 bg-[#b9944f]/10 px-3 text-sm font-black text-[#e7cf8f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9944f]/70"
                 >
                   Регистрация
                 </Link>

@@ -69,7 +69,14 @@ function SecuritySection({
         className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-2 p-3 text-left transition hover:bg-white/[0.02] sm:flex sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:p-6"
       >
         <div className="flex items-start gap-2.5 sm:gap-3">
-          <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white sm:h-11 sm:w-11 sm:rounded-2xl">
+          <div
+            className={cn(
+              "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border transition-colors duration-200 sm:h-11 sm:w-11 sm:rounded-2xl",
+              isOpen
+                ? "border-[#b9944f]/35 bg-[#b9944f]/12 text-[#e7cf8f]"
+                : "border-white/10 bg-white/[0.04] text-white",
+            )}
+          >
             {icon}
           </div>
           <div className="min-w-0 space-y-1">
@@ -83,7 +90,7 @@ function SecuritySection({
             className={cn(
               "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-white transition-all duration-200 sm:h-11 sm:w-11",
               isOpen
-                ? "border-blue-400/40 bg-blue-500/15 shadow-[0_0_0_4px_rgba(59,130,246,0.08)]"
+                ? "border-[#b9944f]/40 bg-[#b9944f]/15 text-[#e7cf8f] shadow-[0_0_0_4px_rgba(185,148,79,0.08)]"
                 : "border-white/10 bg-white/[0.04] hover:bg-white/[0.07]",
             )}
           >
