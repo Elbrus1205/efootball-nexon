@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ParticipantStatus, TeamInviteStatus } from "@prisma/client";
 import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
@@ -18,12 +19,24 @@ export async function GET(request: Request, { params }: { params: { id: string }
     return NextResponse.json({ users: [] });
   }
 
-  const tournamentParticipants = await db.tournamentRegistration.findMany({
-    where: { tournamentId: params.id },
-    select: { userId: true },
-  });
+  const [tournamentParticipants, rosterMembers] = await Promise.all([
+    db.tournamentRegistration.findMany({
+      where: { tournamentId: params.id, status: { not: ParticipantStatus.REMOVED } },
+      select: { userId: true },
+    }),
+    db.tournamentRegistrationMember.findMany({
+      where: {
+        tournamentId: params.id,
+        status: { in: [TeamInviteStatus.PENDING, TeamInviteStatus.ACCEPTED] },
+        registration: { status: { not: ParticipantStatus.REMOVED } },
+      },
+      select: { userId: true },
+    }),
+  ]);
 
-  const excludedUserIds = tournamentParticipants.map((participant) => participant.userId);
+  const excludedUserIds = Array.from(
+    new Set([...tournamentParticipants.map((participant) => participant.userId), ...rosterMembers.map((member) => member.userId)]),
+  );
   const users = await db.user.findMany({
     where: {
       isBanned: false,

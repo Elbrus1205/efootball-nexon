@@ -185,6 +185,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       where: {
         tournamentId: params.id,
         userId: replacementUserId,
+        status: { not: ParticipantStatus.REMOVED },
       },
     });
 
@@ -427,6 +428,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const registrationId = member.registration.id;
 
     const result = await db.$transaction(async (tx) => {
+      await tx.tournamentRegistrationMember.deleteMany({
+        where: {
+          tournamentId: params.id,
+          userId: replacementUserId,
+          id: { not: member.id },
+          status: { notIn: [TeamInviteStatus.PENDING, TeamInviteStatus.ACCEPTED] },
+        },
+      });
+
       await tx.tournamentRegistrationMember.update({
         where: { id: member.id },
         data: {

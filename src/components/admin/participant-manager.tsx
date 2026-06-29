@@ -3,7 +3,7 @@
 import { ParticipantStatus } from "@prisma/client";
 import { ChevronDown, Plus, Search, Shuffle, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { participantStatusLabel } from "@/lib/admin-display";
 import { Badge } from "@/components/ui/badge";
@@ -112,6 +112,7 @@ export function ParticipantManager({
   const [isUserSearchLoading, setIsUserSearchLoading] = useState(false);
   const [participantQuery, setParticipantQuery] = useState("");
   const [openParticipantId, setOpenParticipantId] = useState<string | null>(null);
+  const [openReplacementTargetId, setOpenReplacementTargetId] = useState<string | null>(null);
   const [replacementByParticipant, setReplacementByParticipant] = useState<Record<string, string>>({});
   const [replacementSearchByParticipant, setReplacementSearchByParticipant] = useState<Record<string, string>>({});
   const [replacementOptionsByParticipant, setReplacementOptionsByParticipant] = useState<Record<string, UserOption[]>>({});
@@ -129,7 +130,7 @@ export function ParticipantManager({
     ? participants.filter((participant) => participantSearchText(participant).includes(normalizedParticipantQuery))
     : [];
 
-  const searchUsers = async (query: string) => {
+  const searchUsers = useCallback(async (query: string) => {
     const normalized = normalizeSearch(query);
     if (normalized.length < 2) return [];
 
@@ -138,7 +139,7 @@ export function ParticipantManager({
 
     const payload = (await response.json().catch(() => ({ users: [] }))) as { users?: UserOption[] };
     return payload.users ?? [];
-  };
+  }, [tournamentId]);
 
   useEffect(() => {
     const normalized = normalizeSearch(userSearch);
@@ -166,14 +167,14 @@ export function ParticipantManager({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [tournamentId, userSearch]);
+  }, [searchUsers, userSearch]);
 
   useEffect(() => {
-    if (!openParticipantId) return;
+    if (!openReplacementTargetId) return;
 
-    const normalized = normalizeSearch(replacementSearchByParticipant[openParticipantId] ?? "");
+    const normalized = normalizeSearch(replacementSearchByParticipant[openReplacementTargetId] ?? "");
     if (normalized.length < 2) {
-      setReplacementOptionsByParticipant((current) => ({ ...current, [openParticipantId]: [] }));
+      setReplacementOptionsByParticipant((current) => ({ ...current, [openReplacementTargetId]: [] }));
       return;
     }
 
@@ -181,7 +182,7 @@ export function ParticipantManager({
     const timer = window.setTimeout(() => {
       searchUsers(normalized).then((items) => {
         if (!cancelled) {
-          setReplacementOptionsByParticipant((current) => ({ ...current, [openParticipantId]: items }));
+          setReplacementOptionsByParticipant((current) => ({ ...current, [openReplacementTargetId]: items }));
         }
       });
     }, 220);
@@ -190,7 +191,7 @@ export function ParticipantManager({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [openParticipantId, replacementSearchByParticipant, tournamentId]);
+  }, [openReplacementTargetId, replacementSearchByParticipant, searchUsers]);
 
   const run = (body: Record<string, unknown>, successMessage?: string) => {
     startTransition(async () => {
@@ -215,6 +216,7 @@ export function ParticipantManager({
 
       // Сбрасываем состояние поиска замены, чтобы следующую замену можно было сделать сразу
       // (иначе остаётся прежний выбранный игрок/запрос, и кандидаты не подгружаются заново).
+      setOpenReplacementTargetId(null);
       setReplacementByParticipant({});
       setReplacementSearchByParticipant({});
       setReplacementOptionsByParticipant({});
@@ -355,12 +357,16 @@ export function ParticipantManager({
             const isHistoryEntry = participant.status === ParticipantStatus.REMOVED;
             const isOpen = openParticipantId === participant.id;
             const rosterMembers = participant.rosterMembers ?? [];
+            const hasRosterReplacement = rosterMembers.length > 1;
 
             return (
               <div key={participant.id} className="overflow-hidden rounded-lg border border-white/10 bg-black/20">
                 <button
                   type="button"
-                  onClick={() => setOpenParticipantId(isOpen ? null : participant.id)}
+                  onClick={() => {
+                    setOpenParticipantId(isOpen ? null : participant.id);
+                    setOpenReplacementTargetId(null);
+                  }}
                   className="flex w-full min-w-0 items-center justify-between gap-3 p-3 text-left transition hover:bg-white/[0.03] sm:p-4"
                 >
                   <div className="min-w-0">
@@ -433,48 +439,154 @@ export function ParticipantManager({
                       {rosterMembers.length > 1 ? (
                         <div className="mb-3 space-y-2">
                           <div className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Состав команды</div>
-                          {rosterMembers.map((member) => (
-                            <div
-                              key={member.id}
-                              className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2"
-                            >
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="truncate text-sm font-medium text-white">
-                                    {member.user.name ?? member.user.email ?? member.user.id}
-                                  </span>
-                                  {member.isCaptain ? <Badge variant="primary">Капитан</Badge> : null}
+                          {rosterMembers.map((member) => {
+                            const targetId = `member:${member.id}`;
+                            const memberReplacementUserId = replacementByParticipant[targetId] ?? "";
+                            const memberReplacementQuery = replacementSearchByParticipant[targetId] ?? "";
+                            const normalizedMemberReplacementQuery = normalizeSearch(memberReplacementQuery);
+                            const memberReplacementMatches = normalizedMemberReplacementQuery ? replacementOptionsByParticipant[targetId] ?? [] : [];
+                            const selectedMemberReplacement = usersById.get(memberReplacementUserId);
+
+                            return (
+                              <div key={member.id} className="rounded-lg border border-white/10 bg-black/20 p-2.5">
+                                <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.9fr)_auto] lg:items-start">
+                                  <div className="min-w-0">
+                                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                      <span className="truncate text-sm font-medium text-white">
+                                        {member.user.name ?? member.user.email ?? member.user.id}
+                                      </span>
+                                      {member.isCaptain ? <Badge variant="primary">Капитан</Badge> : null}
+                                    </div>
+                                    {member.user.telegramUsername ? (
+                                      <div className="mt-0.5 truncate text-xs text-zinc-500">@{member.user.telegramUsername}</div>
+                                    ) : (
+                                      <div className="mt-0.5 truncate text-xs text-zinc-500">{member.user.email ?? member.user.id}</div>
+                                    )}
+                                  </div>
+
+                                  <div className="min-w-0 space-y-2">
+                                    <div className="relative">
+                                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                                      <Input
+                                        value={memberReplacementQuery}
+                                        disabled={pending || !canReplace}
+                                        placeholder="Новый игрок"
+                                        onFocus={() => setOpenReplacementTargetId(targetId)}
+                                        onChange={(event) => {
+                                          setOpenReplacementTargetId(targetId);
+                                          setReplacementSearchByParticipant((current) => ({
+                                            ...current,
+                                            [targetId]: event.target.value,
+                                          }));
+                                        }}
+                                        className="h-9 rounded-lg pl-10 pr-10 text-sm"
+                                      />
+                                      {memberReplacementQuery ? (
+                                        <button
+                                          type="button"
+                                          disabled={pending}
+                                          onClick={() => {
+                                            setReplacementSearchByParticipant((current) => ({
+                                              ...current,
+                                              [targetId]: "",
+                                            }));
+                                            setReplacementOptionsByParticipant((current) => ({ ...current, [targetId]: [] }));
+                                          }}
+                                          className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-50"
+                                          aria-label="Очистить поиск"
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </button>
+                                      ) : null}
+                                    </div>
+
+                                    {selectedMemberReplacement ? (
+                                      <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/25 bg-primary/[0.08] px-2.5 py-1.5">
+                                        <div className="min-w-0">
+                                          <div className="truncate text-xs font-medium text-white">{userLabel(selectedMemberReplacement)}</div>
+                                          <div className="mt-0.5 truncate text-[11px] text-zinc-400">{userSearchMeta(selectedMemberReplacement) || "Игрок выбран"}</div>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          disabled={pending}
+                                          onClick={() =>
+                                            setReplacementByParticipant((current) => ({
+                                              ...current,
+                                              [targetId]: "",
+                                            }))
+                                          }
+                                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 transition hover:border-white/20 hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-50"
+                                          aria-label="Снять выбранного игрока"
+                                        >
+                                          <X className="h-3.5 w-3.5" />
+                                        </button>
+                                      </div>
+                                    ) : null}
+
+                                    {normalizedMemberReplacementQuery ? (
+                                      <div className="max-h-44 overflow-y-auto rounded-lg border border-white/10 bg-black/30 p-1">
+                                        {memberReplacementMatches.length ? (
+                                          memberReplacementMatches.map((user) => {
+                                            const isSelected = user.id === memberReplacementUserId;
+
+                                            return (
+                                              <button
+                                                key={user.id}
+                                                type="button"
+                                                disabled={pending}
+                                                onClick={() => {
+                                                  setReplacementByParticipant((current) => ({
+                                                    ...current,
+                                                    [targetId]: user.id,
+                                                  }));
+                                                  setReplacementSearchByParticipant((current) => ({
+                                                    ...current,
+                                                    [targetId]: "",
+                                                  }));
+                                                  setOpenReplacementTargetId(null);
+                                                }}
+                                                className={`flex w-full min-w-0 items-center justify-between gap-3 rounded-md px-3 py-2 text-left transition ${
+                                                  isSelected ? "bg-primary/15 text-white" : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                                                }`}
+                                              >
+                                                <span className="min-w-0">
+                                                  <span className="block truncate text-sm font-medium">{userLabel(user)}</span>
+                                                  <span className="mt-0.5 block truncate text-xs text-zinc-500">{userSearchMeta(user) || user.id}</span>
+                                                </span>
+                                                {isSelected ? <Badge variant="primary">Выбран</Badge> : null}
+                                              </button>
+                                            );
+                                          })
+                                        ) : (
+                                          <div className="px-3 py-3 text-sm text-zinc-500">Игрок не найден.</div>
+                                        )}
+                                      </div>
+                                    ) : null}
+                                  </div>
+
+                                  <Button
+                                    variant="secondary"
+                                    className="h-9 shrink-0 rounded-lg px-3 text-xs"
+                                    disabled={pending || !canReplace || !memberReplacementUserId}
+                                    onClick={() =>
+                                      run(
+                                        { action: "replaceMember", memberId: member.id, replacementUserId: memberReplacementUserId },
+                                        member.isCaptain ? "Капитан состава заменён." : "Игрок состава заменён.",
+                                      )
+                                    }
+                                  >
+                                    Заменить
+                                  </Button>
                                 </div>
-                                {member.user.telegramUsername ? (
-                                  <div className="mt-0.5 truncate text-xs text-zinc-500">@{member.user.telegramUsername}</div>
-                                ) : null}
                               </div>
-                              <Button
-                                variant="secondary"
-                                className="h-9 shrink-0 rounded-lg px-3 text-xs"
-                                disabled={pending || !canReplace || !replacementUserId}
-                                onClick={() =>
-                                  member.isCaptain
-                                    ? run(
-                                        { action: "replace", registrationId: participant.id, replacementUserId },
-                                        "Капитан заменён. Состав и слот сохранены за новой заявкой.",
-                                      )
-                                    : run(
-                                        { action: "replaceMember", memberId: member.id, replacementUserId },
-                                        "Игрок состава заменён.",
-                                      )
-                                }
-                              >
-                                Заменить
-                              </Button>
-                            </div>
-                          ))}
+                            );
+                          })}
                           <div className="text-xs text-zinc-500">
-                            Сначала выберите нового игрока ниже, затем нажмите «Заменить» напротив нужного участника состава.
+                            Для коопа выберите нового игрока прямо напротив того участника, которого нужно заменить.
                           </div>
                         </div>
                       ) : null}
-                      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+                      <div className={`grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start ${hasRosterReplacement ? "hidden" : ""}`}>
                         <div className="min-w-0 space-y-2">
                           <div className="relative">
                             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
@@ -482,12 +594,14 @@ export function ParticipantManager({
                               value={replacementQuery}
                               disabled={pending || !canReplace}
                               placeholder="Найти игрока для замены"
-                              onChange={(event) =>
+                              onFocus={() => setOpenReplacementTargetId(participant.id)}
+                              onChange={(event) => {
+                                setOpenReplacementTargetId(participant.id);
                                 setReplacementSearchByParticipant((current) => ({
                                   ...current,
                                   [participant.id]: event.target.value,
-                                }))
-                              }
+                                }));
+                              }}
                               className="h-10 rounded-lg pl-10 pr-10 text-sm"
                             />
                             {replacementQuery ? (
