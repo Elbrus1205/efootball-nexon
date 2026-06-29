@@ -213,6 +213,12 @@ export function ParticipantManager({
         toast.success(successMessage);
       }
 
+      // Сбрасываем состояние поиска замены, чтобы следующую замену можно было сделать сразу
+      // (иначе остаётся прежний выбранный игрок/запрос, и кандидаты не подгружаются заново).
+      setReplacementByParticipant({});
+      setReplacementSearchByParticipant({});
+      setReplacementOptionsByParticipant({});
+
       router.refresh();
     });
   };
