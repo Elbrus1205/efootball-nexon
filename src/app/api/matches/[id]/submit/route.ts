@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { syncUserAchievementsForUsers } from "@/lib/achievements";
 import { db } from "@/lib/db";
+import { ensureMatchLineupSnapshot } from "@/lib/services/match-lineups";
 import { createNotification } from "@/lib/services/notifications";
 import { recordConfirmedMatchReliability } from "@/lib/services/reliability";
 import { recalculateGroupStandings, resolveConfirmedMatch } from "@/lib/services/tournaments";
@@ -225,6 +226,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     });
 
     await recalculateGroupStandings(match.tournamentId);
+    await ensureMatchLineupSnapshot(match.id);
     await resolveConfirmedMatch(match.id);
     await recordConfirmedMatchReliability({
       userIds: [match.player1Id, match.player2Id],

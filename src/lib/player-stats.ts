@@ -57,6 +57,7 @@ export async function getPlayerCareerStats(playerId: string, options: PlayerCare
         OR: [
           { player1Id: playerId },
           { player2Id: playerId },
+          { lineupPlayers: { some: { userId: playerId } } },
           {
             tournament: { ...tournamentWhere, participantMode: TournamentParticipantMode.COOP },
             participant1Entry: { rosterMembers: { some: { userId: playerId, status: TeamInviteStatus.ACCEPTED } } },
@@ -85,6 +86,12 @@ export async function getPlayerCareerStats(playerId: string, options: PlayerCare
       player2Id: true,
       player1Score: true,
       player2Score: true,
+      lineupPlayers: {
+        select: {
+          side: true,
+          userId: true,
+        },
+      },
       participant1Entry: {
         select: {
           rosterMembers: {
@@ -110,12 +117,15 @@ export async function getPlayerCareerStats(playerId: string, options: PlayerCare
     if (match.player1Score === null || match.player2Score === null) continue;
 
     const isCoopMatch = match.tournament.participantMode === TournamentParticipantMode.COOP;
-    const isPlayerOne =
-      match.player1Id === playerId ||
-      (isCoopMatch && match.participant1Entry?.rosterMembers.some((member) => member.userId === playerId) === true);
-    const isPlayerTwo =
-      match.player2Id === playerId ||
-      (isCoopMatch && match.participant2Entry?.rosterMembers.some((member) => member.userId === playerId) === true);
+    const hasLineupSnapshot = match.lineupPlayers.length > 0;
+    const isPlayerOne = hasLineupSnapshot
+      ? match.lineupPlayers.some((lineupPlayer) => lineupPlayer.side === 1 && lineupPlayer.userId === playerId)
+      : match.player1Id === playerId ||
+        (isCoopMatch && match.participant1Entry?.rosterMembers.some((member) => member.userId === playerId) === true);
+    const isPlayerTwo = hasLineupSnapshot
+      ? match.lineupPlayers.some((lineupPlayer) => lineupPlayer.side === 2 && lineupPlayer.userId === playerId)
+      : match.player2Id === playerId ||
+        (isCoopMatch && match.participant2Entry?.rosterMembers.some((member) => member.userId === playerId) === true);
     if (!isPlayerOne && !isPlayerTwo) continue;
 
     const goalsFor = isPlayerOne ? match.player1Score : match.player2Score;

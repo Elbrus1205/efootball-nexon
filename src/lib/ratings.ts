@@ -40,6 +40,7 @@ type RatingMatchSideSource = {
   tournament: { participantMode: TournamentParticipantMode };
   player1: RatingPlayer | null;
   player2: RatingPlayer | null;
+  lineupPlayers: Array<{ side: number; user: RatingPlayer }>;
   participant1Entry: { rosterMembers: Array<{ user: RatingPlayer }> } | null;
   participant2Entry: { rosterMembers: Array<{ user: RatingPlayer }> } | null;
 };
@@ -134,6 +135,11 @@ function uniqueRatingPlayers(players: RatingPlayer[]) {
 }
 
 function getRatingMatchSidePlayers(match: RatingMatchSideSource, side: 1 | 2) {
+  const snapshotPlayers = match.lineupPlayers.filter((lineupPlayer) => lineupPlayer.side === side).map((lineupPlayer) => lineupPlayer.user);
+  if (snapshotPlayers.length) {
+    return uniqueRatingPlayers(snapshotPlayers);
+  }
+
   const fallback = side === 1 ? match.player1 : match.player2;
   const entry = side === 1 ? match.participant1Entry : match.participant2Entry;
 
@@ -199,6 +205,13 @@ export async function getPlayerRatings(options: PlayerRatingOptions = {}) {
         tournament: { select: { participantMode: true } },
         player1: { select: ratingPlayerSelect },
         player2: { select: ratingPlayerSelect },
+        lineupPlayers: {
+          select: {
+            side: true,
+            user: { select: ratingPlayerSelect },
+          },
+          orderBy: [{ side: "asc" }, { createdAt: "asc" }],
+        },
         participant1Entry: {
           select: {
             rosterMembers: {
@@ -237,6 +250,13 @@ export async function getPlayerRatings(options: PlayerRatingOptions = {}) {
             player1: { select: ratingPlayerSelect },
             player2: { select: ratingPlayerSelect },
             winner: { select: ratingPlayerSelect },
+            lineupPlayers: {
+              select: {
+                side: true,
+                user: { select: ratingPlayerSelect },
+              },
+              orderBy: [{ side: "asc" }, { createdAt: "asc" }],
+            },
             participant1Entry: {
               select: {
                 rosterMembers: {

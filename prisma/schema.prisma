@@ -263,6 +263,7 @@ model User {
   playerOneMatches    Match[]                  @relation("playerOne")
   playerTwoMatches    Match[]                  @relation("playerTwo")
   winningMatches      Match[]                  @relation("winner")
+  matchLineupEntries  MatchLineupPlayer[]
   submittedResults    MatchResultSubmission[]
   notifications       Notification[]
   achievements        UserAchievement[]
@@ -739,6 +740,7 @@ model TournamentRegistration {
   participant2Matches Match[]           @relation("participantTwoRegistration")
   winningMatches      Match[]           @relation("winningRegistration")
   rosterMembers       TournamentRegistrationMember[]
+  matchLineupEntries  MatchLineupPlayer[]
 
   @@unique([tournamentId, userId])
   @@unique([tournamentId, clubSlug])
@@ -874,6 +876,7 @@ model Match {
   participant1Entry   TournamentRegistration? @relation("participantOneRegistration", fields: [participant1EntryId], references: [id], onDelete: SetNull)
   participant2Entry   TournamentRegistration? @relation("participantTwoRegistration", fields: [participant2EntryId], references: [id], onDelete: SetNull)
   winningEntry        TournamentRegistration? @relation("winningRegistration", fields: [winnerEntryId], references: [id], onDelete: SetNull)
+  lineupPlayers       MatchLineupPlayer[]
   submissions         MatchResultSubmission[]
   schedules           MatchSchedule[]
 
@@ -882,6 +885,22 @@ model Match {
   @@index([stageId, status])
   @@index([groupId, status])
   @@index([bracketId, seriesKey])
+}
+
+model MatchLineupPlayer {
+  id             String                  @id @default(cuid())
+  matchId        String
+  userId         String
+  side           Int
+  registrationId String?
+  createdAt      DateTime                @default(now())
+  match          Match                   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  registration   TournamentRegistration? @relation(fields: [registrationId], references: [id], onDelete: SetNull)
+
+  @@unique([matchId, side, userId])
+  @@index([userId])
+  @@index([registrationId])
 }
 
 model MatchSchedule {

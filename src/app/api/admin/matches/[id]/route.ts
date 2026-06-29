@@ -4,6 +4,7 @@ import { assertCanManageMatch } from "@/lib/admin-tournament-access";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
+import { ensureMatchLineupSnapshot } from "@/lib/services/match-lineups";
 import { applyTechnicalLossPenalty, recordConfirmedMatchReliability } from "@/lib/services/reliability";
 import { notifyMatchReady, recalculateGroupStandings, resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { matchUpdateSchema } from "@/lib/validators";
@@ -224,6 +225,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 
   if (updated.status === MatchStatus.CONFIRMED || updated.status === MatchStatus.FINISHED) {
+    await ensureMatchLineupSnapshot(updated.id);
     await resolveConfirmedMatch(updated.id);
     await recordConfirmedMatchReliability({
       userIds: [updated.player1Id, updated.player2Id],
