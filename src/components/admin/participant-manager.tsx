@@ -134,11 +134,15 @@ export function ParticipantManager({
     ? participants.filter((participant) => participantSearchText(participant).includes(normalizedParticipantQuery))
     : [];
 
-  const searchUsers = useCallback(async (query: string) => {
+  const searchUsers = useCallback(async (query: string, scope: "general" | "roster" = "general") => {
     const normalized = normalizeSearch(query);
     if (normalized.length < 2) return [];
 
-    const response = await fetch(`/api/admin/tournaments/${tournamentId}/available-users?q=${encodeURIComponent(normalized)}`);
+    const response = await fetch(
+      `/api/admin/tournaments/${tournamentId}/available-users?q=${encodeURIComponent(normalized)}${
+        scope === "roster" ? "&scope=roster" : ""
+      }`,
+    );
     if (!response.ok) return [];
 
     const payload = (await response.json().catch(() => ({ users: [] }))) as { users?: UserOption[] };
@@ -184,7 +188,8 @@ export function ParticipantManager({
 
     let cancelled = false;
     const timer = window.setTimeout(() => {
-      searchUsers(normalized).then((items) => {
+      const scope = openReplacementTargetId.startsWith("member:") || openReplacementTargetId.startsWith("slot:") ? "roster" : "general";
+      searchUsers(normalized, scope).then((items) => {
         if (!cancelled) {
           setReplacementOptionsByParticipant((current) => ({ ...current, [openReplacementTargetId]: items }));
         }

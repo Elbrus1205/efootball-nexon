@@ -11,7 +11,7 @@ import { hasTelegramRegistrationContact } from "@/lib/social-links";
 import { participantManageSchema } from "@/lib/validators";
 import { formatTournamentBanMessage } from "@/lib/user-ban";
 
-const replaceableMatchStatuses = [
+const replaceableMatchStatuses: MatchStatus[] = [
   MatchStatus.PENDING,
   MatchStatus.READY,
   MatchStatus.SCHEDULED,
@@ -26,6 +26,73 @@ async function tournamentRequiresTelegram(tournamentId: string) {
   });
 
   return Boolean(tournament?.requireTelegramForRegistration);
+}
+
+async function findAbsorbableDuplicateRegistration({
+  tournamentId,
+  targetRegistrationId,
+  userId,
+}: {
+  tournamentId: string;
+  targetRegistrationId: string;
+  userId: string;
+}) {
+  const registration = await db.tournamentRegistration.findFirst({
+    where: {
+      tournamentId,
+      userId,
+      id: { not: targetRegistrationId },
+      status: { not: ParticipantStatus.REMOVED },
+    },
+    select: {
+      id: true,
+      notes: true,
+      rosterMembers: {
+        where: { status: { in: [TeamInviteStatus.PENDING, TeamInviteStatus.ACCEPTED] } },
+        select: { id: true },
+      },
+    },
+  });
+
+  if (!registration) return { registration: null, error: null };
+
+  if (registration.rosterMembers.length) {
+    return { registration: null, error: "Этот игрок уже есть в составе другой заявки." };
+  }
+
+  const matches = await db.match.findMany({
+    where: {
+      tournamentId,
+      OR: [{ participant1EntryId: registration.id }, { participant2EntryId: registration.id }],
+    },
+    select: {
+      id: true,
+      status: true,
+      player1Score: true,
+      player2Score: true,
+      winnerId: true,
+    },
+  });
+  const lockedMatch = matches.find(
+    (match) =>
+      !replaceableMatchStatuses.includes(match.status) ||
+      match.player1Score !== null ||
+      match.player2Score !== null ||
+      match.winnerId !== null,
+  );
+
+  if (lockedMatch) {
+    return { registration: null, error: "У этого игрока уже есть сыгранный или закрытый матч, его нельзя перенести в другой состав." };
+  }
+
+  return {
+    registration: {
+      id: registration.id,
+      notes: registration.notes,
+      matchIds: matches.map((match) => match.id),
+    },
+    error: null,
+  };
 }
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
@@ -412,22 +479,54 @@ export async function POST(request: Request, { params }: { params: { id: string 
         tournamentId: params.id,
         userId: replacementUserId,
         status: { in: [TeamInviteStatus.PENDING, TeamInviteStatus.ACCEPTED] },
+        registration: { status: { not: ParticipantStatus.REMOVED } },
       },
       select: { id: true },
     });
-    const duplicateRegistration = await db.tournamentRegistration.findFirst({
-      where: { tournamentId: params.id, userId: replacementUserId, status: { not: ParticipantStatus.REMOVED } },
-      select: { id: true },
+    const duplicateRegistrationAbsorption = await findAbsorbableDuplicateRegistration({
+      tournamentId: params.id,
+      targetRegistrationId: member.registration.id,
+      userId: replacementUserId,
     });
 
-    if (duplicateMember || duplicateRegistration) {
-      return NextResponse.json({ error: "Этот игрок уже есть в турнире." }, { status: 400 });
+    if (duplicateMember || duplicateRegistrationAbsorption.error) {
+      return NextResponse.json({ error: duplicateRegistrationAbsorption.error ?? "Этот игрок уже есть в турнире." }, { status: 400 });
     }
 
     const isCaptain = member.isCaptain || member.userId === member.registration.userId;
     const registrationId = member.registration.id;
 
     const result = await db.$transaction(async (tx) => {
+      if (duplicateRegistrationAbsorption.registration) {
+        const absorbedAt = new Date();
+        const removedNotes = [
+          duplicateRegistrationAbsorption.registration.notes?.trim(),
+          `Перенесён в состав заявки ${registrationId} ${absorbedAt.toISOString()}.`,
+        ]
+          .filter(Boolean)
+          .join("\n");
+
+        await tx.tournamentRegistration.update({
+          where: { id: duplicateRegistrationAbsorption.registration.id },
+          data: {
+            status: ParticipantStatus.REMOVED,
+            seed: null,
+            stageSeed: null,
+            clubSlug: null,
+            clubName: null,
+            clubBadgePath: null,
+            notes: removedNotes,
+          },
+        });
+
+        if (duplicateRegistrationAbsorption.registration.matchIds.length) {
+          await tx.match.updateMany({
+            where: { id: { in: duplicateRegistrationAbsorption.registration.matchIds } },
+            data: { status: MatchStatus.CANCELLED },
+          });
+        }
+      }
+
       await tx.tournamentRegistrationMember.deleteMany({
         where: {
           tournamentId: params.id,
@@ -576,16 +675,47 @@ export async function POST(request: Request, { params }: { params: { id: string 
       },
       select: { id: true },
     });
-    const duplicateRegistration = await db.tournamentRegistration.findFirst({
-      where: { tournamentId: params.id, userId: replacementUserId, status: { not: ParticipantStatus.REMOVED } },
-      select: { id: true },
+    const duplicateRegistrationAbsorption = await findAbsorbableDuplicateRegistration({
+      tournamentId: params.id,
+      targetRegistrationId: registration.id,
+      userId: replacementUserId,
     });
 
-    if (duplicateMember || duplicateRegistration) {
-      return NextResponse.json({ error: "Этот игрок уже есть в турнире." }, { status: 400 });
+    if (duplicateMember || duplicateRegistrationAbsorption.error) {
+      return NextResponse.json({ error: duplicateRegistrationAbsorption.error ?? "Этот игрок уже есть в турнире." }, { status: 400 });
     }
 
     const result = await db.$transaction(async (tx) => {
+      if (duplicateRegistrationAbsorption.registration) {
+        const absorbedAt = new Date();
+        const removedNotes = [
+          duplicateRegistrationAbsorption.registration.notes?.trim(),
+          `Перенесён в состав заявки ${registration.id} ${absorbedAt.toISOString()}.`,
+        ]
+          .filter(Boolean)
+          .join("\n");
+
+        await tx.tournamentRegistration.update({
+          where: { id: duplicateRegistrationAbsorption.registration.id },
+          data: {
+            status: ParticipantStatus.REMOVED,
+            seed: null,
+            stageSeed: null,
+            clubSlug: null,
+            clubName: null,
+            clubBadgePath: null,
+            notes: removedNotes,
+          },
+        });
+
+        if (duplicateRegistrationAbsorption.registration.matchIds.length) {
+          await tx.match.updateMany({
+            where: { id: { in: duplicateRegistrationAbsorption.registration.matchIds } },
+            data: { status: MatchStatus.CANCELLED },
+          });
+        }
+      }
+
       await tx.tournamentRegistrationMember.deleteMany({
         where: {
           tournamentId: params.id,

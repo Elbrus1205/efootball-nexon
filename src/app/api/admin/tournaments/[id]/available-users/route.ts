@@ -14,6 +14,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
   const { searchParams } = new URL(request.url);
   const query = normalizeQuery(searchParams.get("q"));
+  const rosterScope = searchParams.get("scope") === "roster";
 
   if (query.length < 2) {
     return NextResponse.json({ users: [] });
@@ -35,7 +36,10 @@ export async function GET(request: Request, { params }: { params: { id: string }
   ]);
 
   const excludedUserIds = Array.from(
-    new Set([...tournamentParticipants.map((participant) => participant.userId), ...rosterMembers.map((member) => member.userId)]),
+    new Set([
+      ...(rosterScope ? [] : tournamentParticipants.map((participant) => participant.userId)),
+      ...rosterMembers.map((member) => member.userId),
+    ]),
   );
   const users = await db.user.findMany({
     where: {
