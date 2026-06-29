@@ -261,9 +261,10 @@ export const stageGenerationSchema = z.object({
 });
 
 export const participantManageSchema = z.object({
-  action: z.enum(["add", "remove", "replace", "seed", "status"]),
+  action: z.enum(["add", "remove", "replace", "replaceMember", "seed", "status"]),
   userId: z.string().optional(),
   registrationId: z.string().optional(),
+  memberId: z.string().optional(),
   replacementUserId: z.string().optional(),
   groupId: z.string().optional().or(z.literal("")),
   seed: z.coerce.number().optional(),

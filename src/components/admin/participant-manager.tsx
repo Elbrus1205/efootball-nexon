@@ -10,6 +10,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+type RosterMemberItem = {
+  id: string;
+  isCaptain: boolean;
+  status: string;
+  user: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    publicId?: string | null;
+    telegramUsername?: string | null;
+  };
+};
+
 type ParticipantItem = {
   id: string;
   status: ParticipantStatus;
@@ -27,6 +40,7 @@ type ParticipantItem = {
     id: string;
     name: string;
   } | null;
+  rosterMembers?: RosterMemberItem[];
 };
 
 type GroupItem = {
@@ -334,6 +348,7 @@ export function ParticipantManager({
             const canReplace = participant.status !== ParticipantStatus.REMOVED;
             const isHistoryEntry = participant.status === ParticipantStatus.REMOVED;
             const isOpen = openParticipantId === participant.id;
+            const rosterMembers = participant.rosterMembers ?? [];
 
             return (
               <div key={participant.id} className="overflow-hidden rounded-lg border border-white/10 bg-black/20">
@@ -409,6 +424,50 @@ export function ParticipantManager({
                     </div>
 
                     <div className="rounded-lg border border-white/10 bg-white/[0.025] p-3">
+                      {rosterMembers.length > 1 ? (
+                        <div className="mb-3 space-y-2">
+                          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Состав команды</div>
+                          {rosterMembers.map((member) => (
+                            <div
+                              key={member.id}
+                              className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2"
+                            >
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="truncate text-sm font-medium text-white">
+                                    {member.user.name ?? member.user.email ?? member.user.id}
+                                  </span>
+                                  {member.isCaptain ? <Badge variant="primary">Капитан</Badge> : null}
+                                </div>
+                                {member.user.telegramUsername ? (
+                                  <div className="mt-0.5 truncate text-xs text-zinc-500">@{member.user.telegramUsername}</div>
+                                ) : null}
+                              </div>
+                              <Button
+                                variant="secondary"
+                                className="h-9 shrink-0 rounded-lg px-3 text-xs"
+                                disabled={pending || !canReplace || !replacementUserId}
+                                onClick={() =>
+                                  member.isCaptain
+                                    ? run(
+                                        { action: "replace", registrationId: participant.id, replacementUserId },
+                                        "Капитан заменён. Состав и слот сохранены за новой заявкой.",
+                                      )
+                                    : run(
+                                        { action: "replaceMember", memberId: member.id, replacementUserId },
+                                        "Игрок состава заменён.",
+                                      )
+                                }
+                              >
+                                Заменить
+                              </Button>
+                            </div>
+                          ))}
+                          <div className="text-xs text-zinc-500">
+                            Сначала выберите нового игрока ниже, затем нажмите «Заменить» напротив нужного участника состава.
+                          </div>
+                        </div>
+                      ) : null}
                       <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
                         <div className="min-w-0 space-y-2">
                           <div className="relative">

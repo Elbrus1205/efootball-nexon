@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { MatchStatus, NotificationType, ParticipantStatus } from "@prisma/client";
+import { MatchStatus, NotificationType, ParticipantStatus, TeamInviteStatus } from "@prisma/client";
 import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requireAnyPermission, requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
@@ -138,7 +138,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         id: body.registrationId,
         tournamentId: params.id,
       },
-      include: { user: true, group: true },
+      include: { user: true, group: true, rosterMembers: true },
     });
 
     if (!before) {
@@ -254,6 +254,39 @@ export async function POST(request: Request, { params }: { params: { id: string 
         },
       });
 
+      // Перенос COOP/командного состава на новую заявку, чтобы участник снова отображался.
+      // Напарников (не капитана) переносим как есть, капитаном делаем нового игрока.
+      const teammateMemberIds = before.rosterMembers
+        .filter((member) => member.userId !== before.userId)
+        .map((member) => member.id);
+
+      if (teammateMemberIds.length) {
+        await tx.tournamentRegistrationMember.updateMany({
+          where: { id: { in: teammateMemberIds } },
+          data: { registrationId: registration.id },
+        });
+      }
+
+      // Убираем старого капитана и любую прошлую запись нового игрока в этом турнире,
+      // затем назначаем нового игрока капитаном новой заявки.
+      await tx.tournamentRegistrationMember.deleteMany({
+        where: {
+          tournamentId: params.id,
+          OR: [{ registrationId: before.id }, { userId: replacementUserId }],
+        },
+      });
+
+      await tx.tournamentRegistrationMember.create({
+        data: {
+          tournamentId: params.id,
+          registrationId: registration.id,
+          userId: replacementUserId,
+          status: TeamInviteStatus.ACCEPTED,
+          isCaptain: true,
+          respondedAt: replacedAt,
+        },
+      });
+
       const playerOneMatchIds = replaceableMatches
         .filter((match) => match.participant1EntryId === before.id)
         .map((match) => match.id);
@@ -320,6 +353,150 @@ export async function POST(request: Request, { params }: { params: { id: string 
       registration: replacementResult.registration,
       replacedMatchesCount: replacementResult.replacedMatchesCount,
     });
+  }
+
+  if (body.action === "replaceMember" && body.memberId && body.replacementUserId) {
+    const replacementUserId = body.replacementUserId;
+
+    const member = await db.tournamentRegistrationMember.findFirst({
+      where: { id: body.memberId, tournamentId: params.id },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        registration: { select: { id: true, status: true, userId: true } },
+      },
+    });
+
+    if (!member || !member.registration) {
+      return NextResponse.json({ error: "Участник состава не найден." }, { status: 404 });
+    }
+
+    if (member.registration.status === ParticipantStatus.REMOVED) {
+      return NextResponse.json({ error: "Нельзя менять состав удалённой заявки." }, { status: 400 });
+    }
+
+    if (member.userId === replacementUserId) {
+      return NextResponse.json({ error: "Выберите другого игрока для замены." }, { status: 400 });
+    }
+
+    const replacementUser = await db.user.findUnique({
+      where: { id: replacementUserId },
+      select: { id: true, name: true, email: true, isBanned: true, banReason: true, bannedUntil: true, telegramId: true, telegramUsername: true },
+    });
+
+    if (!replacementUser) {
+      return NextResponse.json({ error: "Новый игрок не найден." }, { status: 404 });
+    }
+
+    const banMessage = formatTournamentBanMessage(replacementUser);
+    if (banMessage) {
+      return NextResponse.json({ error: banMessage }, { status: 403 });
+    }
+
+    const syncedReliability = await syncReliabilityRestriction(replacementUser.id);
+    const reliabilityRestriction = formatReliabilityRegistrationRestriction(syncedReliability);
+    if (reliabilityRestriction) {
+      return NextResponse.json({ error: reliabilityRestriction }, { status: 403 });
+    }
+
+    if ((await tournamentRequiresTelegram(params.id)) && !hasTelegramRegistrationContact(replacementUser)) {
+      return NextResponse.json(
+        { error: "Для замены в этом турнире у нового игрока должен быть привязан Telegram с публичным @username." },
+        { status: 403 },
+      );
+    }
+
+    // Новый игрок не должен уже состоять в этом турнире (как владелец заявки или в любом составе).
+    const duplicateMember = await db.tournamentRegistrationMember.findFirst({
+      where: {
+        tournamentId: params.id,
+        userId: replacementUserId,
+        status: { in: [TeamInviteStatus.PENDING, TeamInviteStatus.ACCEPTED] },
+      },
+      select: { id: true },
+    });
+    const duplicateRegistration = await db.tournamentRegistration.findFirst({
+      where: { tournamentId: params.id, userId: replacementUserId, status: { not: ParticipantStatus.REMOVED } },
+      select: { id: true },
+    });
+
+    if (duplicateMember || duplicateRegistration) {
+      return NextResponse.json({ error: "Этот игрок уже есть в турнире." }, { status: 400 });
+    }
+
+    const isCaptain = member.isCaptain || member.userId === member.registration.userId;
+    const registrationId = member.registration.id;
+
+    const result = await db.$transaction(async (tx) => {
+      await tx.tournamentRegistrationMember.update({
+        where: { id: member.id },
+        data: {
+          userId: replacementUserId,
+          status: TeamInviteStatus.ACCEPTED,
+          respondedAt: new Date(),
+        },
+      });
+
+      let replacedMatchesCount = 0;
+
+      // Капитан кооп-заявки одновременно является владельцем заявки и игроком матчей,
+      // поэтому при замене капитана переносим владельца заявки и игроков в незавершённых матчах.
+      if (isCaptain) {
+        await tx.tournamentRegistration.update({
+          where: { id: registrationId },
+          data: { userId: replacementUserId },
+        });
+
+        const replaceableMatches = await tx.match.findMany({
+          where: {
+            tournamentId: params.id,
+            OR: [{ participant1EntryId: registrationId }, { participant2EntryId: registrationId }],
+            status: { in: replaceableMatchStatuses },
+            player1Score: null,
+            player2Score: null,
+            winnerId: null,
+          },
+          select: { id: true, participant1EntryId: true, participant2EntryId: true },
+        });
+
+        const playerOneIds = replaceableMatches.filter((m) => m.participant1EntryId === registrationId).map((m) => m.id);
+        const playerTwoIds = replaceableMatches.filter((m) => m.participant2EntryId === registrationId).map((m) => m.id);
+
+        if (playerOneIds.length) {
+          await tx.match.updateMany({ where: { id: { in: playerOneIds } }, data: { player1Id: replacementUserId } });
+        }
+        if (playerTwoIds.length) {
+          await tx.match.updateMany({ where: { id: { in: playerTwoIds } }, data: { player2Id: replacementUserId } });
+        }
+
+        replacedMatchesCount = replaceableMatches.length;
+      }
+
+      return { replacedMatchesCount };
+    });
+
+    await logAdminAction({
+      adminId: session.user.id,
+      tournamentId: params.id,
+      entityType: "TOURNAMENT_PARTICIPANT",
+      entityId: registrationId,
+      actionType: "UPDATE",
+      beforeJson: { memberId: member.id, previousUserId: member.userId, isCaptain },
+      afterJson: { replacementUserId, replacedMatchesCount: result.replacedMatchesCount },
+    });
+
+    const tournament = await db.tournament.findUnique({ where: { id: params.id }, select: { title: true, notificationsEnabled: true } });
+    if (tournament?.notificationsEnabled) {
+      await createNotification({
+        userId: replacementUserId,
+        title: "Вы добавлены в состав",
+        body: `${tournament.title}: администратор включил вас в состав вместо игрока ${member.user.name ?? member.user.email ?? "участника"}.`,
+        type: NotificationType.TOURNAMENT,
+        link: `/tournaments/${params.id}`,
+        dedupeWithinHours: 6,
+      });
+    }
+
+    return NextResponse.json({ ok: true, replacedMatchesCount: result.replacedMatchesCount });
   }
 
   if (body.action === "seed" && body.registrationId) {

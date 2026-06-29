@@ -36,6 +36,24 @@ export default async function AdminTournamentParticipantsPage({ params }: { para
             name: true,
           },
         },
+        rosterMembers: {
+          where: { status: { in: ["PENDING", "ACCEPTED"] } },
+          select: {
+            id: true,
+            isCaptain: true,
+            status: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                publicId: true,
+                telegramUsername: true,
+              },
+            },
+          },
+          orderBy: [{ isCaptain: "desc" }, { invitedAt: "asc" }],
+        },
       },
       orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
     }),
