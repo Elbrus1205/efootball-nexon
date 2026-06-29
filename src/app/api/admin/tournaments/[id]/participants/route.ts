@@ -635,7 +635,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return NextResponse.json({ error: "Состав уже заполнен." }, { status: 400 });
     }
 
-    if (registration.rosterMembers.some((member) => member.userId === replacementUserId) || registration.userId === replacementUserId) {
+    if (registration.rosterMembers.some((member) => member.userId === replacementUserId)) {
       return NextResponse.json({ error: "Этот игрок уже есть в составе." }, { status: 400 });
     }
 
@@ -730,7 +730,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
           registrationId: registration.id,
           userId: replacementUserId,
           status: TeamInviteStatus.ACCEPTED,
-          isCaptain: false,
+          isCaptain: replacementUserId === registration.userId,
           respondedAt: new Date(),
         },
       });
