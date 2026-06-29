@@ -89,7 +89,7 @@ function LegalSectionNav({ document }: { document: LegalDocument }) {
 }
 
 export function LegalDocumentPage({ document }: { document: LegalDocument }) {
-  const showSupportCard = document.slug !== "offer";
+  const showSupportCard = true;
 
   return (
     <div className="page-shell py-8 sm:py-12">
