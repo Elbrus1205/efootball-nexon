@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { MatchStatus, NotificationType, ParticipantStatus, TeamInviteStatus } from "@prisma/client";
+import { MatchStatus, NotificationType, ParticipantStatus, TeamInviteStatus, TournamentParticipantMode } from "@prisma/client";
 import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requireAnyPermission, requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
@@ -507,6 +507,137 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }
 
     return NextResponse.json({ ok: true, replacedMatchesCount: result.replacedMatchesCount });
+  }
+
+  if (body.action === "addMember" && body.registrationId && body.replacementUserId) {
+    const replacementUserId = body.replacementUserId;
+
+    const registration = await db.tournamentRegistration.findFirst({
+      where: { id: body.registrationId, tournamentId: params.id },
+      include: {
+        tournament: { select: { title: true, participantMode: true, rosterSize: true, notificationsEnabled: true } },
+        rosterMembers: { where: { status: { in: [TeamInviteStatus.PENDING, TeamInviteStatus.ACCEPTED] } }, select: { id: true, userId: true } },
+      },
+    });
+
+    if (!registration) {
+      return NextResponse.json({ error: "Заявка турнира не найдена." }, { status: 404 });
+    }
+
+    if (registration.status === ParticipantStatus.REMOVED) {
+      return NextResponse.json({ error: "Нельзя добавлять игрока в удалённую заявку." }, { status: 400 });
+    }
+
+    if (registration.tournament.participantMode === TournamentParticipantMode.SINGLE) {
+      return NextResponse.json({ error: "В одиночном турнире нет состава для добавления игрока." }, { status: 400 });
+    }
+
+    if (registration.rosterMembers.length >= registration.tournament.rosterSize) {
+      return NextResponse.json({ error: "Состав уже заполнен." }, { status: 400 });
+    }
+
+    if (registration.rosterMembers.some((member) => member.userId === replacementUserId) || registration.userId === replacementUserId) {
+      return NextResponse.json({ error: "Этот игрок уже есть в составе." }, { status: 400 });
+    }
+
+    const replacementUser = await db.user.findUnique({
+      where: { id: replacementUserId },
+      select: { id: true, name: true, email: true, isBanned: true, banReason: true, bannedUntil: true, telegramId: true, telegramUsername: true },
+    });
+
+    if (!replacementUser) {
+      return NextResponse.json({ error: "Новый игрок не найден." }, { status: 404 });
+    }
+
+    const banMessage = formatTournamentBanMessage(replacementUser);
+    if (banMessage) {
+      return NextResponse.json({ error: banMessage }, { status: 403 });
+    }
+
+    const syncedReliability = await syncReliabilityRestriction(replacementUser.id);
+    const reliabilityRestriction = formatReliabilityRegistrationRestriction(syncedReliability);
+    if (reliabilityRestriction) {
+      return NextResponse.json({ error: reliabilityRestriction }, { status: 403 });
+    }
+
+    if ((await tournamentRequiresTelegram(params.id)) && !hasTelegramRegistrationContact(replacementUser)) {
+      return NextResponse.json(
+        { error: "Для добавления в этот турнир у нового игрока должен быть привязан Telegram с публичным @username." },
+        { status: 403 },
+      );
+    }
+
+    const duplicateMember = await db.tournamentRegistrationMember.findFirst({
+      where: {
+        tournamentId: params.id,
+        userId: replacementUserId,
+        status: { in: [TeamInviteStatus.PENDING, TeamInviteStatus.ACCEPTED] },
+        registration: { status: { not: ParticipantStatus.REMOVED } },
+      },
+      select: { id: true },
+    });
+    const duplicateRegistration = await db.tournamentRegistration.findFirst({
+      where: { tournamentId: params.id, userId: replacementUserId, status: { not: ParticipantStatus.REMOVED } },
+      select: { id: true },
+    });
+
+    if (duplicateMember || duplicateRegistration) {
+      return NextResponse.json({ error: "Этот игрок уже есть в турнире." }, { status: 400 });
+    }
+
+    const result = await db.$transaction(async (tx) => {
+      await tx.tournamentRegistrationMember.deleteMany({
+        where: {
+          tournamentId: params.id,
+          userId: replacementUserId,
+          status: { notIn: [TeamInviteStatus.PENDING, TeamInviteStatus.ACCEPTED] },
+        },
+      });
+
+      const member = await tx.tournamentRegistrationMember.create({
+        data: {
+          tournamentId: params.id,
+          registrationId: registration.id,
+          userId: replacementUserId,
+          status: TeamInviteStatus.ACCEPTED,
+          isCaptain: false,
+          respondedAt: new Date(),
+        },
+      });
+
+      const nextActiveMembersCount = registration.rosterMembers.length + 1;
+      if (nextActiveMembersCount >= registration.tournament.rosterSize && registration.status === ParticipantStatus.PENDING) {
+        await tx.tournamentRegistration.update({
+          where: { id: registration.id },
+          data: { status: ParticipantStatus.CONFIRMED },
+        });
+      }
+
+      return { member, nextActiveMembersCount };
+    });
+
+    await logAdminAction({
+      adminId: session.user.id,
+      tournamentId: params.id,
+      entityType: "TOURNAMENT_PARTICIPANT",
+      entityId: registration.id,
+      actionType: "UPDATE",
+      beforeJson: { registrationId: registration.id, activeMembersCount: registration.rosterMembers.length },
+      afterJson: { addedMemberId: result.member.id, replacementUserId, activeMembersCount: result.nextActiveMembersCount },
+    });
+
+    if (registration.tournament.notificationsEnabled) {
+      await createNotification({
+        userId: replacementUserId,
+        title: "Вы добавлены в состав",
+        body: `${registration.tournament.title}: администратор добавил вас в состав турнира.`,
+        type: NotificationType.TOURNAMENT,
+        link: `/tournaments/${params.id}`,
+        dedupeWithinHours: 6,
+      });
+    }
+
+    return NextResponse.json({ ok: true, member: result.member });
   }
 
   if (body.action === "seed" && body.registrationId) {

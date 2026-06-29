@@ -1,6 +1,6 @@
 "use client";
 
-import { ParticipantStatus } from "@prisma/client";
+import { ParticipantStatus, TournamentParticipantMode } from "@prisma/client";
 import { ChevronDown, Plus, Search, Shuffle, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
@@ -97,10 +97,14 @@ function participantSearchText(participant: ParticipantItem) {
 
 export function ParticipantManager({
   tournamentId,
+  participantMode,
+  rosterSize,
   participants,
   groups,
 }: {
   tournamentId: string;
+  participantMode: TournamentParticipantMode;
+  rosterSize: number;
   participants: ParticipantItem[];
   groups: GroupItem[];
 }) {
@@ -357,7 +361,10 @@ export function ParticipantManager({
             const isHistoryEntry = participant.status === ParticipantStatus.REMOVED;
             const isOpen = openParticipantId === participant.id;
             const rosterMembers = participant.rosterMembers ?? [];
-            const hasRosterReplacement = rosterMembers.length > 1;
+            const expectedRosterSize =
+              participantMode === TournamentParticipantMode.SINGLE ? rosterMembers.length : Math.max(rosterSize, rosterMembers.length);
+            const hasRosterReplacement = expectedRosterSize > 1;
+            const rosterSlots = Array.from({ length: expectedRosterSize }, (_, index) => rosterMembers[index] ?? null);
 
             return (
               <div key={participant.id} className="overflow-hidden rounded-lg border border-white/10 bg-black/20">
@@ -436,11 +443,11 @@ export function ParticipantManager({
                     </div>
 
                     <div className="rounded-lg border border-white/10 bg-white/[0.025] p-3">
-                      {rosterMembers.length > 1 ? (
+                      {hasRosterReplacement ? (
                         <div className="mb-3 space-y-2">
                           <div className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Состав команды</div>
-                          {rosterMembers.map((member) => {
-                            const targetId = `member:${member.id}`;
+                          {rosterSlots.map((member, slotIndex) => {
+                            const targetId = member ? `member:${member.id}` : `slot:${participant.id}:${slotIndex}`;
                             const memberReplacementUserId = replacementByParticipant[targetId] ?? "";
                             const memberReplacementQuery = replacementSearchByParticipant[targetId] ?? "";
                             const normalizedMemberReplacementQuery = normalizeSearch(memberReplacementQuery);
@@ -448,19 +455,22 @@ export function ParticipantManager({
                             const selectedMemberReplacement = usersById.get(memberReplacementUserId);
 
                             return (
-                              <div key={member.id} className="rounded-lg border border-white/10 bg-black/20 p-2.5">
+                              <div key={targetId} className="rounded-lg border border-white/10 bg-black/20 p-2.5">
                                 <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.9fr)_auto] lg:items-start">
                                   <div className="min-w-0">
                                     <div className="flex min-w-0 flex-wrap items-center gap-2">
                                       <span className="truncate text-sm font-medium text-white">
-                                        {member.user.name ?? member.user.email ?? member.user.id}
+                                        {member ? member.user.name ?? member.user.email ?? member.user.id : `Пустой слот ${slotIndex + 1}`}
                                       </span>
-                                      {member.isCaptain ? <Badge variant="primary">Капитан</Badge> : null}
+                                      {member?.isCaptain ? <Badge variant="primary">Капитан</Badge> : null}
+                                      {!member ? <Badge variant="neutral">Нужно заполнить</Badge> : null}
                                     </div>
-                                    {member.user.telegramUsername ? (
+                                    {member?.user.telegramUsername ? (
                                       <div className="mt-0.5 truncate text-xs text-zinc-500">@{member.user.telegramUsername}</div>
                                     ) : (
-                                      <div className="mt-0.5 truncate text-xs text-zinc-500">{member.user.email ?? member.user.id}</div>
+                                      <div className="mt-0.5 truncate text-xs text-zinc-500">
+                                        {member ? member.user.email ?? member.user.id : "Выберите игрока для состава"}
+                                      </div>
                                     )}
                                   </div>
 
@@ -570,12 +580,14 @@ export function ParticipantManager({
                                     disabled={pending || !canReplace || !memberReplacementUserId}
                                     onClick={() =>
                                       run(
-                                        { action: "replaceMember", memberId: member.id, replacementUserId: memberReplacementUserId },
-                                        member.isCaptain ? "Капитан состава заменён." : "Игрок состава заменён.",
+                                        member
+                                          ? { action: "replaceMember", memberId: member.id, replacementUserId: memberReplacementUserId }
+                                          : { action: "addMember", registrationId: participant.id, replacementUserId: memberReplacementUserId },
+                                        member ? (member.isCaptain ? "Капитан состава заменён." : "Игрок состава заменён.") : "Игрок добавлен в состав.",
                                       )
                                     }
                                   >
-                                    Заменить
+                                    {member ? "Заменить" : "Добавить"}
                                   </Button>
                                 </div>
                               </div>

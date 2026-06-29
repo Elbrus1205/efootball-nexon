@@ -11,7 +11,7 @@ export default async function AdminTournamentParticipantsPage({ params }: { para
   const [tournament, participants, stages] = await Promise.all([
     db.tournament.findFirst({
       where: { id: params.id, ...getAdminTournamentAccessWhere(session) },
-      select: { id: true },
+      select: { id: true, participantMode: true, rosterSize: true },
     }),
     db.tournamentRegistration.findMany({
       where: { tournamentId: params.id },
@@ -74,5 +74,13 @@ export default async function AdminTournamentParticipantsPage({ params }: { para
 
   if (!tournament) notFound();
 
-  return <ParticipantManager tournamentId={tournament.id} participants={participants} groups={stages.flatMap((stage) => stage.groups)} />;
+  return (
+    <ParticipantManager
+      tournamentId={tournament.id}
+      participantMode={tournament.participantMode}
+      rosterSize={tournament.rosterSize}
+      participants={participants}
+      groups={stages.flatMap((stage) => stage.groups)}
+    />
+  );
 }
