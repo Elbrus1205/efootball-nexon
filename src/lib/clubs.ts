@@ -1,5 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { unstable_cache } from "next/cache";
 
 export type ClubOption = {
   slug: string;
@@ -150,20 +151,28 @@ function sortClubs(clubs: ClubOption[]) {
 }
 
 export async function getAvailableClubs() {
-  try {
-    const entries = await fs.readdir(CLUBS_DIR, { withFileTypes: true });
-    const existingFileNames = new Set(
-      entries.filter((entry) => entry.isFile()).map((entry) => entry.name),
-    );
-
-    const clubs = CLUBS.filter((club) => existingFileNames.has(club.fileName)).map((club) => ({
-      slug: path.basename(club.fileName, path.extname(club.fileName)),
-      name: club.name,
-      imagePath: `/club-badges/${club.fileName}`,
-    }));
-
-    return sortClubs(clubs);
-  } catch {
-    return [];
-  }
+  return getCachedAvailableClubs();
 }
+
+const getCachedAvailableClubs = unstable_cache(
+  async () => {
+    try {
+      const entries = await fs.readdir(CLUBS_DIR, { withFileTypes: true });
+      const existingFileNames = new Set(
+        entries.filter((entry) => entry.isFile()).map((entry) => entry.name),
+      );
+
+      const clubs = CLUBS.filter((club) => existingFileNames.has(club.fileName)).map((club) => ({
+        slug: path.basename(club.fileName, path.extname(club.fileName)),
+        name: club.name,
+        imagePath: `/club-badges/${club.fileName}`,
+      }));
+
+      return sortClubs(clubs);
+    } catch {
+      return [];
+    }
+  },
+  ["available-clubs"],
+  { revalidate: 3600 },
+);
