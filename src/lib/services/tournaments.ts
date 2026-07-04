@@ -2567,6 +2567,7 @@ export async function recalculateGroupStandings(tournamentId: string) {
       },
       matches: true,
       standings: true,
+      stage: true,
     },
     orderBy: { orderIndex: "asc" },
   });
@@ -2716,7 +2717,7 @@ export async function recalculateGroupStandings(tournamentId: string) {
       }
     }
 
-    const stage = await db.tournamentStage.findUnique({ where: { id: group.stageId } });
+    const stage = group.stage;
     const pointsForWin = stage?.pointsForWin ?? 3;
     const pointsForDraw = stage?.pointsForDraw ?? 1;
     const pointsForLoss = stage?.pointsForLoss ?? 0;

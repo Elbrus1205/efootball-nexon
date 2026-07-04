@@ -215,7 +215,8 @@ export function MatchManager({
   participants: ParticipantOption[];
 }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [draggedMatchId, setDraggedMatchId] = useState<string | null>(null);
   const [orderedMatches, setOrderedMatches] = useState(matches);
   const [query, setQuery] = useState("");
@@ -328,7 +329,9 @@ export function MatchManager({
   const saveMatch = (matchId: string, payload: Record<string, unknown>) => {
     patchLocalMatch(matchId, payload);
 
-    startTransition(async () => {
+    // Автосохранение поля (счёт/участники) — оптимистично, без блокировки всей
+    // страницы. UI не ждёт ответа; при ошибке откатываемся через refresh.
+    void (async () => {
       try {
         const response = await fetch(`/api/admin/matches/${matchId}`, {
           method: "PATCH",
@@ -346,7 +349,35 @@ export function MatchManager({
       } catch {
         router.refresh();
       }
-    });
+    })();
+  };
+
+  // Смена статуса (ОК/Спор) — блокирует только кнопки этого матча на время запроса.
+  const changeStatus = (matchId: string, status: MatchStatus) => {
+    if (confirmingId) return;
+    setConfirmingId(matchId);
+    patchLocalMatch(matchId, { status });
+
+    void (async () => {
+      try {
+        const response = await fetch(`/api/admin/matches/${matchId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        });
+
+        const result = await response.json().catch(() => null);
+        if (response.ok && result?.match && typeof result.match === "object") {
+          patchLocalMatch(matchId, result.match as Record<string, unknown>);
+        } else {
+          router.refresh();
+        }
+      } catch {
+        router.refresh();
+      } finally {
+        setConfirmingId(null);
+      }
+    })();
   };
 
   const reorderMatches = (round: number, sourceId: string, targetId: string) => {
@@ -611,20 +642,20 @@ export function MatchManager({
 
                         <div className="sticky bottom-2 z-20 grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-[#080808]/95 p-2 backdrop-blur lg:static lg:flex lg:flex-wrap lg:border-0 lg:bg-transparent lg:p-0">
                           <Button
-                            disabled={pending || !canConfirm}
+                            disabled={confirmingId === match.id || !canConfirm}
                             size="sm"
                             variant="secondary"
                             className="h-9 min-h-9 rounded-lg px-2 text-xs sm:px-3 sm:text-sm"
-                            onClick={() => saveMatch(match.id, { status: MatchStatus.CONFIRMED })}
+                            onClick={() => changeStatus(match.id, MatchStatus.CONFIRMED)}
                           >
                             ОК
                           </Button>
                           <Button
-                            disabled={pending}
+                            disabled={confirmingId === match.id}
                             size="sm"
                             variant="outline"
                             className="h-9 min-h-9 rounded-lg px-2 text-xs sm:px-3 sm:text-sm"
-                            onClick={() => saveMatch(match.id, { status: MatchStatus.DISPUTED })}
+                            onClick={() => changeStatus(match.id, MatchStatus.DISPUTED)}
                           >
                             <ShieldAlert className="mr-1.5 h-3.5 w-3.5" />
                             Спор

@@ -199,17 +199,17 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     data,
   });
 
+  const isGroupMatch = Boolean(before.groupId || updated.groupId);
   const standingsRelevantChange =
-    before.groupId ||
-    updated.groupId ||
-    before.status !== updated.status ||
-    before.player1Score !== updated.player1Score ||
-    before.player2Score !== updated.player2Score ||
-    before.player1PenaltyScore !== updated.player1PenaltyScore ||
-    before.player2PenaltyScore !== updated.player2PenaltyScore ||
-    before.winnerId !== updated.winnerId ||
-    before.participant1EntryId !== updated.participant1EntryId ||
-    before.participant2EntryId !== updated.participant2EntryId;
+    isGroupMatch &&
+    (before.status !== updated.status ||
+      before.player1Score !== updated.player1Score ||
+      before.player2Score !== updated.player2Score ||
+      before.player1PenaltyScore !== updated.player1PenaltyScore ||
+      before.player2PenaltyScore !== updated.player2PenaltyScore ||
+      before.winnerId !== updated.winnerId ||
+      before.participant1EntryId !== updated.participant1EntryId ||
+      before.participant2EntryId !== updated.participant2EntryId);
 
   if (standingsRelevantChange) {
     await recalculateGroupStandings(before.tournamentId);
