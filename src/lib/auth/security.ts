@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import { LoginAttemptStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 
@@ -14,6 +14,7 @@ export type SecurityContext = {
   device: string;
   platform: string;
   location: string;
+  deviceFingerprint: string | null;
 };
 
 const UNKNOWN_LOCATION = "Не определено";
@@ -76,11 +77,35 @@ export function buildSecurityContext(headers: HeaderLike): SecurityContext {
     device: parseDevice(userAgent),
     platform: parsePlatform(userAgent),
     location: UNKNOWN_LOCATION,
+    deviceFingerprint: null,
   };
 }
 
 export async function resolveSecurityContext(headers: HeaderLike): Promise<SecurityContext> {
   return buildSecurityContext(headers);
+}
+
+/**
+ * Хэширует пришедший с клиента отпечаток ещё раз с серверной солью, чтобы в БД
+ * не лежало значение, которое клиент может воспроизвести напрямую. Возвращает
+ * null для пустых/некорректных значений (вход не должен зависеть от отпечатка).
+ */
+export function hashDeviceFingerprint(rawFingerprint: unknown): string | null {
+  if (typeof rawFingerprint !== "string") return null;
+  const trimmed = rawFingerprint.trim();
+  // Клиент шлёт hex SHA-256 (64 символа). Отсекаем мусор и слишком длинные строки.
+  if (trimmed.length < 16 || trimmed.length > 256) return null;
+
+  const salt = process.env.FINGERPRINT_SALT ?? "";
+  return createHash("sha256").update(`${salt}:${trimmed}`).digest("hex");
+}
+
+/** Возвращает копию контекста с добавленным (уже хэшированным) отпечатком. */
+export function withDeviceFingerprint(context: SecurityContext, rawFingerprint: unknown): SecurityContext {
+  return {
+    ...context,
+    deviceFingerprint: hashDeviceFingerprint(rawFingerprint),
+  };
 }
 
 export async function createLoginHistory(params: {
@@ -99,6 +124,7 @@ export async function createLoginHistory(params: {
       location: params.context.location,
       ipAddress: params.context.ipAddress,
       userAgent: params.context.userAgent,
+      deviceFingerprint: params.context.deviceFingerprint,
     },
   });
 }
@@ -119,6 +145,7 @@ export async function createSecuritySession(params: {
       location: params.context.location,
       ipAddress: params.context.ipAddress,
       userAgent: params.context.userAgent,
+      deviceFingerprint: params.context.deviceFingerprint,
     },
   });
 

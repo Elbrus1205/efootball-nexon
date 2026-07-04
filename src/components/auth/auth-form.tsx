@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getDeviceFingerprint } from "@/lib/device-fingerprint";
 import { startVkIdAuth } from "@/lib/vkid-client";
 
 export function AuthForm({
@@ -104,6 +105,7 @@ export function AuthForm({
             body: JSON.stringify({
               email: normalizedEmail,
               password,
+              fingerprint: await getDeviceFingerprint(),
             }),
           });
 
@@ -126,6 +128,7 @@ export function AuthForm({
           password,
           twoFactorCode: twoFactorStep ? twoFactorCode : undefined,
           challengeToken: twoFactorStep ? challengeToken : undefined,
+          fingerprint: await getDeviceFingerprint(),
           redirect: false,
         });
 

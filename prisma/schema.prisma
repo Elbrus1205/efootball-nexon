@@ -1030,6 +1030,7 @@ model SecuritySession {
   location      String?
   ipAddress     String?
   userAgent     String?  @db.Text
+  deviceFingerprint String?
   lastActiveAt  DateTime @default(now())
   createdAt     DateTime @default(now())
   revokedAt     DateTime?
@@ -1048,12 +1049,25 @@ model LoginHistory {
   location   String?
   ipAddress  String?
   userAgent  String?            @db.Text
+  deviceFingerprint String?
   createdAt  DateTime           @default(now())
   user       User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@index([email, createdAt])
   @@index([status, createdAt])
+  @@index([deviceFingerprint])
+}
+
+model TwinAccountAlert {
+  id                String   @id @default(cuid())
+  deviceFingerprint String
+  userIds           String[]
+  accountsKey       String   @unique
+  lastNotifiedAt    DateTime @default(now())
+  createdAt         DateTime @default(now())
+
+  @@index([deviceFingerprint])
 }
 
 model TwoFactorChallenge {

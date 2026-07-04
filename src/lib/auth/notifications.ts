@@ -1,6 +1,7 @@
 import { NotificationType } from "@prisma/client";
 import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import type { SecurityContext } from "@/lib/auth/security";
+import { detectAndNotifyTwins } from "@/lib/auth/twin-detection";
 import { db } from "@/lib/db";
 import { createNotification } from "@/lib/services/notifications";
 import { isTelegramRecipientUnavailableError, sendTelegramMessage } from "@/lib/telegram-bot";
@@ -30,6 +31,11 @@ export async function notifySuccessfulLogin(params: {
   provider: AuthNotificationProvider;
   context: SecurityContext;
 }) {
+  // Проверка на твинки не зависит от привязки Telegram у самого игрока.
+  await detectAndNotifyTwins({ userId: params.userId, context: params.context }).catch((error) => {
+    console.error("Twin account detection failed", error);
+  });
+
   if (!process.env.TELEGRAM_BOT_TOKEN) {
     await maybeCreateEmailReminder(params.userId);
     return;

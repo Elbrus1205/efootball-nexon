@@ -1,7 +1,7 @@
 import { compare, hash } from "bcryptjs";
 import { LoginAttemptStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
-import { createLoginHistory, resolveSecurityContext } from "@/lib/auth/security";
+import { createLoginHistory, resolveSecurityContext, withDeviceFingerprint } from "@/lib/auth/security";
 import { db } from "@/lib/db";
 import { createTelegramTwoFactorChallenge } from "@/lib/two-factor";
 
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Введите email и пароль." }, { status: 400 });
   }
 
-  const context = await resolveSecurityContext(request.headers);
+  const context = withDeviceFingerprint(await resolveSecurityContext(request.headers), body?.fingerprint);
   const user = await db.user.findFirst({
     where: {
       email: {

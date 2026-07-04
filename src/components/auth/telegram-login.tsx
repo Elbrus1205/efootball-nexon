@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AlertCircle, Loader2, Send } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { formatTelegramLoginSdkError, loadTelegramLoginSdk, openTelegramLoginPopup } from "@/lib/telegram-login-sdk";
+import { getDeviceFingerprint } from "@/lib/device-fingerprint";
 
 export function TelegramLogin({
   mode,
@@ -64,6 +65,7 @@ export function TelegramLogin({
         idToken,
         legalAccepted: effectiveLegalAccepted ? "true" : "false",
         callbackUrl: "/dashboard",
+        fingerprint: await getDeviceFingerprint(),
         redirect: false,
       });
 

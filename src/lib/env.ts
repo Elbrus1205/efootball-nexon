@@ -20,6 +20,8 @@ const envSchema = z.object({
   PUSHER_KEY: z.string().optional(),
   PUSHER_SECRET: z.string().optional(),
   PUSHER_CLUSTER: z.string().optional(),
+  FINGERPRINT_SALT: z.string().optional(),
+  CRON_SECRET: z.string().optional(),
 });
 
 export const env = envSchema.parse({
@@ -42,4 +44,6 @@ export const env = envSchema.parse({
   PUSHER_KEY: process.env.PUSHER_KEY,
   PUSHER_SECRET: process.env.PUSHER_SECRET,
   PUSHER_CLUSTER: process.env.PUSHER_CLUSTER,
+  FINGERPRINT_SALT: process.env.FINGERPRINT_SALT,
+  CRON_SECRET: process.env.CRON_SECRET,
 });

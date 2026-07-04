@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { clearVkIntent, exchangeVkCode, readVkIntent } from "@/lib/vkid-client";
+import { getDeviceFingerprint } from "@/lib/device-fingerprint";
 
 async function waitForAuthenticatedSession(timeoutMs = 8000, intervalMs = 250) {
   const startedAt = Date.now();
@@ -93,6 +94,7 @@ export default function VkCallbackPage() {
           accessToken: token.access_token,
           legalAccepted: intent?.legalAccepted ? "true" : "false",
           callbackUrl: intent?.callbackUrl || "/dashboard",
+          fingerprint: await getDeviceFingerprint(),
           redirect: false,
         });
 

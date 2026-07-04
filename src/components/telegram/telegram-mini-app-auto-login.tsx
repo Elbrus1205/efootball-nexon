@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import Script from "next/script";
+import { getDeviceFingerprint } from "@/lib/device-fingerprint";
 
 type TelegramWebApp = {
   initData?: string;
@@ -68,6 +69,7 @@ export function TelegramMiniAppAutoLogin() {
 
       const result = await signIn("telegram-miniapp", {
         initData: webApp.initData,
+        fingerprint: await getDeviceFingerprint(),
         redirect: false,
       });
 

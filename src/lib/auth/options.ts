@@ -5,7 +5,7 @@ import { compare, hash } from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { notifySuccessfulLogin } from "@/lib/auth/notifications";
-import { createLoginHistory, createSecuritySession, deleteSecuritySessions, resolveSecurityContext, touchSecuritySession } from "@/lib/auth/security";
+import { createLoginHistory, createSecuritySession, deleteSecuritySessions, resolveSecurityContext, touchSecuritySession, withDeviceFingerprint } from "@/lib/auth/security";
 import { fetchVkUserProfile } from "@/lib/auth/vk";
 import { db } from "@/lib/db";
 import { getLegalAcceptanceData, isLegalAccepted } from "@/lib/legal-acceptance";
@@ -24,6 +24,7 @@ const FALLBACK_SECURITY_CONTEXT = {
   location: "Не определено",
   ipAddress: null,
   userAgent: "Неизвестное устройство",
+  deviceFingerprint: null,
 };
 
 function toSessionImage(value?: string | null) {
@@ -50,6 +51,7 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
         twoFactorCode: { label: "2FA Code", type: "text" },
         challengeToken: { label: "2FA Challenge", type: "text" },
+        fingerprint: { label: "Device Fingerprint", type: "text" },
       },
       async authorize(credentials, req) {
         if (!credentials?.email || !credentials.password) return null;
@@ -57,7 +59,7 @@ export const authOptions: NextAuthOptions = {
         const normalizedEmail = credentials.email.trim().toLowerCase();
         const rawPassword = credentials.password;
         const trimmedPassword = rawPassword.trim();
-        const context = await resolveSecurityContext(req?.headers);
+        const context = withDeviceFingerprint(await resolveSecurityContext(req?.headers), credentials.fingerprint);
 
         const user = await db.user.findFirst({
           where: {
@@ -179,12 +181,13 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         accessToken: { label: "VK Access Token", type: "text" },
         legalAccepted: { label: "Legal Accepted", type: "text" },
+        fingerprint: { label: "Device Fingerprint", type: "text" },
       },
       async authorize(credentials, req) {
         const accessToken = credentials?.accessToken?.trim();
         if (!accessToken) return null;
 
-        const context = await resolveSecurityContext(req?.headers);
+        const context = withDeviceFingerprint(await resolveSecurityContext(req?.headers), credentials?.fingerprint);
         const acceptedLegalDocuments = isLegalAccepted(credentials?.legalAccepted);
         const vkProfile = await fetchVkUserProfile(accessToken);
 
@@ -282,9 +285,10 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         idToken: { label: "Telegram ID Token", type: "text" },
         legalAccepted: { label: "Legal Accepted", type: "text" },
+        fingerprint: { label: "Device Fingerprint", type: "text" },
       },
       async authorize(credentials, req) {
-        const context = await resolveSecurityContext(req?.headers);
+        const context = withDeviceFingerprint(await resolveSecurityContext(req?.headers), credentials?.fingerprint);
         const idToken = credentials?.idToken?.trim();
         if (!idToken) {
           console.warn("[telegram-auth] missing-id-token");
@@ -413,9 +417,10 @@ export const authOptions: NextAuthOptions = {
       name: "Telegram Mini App",
       credentials: {
         initData: { label: "Telegram Mini App Init Data", type: "text" },
+        fingerprint: { label: "Device Fingerprint", type: "text" },
       },
       async authorize(credentials, req) {
-        const context = await resolveSecurityContext(req?.headers);
+        const context = withDeviceFingerprint(await resolveSecurityContext(req?.headers), credentials?.fingerprint);
         const initData = credentials?.initData?.trim();
         if (!initData) {
           console.warn("[telegram-miniapp-auth] missing-init-data");
