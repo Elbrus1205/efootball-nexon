@@ -41,7 +41,7 @@ type StatusMeta = { label: string; tone: CarouselTournament["statusTone"] };
 function statusMeta(status: string): StatusMeta {
   switch (status) {
     case TournamentStatus.IN_PROGRESS:
-      return { label: "В эфире", tone: "live" };
+      return { label: "Идёт турнир", tone: "live" };
     case TournamentStatus.REGISTRATION_OPEN:
       return { label: "Идёт набор", tone: "open" };
     case TournamentStatus.AWAITING_START:
@@ -134,7 +134,7 @@ const getHomeData = unstable_cache(
 
     return { playersCount, tournamentsCount, matchesCount, awardedPrizePool, tournaments };
   },
-  ["home-page-data-v3"],
+  ["home-page-data-v4"],
   { revalidate: 300 },
 );
 
@@ -236,11 +236,7 @@ export default async function HomePage() {
 
           <div className={s.heroInner}>
             <div className={s.statusRow}>
-              <span className={s.livePill}>
-                <span />
-                Live
-              </span>
-              <span className={s.statusDivider} />
+              <span className={s.statusDot} aria-hidden="true" />
               eFootball Mobile · Сезон 2026
             </div>
 
@@ -342,6 +338,12 @@ export default async function HomePage() {
             <div className={s.headCenter}>
               <span className={s.eyebrow}>Маркет</span>
               <h2 className={s.title}>Магазин сообщества</h2>
+              <div className={s.headAction}>
+                <Link href={marketHref} target="_blank" rel="noreferrer" className={s.glassButton}>
+                  <ShoppingBag className="h-4 w-4" />
+                  Открыть маркет
+                </Link>
+              </div>
             </div>
           </Reveal>
 
@@ -371,15 +373,6 @@ export default async function HomePage() {
                   </Link>
                 ))}
               </AutoScrollRow>
-            </div>
-          </Reveal>
-
-          <Reveal>
-            <div className={s.marketCta}>
-              <Link href={marketHref} target="_blank" rel="noreferrer" className={s.solidButton}>
-                <ShoppingBag className="h-5 w-5" />
-                Открыть маркет
-              </Link>
             </div>
           </Reveal>
         </section>

@@ -1,10 +1,18 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import { Orbitron } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/layout/navbar";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { TopMailRuPixel } from "@/components/analytics/top-mail-ru-pixel";
 import { AppProviders } from "@/components/providers/app-providers";
+
+const brandDisplay = Orbitron({
+  subsets: ["latin"],
+  weight: ["700", "800", "900"],
+  variable: "--font-brand-display",
+  display: "swap",
+});
 
 const eFootballSans = localFont({
   src: [
@@ -78,7 +86,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" className="dark">
-      <body className={`${eFootballSans.variable} ${eFootballStencil.variable} bg-background font-sans text-foreground antialiased`}>
+      <body className={`${eFootballSans.variable} ${eFootballStencil.variable} ${brandDisplay.variable} bg-background font-sans text-foreground antialiased`}>
         <TopMailRuPixel />
         <noscript>
           <div>
