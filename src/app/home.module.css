@@ -2,7 +2,7 @@
    eFootball Nexon — home page
    Animated wordmark hero, auto-scrolling card rows.
    Scoped via CSS Modules so the site-wide black/gold utility overrides in
-   globals.css never reach these class names. Gold = prestige, ice-cyan = live.
+   globals.css never reach these class names. Accent: gold on black.
    ========================================================================= */
 
 .home {
@@ -11,8 +11,8 @@
   --line: rgba(255, 255, 255, 0.08);
   --gold: #e6c574;
   --gold-deep: #c89b49;
-  --ice: #38e1ff;
-  --ice-deep: #22d3ee;
+  --ice: #e6c574;
+  --ice-deep: #c89b49;
   --turf: #37d07a;
   --ink: #f4f2eb;
   --muted: #9aa0aa;
@@ -154,8 +154,8 @@
 
 .home-ghost-button:hover {
   transform: translateY(-2px);
-  border-color: rgba(56, 225, 255, 0.5);
-  background: rgba(56, 225, 255, 0.08);
+  border-color: rgba(230, 197, 116, 0.5);
+  background: rgba(230, 197, 116, 0.08);
 }
 
 /* =========================================================================
@@ -200,7 +200,7 @@
   background:
     radial-gradient(ellipse at 50% 42%, rgba(5, 5, 6, 0.35), rgba(5, 5, 6, 0.82) 78%),
     linear-gradient(0deg, var(--bg) 2%, transparent 32%, transparent 68%, rgba(5, 5, 6, 0.7) 100%),
-    radial-gradient(ellipse at 50% 30%, rgba(56, 225, 255, 0.12), transparent 55%);
+    radial-gradient(ellipse at 50% 30%, rgba(230, 197, 116, 0.12), transparent 55%);
 }
 
 .heroGridlines {
@@ -226,7 +226,7 @@
   left: 50%;
   top: 38%;
   transform: translate(-50%, -50%);
-  background: radial-gradient(circle, rgba(56, 225, 255, 0.14), transparent 62%);
+  background: radial-gradient(circle, rgba(230, 197, 116, 0.14), transparent 62%);
   filter: blur(40px);
   pointer-events: none;
   animation: heroPulse 8s ease-in-out infinite;
@@ -249,15 +249,15 @@
   align-items: center;
   gap: 0.7rem;
   padding: 0.4rem 0.85rem;
-  border: 1px solid rgba(56, 225, 255, 0.3);
+  border: 1px solid rgba(230, 197, 116, 0.3);
   border-radius: 999px;
-  background: rgba(56, 225, 255, 0.06);
+  background: rgba(230, 197, 116, 0.06);
   font-family: var(--mono);
   font-size: 0.62rem;
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(234, 252, 255, 0.85);
+  color: rgba(245, 238, 220, 0.85);
   opacity: 0;
   transform: translateY(12px);
   animation: fadeUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.1s forwards;
@@ -315,11 +315,11 @@
 }
 
 .brandLineAccent .brandChar {
-  background: linear-gradient(180deg, #d3faff 0%, var(--ice) 48%, var(--ice-deep) 100%);
+  background: linear-gradient(180deg, #f6d98a 0%, #d8a94f 46%, #a9761f 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 6px 26px rgba(56, 225, 255, 0.32));
+  filter: drop-shadow(0 6px 26px rgba(200, 155, 73, 0.4));
 }
 
 /* subtle shimmer sweep once the letters have landed */
@@ -344,8 +344,86 @@
   animation: fadeUp 0.9s cubic-bezier(0.22, 1, 0.36, 1) 1.05s forwards;
 }
 
-.heroActions .solidButton {
-  padding-inline: 2rem;
+/* ---------- premium gold CTA ---------- */
+
+.heroCta {
+  position: relative;
+  display: inline-flex;
+  min-height: 3.35rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  overflow: hidden;
+  padding: 0.95rem 2.3rem;
+  border: 1px solid rgba(246, 217, 138, 0.85);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f7dd97 0%, #e6c574 40%, #c89b49 100%);
+  color: #1a1408;
+  font-size: 0.9rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow:
+    0 18px 42px rgba(200, 155, 73, 0.32),
+    0 0 0 0 rgba(230, 197, 116, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s ease, border-color 0.28s ease;
+  animation: ctaBreathe 3.4s ease-in-out infinite;
+}
+
+.heroCta svg,
+.heroCta span:not(.heroCtaGlow) {
+  position: relative;
+  z-index: 2;
+}
+
+/* continuous light sweep */
+.heroCta::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(110deg, transparent 28%, rgba(255, 255, 255, 0.65) 48%, transparent 66%);
+  transform: translateX(-130%);
+  animation: ctaSheen 3.4s ease-in-out infinite;
+}
+
+/* soft ambient glow behind the button */
+.heroCtaGlow {
+  position: absolute;
+  inset: -40%;
+  z-index: 0;
+  background: radial-gradient(circle, rgba(230, 197, 116, 0.4), transparent 62%);
+  filter: blur(16px);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.heroCtaArrow {
+  transition: transform 0.28s ease;
+}
+
+.heroCta:hover {
+  transform: translateY(-3px) scale(1.02);
+  border-color: #fbe9b5;
+  box-shadow:
+    0 24px 54px rgba(200, 155, 73, 0.45),
+    0 0 0 3px rgba(230, 197, 116, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.heroCta:hover .heroCtaArrow {
+  transform: translateX(5px);
+}
+
+.heroCta:active {
+  transform: translateY(-1px) scale(0.99);
+}
+
+.heroCta:focus-visible {
+  outline: 2px solid #fbe9b5;
+  outline-offset: 3px;
 }
 
 /* ---------- stats under the button ---------- */
@@ -491,7 +569,7 @@
   inset: 0;
   pointer-events: none;
   opacity: 0.55;
-  background: radial-gradient(circle at 80% -10%, rgba(56, 225, 255, 0.16), transparent 55%);
+  background: radial-gradient(circle at 80% -10%, rgba(230, 197, 116, 0.16), transparent 55%);
 }
 
 .miniGold .miniGlow {
@@ -513,7 +591,7 @@
 }
 
 .miniIce:hover {
-  border-color: rgba(56, 225, 255, 0.35);
+  border-color: rgba(230, 197, 116, 0.35);
 }
 
 .miniGold:hover,
@@ -529,8 +607,8 @@
   width: 2.6rem;
   height: 2.6rem;
   border-radius: 12px;
-  border: 1px solid rgba(56, 225, 255, 0.25);
-  background: linear-gradient(180deg, rgba(56, 225, 255, 0.14), rgba(56, 225, 255, 0.03));
+  border: 1px solid rgba(230, 197, 116, 0.25);
+  background: linear-gradient(180deg, rgba(230, 197, 116, 0.14), rgba(230, 197, 116, 0.03));
   color: var(--ice);
   margin-bottom: 0.9rem;
 }
@@ -622,7 +700,7 @@
 
 .home-fx-card-link:hover {
   transform: translateY(-4px);
-  border-color: rgba(56, 225, 255, 0.35);
+  border-color: rgba(230, 197, 116, 0.35);
   box-shadow: 0 24px 52px rgba(0, 0, 0, 0.5);
 }
 
@@ -651,7 +729,7 @@
   height: 100%;
   color: rgba(230, 197, 116, 0.4);
   background:
-    radial-gradient(circle at 50% 35%, rgba(56, 225, 255, 0.1), transparent 60%),
+    radial-gradient(circle at 50% 35%, rgba(230, 197, 116, 0.1), transparent 60%),
     repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.02) 0 12px, transparent 12px 24px);
 }
 
@@ -681,7 +759,7 @@
 }
 
 .home-fx-badge-live {
-  border: 1px solid rgba(56, 225, 255, 0.5);
+  border: 1px solid rgba(230, 197, 116, 0.5);
   background: rgba(6, 32, 40, 0.8);
   color: var(--ice);
 }
@@ -823,10 +901,10 @@
 .community {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(56, 225, 255, 0.2);
+  border: 1px solid rgba(230, 197, 116, 0.2);
   border-radius: 22px;
   background:
-    radial-gradient(ellipse at 15% 0%, rgba(56, 225, 255, 0.14), transparent 55%),
+    radial-gradient(ellipse at 15% 0%, rgba(230, 197, 116, 0.14), transparent 55%),
     radial-gradient(ellipse at 90% 100%, rgba(230, 197, 116, 0.12), transparent 55%),
     linear-gradient(180deg, rgba(16, 18, 24, 0.9), rgba(9, 10, 14, 0.92));
   padding: clamp(1.6rem, 5vw, 3rem);
@@ -921,12 +999,12 @@
 }
 
 .socialTelegram:hover {
-  border-color: rgba(56, 225, 255, 0.45);
-  background: rgba(56, 225, 255, 0.07);
+  border-color: rgba(230, 197, 116, 0.45);
+  background: rgba(230, 197, 116, 0.07);
 }
 .socialTelegram .socialIcon {
-  border: 1px solid rgba(56, 225, 255, 0.35);
-  background: rgba(56, 225, 255, 0.12);
+  border: 1px solid rgba(230, 197, 116, 0.35);
+  background: rgba(230, 197, 116, 0.12);
   color: var(--ice);
 }
 .socialTelegram .socialArrow {
@@ -934,16 +1012,16 @@
 }
 
 .socialVk:hover {
-  border-color: rgba(120, 160, 255, 0.45);
-  background: rgba(90, 130, 255, 0.07);
+  border-color: rgba(230, 197, 116, 0.45);
+  background: rgba(230, 197, 116, 0.07);
 }
 .socialVk .socialIcon {
-  border: 1px solid rgba(120, 160, 255, 0.35);
-  background: rgba(90, 130, 255, 0.12);
-  color: #9db8ff;
+  border: 1px solid rgba(230, 197, 116, 0.35);
+  background: rgba(230, 197, 116, 0.12);
+  color: #e6c574;
 }
 .socialVk .socialArrow {
-  color: #9db8ff;
+  color: #e6c574;
 }
 
 .socialMarket:hover {
@@ -990,6 +1068,20 @@
   50% { opacity: 0.4; }
 }
 
+@keyframes ctaSheen {
+  0% { transform: translateX(-130%); }
+  55%, 100% { transform: translateX(130%); }
+}
+
+@keyframes ctaBreathe {
+  0%, 100% {
+    box-shadow: 0 18px 42px rgba(200, 155, 73, 0.3), 0 0 0 0 rgba(230, 197, 116, 0), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  }
+  50% {
+    box-shadow: 0 20px 48px rgba(200, 155, 73, 0.42), 0 0 24px 2px rgba(230, 197, 116, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+}
+
 @keyframes scrollDrop {
   0% { opacity: 0; transform: translate(-50%, 0); }
   35% { opacity: 1; }
@@ -1018,8 +1110,12 @@
   }
 
   .brandLine {
-    font-size: clamp(2.9rem, 19vw, 4.6rem);
-    letter-spacing: 0.01em;
+    font-size: clamp(2.4rem, 13vw, 3.6rem);
+    letter-spacing: 0.005em;
+  }
+
+  .brand {
+    margin-top: clamp(0.9rem, 2.4vh, 1.4rem);
   }
 
   .heroStats {
@@ -1027,7 +1123,7 @@
     gap: 0.5rem;
   }
 
-  .heroActions .solidButton {
+  .heroCta {
     width: 100%;
   }
 
@@ -1050,6 +1146,12 @@
   }
 }
 
+@media (max-width: 380px) {
+  .brandLine {
+    font-size: 2.15rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .heroVideo,
   .heroGlow,
@@ -1057,6 +1159,8 @@
   .brandChar,
   .brand::after,
   .heroActions,
+  .heroCta,
+  .heroCta::after,
   .heroStats,
   .scrollCue,
   .scrollThumb,

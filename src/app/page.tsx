@@ -266,10 +266,11 @@ export default async function HomePage() {
             </h1>
 
             <div className={s.heroActions}>
-              <Link href="/register" className={s.solidButton}>
+              <Link href="/register" className={s.heroCta}>
+                <span className={s.heroCtaGlow} aria-hidden="true" />
                 <Swords className="h-5 w-5" />
-                Начать играть
-                <ArrowRight className="h-4 w-4" />
+                <span>Начать играть</span>
+                <ArrowRight className={`h-4 w-4 ${s.heroCtaArrow}`} />
               </Link>
             </div>
 
