@@ -1,15 +1,15 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
-import { Orbitron } from "next/font/google";
+import { Rajdhani } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/layout/navbar";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { TopMailRuPixel } from "@/components/analytics/top-mail-ru-pixel";
 import { AppProviders } from "@/components/providers/app-providers";
 
-const brandDisplay = Orbitron({
+const brandDisplay = Rajdhani({
   subsets: ["latin"],
-  weight: ["700", "800", "900"],
+  weight: ["600", "700"],
   variable: "--font-brand-display",
   display: "swap",
 });
