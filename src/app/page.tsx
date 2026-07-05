@@ -1,10 +1,10 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { unstable_cache } from "next/cache";
-import { ArrowRight, BarChart3, Layers, Medal, Send, ShieldCheck, ShoppingBag, Sparkles, Swords, Trophy, Users, Zap } from "lucide-react";
+import { ArrowRight, BarChart3, ClipboardCheck, Layers, Medal, Radio, Send, ShieldCheck, ShoppingBag, Swords, Trophy, Users, Zap } from "lucide-react";
 import { MatchStatus, TournamentStatus } from "@prisma/client";
 import { AnimatedCounter } from "@/components/home/animated-counter";
+import { Reveal } from "@/components/shared/reveal";
 import { db } from "@/lib/db";
 import { getArchivedHomeStats, parsePrizePoolValue } from "@/lib/home-stats";
 import styles from "./home.module.css";
@@ -73,6 +73,29 @@ export default async function HomePage() {
     { icon: Medal, value: awardedPrizePool, suffix: " ₽", label: "разыграно призов" },
   ];
 
+  const path = [
+    {
+      icon: ClipboardCheck,
+      title: "Регистрация",
+      text: "Создай профиль и подай заявку на открытый турнир за пару минут.",
+    },
+    {
+      icon: Layers,
+      title: "Групповой этап",
+      text: "Играй матчи, набирай очки и поднимайся в таблице своей группы.",
+    },
+    {
+      icon: Swords,
+      title: "Плей-офф",
+      text: "Проходи сетку на вылет — каждый матч приближает к финалу.",
+    },
+    {
+      icon: Trophy,
+      title: "Трофей",
+      text: "Забирай приз, титул чемпиона и место в истории сезона.",
+    },
+  ];
+
   const features = [
     {
       icon: Trophy,
@@ -110,14 +133,18 @@ export default async function HomePage() {
   return (
     <main className={`${styles["home-premium"]} -mt-16 min-h-screen overflow-hidden sm:-mt-[72px] lg:-mt-20`}>
       <div className={styles["home-premium-bg"]} aria-hidden="true">
-        <Image
-          src="/images-site/home-hero-football-bg.webp"
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className={styles["home-premium-bg-image"]}
-        />
+        <video
+          className={styles["home-premium-bg-video"]}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          poster="/images-site/home-hero-poster.jpg"
+        >
+          <source src="/videos/home-hero-stadium.webm" type="video/webm" />
+          <source src="/videos/home-hero-stadium.mp4" type="video/mp4" />
+        </video>
         <div className={styles["home-premium-bg-grade"]} />
         <div className={`${styles["home-premium-depth"]} ${styles["home-premium-depth-left"]}`} />
         <div className={`${styles["home-premium-depth"]} ${styles["home-premium-depth-right"]}`} />
@@ -127,9 +154,19 @@ export default async function HomePage() {
         <div className={styles["home-premium-grid"]} aria-hidden="true" />
         <div className={styles["home-premium-rings"]} aria-hidden="true" />
 
+        <div className={styles["home-hud-frame"]} aria-hidden="true">
+          <span className={`${styles["home-hud-corner"]} ${styles["home-hud-corner-tl"]}`} />
+          <span className={`${styles["home-hud-corner"]} ${styles["home-hud-corner-tr"]}`} />
+          <span className={`${styles["home-hud-corner"]} ${styles["home-hud-corner-bl"]}`} />
+          <span className={`${styles["home-hud-corner"]} ${styles["home-hud-corner-br"]}`} />
+        </div>
+
         <div className={styles["home-premium-content"]}>
           <div className={styles["home-premium-topline"]}>
-            <Sparkles className="h-3.5 w-3.5" />
+            <span className={styles["home-live-tag"]}>
+              <Radio className="h-3.5 w-3.5" />
+              LIVE
+            </span>
             <span>eFootball Mobile</span>
             <span className={styles["home-premium-dot"]} />
             <span>Киберфутбольная лига</span>
@@ -192,68 +229,111 @@ export default async function HomePage() {
             ))}
           </div>
         </div>
+
+        <div className={styles["home-scroll-cue"]} aria-hidden="true">
+          <span className={styles["home-scroll-track"]}>
+            <span className={styles["home-scroll-thumb"]} />
+          </span>
+          <span className={styles["home-scroll-label"]}>Листай вниз</span>
+        </div>
       </section>
 
       <section className={styles["home-section"]}>
-        <div className={styles["home-section-head"]}>
-          <span className={styles["home-eyebrow"]}>Возможности платформы</span>
-          <h2 className={styles["home-section-title"]}>Всё для соревновательной игры</h2>
-        </div>
-        <div className={styles["home-bento"]}>
-          {features.map((feature) => (
-            <article
-              key={feature.title}
-              className={`${styles["home-bento-card"]} ${feature.wide ? styles["home-bento-wide"] : ""}`}
-            >
-              <div className={styles["home-bento-icon"]}>
-                <feature.icon className="h-5 w-5" />
-              </div>
-              <h3 className={styles["home-bento-title"]}>{feature.title}</h3>
-              <p className={styles["home-bento-text"]}>{feature.text}</p>
-            </article>
+        <Reveal>
+          <div className={styles["home-section-head"]}>
+            <span className={styles["home-eyebrow"]}>Как это работает</span>
+            <h2 className={styles["home-section-title"]}>Путь до трофея</h2>
+          </div>
+        </Reveal>
+        <div className={styles["home-path"]}>
+          {path.map((step, index) => (
+            <Reveal key={step.title} delay={index * 90}>
+              <article className={styles["home-path-card"]}>
+                <div className={styles["home-path-head"]}>
+                  <span className={styles["home-path-num"]}>{String(index + 1).padStart(2, "0")}</span>
+                  <span className={styles["home-path-icon"]}>
+                    <step.icon className="h-5 w-5" />
+                  </span>
+                </div>
+                <h3 className={styles["home-path-title"]}>{step.title}</h3>
+                <p className={styles["home-path-text"]}>{step.text}</p>
+              </article>
+            </Reveal>
           ))}
         </div>
       </section>
 
       <section className={styles["home-section"]}>
-        <div className={styles["home-section-head"]}>
-          <span className={styles["home-eyebrow"]}>Разделы</span>
-          <h2 className={styles["home-section-title"]}>Начни отсюда</h2>
+        <Reveal>
+          <div className={styles["home-section-head"]}>
+            <span className={styles["home-eyebrow"]}>Возможности платформы</span>
+            <h2 className={styles["home-section-title"]}>Всё для соревновательной игры</h2>
+          </div>
+        </Reveal>
+        <div className={styles["home-bento"]}>
+          {features.map((feature, index) => (
+            <Reveal
+              key={feature.title}
+              delay={index * 80}
+              className={feature.wide ? styles["home-bento-cell-wide"] : undefined}
+            >
+              <article className={`${styles["home-bento-card"]} ${feature.wide ? styles["home-bento-wide"] : ""}`}>
+                <div className={styles["home-bento-icon"]}>
+                  <feature.icon className="h-5 w-5" />
+                </div>
+                <h3 className={styles["home-bento-title"]}>{feature.title}</h3>
+                <p className={styles["home-bento-text"]}>{feature.text}</p>
+              </article>
+            </Reveal>
+          ))}
         </div>
+      </section>
+
+      <section className={styles["home-section"]}>
+        <Reveal>
+          <div className={styles["home-section-head"]}>
+            <span className={styles["home-eyebrow"]}>Разделы</span>
+            <h2 className={styles["home-section-title"]}>Начни отсюда</h2>
+          </div>
+        </Reveal>
         <div className={styles["home-quick-grid"]}>
-          {quickLinks.map((link) => (
-            <Link key={link.href} href={link.href} className={styles["home-quick-card"]}>
-              <div className={styles["home-quick-icon"]}>
-                <link.icon className="h-5 w-5" />
-              </div>
-              <div className={styles["home-quick-body"]}>
-                <span className={styles["home-quick-title"]}>{link.title}</span>
-                <span className={styles["home-quick-text"]}>{link.text}</span>
-              </div>
-              <ArrowRight className={`h-4 w-4 ${styles["home-quick-arrow"]}`} />
-            </Link>
+          {quickLinks.map((link, index) => (
+            <Reveal key={link.href} delay={index * 70}>
+              <Link href={link.href} className={styles["home-quick-card"]}>
+                <div className={styles["home-quick-icon"]}>
+                  <link.icon className="h-5 w-5" />
+                </div>
+                <div className={styles["home-quick-body"]}>
+                  <span className={styles["home-quick-title"]}>{link.title}</span>
+                  <span className={styles["home-quick-text"]}>{link.text}</span>
+                </div>
+                <ArrowRight className={`h-4 w-4 ${styles["home-quick-arrow"]}`} />
+              </Link>
+            </Reveal>
           ))}
         </div>
       </section>
 
       <section className={styles["home-cta"]}>
-        <div className={styles["home-cta-inner"]}>
-          <h2 className={styles["home-cta-title"]}>Готов выйти на поле?</h2>
-          <p className={styles["home-cta-text"]}>
-            Регистрируйся, выбирай турнир и борись за место среди лучших игроков лиги.
-          </p>
-          <div className={styles["home-cta-actions"]}>
-            <Link href="/tournaments" className={styles["home-main-action"]}>
-              <Trophy className="h-5 w-5" />
-              <span>Смотреть турниры</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link href={telegramHref} target="_blank" rel="noreferrer" className={styles["home-social-button"]}>
-              <Send className="h-4 w-4" />
-              <span>Telegram</span>
-            </Link>
+        <Reveal>
+          <div className={styles["home-cta-inner"]}>
+            <h2 className={styles["home-cta-title"]}>Готов выйти на поле?</h2>
+            <p className={styles["home-cta-text"]}>
+              Регистрируйся, выбирай турнир и борись за место среди лучших игроков лиги.
+            </p>
+            <div className={styles["home-cta-actions"]}>
+              <Link href="/tournaments" className={styles["home-main-action"]}>
+                <Trophy className="h-5 w-5" />
+                <span>Смотреть турниры</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link href={telegramHref} target="_blank" rel="noreferrer" className={styles["home-social-button"]}>
+                <Send className="h-4 w-4" />
+                <span>Telegram</span>
+              </Link>
+            </div>
           </div>
-        </div>
+        </Reveal>
       </section>
     </main>
   );
