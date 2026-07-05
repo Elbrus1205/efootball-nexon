@@ -21,12 +21,19 @@ export default async function AdminMatchesPage() {
 
   const matches = await db.match.findMany({
     where: { tournament: getAdminTournamentAccessWhere(session) },
-    include: {
-      tournament: true,
-      stage: true,
-      group: true,
-      player1: true,
-      player2: true,
+    select: {
+      id: true,
+      status: true,
+      round: true,
+      matchNumber: true,
+      scheduledAt: true,
+      bracketId: true,
+      tournamentId: true,
+      tournament: { select: { id: true, title: true } },
+      stage: { select: { name: true, type: true } },
+      group: { select: { name: true } },
+      player1: { select: { id: true, name: true, email: true } },
+      player2: { select: { id: true, name: true, email: true } },
     },
     orderBy: [{ tournamentId: "asc" }, { round: "asc" }, { matchNumber: "asc" }, { createdAt: "asc" }],
   });

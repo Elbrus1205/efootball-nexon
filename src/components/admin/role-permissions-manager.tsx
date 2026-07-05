@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { userRoleColor, userRoleLabel } from "@/lib/admin-display";
-import { managedRoles, rolePermissions, type ManagedRole, type RolePermissionId } from "@/lib/role-permissions";
+import { managedRoles, rolePermissions, type ManagedRole, type RolePermissionId } from "@/lib/role-permissions-shared";
 import { cn } from "@/lib/utils";
 
 type RolePermissionManagerProps = {
