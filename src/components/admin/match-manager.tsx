@@ -341,7 +341,14 @@ export function MatchManager({
 
         const result = await response.json().catch(() => null);
         if (response.ok && result?.match && typeof result.match === "object") {
-          patchLocalMatch(matchId, result.match as Record<string, unknown>);
+          const serverMatch = { ...(result.match as Record<string, unknown>) };
+          // Это сохранение не меняло статус (счёт/участники). Ответ мог быть
+          // прочитан сервером до параллельного подтверждения (ОК/Спор), поэтому
+          // не затираем статус устаревшим значением из этого ответа.
+          if (!("status" in payload)) {
+            delete serverMatch.status;
+          }
+          patchLocalMatch(matchId, serverMatch);
           return;
         }
 
@@ -504,7 +511,7 @@ export function MatchManager({
                       </div>
                     </div>
 
-                    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.86fr)] lg:items-start">
+                    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.86fr)] lg:items-stretch">
                       <div className="grid gap-3">
                         <div className="grid gap-2 sm:grid-cols-[auto_minmax(0,1fr)]">
                           <Badge className="h-9 justify-center px-3" variant={matchStatusVariant[match.status] ?? "neutral"}>
@@ -583,7 +590,7 @@ export function MatchManager({
 
                       </div>
 
-                      <div className="grid gap-3">
+                      <div className="flex flex-col gap-3">
                         <div className="rounded-xl border border-white/10 bg-black/20 p-2.5">
                           <FieldLabel>Счет</FieldLabel>
                           <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
@@ -640,7 +647,7 @@ export function MatchManager({
                           </div>
                         ) : null}
 
-                        <div className="sticky bottom-2 z-20 grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-[#080808]/95 p-2 backdrop-blur lg:static lg:flex lg:flex-wrap lg:border-0 lg:bg-transparent lg:p-0">
+                        <div className="sticky bottom-2 z-20 mt-auto grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-[#080808]/95 p-2 backdrop-blur lg:static lg:flex lg:flex-wrap lg:border-0 lg:bg-transparent lg:p-0">
                           <Button
                             disabled={confirmingId === match.id || !canConfirm}
                             size="sm"
