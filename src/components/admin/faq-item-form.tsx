@@ -4,14 +4,11 @@ import { useState } from "react";
 import type { ChangeEvent } from "react";
 import { FaqAttachmentKind } from "@prisma/client";
 import { FileUp, LinkIcon, Plus, Trash2 } from "lucide-react";
-import { genUploader } from "uploadthing/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { OurFileRouter } from "@/lib/uploadthing/core";
-
-const { uploadFiles } = genUploader<OurFileRouter>();
+import { uploadFile } from "@/lib/storage/upload-client";
 
 type AttachmentDraft = {
   title: string;
@@ -59,9 +56,7 @@ export function FaqItemForm({ action, actionName = "create", submitLabel, item }
     setUploadError("");
 
     try {
-      const [uploaded] = await uploadFiles("faqAttachmentUploader", { files: [file] });
-      const url = uploaded.serverData?.url || uploaded.ufsUrl || uploaded.url;
-      if (!url) throw new Error("empty-upload-url");
+      const url = await uploadFile(file, "faq");
 
       addAttachment({
         title: file.name,
@@ -69,8 +64,8 @@ export function FaqItemForm({ action, actionName = "create", submitLabel, item }
         kind: inferKind(file.name, file.type),
         mimeType: file.type,
       });
-    } catch {
-      setUploadError("Не удалось загрузить файл. Можно вставить ссылку вручную.");
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Не удалось загрузить файл. Можно вставить ссылку вручную.");
     } finally {
       setUploading(false);
       event.target.value = "";

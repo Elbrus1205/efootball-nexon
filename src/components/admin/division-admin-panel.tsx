@@ -4,22 +4,11 @@ import { ChangeEvent, useMemo, useState, useTransition } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Archive, CalendarClock, ImageIcon, ListChecks, Pause, Play, RotateCcw, Shield, Swords, Users } from "lucide-react";
-import { genUploader } from "uploadthing/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import type { OurFileRouter } from "@/lib/uploadthing/core";
-
-const { uploadFiles } = genUploader<OurFileRouter>();
-
-const readFileAsDataUrl = (file: File) =>
-  new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Failed to read image"));
-    reader.onload = () => (typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Failed to read image")));
-    reader.readAsDataURL(file);
-  });
+import { uploadFile } from "@/lib/storage/upload-client";
 
 type AdminMatch = {
   id: string;
@@ -144,15 +133,10 @@ export function DivisionAdminPanel({
     if (!file || !file.type.startsWith("image/")) return;
     setCoverUploading(true);
     try {
-      const [uploaded] = await uploadFiles("coverUploader", { files: [file] });
-      setCoverImage(uploaded.serverData?.url || uploaded.ufsUrl || uploaded.url);
-    } catch {
-      try {
-        setCoverImage(await readFileAsDataUrl(file));
-        toast.info("Обложка показана локально. Для постоянной ссылки проверьте UploadThing.");
-      } catch {
-        toast.error("Не удалось загрузить обложку дивизиона.");
-      }
+      const url = await uploadFile(file, "divisions");
+      setCoverImage(url);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось загрузить обложку дивизиона.");
     } finally {
       setCoverUploading(false);
       event.target.value = "";

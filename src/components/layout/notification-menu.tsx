@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Pusher from "pusher-js";
 import { Bell, CalendarCheck2, CheckCheck, ExternalLink, Loader2, ShieldCheck, Sparkles, Swords, Trophy } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { getSupabaseBrowserClient } from "@/lib/realtime/supabase-browser";
 
 type NotificationItem = {
   id: string;
@@ -61,6 +62,16 @@ export function NotificationMenu({
   const [unread, setUnread] = useState(unreadCount);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  // Дедуп по id: и Supabase Realtime, и Pusher могут доставить одно и то же
+  // уведомление. Считаем его только один раз.
+  const seenIdsRef = useRef<Set<string>>(new Set());
+
+  const ingestNotification = useCallback((notification: NotificationItem) => {
+    if (!notification?.id || seenIdsRef.current.has(notification.id)) return;
+    seenIdsRef.current.add(notification.id);
+    setItems((current) => [notification, ...current.filter((item) => item.id !== notification.id)].slice(0, 8));
+    setUnread((current) => current + 1);
+  }, []);
 
   const loadNotifications = useCallback(async () => {
     setLoading(true);
@@ -68,7 +79,11 @@ export function NotificationMenu({
     try {
       const response = await fetch("/api/notifications", { cache: "no-store" });
       const data = await response.json();
-      setItems(data.notifications ?? []);
+      const loaded: NotificationItem[] = data.notifications ?? [];
+      for (const item of loaded) {
+        if (item?.id) seenIdsRef.current.add(item.id);
+      }
+      setItems(loaded);
       setUnread(data.unreadCount ?? 0);
     } finally {
       setLoading(false);
@@ -93,6 +108,24 @@ export function NotificationMenu({
       if (!ignore) void loadNotifications();
     }, 45_000);
 
+    const cleanups: Array<() => void> = [];
+
+    // Основной канал: Supabase Realtime (broadcast).
+    const supabase = getSupabaseBrowserClient();
+    if (supabase) {
+      const channel = supabase
+        .channel(`user-${userId}`, { config: { broadcast: { self: false } } })
+        .on("broadcast", { event: "notification:new" }, (message) => {
+          ingestNotification(message.payload as NotificationItem);
+        })
+        .subscribe();
+
+      cleanups.push(() => {
+        void supabase.removeChannel(channel);
+      });
+    }
+
+    // Fallback: Pusher (если настроен). Дедуп по id в ingestNotification.
     if (process.env.NEXT_PUBLIC_PUSHER_KEY && process.env.NEXT_PUBLIC_PUSHER_CLUSTER) {
       const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY, {
         cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
@@ -100,24 +133,22 @@ export function NotificationMenu({
 
       const channel = pusher.subscribe(`user-${userId}`);
       channel.bind("notification:new", (notification: NotificationItem) => {
-        setItems((current) => [notification, ...current].slice(0, 8));
-        setUnread((current) => current + 1);
+        ingestNotification(notification);
       });
 
-      return () => {
-        ignore = true;
-        window.clearInterval(interval);
+      cleanups.push(() => {
         channel.unbind_all();
         pusher.unsubscribe(`user-${userId}`);
         pusher.disconnect();
-      };
+      });
     }
 
     return () => {
       ignore = true;
       window.clearInterval(interval);
+      for (const cleanup of cleanups) cleanup();
     };
-  }, [loadNotifications, userId]);
+  }, [loadNotifications, ingestNotification, userId]);
 
   return (
     <DropdownMenu

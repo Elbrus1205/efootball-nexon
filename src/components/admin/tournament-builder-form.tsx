@@ -3,7 +3,6 @@
 import { ClubSelectionMode, MatchupFormat, SeedingMethod, SortRule, TournamentFormat, TournamentParticipantMode, TournamentStatus } from "@prisma/client";
 import type { PlayoffType } from "@prisma/client";
 import { ChangeEvent, useState } from "react";
-import { genUploader } from "uploadthing/client";
 import { seedingMethodLabel, sortRuleLabel, tournamentStatusLabel } from "@/lib/admin-display";
 import { FormatBlueprintBuilder } from "@/components/admin/format-blueprint-builder";
 import { Button } from "@/components/ui/button";
@@ -12,26 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { type FormatBlueprint } from "@/lib/format-blueprint";
-import type { OurFileRouter } from "@/lib/uploadthing/core";
-
-const { uploadFiles } = genUploader<OurFileRouter>();
-
-const readFileAsDataUrl = (file: File) =>
-  new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onerror = () => reject(new Error("Failed to read image"));
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result);
-        return;
-      }
-
-      reject(new Error("Failed to read image"));
-    };
-
-    reader.readAsDataURL(file);
-  });
+import { uploadFile } from "@/lib/storage/upload-client";
 
 type BuilderValues = {
   title?: string;
@@ -106,15 +86,11 @@ export function TournamentBuilderForm({
     setCoverUploadError("");
 
     try {
-      const [uploaded] = await uploadFiles("coverUploader", { files: [file] });
-      setCoverImage(uploaded.serverData?.url || uploaded.ufsUrl || uploaded.url);
-    } catch {
-      try {
-        setCoverImage(await readFileAsDataUrl(file));
-      } catch {
-        setCoverImage("");
-        setCoverUploadError("Не удалось прочитать обложку. Попробуйте другое изображение.");
-      }
+      const url = await uploadFile(file, "tournaments");
+      setCoverImage(url);
+    } catch (error) {
+      setCoverImage("");
+      setCoverUploadError(error instanceof Error ? error.message : "Не удалось загрузить обложку. Попробуйте другое изображение.");
     } finally {
       setCoverUploading(false);
       event.target.value = "";

@@ -2,6 +2,7 @@ import Pusher from "pusher";
 import { NotificationType } from "@prisma/client";
 import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
+import { broadcastNotification } from "@/lib/realtime/notifications-realtime";
 import { isTelegramRecipientUnavailableError, sendTelegramMessage } from "@/lib/telegram-bot";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
 import { tgEmoji } from "@/lib/telegram-emoji";
@@ -112,6 +113,14 @@ export async function createNotification({
   if (shouldDeliver && pusher) {
     await pusher.trigger(`user-${userId}`, "notification:new", payload).catch((error) => {
       console.error("Failed to push notification", error);
+    });
+  }
+
+  // Supabase Realtime — основной канал доставки. Pusher оставлен как fallback.
+  // Клиент дедуплицирует по notification.id, если сработают оба канала.
+  if (shouldDeliver) {
+    await broadcastNotification(userId, payload).catch((error) => {
+      console.error("Failed to broadcast notification via Supabase Realtime", error);
     });
   }
 

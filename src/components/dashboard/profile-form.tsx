@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { uploadFile } from "@/lib/storage/upload-client";
 
 export function ProfileForm({
   initialValues,
@@ -46,6 +47,7 @@ export function ProfileForm({
   }));
   const [avatarPreview, setAvatarPreview] = useState(initialValues.image);
   const [bannerPreview, setBannerPreview] = useState(initialValues.bannerImage);
+  const [uploadingImage, setUploadingImage] = useState<"avatar" | "banner" | null>(null);
   const [pending, startTransition] = useTransition();
   const bioCharactersLeft = PROFILE_BIO_MAX_LENGTH - draft.bio.length;
   const selectedStatusIds = draft.selectedStatusIds ?? [];
@@ -73,7 +75,7 @@ export function ProfileForm({
   };
 
   const optimizeImage = (file: File, type: "avatar" | "banner") =>
-    new Promise<string>((resolve, reject) => {
+    new Promise<Blob>((resolve, reject) => {
       const reader = new FileReader();
 
       reader.onerror = () => reject(new Error("Не удалось прочитать изображение."));
@@ -98,7 +100,17 @@ export function ProfileForm({
           }
 
           context.drawImage(image, 0, 0, width, height);
-          resolve(canvas.toDataURL("image/webp", 0.88));
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error("Не удалось подготовить изображение."));
+              }
+            },
+            "image/webp",
+            0.88,
+          );
         };
 
         image.src = source;
@@ -109,6 +121,8 @@ export function ProfileForm({
 
   const onImageSelect = async (event: ChangeEvent<HTMLInputElement>, type: "avatar" | "banner") => {
     const file = event.target.files?.[0];
+    // Позволяем выбрать тот же файл повторно после ошибки.
+    event.target.value = "";
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
@@ -121,18 +135,22 @@ export function ProfileForm({
       return;
     }
 
+    setUploadingImage(type);
     try {
-      const result = await optimizeImage(file, type);
+      const optimized = await optimizeImage(file, type);
+      const url = await uploadFile(optimized, type === "avatar" ? "avatars" : "banners", `${type}.webp`);
       if (type === "avatar") {
-        setAvatarPreview(result);
-        setDraft((current) => ({ ...current, image: result }));
+        setAvatarPreview(url);
+        setDraft((current) => ({ ...current, image: url }));
       } else {
-        setBannerPreview(result);
-        setDraft((current) => ({ ...current, bannerImage: result }));
+        setBannerPreview(url);
+        setDraft((current) => ({ ...current, bannerImage: url }));
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Не удалось обработать изображение.";
       toast.error(message);
+    } finally {
+      setUploadingImage(null);
     }
   };
 
@@ -181,10 +199,10 @@ export function ProfileForm({
           <div className="profile-banner-grid absolute inset-0 opacity-20" />
 
           <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-white/10 bg-black/30 px-4 py-2 text-sm text-white backdrop-blur-md hover:bg-black/40">
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-white/10 bg-black/30 px-4 py-2 text-sm text-white backdrop-blur-md hover:bg-black/40 aria-disabled:cursor-not-allowed aria-disabled:opacity-60" aria-disabled={uploadingImage !== null}>
               <ImagePlus className="h-4 w-4 text-primary" />
-              Изменить баннер
-              <input type="file" accept="image/*" className="hidden" onChange={(event) => onImageSelect(event, "banner")} />
+              {uploadingImage === "banner" ? "Загрузка..." : "Изменить баннер"}
+              <input type="file" accept="image/*" className="hidden" disabled={uploadingImage !== null} onChange={(event) => onImageSelect(event, "banner")} />
             </label>
           </div>
 
@@ -196,9 +214,9 @@ export function ProfileForm({
                     <AvatarImage src={avatarPreview || undefined} alt="Аватар игрока" />
                     <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
-                  <label className="absolute -bottom-1 -right-1 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-primary text-white shadow-lg hover:bg-primary/90">
+                  <label className="absolute -bottom-1 -right-1 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-primary text-white shadow-lg hover:bg-primary/90 aria-disabled:cursor-not-allowed aria-disabled:opacity-60" aria-disabled={uploadingImage !== null}>
                     <Camera className="h-4 w-4" />
-                    <input type="file" accept="image/*" className="hidden" onChange={(event) => onImageSelect(event, "avatar")} />
+                    <input type="file" accept="image/*" className="hidden" disabled={uploadingImage !== null} onChange={(event) => onImageSelect(event, "avatar")} />
                   </label>
                 </div>
 
