@@ -29,10 +29,10 @@ export default function ForgotPasswordPage() {
                   body: JSON.stringify({ email }),
                 });
                 if (!res.ok) {
-                  toast.error("Не удалось создать запрос");
+                  toast.error("Не удалось отправить письмо. Попробуйте позже.");
                   return;
                 }
-                toast.success("Ссылка для сброса создана. Проверьте API-ответ или почтовый сервис.");
+                toast.success("Если аккаунт с таким email существует, мы отправили ссылку для сброса пароля. Проверьте почту, включая папку «Спам».");
               })
             }
           >

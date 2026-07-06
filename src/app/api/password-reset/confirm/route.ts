@@ -4,9 +4,18 @@ import { db } from "@/lib/db";
 
 export async function POST(request: Request) {
   const { token, password } = (await request.json()) as { token: string; password: string };
+
+  if (!token || typeof token !== "string") {
+    return NextResponse.json({ error: "Некорректная ссылка для сброса пароля." }, { status: 400 });
+  }
+
+  if (typeof password !== "string" || password.length < 8) {
+    return NextResponse.json({ error: "Пароль должен содержать минимум 8 символов." }, { status: 400 });
+  }
+
   const record = await db.passwordResetToken.findUnique({ where: { token } });
   if (!record || record.expiresAt < new Date() || record.usedAt) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 400 });
+    return NextResponse.json({ error: "Ссылка недействительна или срок её действия истёк. Запросите сброс пароля заново." }, { status: 400 });
   }
 
   const passwordHash = await hash(password, 10);

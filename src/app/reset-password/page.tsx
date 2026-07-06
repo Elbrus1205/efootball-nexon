@@ -22,11 +22,17 @@ export default function ResetPasswordPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+          <p className="text-xs text-zinc-400">Минимум 8 символов.</p>
           <Button
             className="w-full"
             disabled={pending || !token}
             onClick={() =>
               startTransition(async () => {
+                if (password.length < 8) {
+                  toast.error("Пароль должен содержать минимум 8 символов.");
+                  return;
+                }
+
                 const res = await fetch("/api/password-reset/confirm", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
@@ -34,7 +40,8 @@ export default function ResetPasswordPage() {
                 });
 
                 if (!res.ok) {
-                  toast.error("Не удалось обновить пароль");
+                  const payload = await res.json().catch(() => null);
+                  toast.error(payload?.error || "Не удалось обновить пароль. Запросите сброс заново.");
                   return;
                 }
 
