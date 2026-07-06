@@ -5,7 +5,7 @@ import { ExternalLink, GripVertical, Search, Shield, ShieldAlert } from "lucide-
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -216,8 +216,9 @@ export function MatchManager({
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
-  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [confirmingIds, setConfirmingIds] = useState<Set<string>>(() => new Set());
   const [draggedMatchId, setDraggedMatchId] = useState<string | null>(null);
+  const scoreInputsRef = useRef<Record<string, { player1?: HTMLInputElement | null; player2?: HTMLInputElement | null }>>({});
   const [orderedMatches, setOrderedMatches] = useState(matches);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -359,18 +360,36 @@ export function MatchManager({
     })();
   };
 
-  // Смена статуса (ОК/Спор) — блокирует только кнопки этого матча на время запроса.
+  // Смена статуса (ОК/Спор) — блокирует только кнопки этого конкретного матча.
+  // Другие матчи можно подтверждать параллельно, не дожидаясь ответа.
   const changeStatus = (matchId: string, status: MatchStatus) => {
-    if (confirmingId) return;
-    setConfirmingId(matchId);
-    patchLocalMatch(matchId, { status });
+    if (confirmingIds.has(matchId)) return;
+    setConfirmingIds((current) => {
+      const next = new Set(current);
+      next.add(matchId);
+      return next;
+    });
+
+    // Берём счёт напрямую из полей ввода: это позволяет нажать ОК сразу после
+    // набора счёта, не дожидаясь onBlur-сохранения. Отправляем счёт вместе со
+    // статусом одним запросом, чтобы сервер посчитал победителя от свежих цифр.
+    const inputs = scoreInputsRef.current[matchId];
+    const payload: Record<string, unknown> = { status };
+    if (status === MatchStatus.CONFIRMED && inputs) {
+      const player1Score = scoreFromInput(inputs.player1?.value ?? "");
+      const player2Score = scoreFromInput(inputs.player2?.value ?? "");
+      if (player1Score !== null) payload.player1Score = player1Score;
+      if (player2Score !== null) payload.player2Score = player2Score;
+    }
+
+    patchLocalMatch(matchId, payload);
 
     void (async () => {
       try {
         const response = await fetch(`/api/admin/matches/${matchId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status }),
+          body: JSON.stringify(payload),
         });
 
         const result = await response.json().catch(() => null);
@@ -382,7 +401,11 @@ export function MatchManager({
       } catch {
         router.refresh();
       } finally {
-        setConfirmingId(null);
+        setConfirmingIds((current) => {
+          const next = new Set(current);
+          next.delete(matchId);
+          return next;
+        });
       }
     })();
   };
@@ -595,6 +618,11 @@ export function MatchManager({
                           <FieldLabel>Счет</FieldLabel>
                           <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
                             <Input
+                              ref={(node) => {
+                                const entry = scoreInputsRef.current[match.id] ?? {};
+                                entry.player1 = node;
+                                scoreInputsRef.current[match.id] = entry;
+                              }}
                               type="number"
                               defaultValue={match.player1Score ?? ""}
                               placeholder="0"
@@ -603,6 +631,11 @@ export function MatchManager({
                             />
                             <span className="text-sm font-semibold text-zinc-500">:</span>
                             <Input
+                              ref={(node) => {
+                                const entry = scoreInputsRef.current[match.id] ?? {};
+                                entry.player2 = node;
+                                scoreInputsRef.current[match.id] = entry;
+                              }}
                               type="number"
                               defaultValue={match.player2Score ?? ""}
                               placeholder="0"
@@ -649,7 +682,7 @@ export function MatchManager({
 
                         <div className="sticky bottom-2 z-20 mt-auto grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-[#080808]/95 p-2 backdrop-blur lg:static lg:flex lg:flex-wrap lg:border-0 lg:bg-transparent lg:p-0">
                           <Button
-                            disabled={confirmingId === match.id || !canConfirm}
+                            disabled={confirmingIds.has(match.id) || !canConfirm}
                             size="sm"
                             variant="secondary"
                             className="h-9 min-h-9 rounded-lg px-2 text-xs sm:px-3 sm:text-sm"
@@ -658,7 +691,7 @@ export function MatchManager({
                             ОК
                           </Button>
                           <Button
-                            disabled={confirmingId === match.id}
+                            disabled={confirmingIds.has(match.id)}
                             size="sm"
                             variant="outline"
                             className="h-9 min-h-9 rounded-lg px-2 text-xs sm:px-3 sm:text-sm"
