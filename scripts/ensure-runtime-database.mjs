@@ -105,6 +105,25 @@ async function ensurePublicTableRls() {
   }
 }
 
+async function ensureRlsAutoEnableExecuteRevoked() {
+  await prisma.$executeRawUnsafe(`
+    DO $$
+    BEGIN
+      IF to_regprocedure('public.rls_auto_enable()') IS NOT NULL THEN
+        EXECUTE 'REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM PUBLIC';
+
+        IF to_regrole('anon') IS NOT NULL THEN
+          EXECUTE 'REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM anon';
+        END IF;
+
+        IF to_regrole('authenticated') IS NOT NULL THEN
+          EXECUTE 'REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM authenticated';
+        END IF;
+      END IF;
+    END $$;
+  `);
+}
+
 async function main() {
   if (!process.env.DATABASE_URL) {
     console.warn("DATABASE_URL is not set. Runtime database checks were skipped.");
@@ -118,6 +137,7 @@ async function main() {
   await ensureUserProfileStatusColumns();
   await ensureReliabilityPenaltyReasons();
   await ensurePublicTableRls();
+  await ensureRlsAutoEnableExecuteRevoked();
   console.log("Runtime database checks completed.");
 }
 
