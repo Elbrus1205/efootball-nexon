@@ -10,6 +10,24 @@ import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getReliabilityPenaltyReasons } from "@/lib/services/reliability";
 
+function getConfiguredScorePenalty(matchId: string, events: Array<{ userId: string; dedupeKey: string | null }>) {
+  const prefix = `match-score-penalty:${matchId}:`;
+  const event = events.find((item) => item.dedupeKey?.startsWith(prefix));
+  if (!event?.dedupeKey) return null;
+
+  const [, , , reasonId] = event.dedupeKey.split(":");
+  return reasonId ? { reasonId, userId: event.userId } : null;
+}
+
+function getConfiguredTechnicalLossPenalty(matchId: string, events: Array<{ userId: string; dedupeKey: string | null }>) {
+  const prefix = `match-forfeit-config:${matchId}:`;
+  const event = events.find((item) => item.dedupeKey?.startsWith(prefix));
+  if (!event?.dedupeKey) return null;
+
+  const [, , , reasonId] = event.dedupeKey.split(":");
+  return reasonId ? { reasonId, userId: event.userId } : null;
+}
+
 export default async function AdminTournamentMatchesPage({ params }: { params: { id: string } }) {
   const session = await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
@@ -71,6 +89,23 @@ export default async function AdminTournamentMatchesPage({ params }: { params: {
 
   if (!tournament) notFound();
 
+  const matchIds = tournament.matches.map((match) => match.id);
+  const configuredPenaltyEvents = matchIds.length
+    ? await db.reliabilityEvent.findMany({
+        where: {
+          matchId: { in: matchIds },
+          OR: [{ dedupeKey: { startsWith: "match-score-penalty:" } }, { dedupeKey: { startsWith: "match-forfeit-config:" } }],
+        },
+        select: {
+          id: true,
+          userId: true,
+          dedupeKey: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+      })
+    : [];
+
   const matches = tournament.matches.map((match) => ({
     id: match.id,
     round: match.round,
@@ -100,6 +135,8 @@ export default async function AdminTournamentMatchesPage({ params }: { params: {
     bracketId: match.bracketId,
     stage: match.stage ? { name: match.stage.name, type: match.stage.type } : null,
     group: match.group ? { name: match.group.name } : null,
+    configuredScorePenalty: getConfiguredScorePenalty(match.id, configuredPenaltyEvents),
+    configuredTechnicalLossPenalty: getConfiguredTechnicalLossPenalty(match.id, configuredPenaltyEvents),
   }));
 
   const participants = tournament.participants.map((participant) => ({

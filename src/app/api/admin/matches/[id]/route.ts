@@ -5,7 +5,12 @@ import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { ensureMatchLineupSnapshot } from "@/lib/services/match-lineups";
-import { applyConfiguredReliabilityPenalty, applyTechnicalLossPenalty, recordConfirmedMatchReliability } from "@/lib/services/reliability";
+import {
+  applyConfiguredReliabilityPenalty,
+  applyTechnicalLossPenalty,
+  recordConfirmedMatchReliability,
+  removeConfiguredReliabilityPenaltiesByPrefix,
+} from "@/lib/services/reliability";
 import { notifyMatchReady, recalculateGroupStandings, resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { matchUpdateSchema } from "@/lib/validators";
 
@@ -231,6 +236,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     await notifyMatchReady(updated.id);
   }
 
+  if (statusExplicitlyChanged && updated.status !== MatchStatus.CONFIRMED && updated.status !== MatchStatus.FINISHED) {
+    await removeConfiguredReliabilityPenaltiesByPrefix(`match-score-penalty:${updated.id}:`);
+  }
+
+  if (statusExplicitlyChanged && updated.status !== MatchStatus.FORFEIT) {
+    await removeConfiguredReliabilityPenaltiesByPrefix(`match-forfeit-config:${updated.id}:`);
+  }
+
   if (updated.status === MatchStatus.CONFIRMED || updated.status === MatchStatus.FINISHED) {
     await ensureMatchLineupSnapshot(updated.id);
     await resolveConfirmedMatch(updated.id);
@@ -239,6 +252,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       matchId: updated.id,
       tournamentId: updated.tournamentId,
     });
+    if ("reliabilityPenaltyReasonId" in body || "reliabilityPenaltyUserId" in body) {
+      await removeConfiguredReliabilityPenaltiesByPrefix(`match-score-penalty:${updated.id}:`);
+    }
     if (body.reliabilityPenaltyReasonId && body.reliabilityPenaltyUserId) {
       try {
         await applyConfiguredReliabilityPenalty({
@@ -266,6 +282,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     if (loserId) {
       const dedupeKey = `match-forfeit:${updated.id}`;
       const technicalLossReason = "technicalLossReason" in body && body.technicalLossReason ? body.technicalLossReason : undefined;
+      if ("reliabilityPenaltyReasonId" in body) {
+        await removeConfiguredReliabilityPenaltiesByPrefix(`match-forfeit-config:${updated.id}:`);
+      }
       if (body.reliabilityPenaltyReasonId) {
         try {
           await applyConfiguredReliabilityPenalty({

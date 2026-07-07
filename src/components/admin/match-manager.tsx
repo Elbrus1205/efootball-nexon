@@ -52,6 +52,8 @@ type MatchItem = {
   bracketId?: string | null;
   stage?: { name: string | null; type: StageType } | null;
   group?: { name: string } | null;
+  configuredScorePenalty?: { reasonId: string; userId: string } | null;
+  configuredTechnicalLossPenalty?: { reasonId: string; userId: string } | null;
 };
 
 type PenaltyReasonOption = {
@@ -155,6 +157,30 @@ function TeamBadge({ participant }: { participant?: ParticipantOption | null }) 
   );
 }
 
+function mapConfiguredScorePenalty(matches: MatchItem[]) {
+  return Object.fromEntries(
+    matches
+      .filter((match) => match.configuredScorePenalty?.reasonId)
+      .map((match) => [match.id, match.configuredScorePenalty?.reasonId ?? ""]),
+  );
+}
+
+function mapConfiguredScorePenaltyTargets(matches: MatchItem[]) {
+  return Object.fromEntries(
+    matches
+      .filter((match) => match.configuredScorePenalty?.userId)
+      .map((match) => [match.id, match.configuredScorePenalty?.userId ?? ""]),
+  );
+}
+
+function mapConfiguredTechnicalLossPenalty(matches: MatchItem[]) {
+  return Object.fromEntries(
+    matches
+      .filter((match) => match.configuredTechnicalLossPenalty?.reasonId)
+      .map((match) => [match.id, match.configuredTechnicalLossPenalty?.reasonId ?? ""]),
+  );
+}
+
 function FieldLabel({ children }: { children: ReactNode }) {
   return <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">{children}</div>;
 }
@@ -223,15 +249,18 @@ export function MatchManager({
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [roundFilter, setRoundFilter] = useState<string>(() => (matches[0]?.round ? String(matches[0].round) : "all"));
-  const [technicalLossPenaltyByMatch, setTechnicalLossPenaltyByMatch] = useState<Record<string, string>>({});
-  const [scorePenaltyByMatch, setScorePenaltyByMatch] = useState<Record<string, string>>({});
-  const [scorePenaltyTargetByMatch, setScorePenaltyTargetByMatch] = useState<Record<string, string>>({});
+  const [technicalLossPenaltyByMatch, setTechnicalLossPenaltyByMatch] = useState<Record<string, string>>(() => mapConfiguredTechnicalLossPenalty(matches));
+  const [scorePenaltyByMatch, setScorePenaltyByMatch] = useState<Record<string, string>>(() => mapConfiguredScorePenalty(matches));
+  const [scorePenaltyTargetByMatch, setScorePenaltyTargetByMatch] = useState<Record<string, string>>(() => mapConfiguredScorePenaltyTargets(matches));
 
   const participantById = useMemo(() => new Map(participants.map((participant) => [participant.id, participant])), [participants]);
   const participantSearchTokens = (participant?: ParticipantOption | null) => [participant?.clubName, participant?.clubSlug, participant?.user.name].filter(Boolean);
 
   useEffect(() => {
     setOrderedMatches(matches);
+    setTechnicalLossPenaltyByMatch(mapConfiguredTechnicalLossPenalty(matches));
+    setScorePenaltyByMatch(mapConfiguredScorePenalty(matches));
+    setScorePenaltyTargetByMatch(mapConfiguredScorePenaltyTargets(matches));
   }, [matches]);
 
   const rounds = useMemo(() => Array.from(new Set(orderedMatches.map((match) => match.round))).sort((a, b) => a - b), [orderedMatches]);
@@ -387,16 +416,15 @@ export function MatchManager({
     if (status === MatchStatus.CONFIRMED) {
       const reliabilityPenaltyReasonId = scorePenaltyByMatch[matchId] ?? "";
       const reliabilityPenaltyUserId = scorePenaltyTargetByMatch[matchId] ?? "";
+      payload.reliabilityPenaltyReasonId = reliabilityPenaltyReasonId;
+      payload.reliabilityPenaltyUserId = reliabilityPenaltyReasonId ? reliabilityPenaltyUserId : "";
       if (reliabilityPenaltyReasonId) {
-        payload.reliabilityPenaltyReasonId = reliabilityPenaltyReasonId;
         payload.reliabilityPenaltyUserId = reliabilityPenaltyUserId;
       }
     }
     if (status === MatchStatus.FORFEIT) {
       const reliabilityPenaltyReasonId = technicalLossPenaltyByMatch[matchId] ?? "";
-      if (reliabilityPenaltyReasonId) {
-        payload.reliabilityPenaltyReasonId = reliabilityPenaltyReasonId;
-      }
+      payload.reliabilityPenaltyReasonId = reliabilityPenaltyReasonId;
     }
 
     patchLocalMatch(matchId, payload);

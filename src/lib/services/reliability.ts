@@ -244,6 +244,53 @@ export async function applyConfiguredReliabilityPenalty({
   });
 }
 
+export async function removeConfiguredReliabilityPenaltiesByPrefix(dedupeKeyPrefix: string) {
+  const normalizedPrefix = dedupeKeyPrefix.trim();
+  if (!normalizedPrefix) return { removed: 0 };
+
+  const result = await db.$transaction(async (tx) => {
+    const events = await tx.reliabilityEvent.findMany({
+      where: {
+        dedupeKey: { startsWith: normalizedPrefix },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    for (const event of events) {
+      const user = await tx.user.findUnique({
+        where: { id: event.userId },
+        select: {
+          reliabilityScore: true,
+          reliabilityRestrictedUntil: true,
+        },
+      });
+
+      if (!user) continue;
+
+      const scoreAfterRemoval = clampReliabilityScore(user.reliabilityScore - event.delta);
+      await tx.user.update({
+        where: { id: event.userId },
+        data: {
+          reliabilityScore: scoreAfterRemoval,
+          reliabilityRestrictedUntil: scoreAfterRemoval >= RELIABILITY_REGISTRATION_THRESHOLD ? null : user.reliabilityRestrictedUntil,
+        },
+      });
+    }
+
+    if (events.length) {
+      await tx.reliabilityEvent.deleteMany({
+        where: {
+          id: { in: events.map((event) => event.id) },
+        },
+      });
+    }
+
+    return { removed: events.length };
+  });
+
+  return result;
+}
+
 export async function applyTechnicalLossPenalty({
   userId,
   matchId,
