@@ -1,14 +1,15 @@
-﻿import { StageType } from "@prisma/client";
+import { ReliabilityPenaltyScope, StageType } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { ParticipantManager } from "@/components/admin/participant-manager";
 import { getAdminTournamentAccessWhere } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { getReliabilityPenaltyReasons } from "@/lib/services/reliability";
 
 export default async function AdminTournamentParticipantsPage({ params }: { params: { id: string } }) {
   const session = await requirePermission("tournaments.manageParticipants");
 
-  const [tournament, participants, stages] = await Promise.all([
+  const [tournament, participants, stages, replacementPenaltyReasons] = await Promise.all([
     db.tournament.findFirst({
       where: { id: params.id, ...getAdminTournamentAccessWhere(session) },
       select: { id: true, participantMode: true, rosterSize: true },
@@ -70,6 +71,7 @@ export default async function AdminTournamentParticipantsPage({ params }: { para
       },
       orderBy: { orderIndex: "asc" },
     }),
+    getReliabilityPenaltyReasons(ReliabilityPenaltyScope.PLAYER_REPLACEMENT),
   ]);
 
   if (!tournament) notFound();
@@ -81,6 +83,7 @@ export default async function AdminTournamentParticipantsPage({ params }: { para
       rosterSize={tournament.rosterSize}
       participants={participants}
       groups={stages.flatMap((stage) => stage.groups)}
+      replacementPenaltyReasons={replacementPenaltyReasons}
     />
   );
 }

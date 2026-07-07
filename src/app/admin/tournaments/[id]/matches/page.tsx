@@ -1,4 +1,5 @@
-﻿import Link from "next/link";
+﻿import { ReliabilityPenaltyScope } from "@prisma/client";
+import Link from "next/link";
 import { ArrowLeft, Swords } from "lucide-react";
 import { notFound } from "next/navigation";
 import { MatchManager } from "@/components/admin/match-manager";
@@ -7,11 +8,13 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { getAdminTournamentAccessWhere } from "@/lib/admin-tournament-access";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { getReliabilityPenaltyReasons } from "@/lib/services/reliability";
 
 export default async function AdminTournamentMatchesPage({ params }: { params: { id: string } }) {
   const session = await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
-  const tournament = await db.tournament.findFirst({
+  const [tournament, scorePenaltyReasons, technicalLossPenaltyReasons] = await Promise.all([
+    db.tournament.findFirst({
     where: { id: params.id, ...getAdminTournamentAccessWhere(session) },
     select: {
       id: true,
@@ -61,7 +64,10 @@ export default async function AdminTournamentMatchesPage({ params }: { params: {
         orderBy: [{ round: "asc" }, { matchNumber: "asc" }],
       },
     },
-  });
+    }),
+    getReliabilityPenaltyReasons(ReliabilityPenaltyScope.SCORE_SUBMISSION),
+    getReliabilityPenaltyReasons(ReliabilityPenaltyScope.TECHNICAL_LOSS),
+  ]);
 
   if (!tournament) notFound();
 
@@ -132,6 +138,8 @@ export default async function AdminTournamentMatchesPage({ params }: { params: {
         tournamentId={tournament.id}
         matches={matches}
         participants={participants}
+        scorePenaltyReasons={scorePenaltyReasons}
+        technicalLossPenaltyReasons={technicalLossPenaltyReasons}
       />
     </div>
   );

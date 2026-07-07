@@ -1,4 +1,4 @@
-import { NotificationType, ReliabilityEventType } from "@prisma/client";
+import { NotificationType, ReliabilityEventType, ReliabilityPenaltyScope } from "@prisma/client";
 import { db } from "@/lib/db";
 import { createNotification } from "@/lib/services/notifications";
 
@@ -33,6 +33,12 @@ type ReliabilityEventInput = {
   tournamentId?: string | null;
   dedupeKey?: string | null;
   notify?: boolean;
+};
+
+const eventTypeByPenaltyScope: Record<ReliabilityPenaltyScope, ReliabilityEventType> = {
+  SCORE_SUBMISSION: ReliabilityEventType.DISPUTE_FALSE_SCORE,
+  PLAYER_REPLACEMENT: ReliabilityEventType.REPLACEMENT_CIRCUMSTANCES,
+  TECHNICAL_LOSS: ReliabilityEventType.TECHNICAL_LOSS,
 };
 
 export function clampReliabilityScore(score: number) {
@@ -176,6 +182,66 @@ export async function applyReliabilityEvent(input: ReliabilityEventInput) {
   }
 
   return result;
+}
+
+export async function getReliabilityPenaltyReasons(scope?: ReliabilityPenaltyScope, activeOnly = true) {
+  return db.reliabilityPenaltyReason.findMany({
+    where: {
+      scope,
+      isActive: activeOnly ? true : undefined,
+    },
+    orderBy: [{ scope: "asc" }, { points: "desc" }, { createdAt: "asc" }],
+  });
+}
+
+export async function applyConfiguredReliabilityPenalty({
+  reasonId,
+  scope,
+  userId,
+  actorId,
+  matchId,
+  tournamentId,
+  dedupeKey,
+  comment,
+}: {
+  reasonId?: string | null;
+  scope: ReliabilityPenaltyScope;
+  userId: string;
+  actorId?: string | null;
+  matchId?: string | null;
+  tournamentId?: string | null;
+  dedupeKey?: string | null;
+  comment?: string | null;
+}) {
+  const normalizedReasonId = reasonId?.trim();
+  if (!normalizedReasonId) return null;
+
+  const reason = await db.reliabilityPenaltyReason.findFirst({
+    where: {
+      id: normalizedReasonId,
+      scope,
+      isActive: true,
+    },
+  });
+
+  if (!reason) {
+    throw new Error("RELIABILITY_PENALTY_REASON_NOT_FOUND");
+  }
+
+  const points = Math.max(0, Math.abs(reason.points));
+  if (points === 0) return null;
+
+  return applyReliabilityEvent({
+    userId,
+    type: eventTypeByPenaltyScope[scope],
+    delta: -points,
+    reason: `${reason.title}: -${points} к надежности.`,
+    comment: [reason.description, comment].filter(Boolean).join("\n") || null,
+    actorId,
+    matchId,
+    tournamentId,
+    dedupeKey,
+  });
 }
 
 export async function applyTechnicalLossPenalty({

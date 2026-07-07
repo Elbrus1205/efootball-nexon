@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { MatchStatus, NotificationType, ParticipantStatus, TeamInviteStatus, TournamentParticipantMode } from "@prisma/client";
+import { MatchStatus, NotificationType, ParticipantStatus, ReliabilityPenaltyScope, TeamInviteStatus, TournamentParticipantMode } from "@prisma/client";
 import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requireAnyPermission, requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { createNotification } from "@/lib/services/notifications";
-import { formatReliabilityRegistrationRestriction, syncReliabilityRestriction } from "@/lib/services/reliability";
+import { applyConfiguredReliabilityPenalty, formatReliabilityRegistrationRestriction, syncReliabilityRestriction } from "@/lib/services/reliability";
 import { recalculateGroupStandings } from "@/lib/services/tournaments";
 import { hasTelegramRegistrationContact } from "@/lib/social-links";
 import { participantManageSchema } from "@/lib/validators";
@@ -404,6 +404,25 @@ export async function POST(request: Request, { params }: { params: { id: string 
       await recalculateGroupStandings(params.id);
     }
 
+    if (body.reliabilityPenaltyReasonId) {
+      try {
+        await applyConfiguredReliabilityPenalty({
+          reasonId: body.reliabilityPenaltyReasonId,
+          scope: ReliabilityPenaltyScope.PLAYER_REPLACEMENT,
+          userId: before.userId,
+          actorId: session.user.id,
+          tournamentId: params.id,
+          dedupeKey: `replacement:${before.id}:${replacementUserId}:${body.reliabilityPenaltyReasonId}`,
+          comment: `Игрок заменен на ${replacementUser.name ?? replacementUser.email ?? replacementUser.id}.`,
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message === "RELIABILITY_PENALTY_REASON_NOT_FOUND") {
+          return NextResponse.json({ error: "Выбранный штраф надежности больше недоступен." }, { status: 400 });
+        }
+        throw error;
+      }
+    }
+
     await logAdminAction({
       adminId: session.user.id,
       tournamentId: params.id,
@@ -582,6 +601,25 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
       return { replacedMatchesCount };
     });
+
+    if (body.reliabilityPenaltyReasonId) {
+      try {
+        await applyConfiguredReliabilityPenalty({
+          reasonId: body.reliabilityPenaltyReasonId,
+          scope: ReliabilityPenaltyScope.PLAYER_REPLACEMENT,
+          userId: member.userId,
+          actorId: session.user.id,
+          tournamentId: params.id,
+          dedupeKey: `replacement-member:${member.id}:${member.userId}:${replacementUserId}:${body.reliabilityPenaltyReasonId}`,
+          comment: `Игрок состава заменен на ${replacementUser.name ?? replacementUser.email ?? replacementUser.id}.`,
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message === "RELIABILITY_PENALTY_REASON_NOT_FOUND") {
+          return NextResponse.json({ error: "Выбранный штраф надежности больше недоступен." }, { status: 400 });
+        }
+        throw error;
+      }
+    }
 
     await logAdminAction({
       adminId: session.user.id,

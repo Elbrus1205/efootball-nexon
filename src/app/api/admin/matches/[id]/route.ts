@@ -1,11 +1,11 @@
-import { MatchStatus, Prisma, type Match } from "@prisma/client";
+import { MatchStatus, Prisma, ReliabilityPenaltyScope, type Match } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { assertCanManageMatch } from "@/lib/admin-tournament-access";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { ensureMatchLineupSnapshot } from "@/lib/services/match-lineups";
-import { applyTechnicalLossPenalty, recordConfirmedMatchReliability } from "@/lib/services/reliability";
+import { applyConfiguredReliabilityPenalty, applyTechnicalLossPenalty, recordConfirmedMatchReliability } from "@/lib/services/reliability";
 import { notifyMatchReady, recalculateGroupStandings, resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { matchUpdateSchema } from "@/lib/validators";
 
@@ -160,6 +160,13 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const statusExplicitlyChanged = "status" in body && Boolean(body.status);
   const multiLegPenaltyDecision = await getMultiLegPenaltyDecision(before, nextPlayer1Score, nextPlayer2Score);
 
+  if (nextStatus === MatchStatus.CONFIRMED && body.reliabilityPenaltyReasonId) {
+    const penaltyTargetId = body.reliabilityPenaltyUserId || "";
+    if (!penaltyTargetId || ![nextPlayer1Id, nextPlayer2Id].includes(penaltyTargetId)) {
+      return NextResponse.json({ error: "Выберите игрока, которому нужно начислить штраф надежности." }, { status: 400 });
+    }
+  }
+
   if (nextStatus === MatchStatus.CONFIRMED || nextStatus === MatchStatus.FINISHED) {
     try {
       const scoreTied = nextPlayer1Score !== null && nextPlayer2Score !== null && nextPlayer1Score === nextPlayer2Score;
@@ -232,6 +239,25 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       matchId: updated.id,
       tournamentId: updated.tournamentId,
     });
+    if (body.reliabilityPenaltyReasonId && body.reliabilityPenaltyUserId) {
+      try {
+        await applyConfiguredReliabilityPenalty({
+          reasonId: body.reliabilityPenaltyReasonId,
+          scope: ReliabilityPenaltyScope.SCORE_SUBMISSION,
+          userId: body.reliabilityPenaltyUserId,
+          actorId: session.user.id,
+          matchId: updated.id,
+          tournamentId: updated.tournamentId,
+          dedupeKey: `match-score-penalty:${updated.id}:${body.reliabilityPenaltyUserId}:${body.reliabilityPenaltyReasonId}`,
+          comment: `Штраф выбран при ручном подтверждении счета ${updated.player1Score ?? 0}:${updated.player2Score ?? 0}.`,
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message === "RELIABILITY_PENALTY_REASON_NOT_FOUND") {
+          return NextResponse.json({ error: "Выбранный штраф надежности больше недоступен." }, { status: 400 });
+        }
+        throw error;
+      }
+    }
     await syncTournamentLifecycleStatus(updated.tournamentId);
   }
 
@@ -240,7 +266,25 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     if (loserId) {
       const dedupeKey = `match-forfeit:${updated.id}`;
       const technicalLossReason = "technicalLossReason" in body && body.technicalLossReason ? body.technicalLossReason : undefined;
-      if (technicalLossReason) {
+      if (body.reliabilityPenaltyReasonId) {
+        try {
+          await applyConfiguredReliabilityPenalty({
+            reasonId: body.reliabilityPenaltyReasonId,
+            scope: ReliabilityPenaltyScope.TECHNICAL_LOSS,
+            userId: loserId,
+            matchId: updated.id,
+            tournamentId: updated.tournamentId,
+            actorId: session.user.id,
+            dedupeKey: `match-forfeit-config:${updated.id}:${loserId}:${body.reliabilityPenaltyReasonId}`,
+            comment: "Штраф выбран при выставлении технического поражения.",
+          });
+        } catch (error) {
+          if (error instanceof Error && error.message === "RELIABILITY_PENALTY_REASON_NOT_FOUND") {
+            return NextResponse.json({ error: "Выбранный штраф надежности больше недоступен." }, { status: 400 });
+          }
+          throw error;
+        }
+      } else if (technicalLossReason) {
         const result = await applyTechnicalLossPenalty({
           userId: loserId,
           matchId: updated.id,

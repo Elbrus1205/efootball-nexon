@@ -40,6 +40,7 @@ export const rolePermissions = [
   { id: "broadcasts.manage", label: "Делать рассылки" },
   { id: "content.manage", label: "Управлять FAQ и регламентами" },
   { id: "divisions.manage", label: "Управлять режимом Дивизион" },
+  { id: "reliability.manage", label: "Настраивать штрафы надежности" },
 ] as const satisfies readonly RolePermission[];
 
 export type RolePermissionId = (typeof rolePermissions)[number]["id"];
@@ -103,6 +104,7 @@ export const defaultRolePermissions: Record<ManagedRole, RolePermissionId[]> = {
     "broadcasts.manage",
     "content.manage",
     "divisions.manage",
+    "reliability.manage",
   ],
 };
 
@@ -126,4 +128,5 @@ export const adminNavPermissions: Record<string, RolePermissionId[]> = {
   "/admin/moderation": ["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"],
   "/admin/broadcasts": ["broadcasts.manage"],
   "/admin/divisions": ["divisions.manage"],
+  "/admin/reliability": ["reliability.manage"],
 };

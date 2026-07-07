@@ -14,6 +14,7 @@ import {
   Megaphone,
   SlidersHorizontal,
   ShieldCheck,
+  ShieldMinus,
   Swords,
   Trophy,
   Users,
@@ -30,6 +31,7 @@ const items = [
   { href: "/admin/role-permissions", label: "Права ролей", icon: SlidersHorizontal },
   { href: "/admin/matches", label: "Матчи", icon: Swords },
   { href: "/admin/moderation", label: "Споры", icon: ShieldCheck },
+  { href: "/admin/reliability", label: "Надежность", icon: ShieldMinus },
   { href: "/admin/divisions", label: "Дивизион", icon: Layers3 },
   { href: "/admin/broadcasts", label: "Рассылки", icon: Megaphone },
 ];

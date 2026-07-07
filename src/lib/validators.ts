@@ -3,6 +3,7 @@ import {
   MatchupFormat,
   ParticipantStatus,
   PlayoffType,
+  ReliabilityPenaltyScope,
   SeedingMethod,
   SortRule,
   TournamentFormat,
@@ -269,6 +270,15 @@ export const participantManageSchema = z.object({
   groupId: z.string().optional().or(z.literal("")),
   seed: z.coerce.number().optional(),
   status: z.nativeEnum(ParticipantStatus).optional(),
+  reliabilityPenaltyReasonId: z.string().trim().optional().or(z.literal("")),
+});
+
+export const reliabilityPenaltyReasonSchema = z.object({
+  title: z.string().trim().min(2, "Название причины должно быть не короче 2 символов.").max(80, "Название причины слишком длинное."),
+  description: z.string().trim().max(500, "Описание должно быть не длиннее 500 символов.").optional().or(z.literal("")),
+  points: z.coerce.number().int().min(1, "Штраф должен быть минимум 1.").max(100, "Штраф не может быть больше 100."),
+  scope: z.nativeEnum(ReliabilityPenaltyScope),
+  isActive: z.coerce.boolean().optional().default(false),
 });
 
 export const groupAssignmentSchema = z.object({
@@ -358,6 +368,8 @@ export const matchUpdateSchema = z.object({
   player2PenaltyScore: z.preprocess((value) => (value === "" ? null : value), z.coerce.number().min(0).max(99).nullable()).optional(),
   status: z.string().optional().or(z.literal("")),
   technicalLossReason: z.string().trim().max(300).optional().or(z.literal("")),
+  reliabilityPenaltyReasonId: z.string().trim().optional().or(z.literal("")),
+  reliabilityPenaltyUserId: z.string().trim().optional().or(z.literal("")),
   notes: z.string().max(1000).optional().or(z.literal("")),
 });
 

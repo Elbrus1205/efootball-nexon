@@ -194,6 +194,12 @@ enum ReliabilityEventType {
   MANUAL_ADJUSTMENT
 }
 
+enum ReliabilityPenaltyScope {
+  SCORE_SUBMISSION
+  PLAYER_REPLACEMENT
+  TECHNICAL_LOSS
+}
+
 enum FaqAttachmentKind {
   IMAGE
   FILE
@@ -309,6 +315,20 @@ model ReliabilityEvent {
   @@index([userId, type, createdAt])
   @@index([matchId])
   @@index([tournamentId])
+}
+
+model ReliabilityPenaltyReason {
+  id          String                  @id @default(cuid())
+  title       String
+  description String?                 @db.Text
+  points      Int
+  scope       ReliabilityPenaltyScope
+  isActive    Boolean                 @default(true)
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+
+  @@index([scope, isActive])
+  @@index([createdAt])
 }
 
 model DivisionSettings {

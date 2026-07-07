@@ -48,6 +48,12 @@ type GroupItem = {
   name: string;
 };
 
+type PenaltyReasonOption = {
+  id: string;
+  title: string;
+  points: number;
+};
+
 type UserOption = {
   id: string;
   name: string | null;
@@ -101,12 +107,14 @@ export function ParticipantManager({
   rosterSize,
   participants,
   groups,
+  replacementPenaltyReasons,
 }: {
   tournamentId: string;
   participantMode: TournamentParticipantMode;
   rosterSize: number;
   participants: ParticipantItem[];
   groups: GroupItem[];
+  replacementPenaltyReasons: PenaltyReasonOption[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -120,6 +128,7 @@ export function ParticipantManager({
   const [replacementByParticipant, setReplacementByParticipant] = useState<Record<string, string>>({});
   const [replacementSearchByParticipant, setReplacementSearchByParticipant] = useState<Record<string, string>>({});
   const [replacementOptionsByParticipant, setReplacementOptionsByParticipant] = useState<Record<string, UserOption[]>>({});
+  const [replacementPenaltyByTarget, setReplacementPenaltyByTarget] = useState<Record<string, string>>({});
   const allLoadedUsers = useMemo(() => {
     const map = new Map<string, UserOption>();
     for (const user of userOptions) map.set(user.id, user);
@@ -229,6 +238,7 @@ export function ParticipantManager({
       setReplacementByParticipant({});
       setReplacementSearchByParticipant({});
       setReplacementOptionsByParticipant({});
+      setReplacementPenaltyByTarget({});
 
       router.refresh();
     });
@@ -244,6 +254,22 @@ export function ParticipantManager({
       router.refresh();
     });
   };
+
+  const renderReplacementPenaltySelect = (targetId: string) =>
+    replacementPenaltyReasons.length ? (
+      <select
+        value={replacementPenaltyByTarget[targetId] ?? ""}
+        onChange={(event) => setReplacementPenaltyByTarget((current) => ({ ...current, [targetId]: event.target.value }))}
+        className="h-9 w-full rounded-lg border border-white/10 bg-black/30 px-3 text-xs text-white outline-none transition focus:border-primary/50"
+      >
+        <option value="">— Без штрафа</option>
+        {replacementPenaltyReasons.map((reason) => (
+          <option key={reason.id} value={reason.id}>
+            -{reason.points} · {reason.title}
+          </option>
+        ))}
+      </select>
+    ) : null;
 
   return (
     <div className="space-y-4">
@@ -538,6 +564,8 @@ export function ParticipantManager({
                                       </div>
                                     ) : null}
 
+                                    {renderReplacementPenaltySelect(targetId)}
+
                                     {normalizedMemberReplacementQuery ? (
                                       <div className="max-h-44 overflow-y-auto rounded-lg border border-white/10 bg-black/30 p-1">
                                         {memberReplacementMatches.length ? (
@@ -586,7 +614,12 @@ export function ParticipantManager({
                                     onClick={() =>
                                       run(
                                         member
-                                          ? { action: "replaceMember", memberId: member.id, replacementUserId: memberReplacementUserId }
+                                          ? {
+                                              action: "replaceMember",
+                                              memberId: member.id,
+                                              replacementUserId: memberReplacementUserId,
+                                              reliabilityPenaltyReasonId: replacementPenaltyByTarget[targetId] ?? "",
+                                            }
                                           : { action: "addMember", registrationId: participant.id, replacementUserId: memberReplacementUserId },
                                         member ? (member.isCaptain ? "Капитан состава заменён." : "Игрок состава заменён.") : "Игрок добавлен в состав.",
                                       )
@@ -662,6 +695,8 @@ export function ParticipantManager({
                             </div>
                           ) : null}
 
+                          {renderReplacementPenaltySelect(participant.id)}
+
                           {normalizedReplacementQuery ? (
                             <div className="max-h-48 overflow-y-auto rounded-lg border border-white/10 bg-black/20 p-1">
                               {replacementMatches.length ? (
@@ -712,6 +747,7 @@ export function ParticipantManager({
                                 action: "replace",
                                 registrationId: participant.id,
                                 replacementUserId,
+                                reliabilityPenaltyReasonId: replacementPenaltyByTarget[participant.id] ?? "",
                               },
                               "Игрок заменён. Таблица слота сохранена за новым участником.",
                             )
