@@ -14,8 +14,33 @@ const profileStatusTypes = [
   "AMBASSADOR",
 ];
 
+const publicTablesRequiringRls = [
+  "DivisionMatch",
+  "DivisionMatchHistory",
+  "DivisionPlayer",
+  "DivisionQueueEntry",
+  "DivisionScoreSubmission",
+  "DivisionSeason",
+  "DivisionSeasonArchive",
+  "DivisionSettings",
+  "FaqAttachment",
+  "FaqItem",
+  "MatchLineupPlayer",
+  "ReliabilityEvent",
+  "ReliabilityPenaltyReason",
+  "RolePermission",
+  "TournamentRegistrationMember",
+  "TwinAccountAlert",
+  "UserAchievement",
+  "UserWarning",
+];
+
 function sqlString(value) {
   return `'${value.replaceAll("'", "''")}'`;
+}
+
+function sqlIdentifier(value) {
+  return `"${value.replaceAll('"', '""')}"`;
 }
 
 async function ensureProfileStatusType(value) {
@@ -74,6 +99,12 @@ async function ensureReliabilityPenaltyReasons() {
   `);
 }
 
+async function ensurePublicTableRls() {
+  for (const tableName of publicTablesRequiringRls) {
+    await prisma.$executeRawUnsafe(`ALTER TABLE IF EXISTS public.${sqlIdentifier(tableName)} ENABLE ROW LEVEL SECURITY`);
+  }
+}
+
 async function main() {
   if (!process.env.DATABASE_URL) {
     console.warn("DATABASE_URL is not set. Runtime database checks were skipped.");
@@ -86,6 +117,7 @@ async function main() {
 
   await ensureUserProfileStatusColumns();
   await ensureReliabilityPenaltyReasons();
+  await ensurePublicTableRls();
   console.log("Runtime database checks completed.");
 }
 
