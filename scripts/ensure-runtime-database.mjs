@@ -15,6 +15,9 @@ const profileStatusTypes = [
 ];
 
 const publicTablesRequiringRls = [
+  "Account",
+  "AdminAction",
+  "BracketSlot",
   "DivisionMatch",
   "DivisionMatchHistory",
   "DivisionPlayer",
@@ -23,16 +26,39 @@ const publicTablesRequiringRls = [
   "DivisionSeason",
   "DivisionSeasonArchive",
   "DivisionSettings",
+  "EmailVerificationCode",
   "FaqAttachment",
   "FaqItem",
+  "GroupStanding",
+  "LoginHistory",
+  "Match",
   "MatchLineupPlayer",
+  "MatchResultSubmission",
+  "MatchSchedule",
+  "Notification",
+  "PasswordResetToken",
+  "PlayoffBracket",
   "ReliabilityEvent",
   "ReliabilityPenaltyReason",
   "RolePermission",
+  "RoundDeadline",
+  "Season",
+  "SecuritySession",
+  "Session",
+  "SiteContent",
+  "Tournament",
+  "TournamentGroup",
+  "TournamentRegistration",
   "TournamentRegistrationMember",
+  "TournamentStage",
   "TwinAccountAlert",
+  "TwoFactorChallenge",
+  "User",
   "UserAchievement",
+  "UserProfileStatus",
   "UserWarning",
+  "VerificationToken",
+  "_prisma_migrations",
 ];
 
 function sqlString(value) {
@@ -105,6 +131,28 @@ async function ensurePublicTableRls() {
   }
 }
 
+async function ensurePublicTableDenyPolicies() {
+  for (const tableName of publicTablesRequiringRls) {
+    const qualifiedTable = `public.${sqlIdentifier(tableName)}`;
+
+    await prisma.$executeRawUnsafe(`
+      DO $$
+      BEGIN
+        IF to_regclass(${sqlString(qualifiedTable)}) IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1
+            FROM pg_policy
+            WHERE polrelid = to_regclass(${sqlString(qualifiedTable)})
+              AND polname = 'deny_all_public_access'
+          )
+        THEN
+          EXECUTE 'CREATE POLICY deny_all_public_access ON ${qualifiedTable} AS PERMISSIVE FOR ALL TO public USING (false) WITH CHECK (false)';
+        END IF;
+      END $$;
+    `);
+  }
+}
+
 async function ensureRlsAutoEnableExecuteRevoked() {
   await prisma.$executeRawUnsafe(`
     DO $$
@@ -137,6 +185,7 @@ async function main() {
   await ensureUserProfileStatusColumns();
   await ensureReliabilityPenaltyReasons();
   await ensurePublicTableRls();
+  await ensurePublicTableDenyPolicies();
   await ensureRlsAutoEnableExecuteRevoked();
   console.log("Runtime database checks completed.");
 }
