@@ -1,5 +1,5 @@
 import { ReliabilityPenaltyScope } from "@prisma/client";
-import { Activity, Plus, Save, ShieldMinus } from "lucide-react";
+import { Activity, Plus, Save, ShieldMinus, Trash2 } from "lucide-react";
 import { revalidatePath } from "next/cache";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,6 +67,26 @@ async function updatePenaltyReason(formData: FormData) {
   revalidatePath("/admin/reliability");
 }
 
+async function deletePenaltyReason(formData: FormData) {
+  "use server";
+
+  await requirePermission("reliability.manage");
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  const reason = await db.reliabilityPenaltyReason.findUnique({
+    where: { id },
+    select: { scope: true },
+  });
+  if (!reason) return;
+  assertEditablePenaltyScope(reason.scope);
+
+  await db.reliabilityPenaltyReason.delete({
+    where: { id },
+  });
+  revalidatePath("/admin/reliability");
+}
+
 export default async function AdminReliabilityPage() {
   await requirePermission("reliability.manage");
 
@@ -74,11 +94,11 @@ export default async function AdminReliabilityPage() {
     where: {
       scope: { in: [...editablePenaltyScopes] },
     },
-    orderBy: [{ scope: "asc" }, { isActive: "desc" }, { points: "desc" }, { createdAt: "asc" }],
+    orderBy: [{ createdAt: "desc" }, { title: "asc" }],
   });
 
   const activeCount = reasons.filter((reason) => reason.isActive).length;
-  const maxPenalty = reasons.reduce((max, reason) => Math.max(max, reason.points), 0);
+  const latestReason = reasons[0] ?? null;
 
   return (
     <div className="space-y-5">
@@ -108,8 +128,8 @@ export default async function AdminReliabilityPage() {
         <Card className="rounded-lg p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">Макс. штраф</div>
-              <div className="mt-2 text-3xl font-semibold text-white">-{maxPenalty}</div>
+              <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">Последний штраф</div>
+              <div className="mt-2 text-3xl font-semibold text-white">{latestReason ? `-${latestReason.points}` : "—"}</div>
             </div>
             <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-red-400/20 bg-red-500/10 text-red-200">
               <ShieldMinus className="h-5 w-5" />
@@ -211,6 +231,13 @@ export default async function AdminReliabilityPage() {
                     Сохранить
                   </Button>
                 </div>
+              </form>
+              <form action={deletePenaltyReason} className="mt-3 border-t border-white/10 pt-3">
+                <input type="hidden" name="id" value={reason.id} />
+                <Button type="submit" variant="outline" className="h-11 w-full rounded-md border-red-400/30 text-red-200 hover:bg-red-500/10 hover:text-red-100">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Удалить штраф
+                </Button>
               </form>
             </CardContent>
           </Card>
