@@ -79,7 +79,7 @@ export default async function AdminTournamentMatchesPage({ params }: { params: {
     }),
     db.reliabilityPenaltyReason.findMany({
       where: {
-        scope: { in: [ReliabilityPenaltyScope.SCORE_SUBMISSION, ReliabilityPenaltyScope.TECHNICAL_LOSS] },
+        scope: ReliabilityPenaltyScope.SCORE_SUBMISSION,
         isActive: true,
       },
       orderBy: [{ scope: "asc" }, { points: "desc" }, { createdAt: "asc" }],

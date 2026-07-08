@@ -10,11 +10,22 @@ import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { reliabilityPenaltyReasonSchema } from "@/lib/validators";
 
-const scopeLabels: Record<ReliabilityPenaltyScope, string> = {
+const editablePenaltyScopes = [ReliabilityPenaltyScope.SCORE_SUBMISSION, ReliabilityPenaltyScope.PLAYER_REPLACEMENT] as const;
+
+const scopeLabels: Record<(typeof editablePenaltyScopes)[number], string> = {
   SCORE_SUBMISSION: "Счет матча",
   PLAYER_REPLACEMENT: "Замена игрока",
-  TECHNICAL_LOSS: "Техническое поражение",
 };
+
+function assertEditablePenaltyScope(scope: ReliabilityPenaltyScope) {
+  if (!editablePenaltyScopes.includes(scope as (typeof editablePenaltyScopes)[number])) {
+    throw new Error("Unsupported reliability penalty scope");
+  }
+}
+
+function formatScopeLabel(scope: ReliabilityPenaltyScope) {
+  return scopeLabels[scope as (typeof editablePenaltyScopes)[number]] ?? scope;
+}
 
 async function createPenaltyReason(formData: FormData) {
   "use server";
@@ -27,6 +38,7 @@ async function createPenaltyReason(formData: FormData) {
     scope: formData.get("scope"),
     isActive: formData.get("isActive") === "on",
   });
+  assertEditablePenaltyScope(payload.scope);
 
   await db.reliabilityPenaltyReason.create({ data: payload });
   revalidatePath("/admin/reliability");
@@ -46,6 +58,7 @@ async function updatePenaltyReason(formData: FormData) {
     scope: formData.get("scope"),
     isActive: formData.get("isActive") === "on",
   });
+  assertEditablePenaltyScope(payload.scope);
 
   await db.reliabilityPenaltyReason.update({
     where: { id },
@@ -58,6 +71,9 @@ export default async function AdminReliabilityPage() {
   await requirePermission("reliability.manage");
 
   const reasons = await db.reliabilityPenaltyReason.findMany({
+    where: {
+      scope: { in: [...editablePenaltyScopes] },
+    },
     orderBy: [{ scope: "asc" }, { isActive: "desc" }, { points: "desc" }, { createdAt: "asc" }],
   });
 
@@ -108,7 +124,7 @@ export default async function AdminReliabilityPage() {
             <Plus className="h-5 w-5 text-primary" />
             Добавить причину штрафа
           </CardTitle>
-          <CardDescription>Причина появится в нужном селекте: при счете матча, замене игрока или техническом поражении.</CardDescription>
+          <CardDescription>Причина появится в нужном селекте: при счете матча или замене игрока.</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={createPenaltyReason} className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_auto] lg:items-end">
@@ -123,7 +139,7 @@ export default async function AdminReliabilityPage() {
             <div className="space-y-2">
               <Label htmlFor="new-scope">Где показывать</Label>
               <select id="new-scope" name="scope" defaultValue={ReliabilityPenaltyScope.SCORE_SUBMISSION} className="h-11 w-full rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
-                {Object.values(ReliabilityPenaltyScope).map((scope) => (
+                {editablePenaltyScopes.map((scope) => (
                   <option key={scope} value={scope}>
                     {scopeLabels[scope]}
                   </option>
@@ -153,7 +169,7 @@ export default async function AdminReliabilityPage() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <CardTitle>{reason.title}</CardTitle>
-                  <CardDescription>{scopeLabels[reason.scope]} · штраф -{reason.points}</CardDescription>
+                  <CardDescription>{formatScopeLabel(reason.scope)} · штраф -{reason.points}</CardDescription>
                 </div>
                 <span className={reason.isActive ? "rounded-md border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-xs text-emerald-200" : "rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-zinc-400"}>
                   {reason.isActive ? "Активна" : "Выключена"}
@@ -174,7 +190,7 @@ export default async function AdminReliabilityPage() {
                 <div className="space-y-2">
                   <Label htmlFor={`scope-${reason.id}`}>Где показывать</Label>
                   <select id={`scope-${reason.id}`} name="scope" defaultValue={reason.scope} className="h-11 w-full rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white">
-                    {Object.values(ReliabilityPenaltyScope).map((scope) => (
+                    {editablePenaltyScopes.map((scope) => (
                       <option key={scope} value={scope}>
                         {scopeLabels[scope]}
                       </option>

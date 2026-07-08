@@ -89,7 +89,7 @@ function getForfeitLoserId(match: Pick<Match, "player1Id" | "player2Id" | "winne
   return null;
 }
 
-const matchConfiguredPenaltyScopes = [ReliabilityPenaltyScope.SCORE_SUBMISSION, ReliabilityPenaltyScope.TECHNICAL_LOSS];
+const matchConfiguredPenaltyScopes = [ReliabilityPenaltyScope.SCORE_SUBMISSION];
 
 async function removeMatchConfiguredReliabilityPenalties(matchId: string) {
   await removeConfiguredReliabilityPenaltiesByPrefix(`match-configured-penalty:${matchId}:`);
