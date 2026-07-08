@@ -20,7 +20,20 @@ export default async function PlayerProfilePage({
       where: {
         OR: [{ id: params.id }, { publicId: params.id }],
       },
-      include: {
+      select: {
+        id: true,
+        publicId: true,
+        name: true,
+        image: true,
+        bannerImage: true,
+        bio: true,
+        favoriteTeam: true,
+        timeZone: true,
+        telegramId: true,
+        telegramUsername: true,
+        vkId: true,
+        role: true,
+        createdAt: true,
         accounts: {
           select: {
             provider: true,
@@ -29,6 +42,15 @@ export default async function PlayerProfilePage({
         },
         profileStatuses: {
           where: getActiveProfileStatusWhere(),
+          select: {
+            id: true,
+            title: true,
+            tone: true,
+            type: true,
+            youtubeUrl: true,
+            youtubeChannelTitle: true,
+            selectedOrder: true,
+          },
           orderBy: [{ selectedOrder: "asc" }, { createdAt: "desc" }],
         },
       },
@@ -44,9 +66,10 @@ export default async function PlayerProfilePage({
   const selectedSeason = searchParams?.season ? seasons.find((season) => season.id === searchParams.season || season.slug === searchParams.season) ?? null : null;
   const activeSeason = seasons.find((season) => season.isActive) ?? null;
   const ratingSeasonId = selectedSeason?.id ?? activeSeason?.id ?? null;
+  const careerStatsPromise = getPlayerCareerStats(user.id, { seasonId: selectedSeason?.id ?? null });
   const [careerStats, achievements, ratings, reliability] = await Promise.all([
-    getPlayerCareerStats(user.id, { seasonId: selectedSeason?.id ?? null }),
-    getUserAchievementProgress(user.id),
+    careerStatsPromise,
+    careerStatsPromise.then((stats) => getUserAchievementProgress(user.id, stats)),
     getPlayerRatings({ seasonId: ratingSeasonId }),
     getReliabilitySummary(user.id),
   ]);

@@ -10,6 +10,7 @@ import {
   type ProfileStatusTone,
   type ProfileStatusType,
 } from "@prisma/client";
+import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { getSelectedProfileStatusWhere } from "@/lib/profile-status-query";
@@ -80,6 +81,12 @@ export type PlayerRatingRow = {
   lastMatchAt: Date | null;
   selectedStatuses: Array<{ id: string; title: string; tone: ProfileStatusTone; type: ProfileStatusType }>;
 };
+
+const getCachedPlayerRatings = unstable_cache(
+  async (seasonId: string | null) => computePlayerRatings({ seasonId }),
+  ["player-ratings"],
+  { revalidate: 60 },
+);
 
 function expectedScore(playerRating: number, opponentRating: number) {
   return 1 / (1 + 10 ** ((opponentRating - playerRating) / 400));
@@ -173,6 +180,10 @@ function parseRatingPenalty(value: string) {
 }
 
 export async function getPlayerRatings(options: PlayerRatingOptions = {}) {
+  return getCachedPlayerRatings(options.seasonId ?? null);
+}
+
+async function computePlayerRatings(options: PlayerRatingOptions = {}) {
   const matchWhere: Prisma.MatchWhereInput = {
     status: { in: [MatchStatus.CONFIRMED, MatchStatus.FINISHED] },
     player1Id: { not: null },

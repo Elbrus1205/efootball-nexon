@@ -291,6 +291,8 @@ model User {
   divisionSeasonArchives DivisionSeasonArchive[]
   reliabilityEvents    ReliabilityEvent[]          @relation("reliabilityTarget")
   reliabilityEventsIssued ReliabilityEvent[]        @relation("reliabilityActor")
+
+  @@index([role, isBanned, createdAt])
 }
 
 model ReliabilityEvent {
@@ -920,6 +922,7 @@ model MatchLineupPlayer {
 
   @@unique([matchId, side, userId])
   @@index([userId])
+  @@index([userId, matchId])
   @@index([registrationId])
 }
 
