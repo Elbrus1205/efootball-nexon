@@ -52,8 +52,7 @@ type MatchItem = {
   bracketId?: string | null;
   stage?: { name: string | null; type: StageType } | null;
   group?: { name: string } | null;
-  configuredScorePenalty?: { reasonId: string; userId: string } | null;
-  configuredTechnicalLossPenalty?: { reasonId: string; userId: string } | null;
+  configuredReliabilityPenalty?: { reasonId: string; userId: string } | null;
 };
 
 type PenaltyReasonOption = {
@@ -157,27 +156,19 @@ function TeamBadge({ participant }: { participant?: ParticipantOption | null }) 
   );
 }
 
-function mapConfiguredScorePenalty(matches: MatchItem[]) {
+function mapConfiguredReliabilityPenalty(matches: MatchItem[]) {
   return Object.fromEntries(
     matches
-      .filter((match) => match.configuredScorePenalty?.reasonId)
-      .map((match) => [match.id, match.configuredScorePenalty?.reasonId ?? ""]),
+      .filter((match) => match.configuredReliabilityPenalty?.reasonId)
+      .map((match) => [match.id, match.configuredReliabilityPenalty?.reasonId ?? ""]),
   );
 }
 
-function mapConfiguredScorePenaltyTargets(matches: MatchItem[]) {
+function mapConfiguredReliabilityPenaltyTargets(matches: MatchItem[]) {
   return Object.fromEntries(
     matches
-      .filter((match) => match.configuredScorePenalty?.userId)
-      .map((match) => [match.id, match.configuredScorePenalty?.userId ?? ""]),
-  );
-}
-
-function mapConfiguredTechnicalLossPenalty(matches: MatchItem[]) {
-  return Object.fromEntries(
-    matches
-      .filter((match) => match.configuredTechnicalLossPenalty?.reasonId)
-      .map((match) => [match.id, match.configuredTechnicalLossPenalty?.reasonId ?? ""]),
+      .filter((match) => match.configuredReliabilityPenalty?.userId)
+      .map((match) => [match.id, match.configuredReliabilityPenalty?.userId ?? ""]),
   );
 }
 
@@ -231,14 +222,12 @@ export function MatchManager({
   tournamentId,
   matches,
   participants,
-  scorePenaltyReasons,
-  technicalLossPenaltyReasons,
+  matchPenaltyReasons,
 }: {
   tournamentId: string;
   matches: MatchItem[];
   participants: ParticipantOption[];
-  scorePenaltyReasons: PenaltyReasonOption[];
-  technicalLossPenaltyReasons: PenaltyReasonOption[];
+  matchPenaltyReasons: PenaltyReasonOption[];
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -249,18 +238,16 @@ export function MatchManager({
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [roundFilter, setRoundFilter] = useState<string>(() => (matches[0]?.round ? String(matches[0].round) : "all"));
-  const [technicalLossPenaltyByMatch, setTechnicalLossPenaltyByMatch] = useState<Record<string, string>>(() => mapConfiguredTechnicalLossPenalty(matches));
-  const [scorePenaltyByMatch, setScorePenaltyByMatch] = useState<Record<string, string>>(() => mapConfiguredScorePenalty(matches));
-  const [scorePenaltyTargetByMatch, setScorePenaltyTargetByMatch] = useState<Record<string, string>>(() => mapConfiguredScorePenaltyTargets(matches));
+  const [reliabilityPenaltyByMatch, setReliabilityPenaltyByMatch] = useState<Record<string, string>>(() => mapConfiguredReliabilityPenalty(matches));
+  const [reliabilityPenaltyTargetByMatch, setReliabilityPenaltyTargetByMatch] = useState<Record<string, string>>(() => mapConfiguredReliabilityPenaltyTargets(matches));
 
   const participantById = useMemo(() => new Map(participants.map((participant) => [participant.id, participant])), [participants]);
   const participantSearchTokens = (participant?: ParticipantOption | null) => [participant?.clubName, participant?.clubSlug, participant?.user.name].filter(Boolean);
 
   useEffect(() => {
     setOrderedMatches(matches);
-    setTechnicalLossPenaltyByMatch(mapConfiguredTechnicalLossPenalty(matches));
-    setScorePenaltyByMatch(mapConfiguredScorePenalty(matches));
-    setScorePenaltyTargetByMatch(mapConfiguredScorePenaltyTargets(matches));
+    setReliabilityPenaltyByMatch(mapConfiguredReliabilityPenalty(matches));
+    setReliabilityPenaltyTargetByMatch(mapConfiguredReliabilityPenaltyTargets(matches));
   }, [matches]);
 
   const rounds = useMemo(() => Array.from(new Set(orderedMatches.map((match) => match.round))).sort((a, b) => a - b), [orderedMatches]);
@@ -413,18 +400,14 @@ export function MatchManager({
       if (player1Score !== null) payload.player1Score = player1Score;
       if (player2Score !== null) payload.player2Score = player2Score;
     }
-    if (status === MatchStatus.CONFIRMED) {
-      const reliabilityPenaltyReasonId = scorePenaltyByMatch[matchId] ?? "";
-      const reliabilityPenaltyUserId = scorePenaltyTargetByMatch[matchId] ?? "";
+    if (status === MatchStatus.CONFIRMED || status === MatchStatus.FORFEIT) {
+      const reliabilityPenaltyReasonId = reliabilityPenaltyByMatch[matchId] ?? "";
+      const reliabilityPenaltyUserId = reliabilityPenaltyTargetByMatch[matchId] ?? "";
       payload.reliabilityPenaltyReasonId = reliabilityPenaltyReasonId;
       payload.reliabilityPenaltyUserId = reliabilityPenaltyReasonId ? reliabilityPenaltyUserId : "";
       if (reliabilityPenaltyReasonId) {
         payload.reliabilityPenaltyUserId = reliabilityPenaltyUserId;
       }
-    }
-    if (status === MatchStatus.FORFEIT) {
-      const reliabilityPenaltyReasonId = technicalLossPenaltyByMatch[matchId] ?? "";
-      payload.reliabilityPenaltyReasonId = reliabilityPenaltyReasonId;
     }
 
     patchLocalMatch(matchId, payload);
@@ -540,17 +523,16 @@ export function MatchManager({
               {roundMatches.map((match) => {
                 const selectedParticipantOne = match.participant1EntryId ? participantById.get(match.participant1EntryId) ?? null : null;
                 const selectedParticipantTwo = match.participant2EntryId ? participantById.get(match.participant2EntryId) ?? null : null;
-                const technicalLossPenaltyReasonId = technicalLossPenaltyByMatch[match.id] ?? "";
-                const scorePenaltyReasonId = scorePenaltyByMatch[match.id] ?? "";
-                const scorePenaltyTargetId = scorePenaltyTargetByMatch[match.id] ?? "";
+                const reliabilityPenaltyReasonId = reliabilityPenaltyByMatch[match.id] ?? "";
+                const reliabilityPenaltyTargetId = reliabilityPenaltyTargetByMatch[match.id] ?? "";
                 const needsPenalty = matchNeedsPenalty(match, orderedMatches);
                 const penaltyComplete =
                   needsPenalty &&
                   match.player1PenaltyScore !== null &&
                   match.player2PenaltyScore !== null &&
                   match.player1PenaltyScore !== match.player2PenaltyScore;
-                const scorePenaltyReady = !scorePenaltyReasonId || Boolean(scorePenaltyTargetId);
-                const canConfirm = (!needsPenalty || penaltyComplete) && scorePenaltyReady;
+                const reliabilityPenaltyReady = !reliabilityPenaltyReasonId || Boolean(reliabilityPenaltyTargetId);
+                const canConfirm = (!needsPenalty || penaltyComplete) && reliabilityPenaltyReady;
                 return (
                   <div
                     key={match.id}
@@ -593,40 +575,30 @@ export function MatchManager({
                             value={match.status}
                             onChange={(event) => {
                               const nextStatus = event.target.value;
-                              saveMatch(
-                                match.id,
-                                nextStatus === MatchStatus.FORFEIT
-                                  ? { status: nextStatus, reliabilityPenaltyReasonId: technicalLossPenaltyReasonId }
-                                  : { status: nextStatus },
-                              );
+                              if (
+                                (nextStatus === MatchStatus.CONFIRMED || nextStatus === MatchStatus.FORFEIT) &&
+                                reliabilityPenaltyReasonId &&
+                                !reliabilityPenaltyTargetId
+                              ) {
+                                window.alert("Выберите игрока, которому нужно начислить штраф надежности.");
+                                return;
+                              }
+
+                              saveMatch(match.id, {
+                                status: nextStatus,
+                                ...(nextStatus === MatchStatus.CONFIRMED || nextStatus === MatchStatus.FORFEIT
+                                  ? {
+                                      reliabilityPenaltyReasonId,
+                                      reliabilityPenaltyUserId: reliabilityPenaltyReasonId ? reliabilityPenaltyTargetId : "",
+                                    }
+                                  : {}),
+                              });
                             }}
                             className="h-9 rounded-lg border border-white/10 bg-[#0A0A0A] px-3 text-sm text-white outline-none transition focus:border-primary/60"
                           >
                             {Object.values(MatchStatus).map((status) => (
                               <option key={status} value={status}>
                                 {matchStatusLabel[status] ?? status}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="grid gap-2 sm:grid-cols-[110px_minmax(0,1fr)] sm:items-center">
-                          <FieldLabel>Штраф ТП</FieldLabel>
-                          <select
-                            value={technicalLossPenaltyReasonId}
-                            onChange={(event) => {
-                              const nextReasonId = event.target.value;
-                              setTechnicalLossPenaltyByMatch((current) => ({ ...current, [match.id]: nextReasonId }));
-                              if (match.status === MatchStatus.FORFEIT) {
-                                saveMatch(match.id, { status: MatchStatus.FORFEIT, reliabilityPenaltyReasonId: nextReasonId });
-                              }
-                            }}
-                            className="h-9 rounded-lg border border-white/10 bg-[#0A0A0A] px-3 text-sm text-white outline-none transition focus:border-primary/60"
-                          >
-                            <option value="">— Без штрафа</option>
-                            {technicalLossPenaltyReasons.map((reason) => (
-                              <option key={reason.id} value={reason.id}>
-                                -{reason.points} · {reason.title}
                               </option>
                             ))}
                           </select>
@@ -695,23 +667,23 @@ export function MatchManager({
                               onBlur={(event) => saveMatch(match.id, { player2Score: scoreFromInput(event.target.value) })}
                             />
                           </div>
-                          {scorePenaltyReasons.length ? (
+                          {matchPenaltyReasons.length ? (
                             <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                               <div className="space-y-1.5">
-                                <FieldLabel>Штраф за счет</FieldLabel>
+                                <FieldLabel>Штраф надежности</FieldLabel>
                                 <select
-                                  value={scorePenaltyReasonId}
+                                  value={reliabilityPenaltyReasonId}
                                   onChange={(event) => {
                                     const nextReasonId = event.target.value;
-                                    setScorePenaltyByMatch((current) => ({ ...current, [match.id]: nextReasonId }));
+                                    setReliabilityPenaltyByMatch((current) => ({ ...current, [match.id]: nextReasonId }));
                                     if (!nextReasonId) {
-                                      setScorePenaltyTargetByMatch((current) => ({ ...current, [match.id]: "" }));
+                                      setReliabilityPenaltyTargetByMatch((current) => ({ ...current, [match.id]: "" }));
                                     }
                                   }}
                                   className="h-9 w-full rounded-lg border border-white/10 bg-[#0A0A0A] px-3 text-xs text-white outline-none transition focus:border-primary/60"
                                 >
                                   <option value="">— Без штрафа</option>
-                                  {scorePenaltyReasons.map((reason) => (
+                                  {matchPenaltyReasons.map((reason) => (
                                     <option key={reason.id} value={reason.id}>
                                       -{reason.points} · {reason.title}
                                     </option>
@@ -721,9 +693,9 @@ export function MatchManager({
                               <div className="space-y-1.5">
                                 <FieldLabel>Кому</FieldLabel>
                                 <select
-                                  value={scorePenaltyTargetId}
-                                  disabled={!scorePenaltyReasonId}
-                                  onChange={(event) => setScorePenaltyTargetByMatch((current) => ({ ...current, [match.id]: event.target.value }))}
+                                  value={reliabilityPenaltyTargetId}
+                                  disabled={!reliabilityPenaltyReasonId}
+                                  onChange={(event) => setReliabilityPenaltyTargetByMatch((current) => ({ ...current, [match.id]: event.target.value }))}
                                   className="h-9 w-full rounded-lg border border-white/10 bg-[#0A0A0A] px-3 text-xs text-white outline-none transition focus:border-primary/60 disabled:opacity-50"
                                 >
                                   <option value="">— Игрок</option>

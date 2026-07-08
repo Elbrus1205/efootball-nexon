@@ -89,6 +89,61 @@ function getForfeitLoserId(match: Pick<Match, "player1Id" | "player2Id" | "winne
   return null;
 }
 
+const matchConfiguredPenaltyScopes = [ReliabilityPenaltyScope.SCORE_SUBMISSION, ReliabilityPenaltyScope.TECHNICAL_LOSS];
+
+async function removeMatchConfiguredReliabilityPenalties(matchId: string) {
+  await removeConfiguredReliabilityPenaltiesByPrefix(`match-configured-penalty:${matchId}:`);
+  await removeConfiguredReliabilityPenaltiesByPrefix(`match-score-penalty:${matchId}:`);
+  await removeConfiguredReliabilityPenaltiesByPrefix(`match-forfeit-config:${matchId}:`);
+}
+
+async function applyMatchConfiguredReliabilityPenalty({
+  reasonId,
+  userId,
+  actorId,
+  matchId,
+  tournamentId,
+  status,
+  player1Score,
+  player2Score,
+}: {
+  reasonId: string;
+  userId: string;
+  actorId: string;
+  matchId: string;
+  tournamentId: string;
+  status: MatchStatus;
+  player1Score: number | null;
+  player2Score: number | null;
+}) {
+  const reason = await db.reliabilityPenaltyReason.findFirst({
+    where: {
+      id: reasonId,
+      scope: { in: matchConfiguredPenaltyScopes },
+      isActive: true,
+    },
+    select: { scope: true },
+  });
+
+  if (!reason) {
+    throw new Error("RELIABILITY_PENALTY_REASON_NOT_FOUND");
+  }
+
+  await applyConfiguredReliabilityPenalty({
+    reasonId,
+    scope: reason.scope,
+    userId,
+    actorId,
+    matchId,
+    tournamentId,
+    dedupeKey: `match-configured-penalty:${matchId}:${userId}:${reasonId}`,
+    comment:
+      status === MatchStatus.FORFEIT
+        ? "Штраф выбран администратором при выставлении технического поражения."
+        : `Штраф выбран администратором при ручном подтверждении счета ${player1Score ?? 0}:${player2Score ?? 0}.`,
+  });
+}
+
 function sortSeriesMatches(a: Match, b: Match) {
   return (
     (a.legNumber ?? 1) - (b.legNumber ?? 1) ||
@@ -165,7 +220,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const statusExplicitlyChanged = "status" in body && Boolean(body.status);
   const multiLegPenaltyDecision = await getMultiLegPenaltyDecision(before, nextPlayer1Score, nextPlayer2Score);
 
-  if (nextStatus === MatchStatus.CONFIRMED && body.reliabilityPenaltyReasonId) {
+  if (body.reliabilityPenaltyReasonId) {
     const penaltyTargetId = body.reliabilityPenaltyUserId || "";
     if (!penaltyTargetId || ![nextPlayer1Id, nextPlayer2Id].includes(penaltyTargetId)) {
       return NextResponse.json({ error: "Выберите игрока, которому нужно начислить штраф надежности." }, { status: 400 });
@@ -236,12 +291,35 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     await notifyMatchReady(updated.id);
   }
 
-  if (statusExplicitlyChanged && updated.status !== MatchStatus.CONFIRMED && updated.status !== MatchStatus.FINISHED) {
-    await removeConfiguredReliabilityPenaltiesByPrefix(`match-score-penalty:${updated.id}:`);
+  const canHaveConfiguredPenalty =
+    updated.status === MatchStatus.CONFIRMED || updated.status === MatchStatus.FINISHED || updated.status === MatchStatus.FORFEIT;
+
+  if (statusExplicitlyChanged && !canHaveConfiguredPenalty) {
+    await removeMatchConfiguredReliabilityPenalties(updated.id);
   }
 
-  if (statusExplicitlyChanged && updated.status !== MatchStatus.FORFEIT) {
-    await removeConfiguredReliabilityPenaltiesByPrefix(`match-forfeit-config:${updated.id}:`);
+  if (canHaveConfiguredPenalty && ("reliabilityPenaltyReasonId" in body || "reliabilityPenaltyUserId" in body)) {
+    await removeMatchConfiguredReliabilityPenalties(updated.id);
+
+    if (body.reliabilityPenaltyReasonId && body.reliabilityPenaltyUserId) {
+      try {
+        await applyMatchConfiguredReliabilityPenalty({
+          reasonId: body.reliabilityPenaltyReasonId,
+          userId: body.reliabilityPenaltyUserId,
+          actorId: session.user.id,
+          matchId: updated.id,
+          tournamentId: updated.tournamentId,
+          status: updated.status,
+          player1Score: updated.player1Score,
+          player2Score: updated.player2Score,
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message === "RELIABILITY_PENALTY_REASON_NOT_FOUND") {
+          return NextResponse.json({ error: "Р’С‹Р±СЂР°РЅРЅС‹Р№ С€С‚СЂР°С„ РЅР°РґРµР¶РЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ РЅРµРґРѕСЃС‚СѓРїРµРЅ." }, { status: 400 });
+        }
+        throw error;
+      }
+    }
   }
 
   if (updated.status === MatchStatus.CONFIRMED || updated.status === MatchStatus.FINISHED) {
@@ -252,10 +330,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       matchId: updated.id,
       tournamentId: updated.tournamentId,
     });
-    if ("reliabilityPenaltyReasonId" in body || "reliabilityPenaltyUserId" in body) {
-      await removeConfiguredReliabilityPenaltiesByPrefix(`match-score-penalty:${updated.id}:`);
-    }
-    if (body.reliabilityPenaltyReasonId && body.reliabilityPenaltyUserId) {
+    if (!("reliabilityPenaltyReasonId" in body) && body.reliabilityPenaltyReasonId && body.reliabilityPenaltyUserId) {
       try {
         await applyConfiguredReliabilityPenalty({
           reasonId: body.reliabilityPenaltyReasonId,
@@ -285,7 +360,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       if ("reliabilityPenaltyReasonId" in body) {
         await removeConfiguredReliabilityPenaltiesByPrefix(`match-forfeit-config:${updated.id}:`);
       }
-      if (body.reliabilityPenaltyReasonId) {
+      if (!("reliabilityPenaltyReasonId" in body) && body.reliabilityPenaltyReasonId) {
         try {
           await applyConfiguredReliabilityPenalty({
             reasonId: body.reliabilityPenaltyReasonId,

@@ -8,20 +8,14 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { getAdminTournamentAccessWhere } from "@/lib/admin-tournament-access";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { getReliabilityPenaltyReasons } from "@/lib/services/reliability";
 
-function getConfiguredScorePenalty(matchId: string, events: Array<{ userId: string; dedupeKey: string | null }>) {
-  const prefix = `match-score-penalty:${matchId}:`;
-  const event = events.find((item) => item.dedupeKey?.startsWith(prefix));
-  if (!event?.dedupeKey) return null;
-
-  const [, , , reasonId] = event.dedupeKey.split(":");
-  return reasonId ? { reasonId, userId: event.userId } : null;
-}
-
-function getConfiguredTechnicalLossPenalty(matchId: string, events: Array<{ userId: string; dedupeKey: string | null }>) {
-  const prefix = `match-forfeit-config:${matchId}:`;
-  const event = events.find((item) => item.dedupeKey?.startsWith(prefix));
+function getConfiguredMatchPenalty(matchId: string, events: Array<{ userId: string; dedupeKey: string | null }>) {
+  const event = events.find(
+    (item) =>
+      item.dedupeKey?.startsWith(`match-configured-penalty:${matchId}:`) ||
+      item.dedupeKey?.startsWith(`match-score-penalty:${matchId}:`) ||
+      item.dedupeKey?.startsWith(`match-forfeit-config:${matchId}:`),
+  );
   if (!event?.dedupeKey) return null;
 
   const [, , , reasonId] = event.dedupeKey.split(":");
@@ -31,7 +25,7 @@ function getConfiguredTechnicalLossPenalty(matchId: string, events: Array<{ user
 export default async function AdminTournamentMatchesPage({ params }: { params: { id: string } }) {
   const session = await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
-  const [tournament, scorePenaltyReasons, technicalLossPenaltyReasons] = await Promise.all([
+  const [tournament, matchPenaltyReasons] = await Promise.all([
     db.tournament.findFirst({
     where: { id: params.id, ...getAdminTournamentAccessWhere(session) },
     select: {
@@ -83,8 +77,13 @@ export default async function AdminTournamentMatchesPage({ params }: { params: {
       },
     },
     }),
-    getReliabilityPenaltyReasons(ReliabilityPenaltyScope.SCORE_SUBMISSION),
-    getReliabilityPenaltyReasons(ReliabilityPenaltyScope.TECHNICAL_LOSS),
+    db.reliabilityPenaltyReason.findMany({
+      where: {
+        scope: { in: [ReliabilityPenaltyScope.SCORE_SUBMISSION, ReliabilityPenaltyScope.TECHNICAL_LOSS] },
+        isActive: true,
+      },
+      orderBy: [{ scope: "asc" }, { points: "desc" }, { createdAt: "asc" }],
+    }),
   ]);
 
   if (!tournament) notFound();
@@ -94,7 +93,11 @@ export default async function AdminTournamentMatchesPage({ params }: { params: {
     ? await db.reliabilityEvent.findMany({
         where: {
           matchId: { in: matchIds },
-          OR: [{ dedupeKey: { startsWith: "match-score-penalty:" } }, { dedupeKey: { startsWith: "match-forfeit-config:" } }],
+          OR: [
+            { dedupeKey: { startsWith: "match-configured-penalty:" } },
+            { dedupeKey: { startsWith: "match-score-penalty:" } },
+            { dedupeKey: { startsWith: "match-forfeit-config:" } },
+          ],
         },
         select: {
           id: true,
@@ -135,8 +138,7 @@ export default async function AdminTournamentMatchesPage({ params }: { params: {
     bracketId: match.bracketId,
     stage: match.stage ? { name: match.stage.name, type: match.stage.type } : null,
     group: match.group ? { name: match.group.name } : null,
-    configuredScorePenalty: getConfiguredScorePenalty(match.id, configuredPenaltyEvents),
-    configuredTechnicalLossPenalty: getConfiguredTechnicalLossPenalty(match.id, configuredPenaltyEvents),
+    configuredReliabilityPenalty: getConfiguredMatchPenalty(match.id, configuredPenaltyEvents),
   }));
 
   const participants = tournament.participants.map((participant) => ({
@@ -175,8 +177,7 @@ export default async function AdminTournamentMatchesPage({ params }: { params: {
         tournamentId={tournament.id}
         matches={matches}
         participants={participants}
-        scorePenaltyReasons={scorePenaltyReasons}
-        technicalLossPenaltyReasons={technicalLossPenaltyReasons}
+        matchPenaltyReasons={matchPenaltyReasons}
       />
     </div>
   );
