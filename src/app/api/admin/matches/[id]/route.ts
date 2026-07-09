@@ -7,10 +7,12 @@ import { logAdminAction } from "@/lib/services/admin-actions";
 import { ensureMatchLineupSnapshot } from "@/lib/services/match-lineups";
 import {
   applyConfiguredReliabilityPenalty,
+  applyConfiguredReliabilityPenaltyToUsers,
   applyTechnicalLossPenalty,
   recordConfirmedMatchReliability,
   removeConfiguredReliabilityPenaltiesByPrefix,
 } from "@/lib/services/reliability";
+import { getMatchSidePenaltyUserIds } from "@/lib/services/reliability-penalty-targets";
 import { notifyMatchReady, recalculateGroupStandings, resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { matchUpdateSchema } from "@/lib/validators";
 
@@ -129,14 +131,16 @@ async function applyMatchConfiguredReliabilityPenalty({
     throw new Error("RELIABILITY_PENALTY_REASON_NOT_FOUND");
   }
 
-  await applyConfiguredReliabilityPenalty({
+  const penaltyUserIds = await getMatchSidePenaltyUserIds(matchId, userId);
+
+  await applyConfiguredReliabilityPenaltyToUsers({
     reasonId,
     scope: reason.scope,
-    userId,
+    userIds: penaltyUserIds,
     actorId,
     matchId,
     tournamentId,
-    dedupeKey: `match-configured-penalty:${matchId}:${userId}:${reasonId}`,
+    dedupeKeyForUserId: (targetUserId) => `match-configured-penalty:${matchId}:${targetUserId}:${reasonId}`,
     comment:
       status === MatchStatus.FORFEIT
         ? "Штраф выбран администратором при выставлении технического поражения."

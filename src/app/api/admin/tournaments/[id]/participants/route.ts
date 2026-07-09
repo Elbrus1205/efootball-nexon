@@ -5,7 +5,8 @@ import { requireAnyPermission, requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { createNotification } from "@/lib/services/notifications";
-import { applyConfiguredReliabilityPenalty, formatReliabilityRegistrationRestriction, syncReliabilityRestriction } from "@/lib/services/reliability";
+import { applyConfiguredReliabilityPenaltyToUsers, formatReliabilityRegistrationRestriction, syncReliabilityRestriction } from "@/lib/services/reliability";
+import { getAcceptedRosterPenaltyUserIds, uniqueReliabilityPenaltyUserIds } from "@/lib/services/reliability-penalty-targets";
 import { recalculateGroupStandings } from "@/lib/services/tournaments";
 import { hasTelegramRegistrationContact } from "@/lib/social-links";
 import { participantManageSchema } from "@/lib/validators";
@@ -406,13 +407,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     if (body.reliabilityPenaltyReasonId) {
       try {
-        await applyConfiguredReliabilityPenalty({
+        const penaltyUserIds = getAcceptedRosterPenaltyUserIds(before);
+
+        await applyConfiguredReliabilityPenaltyToUsers({
           reasonId: body.reliabilityPenaltyReasonId,
           scope: ReliabilityPenaltyScope.PLAYER_REPLACEMENT,
-          userId: before.userId,
+          userIds: penaltyUserIds,
           actorId: session.user.id,
           tournamentId: params.id,
-          dedupeKey: `replacement:${before.id}:${replacementUserId}:${body.reliabilityPenaltyReasonId}`,
+          dedupeKeyForUserId: () => `replacement:${before.id}:${replacementUserId}:${body.reliabilityPenaltyReasonId}`,
           comment: `Игрок заменен на ${replacementUser.name ?? replacementUser.email ?? replacementUser.id}.`,
         });
       } catch (error) {
@@ -449,7 +452,17 @@ export async function POST(request: Request, { params }: { params: { id: string 
       where: { id: body.memberId, tournamentId: params.id },
       include: {
         user: { select: { id: true, name: true, email: true } },
-        registration: { select: { id: true, status: true, userId: true } },
+        registration: {
+          select: {
+            id: true,
+            status: true,
+            userId: true,
+            rosterMembers: {
+              where: { status: TeamInviteStatus.ACCEPTED },
+              select: { userId: true, status: true },
+            },
+          },
+        },
       },
     });
 
@@ -604,13 +617,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     if (body.reliabilityPenaltyReasonId) {
       try {
-        await applyConfiguredReliabilityPenalty({
+        const penaltyUserIds = uniqueReliabilityPenaltyUserIds([member.userId, ...getAcceptedRosterPenaltyUserIds(member.registration)]);
+
+        await applyConfiguredReliabilityPenaltyToUsers({
           reasonId: body.reliabilityPenaltyReasonId,
           scope: ReliabilityPenaltyScope.PLAYER_REPLACEMENT,
-          userId: member.userId,
+          userIds: penaltyUserIds,
           actorId: session.user.id,
           tournamentId: params.id,
-          dedupeKey: `replacement-member:${member.id}:${member.userId}:${replacementUserId}:${body.reliabilityPenaltyReasonId}`,
+          dedupeKeyForUserId: () => `replacement-member:${member.id}:${member.userId}:${replacementUserId}:${body.reliabilityPenaltyReasonId}`,
           comment: `Игрок состава заменен на ${replacementUser.name ?? replacementUser.email ?? replacementUser.id}.`,
         });
       } catch (error) {

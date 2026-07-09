@@ -244,6 +244,46 @@ export async function applyConfiguredReliabilityPenalty({
   });
 }
 
+export async function applyConfiguredReliabilityPenaltyToUsers({
+  reasonId,
+  scope,
+  userIds,
+  actorId,
+  matchId,
+  tournamentId,
+  dedupeKeyForUserId,
+  comment,
+}: {
+  reasonId?: string | null;
+  scope: ReliabilityPenaltyScope;
+  userIds: string[];
+  actorId?: string | null;
+  matchId?: string | null;
+  tournamentId?: string | null;
+  dedupeKeyForUserId: (userId: string) => string;
+  comment?: string | null;
+}) {
+  const uniqueUserIds = Array.from(new Set(userIds.filter(Boolean)));
+  const results = [];
+
+  for (const userId of uniqueUserIds) {
+    results.push(
+      await applyConfiguredReliabilityPenalty({
+        reasonId,
+        scope,
+        userId,
+        actorId,
+        matchId,
+        tournamentId,
+        dedupeKey: dedupeKeyForUserId(userId),
+        comment,
+      }),
+    );
+  }
+
+  return results;
+}
+
 export async function removeConfiguredReliabilityPenaltiesByPrefix(dedupeKeyPrefix: string) {
   const normalizedPrefix = dedupeKeyPrefix.trim();
   if (!normalizedPrefix) return { removed: 0 };
