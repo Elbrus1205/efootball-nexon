@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { Archive, CalendarRange, Crown, Medal, Shield, Trophy } from "lucide-react";
 import { TournamentStatus } from "@prisma/client";
 import { Fragment } from "react";
@@ -49,6 +48,24 @@ function seasonChipClass(active: boolean) {
       ? "border-primary/35 bg-primary/15 text-white shadow-[0_0_22px_rgba(59,130,246,0.14)]"
       : "border-white/10 bg-white/[0.04] text-zinc-400 hover:border-primary/25 hover:text-white",
   );
+}
+
+function getRatingAvatarSrc(src?: string | null) {
+  const proxiedSrc = proxyTelegramAssetUrl(src);
+  const avatarSrc = optimizedImageUrl(proxiedSrc, {
+    width: 96,
+    height: 96,
+    quality: 84,
+    resize: "cover",
+    format: "webp",
+  }) ?? proxiedSrc;
+
+  if (!avatarSrc) return null;
+  if (avatarSrc.startsWith("/") || avatarSrc.startsWith("http://") || avatarSrc.startsWith("https://") || avatarSrc.startsWith("data:image/")) {
+    return avatarSrc;
+  }
+
+  return null;
 }
 
 export default async function RatingsPage({
@@ -135,6 +152,7 @@ export default async function RatingsPage({
                 const isCurrentUser = player.playerId === session?.user?.id;
                 const showRatingChange = shouldShowRatingChange(player.lastRatingChangeAt) && player.lastRatingChange !== 0;
                 const ratingChangeTone = player.lastRatingChange > 0 ? "text-emerald-300" : "text-rose-300";
+                const avatarSrc = getRatingAvatarSrc(player.image);
 
                 return (
                   <Fragment key={player.playerId}>
@@ -160,12 +178,14 @@ export default async function RatingsPage({
                       <div className="min-w-0 py-4 pl-0 pr-2">
                         <div className="flex items-center gap-2 sm:gap-3">
                           <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/20 sm:h-10 sm:w-10">
-                            {player.image ? (
-                              <Image
-                                src={optimizedImageUrl(proxyTelegramAssetUrl(player.image), { width: 96, height: 96, quality: 84, resize: "cover", format: "webp" }) ?? player.image}
+                            {avatarSrc ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={avatarSrc}
                                 alt={player.playerName}
-                                width={40}
-                                height={40}
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
                                 className="h-full w-full object-cover"
                               />
                             ) : (
