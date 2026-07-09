@@ -1,5 +1,5 @@
-import { ReliabilityPenaltyScope } from "@prisma/client";
-import { Activity, Plus, Save, ShieldMinus, Trash2 } from "lucide-react";
+import { ReliabilityEventType, ReliabilityPenaltyScope } from "@prisma/client";
+import { Activity, Plus, Save, Search, ShieldMinus, SlidersHorizontal, Trash2 } from "lucide-react";
 import { revalidatePath } from "next/cache";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { reliabilityPenaltyReasonSchema } from "@/lib/validators";
+import { applyReliabilityEvent } from "@/lib/services/reliability";
+import { manualReliabilityAdjustmentSchema, reliabilityPenaltyReasonSchema } from "@/lib/validators";
 
 const editablePenaltyScopes = [ReliabilityPenaltyScope.SCORE_SUBMISSION, ReliabilityPenaltyScope.PLAYER_REPLACEMENT] as const;
 
@@ -87,15 +88,69 @@ async function deletePenaltyReason(formData: FormData) {
   revalidatePath("/admin/reliability");
 }
 
+async function applyManualReliabilityAdjustment(formData: FormData) {
+  "use server";
+
+  const session = await requirePermission("reliability.manage");
+  const payload = manualReliabilityAdjustmentSchema.parse({
+    player: formData.get("player"),
+    delta: formData.get("delta"),
+    reason: formData.get("reason"),
+  });
+
+  const user = await db.user.findFirst({
+    where: {
+      OR: [
+        { publicId: payload.player },
+        { name: { equals: payload.player, mode: "insensitive" } },
+      ],
+    },
+    select: { id: true, name: true, publicId: true },
+  });
+
+  if (!user) {
+    throw new Error("Игрок с таким ником или ID не найден.");
+  }
+
+  const sign = payload.delta > 0 ? "+" : "";
+  await applyReliabilityEvent({
+    userId: user.id,
+    actorId: session.user.id,
+    type: ReliabilityEventType.MANUAL_ADJUSTMENT,
+    delta: payload.delta,
+    reason: payload.reason || `Ручная корректировка надежности: ${sign}${payload.delta}.`,
+    comment: `Админ-панель надежности. Игрок: ${user.name ?? user.publicId}.`,
+  });
+
+  revalidatePath("/admin/reliability");
+}
+
 export default async function AdminReliabilityPage() {
   await requirePermission("reliability.manage");
 
-  const reasons = await db.reliabilityPenaltyReason.findMany({
-    where: {
-      scope: { in: [...editablePenaltyScopes] },
-    },
-    orderBy: [{ createdAt: "desc" }, { title: "asc" }],
-  });
+  const [reasons, recentManualEvents] = await Promise.all([
+    db.reliabilityPenaltyReason.findMany({
+      where: {
+        scope: { in: [...editablePenaltyScopes] },
+      },
+      orderBy: [{ createdAt: "desc" }, { title: "asc" }],
+    }),
+    db.reliabilityEvent.findMany({
+      where: { type: ReliabilityEventType.MANUAL_ADJUSTMENT },
+      select: {
+        id: true,
+        delta: true,
+        scoreBefore: true,
+        scoreAfter: true,
+        reason: true,
+        createdAt: true,
+        user: { select: { name: true, publicId: true } },
+        actor: { select: { name: true, publicId: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    }),
+  ]);
 
   const activeCount = reasons.filter((reason) => reason.isActive).length;
   const latestReason = reasons[0] ?? null;
@@ -137,6 +192,54 @@ export default async function AdminReliabilityPage() {
           </div>
         </Card>
       </div>
+
+      <Card className="rounded-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <SlidersHorizontal className="h-5 w-5 text-primary" />
+            Ручная корректировка надежности
+          </CardTitle>
+          <CardDescription>Введите ник или ID игрока, число со знаком и причину. Например: -5 снимет надежность, +5 вернет очки.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <form action={applyManualReliabilityAdjustment} className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_160px_auto] lg:items-end">
+            <div className="space-y-2">
+              <Label htmlFor="manual-player">Ник или ID игрока</Label>
+              <Input id="manual-player" name="player" placeholder="PlayerName или 1234567890" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manual-delta">Изменение</Label>
+              <Input id="manual-delta" name="delta" type="number" min={-100} max={100} placeholder="-5 или +5" required />
+            </div>
+            <Button type="submit" className="h-11 rounded-md">
+              <Search className="mr-2 h-4 w-4" />
+              Применить
+            </Button>
+            <div className="space-y-2 lg:col-span-3">
+              <Label htmlFor="manual-reason">Причина</Label>
+              <Textarea id="manual-reason" name="reason" placeholder="Например: ошибочно выдан штраф, нарушение правил, компенсация после проверки." />
+            </div>
+          </form>
+
+          {recentManualEvents.length ? (
+            <div className="grid gap-2 border-t border-white/10 pt-4">
+              {recentManualEvents.map((event) => (
+                <div key={event.id} className="flex flex-col gap-1 rounded-md border border-white/10 bg-white/[0.03] px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="font-medium text-white">
+                      {event.user.name ?? `ID ${event.user.publicId}`} · {event.delta > 0 ? `+${event.delta}` : event.delta}
+                    </div>
+                    <div className="truncate text-xs text-zinc-500">{event.reason}</div>
+                  </div>
+                  <div className="shrink-0 text-xs text-zinc-500">
+                    {event.scoreBefore} → {event.scoreAfter}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
 
       <Card className="rounded-lg">
         <CardHeader>

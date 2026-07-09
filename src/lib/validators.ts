@@ -281,6 +281,17 @@ export const reliabilityPenaltyReasonSchema = z.object({
   isActive: z.coerce.boolean().optional().default(false),
 });
 
+export const manualReliabilityAdjustmentSchema = z.object({
+  player: z.string().trim().min(1, "Укажите ник или ID игрока.").max(80, "Ник слишком длинный."),
+  delta: z.coerce
+    .number()
+    .int("Укажите целое число.")
+    .min(-100, "Минус не может быть меньше -100.")
+    .max(100, "Плюс не может быть больше 100.")
+    .refine((value) => value !== 0, "Укажите не 0: например -5 или +5."),
+  reason: z.string().trim().max(500, "Причина не должна быть длиннее 500 символов.").optional().or(z.literal("")),
+});
+
 export const groupAssignmentSchema = z.object({
   mode: z.enum(["auto", "manual"]),
   assignments: z
