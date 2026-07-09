@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 type ClubPlayerLineProps = {
   clubName?: string | null;
@@ -30,8 +31,7 @@ export function ClubPlayerLine({
       <div className="flex flex-col items-center gap-1 text-center sm:gap-1.5">
         {badgePath ? (
           <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-black/20 sm:h-9 sm:w-9">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={badgePath} alt={clubName ?? playerName} loading="lazy" decoding="async" className="h-full w-full object-contain p-1" />
+            <Image src={badgePath} alt={clubName ?? playerName} width={36} height={36} className="h-full w-full object-contain p-1" />
           </div>
         ) : null}
         <div className="min-w-0 max-w-full">
@@ -64,8 +64,7 @@ export function ClubPlayerLine({
               : "flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/20"
           }
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={badgePath} alt={clubName ?? playerName} loading="lazy" decoding="async" className="h-full w-full object-contain p-1" />
+          <Image src={badgePath} alt={clubName ?? playerName} width={compact ? 32 : 40} height={compact ? 32 : 40} className="h-full w-full object-contain p-1" />
         </div>
       ) : null}
 

@@ -128,7 +128,7 @@ const getHomeData = unstable_cache(
         prizeLabel: prizeValue ? `${new Intl.NumberFormat("ru-RU").format(prizeValue)} ₽` : null,
         participants: row.participants,
         maxParticipants: row.maxParticipants,
-        coverUrl: row.hasCoverImage ? `/api/tournaments/${row.id}/cover?v=${row.updatedAt.getTime()}` : null,
+        coverUrl: row.hasCoverImage ? `/api/tournaments/${row.id}/cover?w=720&h=405&q=84&v=${row.updatedAt.getTime()}` : null,
       };
     });
 

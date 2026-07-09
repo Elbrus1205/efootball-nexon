@@ -1,6 +1,7 @@
 import { ClubSelectionMode, MatchStatus, ParticipantStatus, StageType, TournamentFormat, TournamentParticipantMode, TournamentStatus } from "@prisma/client";
 import { AlertTriangle, Send } from "lucide-react";
 import { unstable_noStore as noStore } from "next/cache";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { BracketView } from "@/components/tournaments/bracket-view";
 import { CancelTournamentRegistrationButton } from "@/components/tournaments/cancel-tournament-registration-button";
@@ -1201,8 +1202,7 @@ export default async function TournamentDetailsPage({
             <div className="flex min-w-0 items-center gap-3 border-b border-white/10 px-4 py-4">
               {rosterBadge ? (
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/25">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={rosterBadge} alt={rosterTitle} className="h-full w-full object-contain p-1.5" />
+                  <Image src={rosterBadge} alt={rosterTitle} width={48} height={48} className="h-full w-full object-contain p-1.5" />
                 </div>
               ) : null}
               <div className="min-w-0">

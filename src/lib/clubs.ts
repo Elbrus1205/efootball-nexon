@@ -14,6 +14,7 @@ type ClubDefinition = {
 };
 
 const CLUBS_DIR = path.join(process.cwd(), "public", "club-badges");
+const CLUB_THUMBS_DIR = path.join(CLUBS_DIR, "thumbs");
 
 const CLUBS: ClubDefinition[] = [
   { fileName: "ajax-amsterdam-big-768x773.png", name: "Аякс" },
@@ -158,15 +159,24 @@ const getCachedAvailableClubs = unstable_cache(
   async () => {
     try {
       const entries = await fs.readdir(CLUBS_DIR, { withFileTypes: true });
+      const thumbEntries = await fs.readdir(CLUB_THUMBS_DIR, { withFileTypes: true }).catch(() => []);
       const existingFileNames = new Set(
         entries.filter((entry) => entry.isFile()).map((entry) => entry.name),
       );
+      const existingThumbFileNames = new Set(
+        thumbEntries.filter((entry) => entry.isFile()).map((entry) => entry.name),
+      );
 
-      const clubs = CLUBS.filter((club) => existingFileNames.has(club.fileName)).map((club) => ({
-        slug: path.basename(club.fileName, path.extname(club.fileName)),
-        name: club.name,
-        imagePath: `/club-badges/${club.fileName}`,
-      }));
+      const clubs = CLUBS.filter((club) => existingFileNames.has(club.fileName)).map((club) => {
+        const slug = path.basename(club.fileName, path.extname(club.fileName));
+        const thumbFileName = `${slug}.webp`;
+
+        return {
+          slug,
+          name: club.name,
+          imagePath: existingThumbFileNames.has(thumbFileName) ? `/club-badges/thumbs/${thumbFileName}` : `/club-badges/${club.fileName}`,
+        };
+      });
 
       return sortClubs(clubs);
     } catch {

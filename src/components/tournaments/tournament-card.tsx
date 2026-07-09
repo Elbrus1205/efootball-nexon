@@ -48,7 +48,7 @@ export function TournamentCard({
               height={360}
               sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
               priority={priorityImage}
-              unoptimized
+              quality={84}
               className="h-full w-full object-cover"
             />
           </div>

@@ -2,11 +2,13 @@
 
 import { ChangeEvent, useMemo, useState, useTransition } from "react";
 import type { ReactNode } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Archive, CalendarClock, ImageIcon, ListChecks, Pause, Play, RotateCcw, Shield, Swords, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { optimizedImageUrl } from "@/lib/image-optimization";
 import { cn } from "@/lib/utils";
 import { uploadFile } from "@/lib/storage/upload-client";
 
@@ -117,6 +119,13 @@ export function DivisionAdminPanel({
   const [pending, startTransition] = useTransition();
   const [coverImage, setCoverImage] = useState(settings.coverImage ?? "");
   const [coverUploading, setCoverUploading] = useState(false);
+  const coverPreviewSrc = optimizedImageUrl(coverImage, {
+    width: 1280,
+    height: 720,
+    quality: 86,
+    resize: "cover",
+    format: "webp",
+  });
   const router = useRouter();
 
   const activeSeason = useMemo(() => seasons.find((season) => season.status === "ACTIVE"), [seasons]);
@@ -319,8 +328,16 @@ export function DivisionAdminPanel({
               </label>
               {coverImage ? (
                 <div className="space-y-3 rounded-lg border border-white/10 bg-black/30 p-3 md:col-span-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={coverImage} alt="Фон карточки дивизиона" className="aspect-video w-full rounded-lg object-cover" />
+                  <div className="relative aspect-video overflow-hidden rounded-lg bg-black/30">
+                    <Image
+                      src={coverPreviewSrc ?? coverImage}
+                      alt="Фон карточки дивизиона"
+                      fill
+                      sizes="(min-width: 768px) 720px, 100vw"
+                      quality={86}
+                      className="object-cover"
+                    />
+                  </div>
                   <Button type="button" variant="outline" className="w-full" onClick={() => setCoverImage("")}>Убрать фон</Button>
                 </div>
               ) : (

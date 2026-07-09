@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { optimizedImageUrl } from "@/lib/image-optimization";
 
 const dataImagePattern = /^data:([^;,]+);base64,([\s\S]+)$/;
 export const COVER_CACHE_CONTROL = "public, max-age=31536000, immutable";
+const DEFAULT_COVER_WIDTH = 960;
+const DEFAULT_COVER_HEIGHT = 540;
+const DEFAULT_COVER_QUALITY = 84;
 
 function buildBase64ImageResponse(coverImage: string) {
   const dataImage = coverImage.match(dataImagePattern);
@@ -37,9 +41,34 @@ async function proxyImageResponse(url: URL) {
   return new NextResponse(upstream.body, { headers });
 }
 
+function numberParam(searchParams: URLSearchParams, shortName: string, longName: string, fallback: number, max: number) {
+  const raw = searchParams.get(shortName) ?? searchParams.get(longName);
+  const value = raw ? Number(raw) : NaN;
+
+  if (!Number.isFinite(value) || value <= 0) return fallback;
+  return Math.min(Math.round(value), max);
+}
+
+function buildOptimizedCoverUrl(coverImage: string, request: NextRequest) {
+  const url = new URL(coverImage, request.url);
+  const width = numberParam(request.nextUrl.searchParams, "w", "width", DEFAULT_COVER_WIDTH, 1920);
+  const height = numberParam(request.nextUrl.searchParams, "h", "height", DEFAULT_COVER_HEIGHT, 1080);
+  const quality = numberParam(request.nextUrl.searchParams, "q", "quality", DEFAULT_COVER_QUALITY, 95);
+
+  return new URL(
+    optimizedImageUrl(url.toString(), {
+      width,
+      height,
+      quality,
+      resize: "cover",
+      format: "webp",
+    }) ?? url.toString(),
+  );
+}
+
 export async function buildCoverImageResponse(coverImage: string, request: NextRequest) {
   if (coverImage.startsWith("http://") || coverImage.startsWith("https://") || coverImage.startsWith("/")) {
-    return proxyImageResponse(new URL(coverImage, request.url));
+    return proxyImageResponse(buildOptimizedCoverUrl(coverImage, request));
   }
 
   return buildBase64ImageResponse(coverImage);

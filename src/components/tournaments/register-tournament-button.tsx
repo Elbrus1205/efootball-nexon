@@ -2,6 +2,7 @@
 
 import { ClubSelectionMode, TournamentParticipantMode } from "@prisma/client";
 import { CheckCircle2, Search, ScrollText, X } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
@@ -351,8 +352,7 @@ export function RegisterTournamentButton({
                             selected ? "border-primary/60" : "border-white/10 group-hover:border-white/20"
                           }`}
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={club.imagePath} alt={club.name} className="h-full w-full object-contain p-1" />
+                          <Image src={club.imagePath} alt={club.name} width={56} height={56} className="h-full w-full object-contain p-1" />
                         </div>
                         <div className="min-w-0 space-y-1">
                           <div className="line-clamp-2 text-xs font-semibold leading-snug text-white sm:text-sm">{club.name}</div>

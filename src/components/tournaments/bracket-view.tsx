@@ -3,6 +3,7 @@
 import type { MatchStatus } from "@prisma/client";
 import { GitBranch, Trophy } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState, type CSSProperties } from "react";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { cn } from "@/lib/utils";
@@ -283,8 +284,7 @@ function BracketTeamRow({ side }: { side: BracketSide }) {
         )}
       >
         {side.badgePath ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={side.badgePath} alt={side.clubName ?? side.playerName} loading="lazy" decoding="async" className="h-full w-full object-contain p-1" />
+          <Image src={side.badgePath} alt={side.clubName ?? side.playerName} width={40} height={40} className="h-full w-full object-contain p-1" />
         ) : (
           <span className={cn("text-[10px] uppercase text-zinc-500", side.isChampion && "text-amber-100", isLoser && "text-zinc-600")}>FC</span>
         )}

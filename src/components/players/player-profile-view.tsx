@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { AlertTriangle, ArrowRight, Clock3, PencilLine, ShieldCheck, Trophy } from "lucide-react";
 import { ProfileStatusType, type ProfileStatusTone, type Season, type UserRole } from "@prisma/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,6 +15,7 @@ import type { AchievementGroupProgress } from "@/lib/achievements";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import type { PlayerCareerStats } from "@/lib/player-stats";
 import type { ReliabilitySummary } from "@/lib/services/reliability";
+import { optimizedImageUrl } from "@/lib/image-optimization";
 import { getUserSocialLinks } from "@/lib/social-links";
 import { formatTimeZoneLabel, formatTimeZoneLocalTime } from "@/lib/time-zone";
 
@@ -173,6 +175,7 @@ export function PlayerProfileView({
     : socialLinks;
   const periodLabel = selectedSeason ? `Сезон: ${selectedSeason.name}` : "За всё время";
   const timeZoneLocalTime = formatTimeZoneLocalTime(user.timeZone);
+  const bannerImageSrc = optimizedImageUrl(user.bannerImage, { width: 1600, height: 420, quality: 82, resize: "cover", format: "webp" });
   const registeredAt = new Intl.DateTimeFormat("ru-RU", {
     day: "numeric",
     month: "short",
@@ -185,18 +188,20 @@ export function PlayerProfileView({
     <div className="page-shell space-y-8">
       <Card className="overflow-hidden border-white/10 bg-white/[0.03]">
         <div className="relative overflow-hidden border-b border-white/10">
-          <div
-            className="profile-banner-surface h-40 rounded-t-[inherit] sm:h-52"
-            style={
-              user.bannerImage
-                ? {
-                    backgroundImage: `linear-gradient(180deg, rgba(8,10,16,0.18), rgba(8,10,16,0.7)), url(${user.bannerImage})`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                  }
-                : undefined
-            }
-          />
+          <div className="profile-banner-surface relative h-40 rounded-t-[inherit] sm:h-52">
+            {bannerImageSrc ? (
+              <Image
+                src={bannerImageSrc}
+                alt=""
+                fill
+                priority
+                sizes="(max-width: 768px) 100vw, 1120px"
+                quality={82}
+                className="object-cover"
+              />
+            ) : null}
+            {bannerImageSrc ? <div className="absolute inset-0 bg-gradient-to-b from-[rgba(8,10,16,0.18)] to-[rgba(8,10,16,0.7)]" /> : null}
+          </div>
           <div className="profile-banner-grid absolute inset-0 opacity-20" />
 
           <div className="relative px-5 pb-6 sm:px-6">
@@ -268,10 +273,11 @@ export function PlayerProfileView({
             <div className="mt-2 flex items-center gap-3">
               {favoriteClub ? (
                 <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={favoriteClub.imagePath}
                     alt={favoriteClub.name}
+                    width={32}
+                    height={32}
                     className="h-8 w-8 rounded-full border border-white/10 bg-black/20 p-1 object-contain"
                   />
                   <div className="text-sm font-medium text-white">{favoriteClub.name}</div>

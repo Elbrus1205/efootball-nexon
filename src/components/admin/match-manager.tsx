@@ -3,6 +3,7 @@
 import { MatchStatus, StageType } from "@prisma/client";
 import { ExternalLink, GripVertical, Search, Shield, ShieldAlert } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -147,8 +148,7 @@ function TeamBadge({ participant }: { participant?: ParticipantOption | null }) 
   return (
     <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-black/30 text-primary">
       {participant?.clubBadgePath ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={participant.clubBadgePath} alt={participantClubName(participant)} className="h-full w-full object-contain p-1" />
+        <Image src={participant.clubBadgePath} alt={participantClubName(participant)} width={40} height={40} className="h-full w-full object-contain p-1" />
       ) : (
         <Shield className="h-4 w-4" />
       )}

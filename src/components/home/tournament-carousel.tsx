@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Trophy, Users } from "lucide-react";
 import styles from "@/app/home.module.css";
@@ -33,8 +34,14 @@ function Card({ tournament }: { tournament: CarouselTournament }) {
       <Link href={`/tournaments/${tournament.slug}`} className={styles["home-fx-card-link"]}>
         <div className={styles["home-fx-card-media"]}>
           {tournament.coverUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={tournament.coverUrl} alt="" loading="lazy" className={styles["home-fx-card-cover"]} />
+            <Image
+              src={tournament.coverUrl}
+              alt=""
+              fill
+              sizes="(max-width: 640px) 80vw, 316px"
+              quality={84}
+              className={styles["home-fx-card-cover"]}
+            />
           ) : (
             <div className={styles["home-fx-card-fallback"]} aria-hidden="true">
               <Trophy className="h-7 w-7" />

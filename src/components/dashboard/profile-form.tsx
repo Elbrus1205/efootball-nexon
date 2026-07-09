@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { ChangeEvent, useState, useTransition } from "react";
 import { ArrowLeft, Camera, ImagePlus, Save, ShieldCheck } from "lucide-react";
 import type { ProfileStatusTone, ProfileStatusType } from "@prisma/client";
@@ -16,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { uploadFile } from "@/lib/storage/upload-client";
+import { optimizedImageUrl } from "@/lib/image-optimization";
 
 export function ProfileForm({
   initialValues,
@@ -56,6 +58,7 @@ export function ProfileForm({
     .filter((status): status is (typeof statuses)[number] => Boolean(status));
 
   const displayName = draft.name || "Игрок eFootball Nexon";
+  const bannerPreviewSrc = optimizedImageUrl(bannerPreview, { width: 1600, height: 420, quality: 82, resize: "cover", format: "webp" });
 
   const toggleStatus = (statusId: string) => {
     setDraft((current) => {
@@ -184,18 +187,20 @@ export function ProfileForm({
     <Card className="overflow-hidden border-white/10 bg-white/[0.03]">
       <CardContent className="space-y-6 p-0">
         <div className="relative overflow-hidden border-b border-white/10">
-          <div
-            className="profile-banner-surface h-40 sm:h-52"
-            style={
-              bannerPreview
-                ? {
-                    backgroundImage: `linear-gradient(180deg, rgba(8,10,16,0.18), rgba(8,10,16,0.7)), url(${bannerPreview})`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                  }
-                : undefined
-            }
-          />
+          <div className="profile-banner-surface relative h-40 sm:h-52">
+            {bannerPreviewSrc ? (
+              <Image
+                src={bannerPreviewSrc}
+                alt=""
+                fill
+                priority
+                sizes="(max-width: 768px) 100vw, 1120px"
+                quality={82}
+                className="object-cover"
+              />
+            ) : null}
+            {bannerPreviewSrc ? <div className="absolute inset-0 bg-gradient-to-b from-[rgba(8,10,16,0.18)] to-[rgba(8,10,16,0.7)]" /> : null}
+          </div>
           <div className="profile-banner-grid absolute inset-0 opacity-20" />
 
           <div className="absolute right-4 top-4 sm:right-6 sm:top-6">

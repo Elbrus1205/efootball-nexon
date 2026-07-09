@@ -1,4 +1,5 @@
 import * as AvatarPrimitive from "@radix-ui/react-avatar";
+import { optimizedImageUrl } from "@/lib/image-optimization";
 import { proxyTelegramAssetUrl } from "@/lib/telegram-assets";
 import { cn, getInitials } from "@/lib/utils";
 
@@ -7,7 +8,8 @@ export function Avatar({ className, ...props }: React.ComponentPropsWithoutRef<t
 }
 
 export function AvatarImage({ src, ...props }: React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>) {
-  return <AvatarPrimitive.Image className="aspect-square h-full w-full object-cover" src={proxyTelegramAssetUrl(src)} {...props} />;
+  const proxiedSrc = proxyTelegramAssetUrl(src);
+  return <AvatarPrimitive.Image className="aspect-square h-full w-full object-cover" src={optimizedImageUrl(proxiedSrc, { width: 192, height: 192, quality: 84, resize: "cover", format: "webp" })} {...props} />;
 }
 
 export function AvatarFallback({

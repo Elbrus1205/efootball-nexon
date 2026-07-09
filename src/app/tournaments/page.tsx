@@ -42,11 +42,11 @@ type TournamentListRow = {
 };
 
 function getTournamentCoverUrl(tournament: Pick<TournamentListRow, "id" | "hasCoverImage" | "updatedAt">) {
-  return tournament.hasCoverImage ? `/api/tournaments/${tournament.id}/cover?v=${tournament.updatedAt.getTime()}` : null;
+  return tournament.hasCoverImage ? `/api/tournaments/${tournament.id}/cover?w=720&h=405&q=84&v=${tournament.updatedAt.getTime()}` : null;
 }
 
 function getDivisionCoverUrl(settings: { coverImage: string | null; updatedAt: Date | null }) {
-  return settings.coverImage && settings.updatedAt ? `/api/divisions/cover?v=${settings.updatedAt.getTime()}` : null;
+  return settings.coverImage && settings.updatedAt ? `/api/divisions/cover?w=1280&h=720&q=86&v=${settings.updatedAt.getTime()}` : null;
 }
 
 function loadTournamentList(showTestTournaments: boolean) {

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Archive, CalendarRange, Crown, Medal, Shield, Trophy } from "lucide-react";
 import { TournamentStatus } from "@prisma/client";
 import { Fragment } from "react";
@@ -8,6 +9,7 @@ import { ProfileStatusBadge } from "@/components/profile/profile-status-badge";
 import { getCurrentSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { parsePrizePoolValue } from "@/lib/home-stats";
+import { optimizedImageUrl } from "@/lib/image-optimization";
 import { getPlayerRatings } from "@/lib/ratings";
 import { proxyTelegramAssetUrl } from "@/lib/telegram-assets";
 import { cn, formatDate } from "@/lib/utils";
@@ -159,8 +161,13 @@ export default async function RatingsPage({
                         <div className="flex items-center gap-2 sm:gap-3">
                           <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/20 sm:h-10 sm:w-10">
                             {player.image ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={proxyTelegramAssetUrl(player.image)} alt={player.playerName} className="h-full w-full object-cover" />
+                              <Image
+                                src={optimizedImageUrl(proxyTelegramAssetUrl(player.image), { width: 96, height: 96, quality: 84, resize: "cover", format: "webp" }) ?? player.image}
+                                alt={player.playerName}
+                                width={40}
+                                height={40}
+                                className="h-full w-full object-cover"
+                              />
                             ) : (
                               <Shield className="h-4 w-4 text-zinc-500" />
                             )}

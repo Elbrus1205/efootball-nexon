@@ -3,6 +3,7 @@
 import { ClubSelectionMode, MatchupFormat, SeedingMethod, SortRule, TournamentFormat, TournamentParticipantMode, TournamentStatus } from "@prisma/client";
 import type { PlayoffType } from "@prisma/client";
 import { ChangeEvent, useState } from "react";
+import Image from "next/image";
 import { seedingMethodLabel, sortRuleLabel, tournamentStatusLabel } from "@/lib/admin-display";
 import { FormatBlueprintBuilder } from "@/components/admin/format-blueprint-builder";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { type FormatBlueprint } from "@/lib/format-blueprint";
+import { optimizedImageUrl } from "@/lib/image-optimization";
 import { uploadFile } from "@/lib/storage/upload-client";
 
 type BuilderValues = {
@@ -69,6 +71,13 @@ export function TournamentBuilderForm({
   const [coverUploadError, setCoverUploadError] = useState("");
   const [participantMode, setParticipantMode] = useState(initialValues?.participantMode ?? TournamentParticipantMode.SINGLE);
   const [matchupFormat, setMatchupFormat] = useState(initialValues?.matchupFormat ?? MatchupFormat.SINGLE_MATCH);
+  const coverPreviewSrc = optimizedImageUrl(coverImage, {
+    width: 960,
+    height: 384,
+    quality: 86,
+    resize: "cover",
+    format: "webp",
+  });
 
   const selectedSortRules = initialValues?.sortRules ?? [
     SortRule.POINTS,
@@ -232,8 +241,16 @@ export function TournamentBuilderForm({
             {coverUploadError ? <div className="text-sm text-red-300">{coverUploadError}</div> : null}
             {coverImage ? (
               <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={coverImage} alt="Обложка турнира" className="h-32 w-full rounded-xl object-cover" />
+                <div className="relative h-32 overflow-hidden rounded-xl bg-black/30">
+                  <Image
+                    src={coverPreviewSrc ?? coverImage}
+                    alt="Обложка турнира"
+                    fill
+                    sizes="(min-width: 768px) 50vw, 100vw"
+                    quality={86}
+                    className="object-cover"
+                  />
+                </div>
                 <Button type="button" variant="outline" className="w-full" onClick={() => setCoverImage("")}>
                   Убрать обложку
                 </Button>
