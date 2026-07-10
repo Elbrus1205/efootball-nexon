@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -13,6 +13,56 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getDeviceFingerprint } from "@/lib/device-fingerprint";
 import { startVkIdAuth } from "@/lib/vkid-client";
+
+function calculateAge(dateValue: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) return null;
+  const date = new Date(`${dateValue}T00:00:00Z`);
+  if (Number.isNaN(date.getTime()) || date > new Date()) return null;
+  const now = new Date();
+  let age = now.getUTCFullYear() - date.getUTCFullYear();
+  const monthDelta = now.getUTCMonth() - date.getUTCMonth();
+  if (monthDelta < 0 || (monthDelta === 0 && now.getUTCDate() < date.getUTCDate())) age -= 1;
+  return age;
+}
+
+function ConsentCheckbox({
+  id,
+  checked,
+  onChange,
+  title,
+  children,
+}: {
+  id: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <label
+      htmlFor={id}
+      className={`group flex cursor-pointer gap-2.5 rounded-lg border p-2.5 transition ${
+        checked ? "border-emerald-300/25 bg-emerald-400/10" : "border-white/10 bg-black/20 hover:border-primary/30 hover:bg-white/[0.04]"
+      }`}
+    >
+      <input id={id} type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="sr-only" />
+      <span
+        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
+          checked ? "border-emerald-300/35 bg-emerald-400 text-black" : "border-white/15 bg-white/[0.04] text-transparent"
+        }`}
+      >
+        <Check className="h-3.5 w-3.5" />
+      </span>
+      <span className="min-w-0">
+        <span className="flex items-center gap-2 text-xs font-semibold text-white sm:text-sm">
+          <ShieldCheck className="h-3.5 w-3.5 text-primary sm:h-4 sm:w-4" />
+          {title}
+        </span>
+        <span className="mt-1 block text-[11px] leading-4 text-zinc-400 sm:text-xs sm:leading-5">{children}</span>
+      </span>
+    </label>
+  );
+}
 
 export function AuthForm({
   type,
@@ -34,15 +84,30 @@ export function AuthForm({
   const [challengeToken, setChallengeToken] = useState("");
   const [registrationVerificationStep, setRegistrationVerificationStep] = useState(false);
   const [emailCode, setEmailCode] = useState("");
-  const [legalAccepted, setLegalAccepted] = useState(false);
+  const [guardianVerificationRequired, setGuardianVerificationRequired] = useState(false);
+  const [guardianCode, setGuardianCode] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [guardianFullName, setGuardianFullName] = useState("");
+  const [guardianEmail, setGuardianEmail] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [personalDataConsent, setPersonalDataConsent] = useState(false);
+  const [publicDataConsent, setPublicDataConsent] = useState(false);
   const router = useRouter();
   const requiresLegalAcceptance = type === "register";
-  const externalAuthLegalAccepted = requiresLegalAcceptance ? legalAccepted : true;
+  const registrationAge = requiresLegalAcceptance ? calculateAge(dateOfBirth) : null;
+  const isMinor = registrationAge !== null && registrationAge < 18;
+  const separateConsentsAccepted = termsAccepted && personalDataConsent && publicDataConsent;
+  const registrationDetailsValid =
+    registrationAge !== null &&
+    registrationAge >= 12 &&
+    separateConsentsAccepted &&
+    (!isMinor || (guardianFullName.trim().length >= 5 && guardianEmail.trim().length > 0));
+  const externalRegistrationAllowed = !requiresLegalAcceptance || (registrationDetailsValid && !isMinor);
 
   const ensureLegalAccepted = () => {
-    if (!requiresLegalAcceptance || legalAccepted) return true;
+    if (!requiresLegalAcceptance || registrationDetailsValid) return true;
 
-    toast.error("Сначала примите документы сайта.");
+    toast.error("Укажите дату рождения, данные представителя при необходимости и примите каждое согласие отдельно.");
     return false;
   };
 
@@ -53,10 +118,18 @@ export function AuthForm({
       try {
         if (typeof window === "undefined") return;
 
+        if (requiresLegalAcceptance && !externalRegistrationAllowed) {
+          toast.error(isMinor ? "Пользователи 12–17 лет регистрируются по email с подтверждением представителя." : "Заполните дату рождения и отдельные согласия.");
+          return;
+        }
+
         await startVkIdAuth({
           mode: "auth",
           callbackUrl: `${window.location.origin}${callbackPath}`,
-          legalAccepted: externalAuthLegalAccepted,
+          termsAccepted,
+          personalDataConsent,
+          publicDataConsent,
+          dateOfBirth,
         }, vkAppId);
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Не удалось запустить вход через VK.");
@@ -79,8 +152,14 @@ export function AuthForm({
               email: normalizedEmail,
               password,
               name,
-              legalAccepted,
+              dateOfBirth,
+              termsAccepted,
+              personalDataConsent,
+              publicDataConsent,
+              guardianFullName: isMinor ? guardianFullName : undefined,
+              guardianEmail: isMinor ? guardianEmail : undefined,
               emailCode: registrationVerificationStep ? emailCode : undefined,
+              guardianCode: registrationVerificationStep && guardianVerificationRequired ? guardianCode : undefined,
             }),
           });
           const registerPayload = await res.clone().json().catch(() => null);
@@ -92,8 +171,10 @@ export function AuthForm({
           }
           if (registerPayload?.verificationRequired) {
             setRegistrationVerificationStep(true);
+            setGuardianVerificationRequired(Boolean(registerPayload.guardianVerificationRequired));
             setEmailCode("");
-            toast.success("Код подтверждения отправлен на вашу почту.");
+            setGuardianCode("");
+            toast.success(registerPayload.guardianVerificationRequired ? "Коды отправлены пользователю и законному представителю." : "Код подтверждения отправлен на вашу почту.");
             return;
           }
         }
@@ -144,9 +225,11 @@ export function AuthForm({
 
         setTwoFactorStep(false);
         setRegistrationVerificationStep(false);
+        setGuardianVerificationRequired(false);
         setTwoFactorCode("");
         setChallengeToken("");
         setEmailCode("");
+        setGuardianCode("");
         toast.success(type === "register" ? "Аккаунт создан" : "Вход выполнен");
         router.push("/dashboard");
         router.refresh();
@@ -176,17 +259,56 @@ export function AuthForm({
       </CardHeader>
       <CardContent className="space-y-3">
         {type === "register" && !registrationVerificationStep ? (
-          <div className="space-y-2">
-            <Label htmlFor="name" className="text-xs">Имя</Label>
-            <Input
-              id="name"
-              className="h-10 rounded-lg px-3"
-              minLength={3}
-              maxLength={16}
-              pattern="(?!.*__)[A-Za-z0-9][A-Za-z0-9_]{1,14}[A-Za-z0-9]"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-xs">Игровое имя</Label>
+              <Input
+                id="name"
+                className="h-10 rounded-lg px-3"
+                minLength={3}
+                maxLength={16}
+                pattern="(?!.*__)[A-Za-z0-9][A-Za-z0-9_]{1,14}[A-Za-z0-9]"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dateOfBirth" className="text-xs">Дата рождения</Label>
+              <Input
+                id="dateOfBirth"
+                type="date"
+                className="h-10 rounded-lg px-3"
+                value={dateOfBirth}
+                onChange={(event) => setDateOfBirth(event.target.value)}
+              />
+              {registrationAge !== null && registrationAge < 12 ? <p className="text-xs text-rose-300">Регистрация доступна с 12 лет.</p> : null}
+            </div>
+            {isMinor ? (
+              <div className="space-y-3 rounded-lg border border-amber-300/20 bg-amber-400/10 p-3">
+                <p className="text-xs leading-5 text-amber-100">
+                  Для пользователя 12–17 лет требуется подтверждение законного представителя. Код согласия будет отправлен на его email.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="guardianFullName" className="text-xs">ФИО законного представителя</Label>
+                  <Input
+                    id="guardianFullName"
+                    className="h-10 rounded-lg px-3"
+                    value={guardianFullName}
+                    onChange={(event) => setGuardianFullName(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="guardianEmail" className="text-xs">Email законного представителя</Label>
+                  <Input
+                    id="guardianEmail"
+                    type="email"
+                    className="h-10 rounded-lg px-3"
+                    value={guardianEmail}
+                    onChange={(event) => setGuardianEmail(event.target.value)}
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -204,6 +326,22 @@ export function AuthForm({
               value={emailCode}
               onChange={(event) => setEmailCode(event.target.value)}
             />
+            {guardianVerificationRequired ? (
+              <>
+                <p className="pt-2 text-xs leading-5 text-amber-100">
+                  Второй код отправлен законному представителю. Он должен ознакомиться с документами и передать код только при согласии.
+                </p>
+                <Label htmlFor="guardianCode" className="text-xs">Код законного представителя</Label>
+                <Input
+                  id="guardianCode"
+                  className="h-10 rounded-lg px-3"
+                  inputMode="numeric"
+                  placeholder="Введите 6-значный код"
+                  value={guardianCode}
+                  onChange={(event) => setGuardianCode(event.target.value)}
+                />
+              </>
+            ) : null}
           </div>
         ) : !twoFactorStep ? (
           <>
@@ -232,62 +370,32 @@ export function AuthForm({
         )}
 
         {requiresLegalAcceptance && !twoFactorStep && !registrationVerificationStep ? (
-          <label
-            htmlFor="legalAccepted"
-            className={`group flex cursor-pointer gap-2.5 rounded-lg border p-2.5 transition ${
-              legalAccepted
-                ? "border-emerald-300/25 bg-emerald-400/10"
-                : "border-white/10 bg-black/20 hover:border-primary/30 hover:bg-white/[0.04]"
-            }`}
-          >
-            <input
-              id="legalAccepted"
-              type="checkbox"
-              checked={legalAccepted}
-              onChange={(event) => setLegalAccepted(event.target.checked)}
-              className="sr-only"
-            />
-            <span
-              className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
-                legalAccepted ? "border-emerald-300/35 bg-emerald-400 text-black" : "border-white/15 bg-white/[0.04] text-transparent"
-              }`}
-            >
-              <Check className="h-3.5 w-3.5" />
-            </span>
-            <span className="min-w-0">
-              <span className="flex items-center gap-2 text-xs font-semibold text-white sm:text-sm">
-                <ShieldCheck className="h-3.5 w-3.5 text-primary sm:h-4 sm:w-4" />
-                Принимаю документы сайта
-              </span>
-              <span className="mt-1 block text-[11px] leading-4 text-zinc-400 sm:text-xs sm:leading-5">
-                Я принимаю{" "}
-                <Link className="text-primary transition hover:text-white" href="/terms">
-                  пользовательское соглашение
-                </Link>
-                {", "}
-                <Link className="text-primary transition hover:text-white" href="/privacy">
-                  политику конфиденциальности
-                </Link>
-                {", "}
-                <Link className="text-primary transition hover:text-white" href="/consent">
-                  согласие на обработку данных
-                </Link>
-                {" и "}
-                <Link className="text-primary transition hover:text-white" href="/cookies">
-                  политику cookie
-                </Link>
-                .
-              </span>
-            </span>
-          </label>
+          <div className="space-y-2">
+            <ConsentCheckbox id="termsAccepted" checked={termsAccepted} onChange={setTermsAccepted} title="Принимаю пользовательское соглашение">
+              Подтверждаю, что ознакомился и принимаю{" "}
+              <Link className="text-primary transition hover:text-white" href="/terms">условия использования сервиса</Link>.
+            </ConsentCheckbox>
+            <ConsentCheckbox id="personalDataConsent" checked={personalDataConsent} onChange={setPersonalDataConsent} title="Даю согласие на обработку персональных данных">
+              Это отдельное согласие на регистрацию, авторизацию, безопасность аккаунта и участие в турнирах. Текст{" "}
+              <Link className="text-primary transition hover:text-white" href="/consent">согласия</Link> и{" "}
+              <Link className="text-primary transition hover:text-white" href="/privacy">политика обработки данных</Link>.
+            </ConsentCheckbox>
+            <ConsentCheckbox id="publicDataConsent" checked={publicDataConsent} onChange={setPublicDataConsent} title="Отдельно разрешаю публикацию турнирного профиля">
+              Разрешаю публиковать игровое имя, публичный ID, аватар и bio; турнирную историю, результаты, рейтинг и статистику; привязанные социальные ссылки; часовой пояс и дату регистрации. Согласие можно отозвать обращением оператору.
+            </ConsentCheckbox>
+            <p className="px-1 text-[11px] leading-4 text-zinc-500">
+              На сайте используются только обязательные cookie. Подробнее —{" "}
+              <Link className="text-primary transition hover:text-white" href="/cookies">в политике cookie</Link>.
+            </p>
+          </div>
         ) : null}
 
-        <Button className={`h-10 w-full rounded-lg ${registrationVerificationStep ? "hidden" : ""}`} onClick={submit} disabled={pending || (requiresLegalAcceptance && !legalAccepted)}>
+        <Button className={`h-10 w-full rounded-lg ${registrationVerificationStep ? "hidden" : ""}`} onClick={submit} disabled={pending || (requiresLegalAcceptance && !registrationDetailsValid)}>
           {pending ? "Подождите..." : type === "login" ? (twoFactorStep ? "Подтвердить вход" : "Войти") : "Создать аккаунт"}
         </Button>
 
         {registrationVerificationStep ? (
-          <Button className="h-10 w-full rounded-lg" onClick={submit} disabled={pending || !emailCode.trim()}>
+          <Button className="h-10 w-full rounded-lg" onClick={submit} disabled={pending || !emailCode.trim() || (guardianVerificationRequired && !guardianCode.trim())}>
             {pending ? "Подождите..." : "Подтвердить email"}
           </Button>
         ) : null}
@@ -312,7 +420,9 @@ export function AuthForm({
             className="h-10 w-full rounded-lg"
             onClick={() => {
               setRegistrationVerificationStep(false);
+              setGuardianVerificationRequired(false);
               setEmailCode("");
+              setGuardianCode("");
             }}
           >
             Назад
@@ -326,7 +436,7 @@ export function AuthForm({
                 type="button"
                 className="flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#0077ff] px-3 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,119,255,0.18)] transition hover:bg-[#096de0] disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={() => startVkAuth("/dashboard")}
-                disabled={pending || (requiresLegalAcceptance && !legalAccepted)}
+                disabled={pending || !externalRegistrationAllowed}
               >
                 <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white text-[11px] font-black leading-none text-[#0077ff]">VK</span>
                 Продолжить с VK ID
@@ -335,8 +445,12 @@ export function AuthForm({
                 mode={type}
                 enabled={telegramEnabled}
                 clientId={telegramClientId}
-                legalAccepted={externalAuthLegalAccepted}
                 requireLegalAcceptance={requiresLegalAcceptance}
+                registrationAllowed={externalRegistrationAllowed}
+                dateOfBirth={dateOfBirth}
+                termsAccepted={termsAccepted}
+                personalDataConsent={personalDataConsent}
+                publicDataConsent={publicDataConsent}
               />
             </div>
 

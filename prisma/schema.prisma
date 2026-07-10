@@ -256,6 +256,24 @@ model User {
   legalAcceptedVersion String?
   legalAcceptedIp     String?
   legalAcceptedUserAgent String?               @db.Text
+  dateOfBirth         DateTime?                 @db.Date
+  termsAcceptedAt     DateTime?
+  termsAcceptedVersion String?
+  personalDataConsentAt DateTime?
+  personalDataConsentVersion String?
+  personalDataConsentIp String?
+  personalDataConsentUserAgent String?          @db.Text
+  publicDataConsentAt DateTime?
+  publicDataConsentVersion String?
+  publicDataConsentIp String?
+  publicDataConsentUserAgent String?            @db.Text
+  publicDataConsentCategories String[]          @default([])
+  guardianFullName    String?
+  guardianEmail       String?
+  guardianConsentAt   DateTime?
+  guardianConsentVersion String?
+  guardianConsentIp   String?
+  guardianConsentUserAgent String?              @db.Text
   reliabilityScore    Int                      @default(100)
   reliabilityRestrictedUntil DateTime?
   reliabilityConfirmStreak Int                 @default(0)

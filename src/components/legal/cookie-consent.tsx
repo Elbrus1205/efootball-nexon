@@ -4,20 +4,20 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Cookie, ShieldCheck } from "lucide-react";
 
-const CONSENT_COOKIE = "cookie_consent";
-const CONSENT_VERSION = "1";
-const CONSENT_MAX_AGE_DAYS = 365;
+const NOTICE_COOKIE = "cookie_notice_acknowledged";
+const NOTICE_VERSION = "2";
+const NOTICE_MAX_AGE_DAYS = 365;
 
 function hasStoredConsent() {
   if (typeof document === "undefined") return true;
-  return document.cookie.split("; ").some((entry) => entry === `${CONSENT_COOKIE}=${CONSENT_VERSION}`);
+  return document.cookie.split("; ").some((entry) => entry === `${NOTICE_COOKIE}=${NOTICE_VERSION}`);
 }
 
 function storeConsent() {
   if (typeof document === "undefined") return;
-  const maxAge = CONSENT_MAX_AGE_DAYS * 24 * 60 * 60;
+  const maxAge = NOTICE_MAX_AGE_DAYS * 24 * 60 * 60;
   const secure = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `${CONSENT_COOKIE}=${CONSENT_VERSION}; Max-Age=${maxAge}; Path=/; SameSite=Lax${secure}`;
+  document.cookie = `${NOTICE_COOKIE}=${NOTICE_VERSION}; Max-Age=${maxAge}; Path=/; SameSite=Lax${secure}`;
 }
 
 export function CookieConsent() {
@@ -55,7 +55,7 @@ export function CookieConsent() {
             <div className="min-w-0 space-y-1">
               <div className="text-sm font-black text-white sm:text-base">Мы используем cookie</div>
               <p className="text-xs leading-5 text-zinc-400 sm:text-sm sm:leading-6">
-                Сайт использует обязательные cookie для входа, безопасности и корректной работы турниров. Продолжая пользоваться сайтом, вы соглашаетесь с этим.{" "}
+                Сайт использует только обязательные cookie для входа, безопасности и корректной работы турниров. Сторонняя аналитика и маркетинговые cookie не подключены. Кнопка «Понятно» только закрывает уведомление.{" "}
                 <Link href="/cookies" className="font-semibold text-[#e7cf8f] underline-offset-4 transition hover:text-white hover:underline">
                   Политика cookie
                 </Link>
@@ -77,7 +77,7 @@ export function CookieConsent() {
               className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-black uppercase tracking-[0.06em] text-black shadow-[0_2px_18px_rgba(212,175,55,0.22)] transition-all hover:bg-primary/90 hover:shadow-[0_2px_24px_rgba(212,175,55,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 active:scale-[0.99] sm:w-auto"
             >
               <ShieldCheck className="h-4 w-4" />
-              Принять
+              Понятно
             </button>
           </div>
         </div>

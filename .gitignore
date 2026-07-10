@@ -15,6 +15,7 @@ android-output/
 *.aab
 db-backups/
 db_backups/
+db-backup/
 
 # testing and coverage
 coverage/

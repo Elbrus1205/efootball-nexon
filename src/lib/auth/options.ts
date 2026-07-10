@@ -8,7 +8,7 @@ import { notifySuccessfulLogin } from "@/lib/auth/notifications";
 import { createLoginHistory, createSecuritySession, deleteSecuritySessions, resolveSecurityContext, touchSecuritySession, withDeviceFingerprint } from "@/lib/auth/security";
 import { fetchVkUserProfile } from "@/lib/auth/vk";
 import { db } from "@/lib/db";
-import { getLegalAcceptanceData, isLegalAccepted } from "@/lib/legal-acceptance";
+import { ADULT_AGE, getRegistrationAge, getRegistrationConsentData, hasSeparateRegistrationConsents } from "@/lib/legal-acceptance";
 import { generateFallbackName } from "@/lib/player-name";
 import { generateUniquePublicPlayerId } from "@/lib/public-player-id";
 import { describeTelegramOidcError, verifyAndConsumeTelegramIdToken } from "@/lib/telegram-oidc-server";
@@ -32,6 +32,13 @@ function toSessionImage(value?: string | null) {
   if (value.startsWith("data:")) return null;
   if (value.length > MAX_SESSION_IMAGE_LENGTH) return null;
   return value;
+}
+
+function getAdultSocialRegistrationConsent(credentials: Record<string, string> | undefined, headers: Headers | Record<string, string | string[] | undefined> | undefined) {
+  if (!credentials || !hasSeparateRegistrationConsents(credentials)) return null;
+  const registrationAge = getRegistrationAge(credentials.dateOfBirth);
+  if (!registrationAge || registrationAge.age < ADULT_AGE) return null;
+  return getRegistrationConsentData(headers, { dateOfBirth: registrationAge.dateOfBirth });
 }
 
 export const authOptions: NextAuthOptions = {
@@ -180,7 +187,10 @@ export const authOptions: NextAuthOptions = {
       name: "VK ID",
       credentials: {
         accessToken: { label: "VK Access Token", type: "text" },
-        legalAccepted: { label: "Legal Accepted", type: "text" },
+        dateOfBirth: { label: "Date of Birth", type: "text" },
+        termsAccepted: { label: "Terms Accepted", type: "text" },
+        personalDataConsent: { label: "Personal Data Consent", type: "text" },
+        publicDataConsent: { label: "Public Data Consent", type: "text" },
         fingerprint: { label: "Device Fingerprint", type: "text" },
       },
       async authorize(credentials, req) {
@@ -188,7 +198,7 @@ export const authOptions: NextAuthOptions = {
         if (!accessToken) return null;
 
         const context = withDeviceFingerprint(await resolveSecurityContext(req?.headers), credentials?.fingerprint);
-        const acceptedLegalDocuments = isLegalAccepted(credentials?.legalAccepted);
+        const registrationConsentData = getAdultSocialRegistrationConsent(credentials, req?.headers);
         const vkProfile = await fetchVkUserProfile(accessToken);
 
         let user = await db.user.findUnique({
@@ -228,11 +238,11 @@ export const authOptions: NextAuthOptions = {
               email: user.email ?? vkProfile.email ?? undefined,
               name: nextName,
               image: user.image ?? vkProfile.avatar ?? undefined,
-              ...(!user.legalAcceptedAt && acceptedLegalDocuments ? getLegalAcceptanceData(req?.headers) : {}),
+              ...(!user.personalDataConsentAt && registrationConsentData ? registrationConsentData : {}),
             },
           });
         } else {
-          if (!acceptedLegalDocuments) return null;
+          if (!registrationConsentData) return null;
 
           const displayName = await generateUniqueDisplayName(vkProfile.vkId, vkProfile.fullName ?? "VK Player");
 
@@ -243,7 +253,7 @@ export const authOptions: NextAuthOptions = {
               email: vkProfile.email,
               name: displayName,
               image: vkProfile.avatar,
-              ...getLegalAcceptanceData(req?.headers),
+              ...registrationConsentData,
             },
           });
         }
@@ -284,7 +294,10 @@ export const authOptions: NextAuthOptions = {
       name: "Telegram",
       credentials: {
         idToken: { label: "Telegram ID Token", type: "text" },
-        legalAccepted: { label: "Legal Accepted", type: "text" },
+        dateOfBirth: { label: "Date of Birth", type: "text" },
+        termsAccepted: { label: "Terms Accepted", type: "text" },
+        personalDataConsent: { label: "Personal Data Consent", type: "text" },
+        publicDataConsent: { label: "Public Data Consent", type: "text" },
         fingerprint: { label: "Device Fingerprint", type: "text" },
       },
       async authorize(credentials, req) {
@@ -311,7 +324,7 @@ export const authOptions: NextAuthOptions = {
         const telegramUsername = profile.username?.trim() || generateFallbackName(telegramId);
         const role = telegramId === TELEGRAM_ADMIN_ID ? UserRole.FOUNDER : UserRole.PLAYER;
         const existingRoleUpdate = telegramId === TELEGRAM_ADMIN_ID ? UserRole.FOUNDER : undefined;
-        const acceptedLegalDocuments = isLegalAccepted(credentials?.legalAccepted);
+        const registrationConsentData = getAdultSocialRegistrationConsent(credentials, req?.headers);
 
         let user = await db.user.findUnique({
           where: { telegramId },
@@ -336,12 +349,12 @@ export const authOptions: NextAuthOptions = {
               telegramUsername: profile.username ?? null,
               image: profile.picture || undefined,
               role: existingRoleUpdate,
-              ...(!user.legalAcceptedAt && acceptedLegalDocuments ? getLegalAcceptanceData(req?.headers) : {}),
+              ...(!user.personalDataConsentAt && registrationConsentData ? registrationConsentData : {}),
             },
           });
           console.info("[telegram-auth] updated-existing-user", { telegramId, userId: user.id });
         } else {
-          if (!acceptedLegalDocuments) {
+          if (!registrationConsentData) {
             console.warn("[telegram-auth] legal-acceptance-required", { telegramId });
             return null;
           }
@@ -356,7 +369,7 @@ export const authOptions: NextAuthOptions = {
               image: profile.picture || undefined,
               name: displayName,
               role,
-              ...getLegalAcceptanceData(req?.headers),
+              ...registrationConsentData,
             },
           });
           console.info("[telegram-auth] created-user", { telegramId, userId: user.id });

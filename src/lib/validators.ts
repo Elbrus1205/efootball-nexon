@@ -14,6 +14,7 @@ import {
 import { z } from "zod";
 import { PROFILE_BIO_MAX_LENGTH } from "@/lib/profile";
 import { MAX_SELECTED_PROFILE_STATUSES } from "@/lib/profile-status-style";
+import { ADULT_AGE, getRegistrationAge, MINIMUM_REGISTRATION_AGE } from "@/lib/legal-acceptance";
 
 const optionalIntField = (minimum: number, maximum: number, message?: string) =>
   z.preprocess(
@@ -39,14 +40,44 @@ const playerNameSchema = z
     message: "Нижнее подчёркивание нельзя ставить два и более раз подряд.",
   });
 
-export const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  name: playerNameSchema,
-  legalAccepted: z.boolean().refine(Boolean, {
-    message: "Необходимо принять документы сайта.",
-  }),
-});
+export const registerSchema = z
+  .object({
+    email: z.string().email(),
+    password: z.string().min(8),
+    name: playerNameSchema,
+    dateOfBirth: z.string(),
+    termsAccepted: z.boolean().refine(Boolean, {
+      message: "Необходимо принять пользовательское соглашение.",
+    }),
+    personalDataConsent: z.boolean().refine(Boolean, {
+      message: "Необходимо отдельно дать согласие на обработку персональных данных.",
+    }),
+    publicDataConsent: z.boolean().refine(Boolean, {
+      message: "Для публичного турнирного профиля необходимо отдельное согласие на распространение данных.",
+    }),
+    guardianFullName: z.string().trim().max(160).optional().or(z.literal("")),
+    guardianEmail: z.string().trim().email().optional().or(z.literal("")),
+  })
+  .superRefine((value, context) => {
+    const registrationAge = getRegistrationAge(value.dateOfBirth);
+    if (!registrationAge) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ["dateOfBirth"], message: "Укажите корректную дату рождения." });
+      return;
+    }
+
+    if (registrationAge.age < MINIMUM_REGISTRATION_AGE) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ["dateOfBirth"], message: "Регистрация доступна с 12 лет." });
+    }
+
+    if (registrationAge.age < ADULT_AGE) {
+      if (!value.guardianFullName || value.guardianFullName.trim().length < 5) {
+        context.addIssue({ code: z.ZodIssueCode.custom, path: ["guardianFullName"], message: "Укажите ФИО законного представителя." });
+      }
+      if (!value.guardianEmail) {
+        context.addIssue({ code: z.ZodIssueCode.custom, path: ["guardianEmail"], message: "Укажите email законного представителя." });
+      }
+    }
+  });
 
 export const loginSchema = z.object({
   email: z.string().email(),

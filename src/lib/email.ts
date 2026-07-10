@@ -62,6 +62,55 @@ export async function sendEmailVerificationCode(params: {
   }
 }
 
+export async function sendGuardianConsentCode(params: {
+  email: string;
+  code: string;
+}) {
+  const { apiKey, from } = getEmailConfig();
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXTAUTH_URL ?? "https://efootball-nexon.com";
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;background:#0b1020;color:#fff;padding:24px">
+      <div style="max-width:560px;margin:0 auto;background:#121827;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:28px">
+        <div style="font-size:24px;font-weight:700;margin-bottom:8px">Согласие законного представителя</div>
+        <div style="font-size:14px;line-height:1.7;color:#b7c0d1;margin-bottom:18px">
+          Ваш email указан при регистрации пользователя 12–17 лет. Передайте код регистрирующемуся только в том случае, если вы являетесь его законным представителем, ознакомились с документами сайта и согласны на обработку персональных данных несовершеннолетнего и публикацию его турнирного профиля.
+        </div>
+        <div style="font-size:34px;letter-spacing:10px;font-weight:700;background:#0d1426;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:18px 20px;text-align:center;margin-bottom:18px">
+          ${params.code}
+        </div>
+        <div style="font-size:13px;line-height:1.7;color:#8f9bb2;margin-bottom:14px">
+          Код действует 10 минут. Использование кода подтверждает ваше согласие. Если вы не давали согласия на регистрацию, никому не сообщайте код.
+        </div>
+        <div style="font-size:13px;line-height:1.7">
+          <a href="${appUrl}/terms" style="color:#f6c84c">Пользовательское соглашение</a><br />
+          <a href="${appUrl}/consent" style="color:#f6c84c">Согласие на обработку персональных данных</a><br />
+          <a href="${appUrl}/privacy" style="color:#f6c84c">Политика обработки персональных данных</a>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: params.email,
+      subject: "Согласие представителя — eFootball Nexon",
+      html,
+    }),
+  });
+
+  if (!response.ok) {
+    const payload = await response.text().catch(() => "");
+    throw new Error(payload || "Failed to send guardian consent email");
+  }
+}
+
 export async function sendPasswordResetLink(params: {
   email: string;
   resetUrl: string;

@@ -4,7 +4,6 @@ import { Rajdhani } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/layout/navbar";
 import { SiteFooter } from "@/components/layout/site-footer";
-import { TopMailRuPixel } from "@/components/analytics/top-mail-ru-pixel";
 import { AppProviders } from "@/components/providers/app-providers";
 
 const brandDisplay = Rajdhani({
@@ -87,13 +86,6 @@ export default function RootLayout({
   return (
     <html lang="ru" className="dark">
       <body className={`${eFootballSans.variable} ${eFootballStencil.variable} ${brandDisplay.variable} bg-background font-sans text-foreground antialiased`}>
-        <TopMailRuPixel />
-        <noscript>
-          <div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="https://top-fwz1.mail.ru/counter?id=3765921;js=na" style={{ position: "absolute", left: "-9999px" }} alt="Top.Mail.Ru" />
-          </div>
-        </noscript>
         <AppProviders>
           <div className="min-h-screen bg-hero">
             <Navbar />

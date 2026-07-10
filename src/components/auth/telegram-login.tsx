@@ -10,19 +10,26 @@ export function TelegramLogin({
   mode,
   enabled,
   clientId,
-  legalAccepted = true,
   requireLegalAcceptance = false,
+  registrationAllowed = true,
+  dateOfBirth = "",
+  termsAccepted = false,
+  personalDataConsent = false,
+  publicDataConsent = false,
 }: {
   mode: "login" | "register";
   enabled: boolean;
   clientId?: string;
-  legalAccepted?: boolean;
   requireLegalAcceptance?: boolean;
+  registrationAllowed?: boolean;
+  dateOfBirth?: string;
+  termsAccepted?: boolean;
+  personalDataConsent?: boolean;
+  publicDataConsent?: boolean;
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const isBlockedByLegal = requireLegalAcceptance && !legalAccepted;
-  const effectiveLegalAccepted = requireLegalAcceptance ? legalAccepted : true;
+  const isBlockedByLegal = requireLegalAcceptance && !registrationAllowed;
 
   useEffect(() => {
     if (!enabled || !clientId) return;
@@ -63,7 +70,10 @@ export function TelegramLogin({
 
       const result = await signIn("telegram", {
         idToken,
-        legalAccepted: effectiveLegalAccepted ? "true" : "false",
+        dateOfBirth,
+        termsAccepted: termsAccepted ? "true" : "false",
+        personalDataConsent: personalDataConsent ? "true" : "false",
+        publicDataConsent: publicDataConsent ? "true" : "false",
         callbackUrl: "/dashboard",
         fingerprint: await getDeviceFingerprint(),
         redirect: false,

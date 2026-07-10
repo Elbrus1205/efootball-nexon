@@ -92,7 +92,10 @@ export default function VkCallbackPage() {
 
         const result = await signIn("vkid", {
           accessToken: token.access_token,
-          legalAccepted: intent?.legalAccepted ? "true" : "false",
+          dateOfBirth: intent?.dateOfBirth ?? "",
+          termsAccepted: intent?.termsAccepted ? "true" : "false",
+          personalDataConsent: intent?.personalDataConsent ? "true" : "false",
+          publicDataConsent: intent?.publicDataConsent ? "true" : "false",
           callbackUrl: intent?.callbackUrl || "/dashboard",
           fingerprint: await getDeviceFingerprint(),
           redirect: false,

@@ -7,7 +7,10 @@ const VK_INTENT_KEY = "vkid:intent";
 export type VkAuthIntent = {
   mode: "auth" | "bind";
   callbackUrl: string;
-  legalAccepted?: boolean;
+  dateOfBirth?: string;
+  termsAccepted?: boolean;
+  personalDataConsent?: boolean;
+  publicDataConsent?: boolean;
   appId?: number;
   state?: string;
   codeVerifier?: string;
