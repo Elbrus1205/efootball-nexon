@@ -26,9 +26,10 @@ function RankIcon({ rank }: { rank: number }) {
   return <span className="text-xs font-semibold">{rank}</span>;
 }
 
-function shouldShowRatingChange(changedAt: Date | null) {
+function shouldShowRatingChange(changedAt: Date | string | null) {
   if (!changedAt) return false;
-  return Date.now() - changedAt.getTime() <= 5 * 60 * 1000;
+  const changedAtTime = changedAt instanceof Date ? changedAt.getTime() : Date.parse(changedAt);
+  return Number.isFinite(changedAtTime) && Date.now() - changedAtTime <= 5 * 60 * 1000;
 }
 
 function formatRating(value: number) {
