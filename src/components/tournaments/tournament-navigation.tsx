@@ -60,7 +60,7 @@ export function TournamentNavigation({
                   key={tab.value}
                   value={tab.value}
                   className={cn(
-                    "relative h-11 shrink-0 snap-start gap-2 rounded-xl border border-transparent px-3 text-sm font-semibold text-zinc-400 transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 motion-reduce:transition-none sm:px-4",
+                    "relative inline-flex h-11 shrink-0 snap-start flex-row items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-transparent px-3 text-sm font-semibold text-zinc-400 transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 motion-reduce:transition-none sm:px-4",
                     "hover:border-white/10 hover:bg-white/[0.05] hover:text-white data-[state=active]:border-primary/30 data-[state=active]:bg-primary/10 data-[state=active]:text-white",
                     "after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:origin-center after:scale-x-0 after:rounded-full after:bg-primary after:transition-transform data-[state=active]:after:scale-x-100 motion-reduce:after:transition-none",
                   )}

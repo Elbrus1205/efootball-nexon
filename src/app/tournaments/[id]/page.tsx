@@ -14,7 +14,6 @@ import { TournamentEmptyState } from "@/components/tournaments/tournament-empty-
 import { TournamentHero } from "@/components/tournaments/tournament-hero";
 import { TournamentNavigation } from "@/components/tournaments/tournament-navigation";
 import { TournamentStageSwitcher, type TournamentStageOption } from "@/components/tournaments/tournament-stage-switcher";
-import { TournamentStandings } from "@/components/tournaments/tournament-standings";
 import { TelegramProfileLink } from "@/components/telegram-profile-link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -396,8 +395,6 @@ function StickyHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Retained temporarily as a markup reference while the extracted responsive standings component settles.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function StandingsTable({ rows, highlights = [] }: { rows: LeagueRow[]; highlights?: StandingHighlight[] }) {
   const orderedHighlights = [...highlights].sort((a, b) => a.fromRank - b.fromRank || a.toRank - b.toRank);
   const eliminatedRanges = getEliminatedRanges(orderedHighlights, rows.length);
@@ -1168,23 +1165,25 @@ export default async function TournamentDetailsPage({
 
   return (
     <div className="page-shell space-y-8">
-      <TournamentHero
-        title={tournament.title}
-        description={tournament.description}
-        statusLabel={tournamentStatusLabel[tournament.status]}
-        statusVariant={tournamentStatusVariant[tournament.status]}
-        formatLabel={publicParticipantModeLabel(tournament.participantMode, tournament.rosterSize)}
-        playoffLabel={tournament.playoffType ? playoffTypeLabel[tournament.playoffType] ?? tournament.playoffType : null}
-        startLabel={formatDate(tournament.startsAt)}
-        registrationDeadlineLabel={formatDate(tournament.registrationEndsAt)}
-        stageLabel={currentStage?.name ?? "Ожидает публикации"}
-        participantsLabel={`${activeParticipants.length} / ${tournament.maxParticipants}`}
-        prizePool={tournament.prizePool}
-        coverUrl={tournament.coverImage ? `/api/tournaments/${tournament.id}/cover?w=1280&h=720&q=86` : null}
-        primaryAction={primaryAction}
-        secondaryAction={canCancelRegistration ? <CancelTournamentRegistrationButton tournamentId={tournament.id} /> : null}
-        tournamentId={tournament.id}
-      />
+      <div className="hidden md:block">
+        <TournamentHero
+          title={tournament.title}
+          description={tournament.description}
+          statusLabel={tournamentStatusLabel[tournament.status]}
+          statusVariant={tournamentStatusVariant[tournament.status]}
+          formatLabel={publicParticipantModeLabel(tournament.participantMode, tournament.rosterSize)}
+          playoffLabel={tournament.playoffType ? playoffTypeLabel[tournament.playoffType] ?? tournament.playoffType : null}
+          startLabel={formatDate(tournament.startsAt)}
+          registrationDeadlineLabel={formatDate(tournament.registrationEndsAt)}
+          stageLabel={currentStage?.name ?? "Ожидает публикации"}
+          participantsLabel={`${activeParticipants.length} / ${tournament.maxParticipants}`}
+          prizePool={tournament.prizePool}
+          coverUrl={tournament.coverImage ? `/api/tournaments/${tournament.id}/cover?w=1280&h=720&q=86` : null}
+          primaryAction={primaryAction}
+          secondaryAction={canCancelRegistration ? <CancelTournamentRegistrationButton tournamentId={tournament.id} /> : null}
+          tournamentId={tournament.id}
+        />
+      </div>
 
       {reliabilityWarningText ? <div className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] px-4 py-3 text-sm leading-6 text-amber-100">{reliabilityWarningText}</div> : null}
 
@@ -1217,7 +1216,7 @@ export default async function TournamentDetailsPage({
                               <span className="text-xs text-zinc-500">{groupRows.length} / {groupCapacity || "—"}</span>
                             </div>
                             <div className="p-3 sm:p-4">
-                              {groupRows.length ? <TournamentStandings rows={groupRows} highlights={customStandingHighlights.get(group.orderIndex) ?? []} /> : <TournamentEmptyState title="Группа ещё не сформирована" description="Участники появятся после распределения по группам." />}
+                              {groupRows.length ? <StandingsTable rows={groupRows} highlights={customStandingHighlights.get(group.orderIndex) ?? []} /> : <TournamentEmptyState title="Группа ещё не сформирована" description="Участники появятся после распределения по группам." />}
                             </div>
                             <EmptyGroupSlots slots={emptySlots} />
                           </Card>
@@ -1232,7 +1231,7 @@ export default async function TournamentDetailsPage({
                 return (
                   <Card key={stage.id} className="min-w-0 overflow-hidden p-0">
                     <div className="border-b border-white/10 px-5 py-4 font-semibold text-white">Таблица лиги</div>
-                    <div className="p-3 sm:p-4">{stageTable.length ? <TournamentStandings rows={stageTable} /> : <TournamentEmptyState title="Нет данных таблицы" description="Статистика появится после первых завершённых матчей." />}</div>
+                    <div className="p-3 sm:p-4">{stageTable.length ? <StandingsTable rows={stageTable} /> : <TournamentEmptyState title="Нет данных таблицы" description="Статистика появится после первых завершённых матчей." />}</div>
                   </Card>
                 );
               })}
