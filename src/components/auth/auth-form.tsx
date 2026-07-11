@@ -84,11 +84,8 @@ export function AuthForm({
   const [challengeToken, setChallengeToken] = useState("");
   const [registrationVerificationStep, setRegistrationVerificationStep] = useState(false);
   const [emailCode, setEmailCode] = useState("");
-  const [guardianVerificationRequired, setGuardianVerificationRequired] = useState(false);
-  const [guardianCode, setGuardianCode] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
-  const [guardianFullName, setGuardianFullName] = useState("");
-  const [guardianEmail, setGuardianEmail] = useState("");
+  const [guardianConsent, setGuardianConsent] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [personalDataConsent, setPersonalDataConsent] = useState(false);
   const [publicDataConsent, setPublicDataConsent] = useState(false);
@@ -101,13 +98,13 @@ export function AuthForm({
     registrationAge !== null &&
     registrationAge >= 12 &&
     separateConsentsAccepted &&
-    (!isMinor || (guardianFullName.trim().length >= 5 && guardianEmail.trim().length > 0));
-  const externalRegistrationAllowed = !requiresLegalAcceptance || (registrationDetailsValid && !isMinor);
+    (!isMinor || guardianConsent);
+  const externalRegistrationAllowed = !requiresLegalAcceptance || registrationDetailsValid;
 
   const ensureLegalAccepted = () => {
     if (!requiresLegalAcceptance || registrationDetailsValid) return true;
 
-    toast.error("Укажите дату рождения, данные представителя при необходимости и примите каждое согласие отдельно.");
+    toast.error("Укажите дату рождения и примите каждое необходимое согласие.");
     return false;
   };
 
@@ -119,7 +116,7 @@ export function AuthForm({
         if (typeof window === "undefined") return;
 
         if (requiresLegalAcceptance && !externalRegistrationAllowed) {
-          toast.error(isMinor ? "Пользователи 12–17 лет регистрируются по email с подтверждением представителя." : "Заполните дату рождения и отдельные согласия.");
+          toast.error("Заполните дату рождения и отдельные согласия.");
           return;
         }
 
@@ -129,6 +126,7 @@ export function AuthForm({
           termsAccepted,
           personalDataConsent,
           publicDataConsent,
+          guardianConsent: isMinor ? guardianConsent : undefined,
           dateOfBirth,
         }, vkAppId);
       } catch (error) {
@@ -156,10 +154,8 @@ export function AuthForm({
               termsAccepted,
               personalDataConsent,
               publicDataConsent,
-              guardianFullName: isMinor ? guardianFullName : undefined,
-              guardianEmail: isMinor ? guardianEmail : undefined,
+              guardianConsent: isMinor ? guardianConsent : undefined,
               emailCode: registrationVerificationStep ? emailCode : undefined,
-              guardianCode: registrationVerificationStep && guardianVerificationRequired ? guardianCode : undefined,
             }),
           });
           const registerPayload = await res.clone().json().catch(() => null);
@@ -171,10 +167,8 @@ export function AuthForm({
           }
           if (registerPayload?.verificationRequired) {
             setRegistrationVerificationStep(true);
-            setGuardianVerificationRequired(Boolean(registerPayload.guardianVerificationRequired));
             setEmailCode("");
-            setGuardianCode("");
-            toast.success(registerPayload.guardianVerificationRequired ? "Коды отправлены пользователю и законному представителю." : "Код подтверждения отправлен на вашу почту.");
+            toast.success("Код подтверждения отправлен на вашу почту.");
             return;
           }
         }
@@ -225,11 +219,9 @@ export function AuthForm({
 
         setTwoFactorStep(false);
         setRegistrationVerificationStep(false);
-        setGuardianVerificationRequired(false);
         setTwoFactorCode("");
         setChallengeToken("");
         setEmailCode("");
-        setGuardianCode("");
         toast.success(type === "register" ? "Аккаунт создан" : "Вход выполнен");
         router.push("/dashboard");
         router.refresh();
@@ -284,30 +276,14 @@ export function AuthForm({
               {registrationAge !== null && registrationAge < 12 ? <p className="text-xs text-rose-300">Регистрация доступна с 12 лет.</p> : null}
             </div>
             {isMinor ? (
-              <div className="space-y-3 rounded-lg border border-amber-300/20 bg-amber-400/10 p-3">
-                <p className="text-xs leading-5 text-amber-100">
-                  Для пользователя 12–17 лет требуется подтверждение законного представителя. Код согласия будет отправлен на его email.
-                </p>
-                <div className="space-y-2">
-                  <Label htmlFor="guardianFullName" className="text-xs">ФИО законного представителя</Label>
-                  <Input
-                    id="guardianFullName"
-                    className="h-10 rounded-lg px-3"
-                    value={guardianFullName}
-                    onChange={(event) => setGuardianFullName(event.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="guardianEmail" className="text-xs">Email законного представителя</Label>
-                  <Input
-                    id="guardianEmail"
-                    type="email"
-                    className="h-10 rounded-lg px-3"
-                    value={guardianEmail}
-                    onChange={(event) => setGuardianEmail(event.target.value)}
-                  />
-                </div>
-              </div>
+              <ConsentCheckbox
+                id="guardianConsent"
+                checked={guardianConsent}
+                onChange={setGuardianConsent}
+                title="Законный представитель даёт согласие"
+              >
+                Подтверждаю, что законный представитель ознакомился с документами сайта и согласен на регистрацию, обработку персональных данных несовершеннолетнего и публикацию его турнирного профиля.
+              </ConsentCheckbox>
             ) : null}
           </div>
         ) : null}
@@ -326,22 +302,6 @@ export function AuthForm({
               value={emailCode}
               onChange={(event) => setEmailCode(event.target.value)}
             />
-            {guardianVerificationRequired ? (
-              <>
-                <p className="pt-2 text-xs leading-5 text-amber-100">
-                  Второй код отправлен законному представителю. Он должен ознакомиться с документами и передать код только при согласии.
-                </p>
-                <Label htmlFor="guardianCode" className="text-xs">Код законного представителя</Label>
-                <Input
-                  id="guardianCode"
-                  className="h-10 rounded-lg px-3"
-                  inputMode="numeric"
-                  placeholder="Введите 6-значный код"
-                  value={guardianCode}
-                  onChange={(event) => setGuardianCode(event.target.value)}
-                />
-              </>
-            ) : null}
           </div>
         ) : !twoFactorStep ? (
           <>
@@ -395,7 +355,7 @@ export function AuthForm({
         </Button>
 
         {registrationVerificationStep ? (
-          <Button className="h-10 w-full rounded-lg" onClick={submit} disabled={pending || !emailCode.trim() || (guardianVerificationRequired && !guardianCode.trim())}>
+          <Button className="h-10 w-full rounded-lg" onClick={submit} disabled={pending || !emailCode.trim()}>
             {pending ? "Подождите..." : "Подтвердить email"}
           </Button>
         ) : null}
@@ -420,9 +380,7 @@ export function AuthForm({
             className="h-10 w-full rounded-lg"
             onClick={() => {
               setRegistrationVerificationStep(false);
-              setGuardianVerificationRequired(false);
               setEmailCode("");
-              setGuardianCode("");
             }}
           >
             Назад
@@ -451,6 +409,7 @@ export function AuthForm({
                 termsAccepted={termsAccepted}
                 personalDataConsent={personalDataConsent}
                 publicDataConsent={publicDataConsent}
+                guardianConsent={guardianConsent}
               />
             </div>
 

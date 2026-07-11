@@ -11,6 +11,7 @@ export type VkAuthIntent = {
   termsAccepted?: boolean;
   personalDataConsent?: boolean;
   publicDataConsent?: boolean;
+  guardianConsent?: boolean;
   appId?: number;
   state?: string;
   codeVerifier?: string;

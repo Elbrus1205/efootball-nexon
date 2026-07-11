@@ -96,6 +96,7 @@ export default function VkCallbackPage() {
           termsAccepted: intent?.termsAccepted ? "true" : "false",
           personalDataConsent: intent?.personalDataConsent ? "true" : "false",
           publicDataConsent: intent?.publicDataConsent ? "true" : "false",
+          guardianConsent: intent?.guardianConsent ? "true" : "false",
           callbackUrl: intent?.callbackUrl || "/dashboard",
           fingerprint: await getDeviceFingerprint(),
           redirect: false,

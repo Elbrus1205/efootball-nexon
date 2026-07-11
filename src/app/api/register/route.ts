@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import { getActiveProfileStatusWhere } from "@/lib/profile-status-query";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth/session";
-import { generateVerificationCode, hashVerificationCode, sendEmailVerificationCode, sendGuardianConsentCode } from "@/lib/email";
-import { ADULT_AGE, getRegistrationAge, getRegistrationConsentData, LEGAL_ACCEPTANCE_REQUIRED_MESSAGE } from "@/lib/legal-acceptance";
+import { generateVerificationCode, hashVerificationCode, sendEmailVerificationCode } from "@/lib/email";
+import { getRegistrationAge, getRegistrationConsentData, LEGAL_ACCEPTANCE_REQUIRED_MESSAGE } from "@/lib/legal-acceptance";
 import { generateUniquePublicPlayerId } from "@/lib/public-player-id";
 import { resolveRequestTimeZone } from "@/lib/time-zone";
 import { DISPLAY_NAME_TAKEN_MESSAGE, isDisplayNameTaken, isDisplayNameUniqueError, normalizeDisplayName } from "@/lib/user-names";
@@ -14,10 +14,6 @@ const REGISTER_CODE_TTL_MS = 10 * 60 * 1000;
 
 function getRegisterCodeIdentifier(email: string) {
   return `register-email:${email}`;
-}
-
-function getGuardianCodeIdentifier(email: string, guardianEmail: string) {
-  return `register-guardian:${email}:${guardianEmail}`;
 }
 
 export async function POST(request: Request) {
@@ -31,8 +27,7 @@ export async function POST(request: Request) {
       fieldErrors.personalDataConsent?.[0] ??
       fieldErrors.publicDataConsent?.[0] ??
       fieldErrors.dateOfBirth?.[0] ??
-      fieldErrors.guardianFullName?.[0] ??
-      fieldErrors.guardianEmail?.[0] ??
+      fieldErrors.guardianConsent?.[0] ??
       fieldErrors.email?.[0] ??
       fieldErrors.password?.[0] ??
       fieldErrors.name?.[0] ??
@@ -45,16 +40,8 @@ export async function POST(request: Request) {
   const normalizedEmail = body.email.trim().toLowerCase();
   const normalizedName = normalizeDisplayName(body.name);
   const emailCode = String((rawBody as { emailCode?: unknown }).emailCode ?? "").trim();
-  const guardianCode = String((rawBody as { guardianCode?: unknown }).guardianCode ?? "").trim();
   const registrationAge = getRegistrationAge(body.dateOfBirth)!;
-  const isMinor = registrationAge.age < ADULT_AGE;
-  const guardianFullName = isMinor ? body.guardianFullName?.trim() ?? "" : "";
-  const guardianEmail = isMinor ? body.guardianEmail?.trim().toLowerCase() ?? "" : "";
   const requestTimeZone = resolveRequestTimeZone(request.headers);
-
-  if (isMinor && guardianEmail === normalizedEmail) {
-    return NextResponse.json({ error: "Email законного представителя должен отличаться от email пользователя." }, { status: 400 });
-  }
   const existing = await db.user.findFirst({
     where: {
       email: {
@@ -73,17 +60,12 @@ export async function POST(request: Request) {
   }
 
   const identifier = getRegisterCodeIdentifier(normalizedEmail);
-  const guardianIdentifier = isMinor ? getGuardianCodeIdentifier(normalizedEmail, guardianEmail) : null;
-
   if (!emailCode) {
     const code = generateVerificationCode();
     const token = hashVerificationCode(`${normalizedEmail}:${code}`);
-    const guardianVerificationCode = isMinor ? generateVerificationCode() : null;
-    const guardianToken = guardianIdentifier && guardianVerificationCode ? hashVerificationCode(`${guardianIdentifier}:${guardianVerificationCode}`) : null;
 
     await db.$transaction([
       db.verificationToken.deleteMany({ where: { identifier } }),
-      ...(guardianIdentifier ? [db.verificationToken.deleteMany({ where: { identifier: guardianIdentifier } })] : []),
       db.verificationToken.create({
         data: {
           identifier,
@@ -91,36 +73,20 @@ export async function POST(request: Request) {
           expires: new Date(Date.now() + REGISTER_CODE_TTL_MS),
         },
       }),
-      ...(guardianIdentifier && guardianToken
-        ? [
-            db.verificationToken.create({
-              data: {
-                identifier: guardianIdentifier,
-                token: guardianToken,
-                expires: new Date(Date.now() + REGISTER_CODE_TTL_MS),
-              },
-            }),
-          ]
-        : []),
     ]);
 
     try {
-      await Promise.all([
-        sendEmailVerificationCode({ email: normalizedEmail, code }),
-        ...(guardianVerificationCode ? [sendGuardianConsentCode({ email: guardianEmail, code: guardianVerificationCode })] : []),
-      ]);
+      await sendEmailVerificationCode({ email: normalizedEmail, code });
     } catch {
-      await db.verificationToken.deleteMany({
-        where: { identifier: { in: [identifier, ...(guardianIdentifier ? [guardianIdentifier] : [])] } },
-      });
+      await db.verificationToken.deleteMany({ where: { identifier } });
 
       return NextResponse.json(
-        { error: "Не удалось отправить код пользователю или законному представителю. Проверьте email и повторите попытку." },
+        { error: "Не удалось отправить код. Проверьте email и повторите попытку." },
         { status: 500 },
       );
     }
 
-    return NextResponse.json({ ok: true, verificationRequired: true, guardianVerificationRequired: isMinor });
+    return NextResponse.json({ ok: true, verificationRequired: true });
   }
 
   if (!/^\d{6}$/.test(emailCode)) {
@@ -141,27 +107,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Код неверный или уже истёк." }, { status: 400 });
   }
 
-  let guardianVerification: { identifier: string; token: string; expires: Date } | null = null;
-  if (isMinor && guardianIdentifier) {
-    if (!/^\d{6}$/.test(guardianCode)) {
-      return NextResponse.json({ error: "Введите 6-значный код, отправленный законному представителю." }, { status: 400 });
-    }
-
-    const guardianToken = hashVerificationCode(`${guardianIdentifier}:${guardianCode}`);
-    guardianVerification = await db.verificationToken.findUnique({
-      where: {
-        identifier_token: {
-          identifier: guardianIdentifier,
-          token: guardianToken,
-        },
-      },
-    });
-
-    if (!guardianVerification || guardianVerification.expires < new Date()) {
-      return NextResponse.json({ error: "Код законного представителя неверный или уже истёк." }, { status: 400 });
-    }
-  }
-
   const passwordHash = await hash(body.password, 10);
 
   const user = await db
@@ -177,14 +122,12 @@ export async function POST(request: Request) {
           timeZoneUpdatedAt: requestTimeZone ? new Date() : null,
           ...getRegistrationConsentData(request.headers, {
             dateOfBirth: registrationAge.dateOfBirth,
-            guardianFullName,
-            guardianEmail,
           }),
         },
       });
 
       await tx.verificationToken.deleteMany({
-        where: { identifier: { in: [identifier, ...(guardianIdentifier ? [guardianIdentifier] : [])] } },
+        where: { identifier },
       });
 
       return created;

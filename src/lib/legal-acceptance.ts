@@ -1,4 +1,4 @@
-export const LEGAL_DOCUMENTS_VERSION = "2026-07-10";
+export const LEGAL_DOCUMENTS_VERSION = "2026-07-11";
 export const TERMS_VERSION = LEGAL_DOCUMENTS_VERSION;
 export const PERSONAL_DATA_CONSENT_VERSION = LEGAL_DOCUMENTS_VERSION;
 export const PUBLIC_DATA_CONSENT_VERSION = LEGAL_DOCUMENTS_VERSION;
@@ -81,8 +81,6 @@ export function getRegistrationConsentData(
   headers: HeaderSource,
   input: {
     dateOfBirth: Date;
-    guardianFullName?: string | null;
-    guardianEmail?: string | null;
   },
 ) {
   const acceptedAt = new Date();
@@ -105,8 +103,8 @@ export function getRegistrationConsentData(
     publicDataConsentIp: ip,
     publicDataConsentUserAgent: userAgent || null,
     publicDataConsentCategories: [...PUBLIC_DATA_CONSENT_CATEGORIES],
-    guardianFullName: isMinor ? input.guardianFullName?.trim() || null : null,
-    guardianEmail: isMinor ? input.guardianEmail?.trim().toLowerCase() || null : null,
+    guardianFullName: null,
+    guardianEmail: null,
     guardianConsentAt: isMinor ? acceptedAt : null,
     guardianConsentVersion: isMinor ? GUARDIAN_CONSENT_VERSION : null,
     guardianConsentIp: isMinor ? ip : null,

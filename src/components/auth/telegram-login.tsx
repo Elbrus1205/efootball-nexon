@@ -16,6 +16,7 @@ export function TelegramLogin({
   termsAccepted = false,
   personalDataConsent = false,
   publicDataConsent = false,
+  guardianConsent = false,
 }: {
   mode: "login" | "register";
   enabled: boolean;
@@ -26,6 +27,7 @@ export function TelegramLogin({
   termsAccepted?: boolean;
   personalDataConsent?: boolean;
   publicDataConsent?: boolean;
+  guardianConsent?: boolean;
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +76,7 @@ export function TelegramLogin({
         termsAccepted: termsAccepted ? "true" : "false",
         personalDataConsent: personalDataConsent ? "true" : "false",
         publicDataConsent: publicDataConsent ? "true" : "false",
+        guardianConsent: guardianConsent ? "true" : "false",
         callbackUrl: "/dashboard",
         fingerprint: await getDeviceFingerprint(),
         redirect: false,

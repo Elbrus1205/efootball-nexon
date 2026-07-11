@@ -55,8 +55,7 @@ export const registerSchema = z
     publicDataConsent: z.boolean().refine(Boolean, {
       message: "Для публичного турнирного профиля необходимо отдельное согласие на распространение данных.",
     }),
-    guardianFullName: z.string().trim().max(160).optional().or(z.literal("")),
-    guardianEmail: z.string().trim().email().optional().or(z.literal("")),
+    guardianConsent: z.boolean().optional(),
   })
   .superRefine((value, context) => {
     const registrationAge = getRegistrationAge(value.dateOfBirth);
@@ -69,13 +68,12 @@ export const registerSchema = z
       context.addIssue({ code: z.ZodIssueCode.custom, path: ["dateOfBirth"], message: "Регистрация доступна с 12 лет." });
     }
 
-    if (registrationAge.age < ADULT_AGE) {
-      if (!value.guardianFullName || value.guardianFullName.trim().length < 5) {
-        context.addIssue({ code: z.ZodIssueCode.custom, path: ["guardianFullName"], message: "Укажите ФИО законного представителя." });
-      }
-      if (!value.guardianEmail) {
-        context.addIssue({ code: z.ZodIssueCode.custom, path: ["guardianEmail"], message: "Укажите email законного представителя." });
-      }
+    if (registrationAge.age < ADULT_AGE && !value.guardianConsent) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["guardianConsent"],
+        message: "Необходимо согласие законного представителя.",
+      });
     }
   });
 

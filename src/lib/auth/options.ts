@@ -34,10 +34,11 @@ function toSessionImage(value?: string | null) {
   return value;
 }
 
-function getAdultSocialRegistrationConsent(credentials: Record<string, string> | undefined, headers: Headers | Record<string, string | string[] | undefined> | undefined) {
+function getSocialRegistrationConsent(credentials: Record<string, string> | undefined, headers: Headers | Record<string, string | string[] | undefined> | undefined) {
   if (!credentials || !hasSeparateRegistrationConsents(credentials)) return null;
   const registrationAge = getRegistrationAge(credentials.dateOfBirth);
-  if (!registrationAge || registrationAge.age < ADULT_AGE) return null;
+  if (!registrationAge || registrationAge.age < 12) return null;
+  if (registrationAge.age < ADULT_AGE && credentials.guardianConsent !== "true") return null;
   return getRegistrationConsentData(headers, { dateOfBirth: registrationAge.dateOfBirth });
 }
 
@@ -191,6 +192,7 @@ export const authOptions: NextAuthOptions = {
         termsAccepted: { label: "Terms Accepted", type: "text" },
         personalDataConsent: { label: "Personal Data Consent", type: "text" },
         publicDataConsent: { label: "Public Data Consent", type: "text" },
+        guardianConsent: { label: "Guardian Consent", type: "text" },
         fingerprint: { label: "Device Fingerprint", type: "text" },
       },
       async authorize(credentials, req) {
@@ -198,7 +200,7 @@ export const authOptions: NextAuthOptions = {
         if (!accessToken) return null;
 
         const context = withDeviceFingerprint(await resolveSecurityContext(req?.headers), credentials?.fingerprint);
-        const registrationConsentData = getAdultSocialRegistrationConsent(credentials, req?.headers);
+        const registrationConsentData = getSocialRegistrationConsent(credentials, req?.headers);
         const vkProfile = await fetchVkUserProfile(accessToken);
 
         let user = await db.user.findUnique({
@@ -298,6 +300,7 @@ export const authOptions: NextAuthOptions = {
         termsAccepted: { label: "Terms Accepted", type: "text" },
         personalDataConsent: { label: "Personal Data Consent", type: "text" },
         publicDataConsent: { label: "Public Data Consent", type: "text" },
+        guardianConsent: { label: "Guardian Consent", type: "text" },
         fingerprint: { label: "Device Fingerprint", type: "text" },
       },
       async authorize(credentials, req) {
@@ -324,7 +327,7 @@ export const authOptions: NextAuthOptions = {
         const telegramUsername = profile.username?.trim() || generateFallbackName(telegramId);
         const role = telegramId === TELEGRAM_ADMIN_ID ? UserRole.FOUNDER : UserRole.PLAYER;
         const existingRoleUpdate = telegramId === TELEGRAM_ADMIN_ID ? UserRole.FOUNDER : undefined;
-        const registrationConsentData = getAdultSocialRegistrationConsent(credentials, req?.headers);
+        const registrationConsentData = getSocialRegistrationConsent(credentials, req?.headers);
 
         let user = await db.user.findUnique({
           where: { telegramId },
