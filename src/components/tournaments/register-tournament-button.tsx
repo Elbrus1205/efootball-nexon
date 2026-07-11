@@ -269,7 +269,7 @@ export function RegisterTournamentButton({
         <Button size="lg" onClick={() => submit()} disabled={isPending}>
           {isPending ? "Регистрация..." : "Зарегистрироваться"}
         </Button>
-        {message ? <div className="text-sm text-red-300">{message}</div> : null}
+        {message ? <div aria-live="polite" className="text-sm text-red-300">{message}</div> : null}
         {regulationsModal}
       </div>
     );
@@ -281,7 +281,7 @@ export function RegisterTournamentButton({
         <Button size="lg" onClick={openClubSelection} disabled={isPending}>
           {isPending ? "Проверяем..." : "Зарегистрироваться"}
         </Button>
-        {message ? <div className="text-sm text-red-300">{message}</div> : null}
+        {message ? <div aria-live="polite" className="text-sm text-red-300">{message}</div> : null}
         {regulationsModal}
       </div>
 

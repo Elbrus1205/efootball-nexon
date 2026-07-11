@@ -239,7 +239,7 @@ export function MyMatchCard({
                   </span>
                 </div>
               ) : canSubmit ? (
-                <div className="flex items-center gap-1 rounded-md border border-white/10 bg-black/35 px-2.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                <div className="flex min-h-11 items-center gap-1 rounded-md border border-white/10 bg-black/35 px-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                   <input
                     type="number"
                     min={0}
@@ -248,7 +248,7 @@ export function MyMatchCard({
                     aria-label={isPenaltyInputStep ? "Пенальти, ваш счёт" : "Ваш счёт"}
                     value={player1ScoreInput}
                     onChange={(e) => setPlayer1ScoreInput(e.target.value)}
-                    className="w-7 bg-transparent text-center text-xl font-black tabular-nums text-white caret-primary outline-none placeholder:text-zinc-700 [appearance:textfield] focus:text-primary [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    className="h-11 w-9 bg-transparent text-center text-xl font-black tabular-nums text-white caret-primary outline-none placeholder:text-zinc-700 [appearance:textfield] focus:text-primary [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                   />
                   <span className="text-base font-semibold text-zinc-600">:</span>
                   <input
@@ -259,7 +259,7 @@ export function MyMatchCard({
                     aria-label={isPenaltyInputStep ? "Пенальти, счёт соперника" : "Счёт соперника"}
                     value={player2ScoreInput}
                     onChange={(e) => setPlayer2ScoreInput(e.target.value)}
-                    className="w-7 bg-transparent text-center text-xl font-black tabular-nums text-white caret-primary outline-none placeholder:text-zinc-700 [appearance:textfield] focus:text-primary [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    className="h-11 w-9 bg-transparent text-center text-xl font-black tabular-nums text-white caret-primary outline-none placeholder:text-zinc-700 [appearance:textfield] focus:text-primary [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                   />
                 </div>
               ) : (
@@ -298,7 +298,7 @@ export function MyMatchCard({
           <button
             onClick={onSubmit}
             disabled={submitDisabled}
-            className="mt-2.5 inline-flex h-10 w-full items-center justify-center rounded-lg bg-primary px-3 text-[10px] font-black uppercase tracking-[0.08em] text-black shadow-[0_2px_18px_rgba(33,241,168,0.22)] transition-all hover:bg-primary/90 hover:shadow-[0_2px_24px_rgba(33,241,168,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 active:scale-[0.99] disabled:pointer-events-none disabled:bg-white/10 disabled:text-zinc-500 disabled:shadow-none sm:mt-3 sm:h-11 sm:text-[11px]"
+            className="mt-2.5 inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary px-3 text-[10px] font-black uppercase tracking-[0.08em] text-black shadow-[0_2px_18px_rgba(33,241,168,0.22)] transition-all hover:bg-primary/90 hover:shadow-[0_2px_24px_rgba(33,241,168,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 active:scale-[0.99] disabled:pointer-events-none disabled:bg-white/10 disabled:text-zinc-500 disabled:shadow-none sm:mt-3 sm:text-[11px]"
           >
             <span className="truncate">{isPending ? "Отправка..." : isPenaltyInputStep ? "Отправить" : "Подтвердить"}</span>
           </button>
@@ -306,7 +306,7 @@ export function MyMatchCard({
 
         {canSubmit ? (
           <div className="mt-2 flex items-center justify-between gap-2">
-            <p className="min-w-0 flex-1 text-[11px] leading-snug text-zinc-500">{message}</p>
+            <p aria-live="polite" className="min-w-0 flex-1 text-[11px] leading-snug text-zinc-500">{message}</p>
             {attemptsLeft > 0 && !waitingForOpponent ? (
               <div className="flex shrink-0 items-center gap-1.5" title={`Осталось попыток: ${attemptsLeft}`}>
                 <span className="hidden text-[10px] uppercase tracking-[0.1em] text-zinc-600 sm:inline">Попытки</span>
@@ -335,7 +335,7 @@ export function MyMatchCard({
               <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-red-400" />
               <span className="truncate">Спор — результат выставит администрация.</span>
             </div>
-            <Button asChild variant="outline" size="sm" className="h-8 shrink-0 border-red-300/20 bg-red-500/10 px-3 text-xs text-red-100 hover:bg-red-500/20 hover:text-white">
+            <Button asChild variant="outline" size="sm" className="min-h-11 shrink-0 border-red-300/20 bg-red-500/10 px-3 text-xs text-red-100 hover:bg-red-500/20 hover:text-white">
               <Link href={disputeHref}>Открыть спор</Link>
             </Button>
           </div>

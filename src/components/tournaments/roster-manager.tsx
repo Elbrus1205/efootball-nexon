@@ -179,7 +179,7 @@ export function RosterManager({
                     size="sm"
                     variant="outline"
                     disabled={isPending}
-                    className="h-8 shrink-0 gap-1.5 rounded-lg border-rose-400/25 px-2 text-xs text-rose-100 hover:border-rose-300/45 hover:bg-rose-500/10"
+                    className="min-h-11 shrink-0 gap-1.5 rounded-lg border-rose-400/25 px-3 text-xs text-rose-100 hover:border-rose-300/45 hover:bg-rose-500/10"
                     onClick={() => removeMember(member.id, member.status)}
                   >
                     {member.status === TeamInviteStatus.PENDING ? <X className="h-3.5 w-3.5" /> : <Trash2 className="h-3.5 w-3.5" />}
@@ -192,7 +192,7 @@ export function RosterManager({
         </div>
       ) : null}
 
-      {message ? <div className="rounded-xl border border-rose-400/25 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{message}</div> : null}
+      {message ? <div aria-live="polite" className="rounded-xl border border-rose-400/25 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{message}</div> : null}
     </Card>
   );
 }

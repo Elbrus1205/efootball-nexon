@@ -1,5 +1,5 @@
-import { ClubSelectionMode, MatchStatus, ParticipantStatus, StageType, TournamentFormat, TournamentParticipantMode, TournamentStatus } from "@prisma/client";
-import { AlertTriangle, Send } from "lucide-react";
+import { ClubSelectionMode, MatchStatus, ParticipantStatus, StageType, TournamentFormat, TournamentStatus } from "@prisma/client";
+import { Search, Send } from "lucide-react";
 import { unstable_noStore as noStore } from "next/cache";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -10,12 +10,15 @@ import { MyMatchCard } from "@/components/tournaments/my-match-card";
 import { RegisterTournamentButton } from "@/components/tournaments/register-tournament-button";
 import { RosterManager } from "@/components/tournaments/roster-manager";
 import { TournamentScheduleView } from "@/components/tournaments/tournament-schedule-view";
-import { TournamentStructureSwitcher, type TournamentStructureOption } from "@/components/tournaments/tournament-structure-switcher";
+import { TournamentEmptyState } from "@/components/tournaments/tournament-empty-state";
+import { TournamentHero } from "@/components/tournaments/tournament-hero";
+import { TournamentNavigation } from "@/components/tournaments/tournament-navigation";
+import { TournamentStageSwitcher, type TournamentStageOption } from "@/components/tournaments/tournament-stage-switcher";
+import { TournamentStandings } from "@/components/tournaments/tournament-standings";
 import { TelegramProfileLink } from "@/components/telegram-profile-link";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TabsContent } from "@/components/ui/tabs";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getAvailableClubs } from "@/lib/clubs";
 import {
@@ -30,6 +33,13 @@ import { RELIABILITY_REGISTRATION_THRESHOLD } from "@/lib/services/reliability";
 import { shouldSyncTournamentRegistrationLifecycle, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { getTelegramProfileLinks, hasPublicTelegramUsername, hasTelegramRegistrationContact } from "@/lib/social-links";
 import { formatDate } from "@/lib/utils";
+import {
+  buildLeagueTable as buildPublicLeagueTable,
+  getTournamentTabs,
+  isTournamentTabValue as isPublicTournamentTabValue,
+  participantModeLabel as publicParticipantModeLabel,
+  stagePresentationState,
+} from "@/lib/tournament-public-view";
 
 type LeagueRow = {
   id: string;
@@ -86,24 +96,8 @@ const CUSTOM_STANDING_HIGHLIGHT_STYLES = [
   },
 ] as const;
 
-const tournamentTabTriggerClass =
-  "shrink-0 whitespace-nowrap border border-white/10 bg-white/[0.04] px-3.5 py-2 text-[13px] font-bold text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-amber-300/35 hover:bg-amber-300/10 hover:text-amber-50 data-[state=active]:border-amber-300/45 data-[state=active]:bg-amber-300/15 data-[state=active]:text-amber-100 data-[state=active]:shadow-[0_0_18px_rgba(33,241,168,0.14),inset_0_1px_0_rgba(255,255,255,0.08)] sm:px-4";
-
-const tournamentTabValues = ["structure", "matches", "my-matches", "roster", "participants", "rules"] as const;
-type TournamentTabValue = (typeof tournamentTabValues)[number];
-
-function isTournamentTabValue(value?: string): value is TournamentTabValue {
-  return Boolean(value && (tournamentTabValues as readonly string[]).includes(value));
-}
-
 function normalizeSearchText(value: string | null | undefined) {
   return (value ?? "").trim().toLowerCase();
-}
-
-function participantModeLabel(mode: TournamentParticipantMode, rosterSize: number) {
-  if (mode === TournamentParticipantMode.SINGLE) return "1x1";
-  if (mode === TournamentParticipantMode.COOP) return `${rosterSize}x${rosterSize}`;
-  return `Команды ${rosterSize}`;
 }
 
 function scheduleMatchTime(match: { scheduledAt?: Date | string | null; createdAt: Date | string; schedules: Array<{ startsAt: Date | string }> }) {
@@ -294,110 +288,6 @@ function resolveReplacementRegistrationId(entryId: string, replacements: Map<str
   return current;
 }
 
-function buildLeagueTable(
-  participants: Array<{
-    id: string;
-    userId: string;
-    status?: ParticipantStatus;
-    notes?: string | null;
-    clubSlug: string | null;
-    clubName: string | null;
-    clubBadgePath: string | null;
-    user: { id: string; name: string | null };
-  }>,
-  matches: Array<{
-    status?: MatchStatus;
-    player1Id: string | null;
-    player2Id: string | null;
-    participant1EntryId?: string | null;
-    participant2EntryId?: string | null;
-    player1Score: number | null;
-    player2Score: number | null;
-  }>,
-  clubsBySlug: Map<string, { name: string; imagePath: string }>,
-  scoring: { pointsForWin?: number | null; pointsForDraw?: number | null; pointsForLoss?: number | null } = {},
-) {
-  const table = new Map<string, LeagueRow>();
-  const pointsForWin = scoring.pointsForWin ?? 3;
-  const pointsForDraw = scoring.pointsForDraw ?? 1;
-  const pointsForLoss = scoring.pointsForLoss ?? 0;
-  const participantIds = new Set(participants.map((entry) => entry.id));
-  const replacementByEntryId = new Map(
-    participants
-      .filter((entry) => entry.status === ParticipantStatus.REMOVED)
-      .map((entry) => [entry.id, getReplacementRegistrationId(entry.notes)])
-      .filter((item): item is [string, string] => Boolean(item[1] && participantIds.has(item[1]))),
-  );
-
-  for (const entry of participants.filter((item) => item.status !== ParticipantStatus.REMOVED && item.status !== ParticipantStatus.REJECTED)) {
-    const playerName = getPlayerDisplayName(entry.user);
-    table.set(entry.id, {
-      id: entry.user.id,
-      playerId: entry.user.id,
-      playerName,
-      clubName: resolveClubName(entry, clubsBySlug, playerName),
-      clubBadgePath: resolveClubBadgePath(entry, clubsBySlug),
-      played: 0,
-      wins: 0,
-      draws: 0,
-      losses: 0,
-      goalDifference: 0,
-      points: 0,
-    });
-  }
-
-  for (const match of matches) {
-    if (match.status && match.status !== MatchStatus.CONFIRMED && match.status !== MatchStatus.FINISHED) continue;
-    if (!match.participant1EntryId || !match.participant2EntryId) continue;
-    if (match.player1Score === null || match.player2Score === null) continue;
-
-    const player1 = table.get(resolveReplacementRegistrationId(match.participant1EntryId, replacementByEntryId));
-    const player2 = table.get(resolveReplacementRegistrationId(match.participant2EntryId, replacementByEntryId));
-    if (!player1 || !player2) continue;
-
-    player1.played += 1;
-    player2.played += 1;
-    player1.goalDifference += match.player1Score - match.player2Score;
-    player2.goalDifference += match.player2Score - match.player1Score;
-
-    if (match.player1Score > match.player2Score) {
-      player1.wins += 1;
-      player2.losses += 1;
-      player1.points += pointsForWin;
-      player2.points += pointsForLoss;
-    } else if (match.player1Score < match.player2Score) {
-      player2.wins += 1;
-      player1.losses += 1;
-      player2.points += pointsForWin;
-      player1.points += pointsForLoss;
-    } else {
-      player1.draws += 1;
-      player2.draws += 1;
-      player1.points += pointsForDraw;
-      player2.points += pointsForDraw;
-    }
-  }
-
-  return Array.from(table.values()).sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;
-    if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
-    if (b.wins !== a.wins) return b.wins - a.wins;
-    return a.clubName.localeCompare(b.clubName, "ru");
-  });
-}
-
-function defaultRowHighlight(index: number) {
-  if (index === 0) return "border-t border-primary/20 bg-primary/10";
-  if (index === 1) return "border-t border-emerald-400/10 bg-emerald-400/5";
-  return "border-t border-white/10";
-}
-
-function defaultRankBadge(index: number) {
-  if (index === 0) return "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/20 px-1 text-[10px] font-semibold text-primary";
-  if (index === 1) return "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-400/15 px-1 text-[10px] font-semibold text-emerald-300";
-  return "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white/5 px-1 text-[10px] font-medium text-zinc-300";
-}
-
 function buildCustomStandingHighlights(tournament: {
   format: TournamentFormat;
   formatBlueprintJson: unknown;
@@ -443,42 +333,37 @@ function buildCustomStandingHighlights(tournament: {
   return byDivision;
 }
 
-function formatRankRange(fromRank: number, toRank: number) {
-  if (fromRank === toRank) {
-    return `${fromRank} место`;
-  }
+function defaultRowHighlight(index: number) {
+  if (index === 0) return "border-t border-primary/20 bg-primary/10";
+  if (index === 1) return "border-t border-emerald-400/10 bg-emerald-400/5";
+  return "border-t border-white/10";
+}
 
-  return `${fromRank}–${toRank} места`;
+function defaultRankBadge(index: number) {
+  if (index === 0) return "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/20 px-1 text-[10px] font-semibold text-primary";
+  if (index === 1) return "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-400/15 px-1 text-[10px] font-semibold text-emerald-300";
+  return "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white/5 px-1 text-[10px] font-medium text-zinc-300";
+}
+
+function formatRankRange(fromRank: number, toRank: number) {
+  return fromRank === toRank ? `${fromRank} место` : `${fromRank}–${toRank} места`;
 }
 
 function getEliminatedRanges(highlights: StandingHighlight[], totalRows: number) {
   const occupied = new Set<number>();
-
   for (const highlight of highlights) {
-    for (let rank = highlight.fromRank; rank <= highlight.toRank; rank += 1) {
-      occupied.add(rank);
-    }
+    for (let rank = highlight.fromRank; rank <= highlight.toRank; rank += 1) occupied.add(rank);
   }
-
   const ranges: Array<{ fromRank: number; toRank: number }> = [];
-  let currentStart: number | null = null;
-
+  let start: number | null = null;
   for (let rank = 1; rank <= totalRows; rank += 1) {
-    if (!occupied.has(rank)) {
-      if (currentStart === null) currentStart = rank;
-      continue;
-    }
-
-    if (currentStart !== null) {
-      ranges.push({ fromRank: currentStart, toRank: rank - 1 });
-      currentStart = null;
+    if (!occupied.has(rank)) start ??= rank;
+    else if (start !== null) {
+      ranges.push({ fromRank: start, toRank: rank - 1 });
+      start = null;
     }
   }
-
-  if (currentStart !== null) {
-    ranges.push({ fromRank: currentStart, toRank: totalRows });
-  }
-
+  if (start !== null) ranges.push({ fromRank: start, toRank: totalRows });
   return ranges;
 }
 
@@ -511,6 +396,8 @@ function StickyHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Retained temporarily as a markup reference while the extracted responsive standings component settles.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function StandingsTable({ rows, highlights = [] }: { rows: LeagueRow[]; highlights?: StandingHighlight[] }) {
   const orderedHighlights = [...highlights].sort((a, b) => a.fromRank - b.fromRank || a.toRank - b.toRank);
   const eliminatedRanges = getEliminatedRanges(orderedHighlights, rows.length);
@@ -709,10 +596,15 @@ export default async function TournamentDetailsPage({
     select: {
       id: true,
       title: true,
+      description: true,
+      coverImage: true,
+      prizePool: true,
       rules: true,
       status: true,
       isTest: true,
       startsAt: true,
+      endsAt: true,
+      registrationEndsAt: true,
       maxParticipants: true,
       format: true,
       formatBlueprintJson: true,
@@ -857,7 +749,11 @@ export default async function TournamentDetailsPage({
           id: true,
           name: true,
           type: true,
+          status: true,
           orderIndex: true,
+          startsAt: true,
+          endsAt: true,
+          advancingPerGroup: true,
           participantsPerGroup: true,
           pointsForWin: true,
           pointsForDraw: true,
@@ -1023,8 +919,6 @@ export default async function TournamentDetailsPage({
     tournament.status !== TournamentStatus.IN_PROGRESS &&
     tournament.status !== TournamentStatus.COMPLETED;
 
-  const groupStage = tournament.stages.find((stage) => stage.type === StageType.GROUP_STAGE);
-  const playoffStages = tournament.stages.filter((stage) => stage.type === StageType.PLAYOFF && stage.bracket);
   const leagueStage = tournament.stages.find((stage) => stage.type === StageType.LEAGUE);
   const participantsByGroupId = new Map<string, typeof tournament.participants>();
 
@@ -1090,45 +984,23 @@ export default async function TournamentDetailsPage({
 
   const leagueTable =
     tournament.format === TournamentFormat.ROUND_ROBIN || tournament.format === TournamentFormat.LEAGUE
-      ? buildLeagueTable(tournament.participants, leagueMatches, clubsBySlug)
+      ? buildPublicLeagueTable(tournament.participants, leagueMatches, clubsBySlug)
       : [];
 
   const takenClubSlugs = activeParticipants.map((entry) => entry.clubSlug).filter(Boolean) as string[];
-  const isLeagueStructure = tournament.format === TournamentFormat.LEAGUE || tournament.format === TournamentFormat.ROUND_ROBIN;
-  const structureSectionTitle = tournament.format === TournamentFormat.CUSTOM ? groupStage?.name?.trim() || "Лиги" : isLeagueStructure ? "Лига" : "Группы";
   const customStandingHighlights = buildCustomStandingHighlights(tournament);
-  const structureOptions: TournamentStructureOption[] = [
-    ...(groupStage
-      ? [
-          {
-            id: "groups",
-            title: isLeagueStructure ? "Лига" : "Групповой этап",
-            caption: isLeagueStructure ? "Общая таблица" : pluralRu(groupStage.groups.length, "группа", "группы", "групп"),
-          },
-        ]
-      : []),
-    ...(leagueStage || tournament.format === TournamentFormat.ROUND_ROBIN
-      ? [
-          {
-            id: "league",
-            title: "Лига",
-            caption: "Общая таблица",
-          },
-        ]
-      : []),
-    ...(playoffStages.length
-      ? [
-          {
-            id: "playoff",
-            title: "Плей-офф",
-            caption: pluralRu(playoffStages.length, "сетка", "сетки", "сеток"),
-          },
-        ]
-      : []),
-  ];
-  const tournamentMetaItems = [
-    { label: "Старт", value: formatDate(tournament.startsAt) },
-  ];
+  const structureOptions: TournamentStageOption[] = tournament.stages.map((stage) => ({
+    id: stage.id,
+    title: stage.name?.trim() || (stage.type === StageType.PLAYOFF ? "Плей-офф" : stage.type === StageType.LEAGUE ? "Лига" : "Групповой этап"),
+    caption:
+      stage.type === StageType.PLAYOFF
+        ? pluralRu(stage.roundsCount ?? 0, "раунд", "раунда", "раундов")
+        : stage.groups.length
+          ? pluralRu(stage.groups.length, "группа", "группы", "групп")
+          : "Общая таблица",
+    state: stagePresentationState(stage.status),
+  }));
+  const currentStage = tournament.stages.find((stage) => stage.status === "ACTIVE") ?? tournament.stages.find((stage) => stage.status !== "DRAFT") ?? tournament.stages[0];
   const participantClubMap = Object.fromEntries(
     tournament.participants.map((entry) => [
       entry.userId,
@@ -1184,9 +1056,10 @@ export default async function TournamentDetailsPage({
   }));
   const currentRosterMembership = tournament.rosterMembers[0] ?? null;
   const showRosterTab = tournament.participantMode !== "SINGLE";
+  const tournamentTabs = getTournamentTabs(tournament.participantMode);
   const requestedTournamentTab = searchParams?.tab;
   const defaultTournamentTab =
-    isTournamentTabValue(requestedTournamentTab) && (requestedTournamentTab !== "roster" || showRosterTab)
+    isPublicTournamentTabValue(requestedTournamentTab) && (requestedTournamentTab !== "roster" || showRosterTab)
       ? requestedTournamentTab
       : "structure";
   const renderRosterCards = (entries: typeof activeParticipants) => (
@@ -1237,7 +1110,7 @@ export default async function TournamentDetailsPage({
                         target="_blank"
                         rel="noreferrer"
                         aria-label={`Открыть Telegram ${memberName}`}
-                        className="flex h-9 min-w-0 shrink-0 items-center gap-2 rounded-xl border border-sky-300/20 bg-sky-500/10 px-3 text-xs font-semibold text-sky-100 transition hover:border-sky-300/40 hover:bg-sky-500/20"
+                        className="flex h-11 min-w-0 shrink-0 items-center gap-2 rounded-xl border border-sky-300/20 bg-sky-500/10 px-3 text-xs font-semibold text-sky-100 transition hover:border-sky-300/40 hover:bg-sky-500/20"
                       >
                         <Send className="h-3.5 w-3.5" />
                         <span className="hidden sm:inline">@{telegramProfile.username}</span>
@@ -1259,219 +1132,113 @@ export default async function TournamentDetailsPage({
   const currentRosterCards = currentRosterMembership
     ? renderRosterCards(activeParticipants.filter((entry) => entry.id === currentRosterMembership.registration.id))
     : (
-      <Card className="p-6 text-zinc-500">
-        Ваш состав появится здесь после регистрации или принятия приглашения.
-      </Card>
+      <TournamentEmptyState title="Состав ещё не создан" description="Он появится после регистрации команды или принятия приглашения." />
     );
   const allRosterCards = renderRosterCards(filteredParticipants);
-  const showTournamentActionPanel = canRegister || canCancelRegistration || isRegistrationOpen;
+  const primaryAction = canRegister ? (
+    <RegisterTournamentButton
+      tournamentId={tournament.id}
+      clubSelectionMode={tournament.clubSelectionMode ?? ClubSelectionMode.ADMIN_RANDOM}
+      participantMode={tournament.participantMode}
+      rosterSize={tournament.rosterSize}
+      clubs={availableClubs}
+      takenClubSlugs={takenClubSlugs}
+    />
+  ) : alreadyRegistered ? (
+    <Button size="lg" asChild><a href={`/tournaments/${tournament.id}?tab=my-matches`}>Открыть мои матчи</a></Button>
+  ) : isRegistrationOpen && !isLoggedIn ? (
+    <Button size="lg" asChild><a href={`/login?callbackUrl=/tournaments/${tournament.id}`}>Войти и участвовать</a></Button>
+  ) : isRegistrationOpen && needsTelegramConnection ? (
+    <Button size="lg" asChild><a href="/dashboard/security">Привязать Telegram</a></Button>
+  ) : isRegistrationOpen ? (
+    <Button size="lg" disabled>
+      {needsTelegramUsername
+        ? "Нужен публичный @username"
+        : reliabilityRestrictionText
+          ? `Надёжность ${currentUser?.reliabilityScore ?? 0}/100`
+          : hasFreeSlots
+            ? "Регистрация недоступна"
+            : "Мест больше нет"}
+    </Button>
+  ) : (
+    <Button size="lg" asChild><a href={`/tournaments/${tournament.id}?tab=matches`}>Смотреть расписание</a></Button>
+  );
 
   logTiming("tournament-page", pageStart);
 
   return (
     <div className="page-shell space-y-8">
-      <Card className="overflow-hidden rounded-lg border-primary/15 bg-white/[0.025] p-0">
-        <div
-          className={
-            !showTournamentActionPanel
-              ? "p-4 sm:p-5 lg:p-6"
-              : canCancelRegistration
-              ? "grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_190px] lg:items-start lg:p-6"
-              : "grid gap-5 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-stretch lg:p-6"
-          }
-        >
-          <div className="min-w-0 space-y-4">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <Badge variant={tournamentStatusVariant[tournament.status]} className="shrink-0">
-                {tournamentStatusLabel[tournament.status]}
-              </Badge>
-              <Badge variant="neutral" className="shrink-0">
-                {participantModeLabel(tournament.participantMode, tournament.rosterSize)}
-              </Badge>
-              {tournament.playoffType ? (
-                <Badge variant="neutral" className="shrink-0">
-                  {playoffTypeLabel[tournament.playoffType] ?? tournament.playoffType}
-                </Badge>
-              ) : null}
-            </div>
+      <TournamentHero
+        title={tournament.title}
+        description={tournament.description}
+        statusLabel={tournamentStatusLabel[tournament.status]}
+        statusVariant={tournamentStatusVariant[tournament.status]}
+        formatLabel={publicParticipantModeLabel(tournament.participantMode, tournament.rosterSize)}
+        playoffLabel={tournament.playoffType ? playoffTypeLabel[tournament.playoffType] ?? tournament.playoffType : null}
+        startLabel={formatDate(tournament.startsAt)}
+        registrationDeadlineLabel={formatDate(tournament.registrationEndsAt)}
+        stageLabel={currentStage?.name ?? "Ожидает публикации"}
+        participantsLabel={`${activeParticipants.length} / ${tournament.maxParticipants}`}
+        prizePool={tournament.prizePool}
+        coverUrl={tournament.coverImage ? `/api/tournaments/${tournament.id}/cover?w=1280&h=720&q=86` : null}
+        primaryAction={primaryAction}
+        secondaryAction={canCancelRegistration ? <CancelTournamentRegistrationButton tournamentId={tournament.id} /> : null}
+        tournamentId={tournament.id}
+      />
 
-            <div className="min-w-0">
-              <h1 className="max-w-full break-words font-display text-[20px] font-thin uppercase leading-[0.95] tracking-normal text-white sm:text-[32px] lg:text-[40px]">
-                {tournament.title}
-              </h1>
-            </div>
+      {reliabilityWarningText ? <div className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] px-4 py-3 text-sm leading-6 text-amber-100">{reliabilityWarningText}</div> : null}
 
-            <div className="grid gap-2 sm:grid-cols-3">
-              {tournamentMetaItems.map((item) => (
-                <div key={item.label} className="min-w-0 rounded-lg border border-white/10 bg-black/20 px-3 py-2.5">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">{item.label}</div>
-                  <div className="mt-1 truncate text-sm font-semibold text-zinc-100">{item.value}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {showTournamentActionPanel ? (
-          <div className={canCancelRegistration ? "rounded-lg border border-white/10 bg-black/25 p-2.5 lg:self-start" : "rounded-lg border border-white/10 bg-black/25 p-4"}>
-            {canRegister ? (
-              <div className="space-y-3">
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Участие</div>
-                  <div className="mt-1 text-lg font-semibold text-white">Заявка открыта</div>
-                  <div className="mt-1 text-sm leading-5 text-zinc-400">Выберите клуб и подтвердите участие в турнире.</div>
-                </div>
-                {reliabilityWarningText ? (
-                  <div className="flex gap-2 rounded-lg border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-sm leading-5 text-amber-100">
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                    <span>{reliabilityWarningText}</span>
-                  </div>
-                ) : null}
-                <RegisterTournamentButton
-                  tournamentId={tournament.id}
-                  clubSelectionMode={tournament.clubSelectionMode ?? ClubSelectionMode.ADMIN_RANDOM}
-                  participantMode={tournament.participantMode}
-                  rosterSize={tournament.rosterSize}
-                  clubs={availableClubs}
-                  takenClubSlugs={takenClubSlugs}
-                />
-              </div>
-            ) : canCancelRegistration ? (
-              <CancelTournamentRegistrationButton tournamentId={tournament.id} />
-            ) : isRegistrationOpen ? (
-              <div className="space-y-3">
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Участие</div>
-                  <div className="mt-1 text-lg font-semibold text-white">
-                    {!isLoggedIn
-                      ? "Нужен вход"
-                      : needsTelegramConnection
-                        ? "Нужен Telegram"
-                        : needsTelegramUsername
-                          ? "Нужен @username"
-                          : alreadyRegistered
-                            ? "Вы уже зарегистрированы"
-                            : reliabilityRestrictionText
-                              ? "Ограничена надежность"
-                            : hasFreeSlots
-                              ? "Регистрация недоступна"
-                              : "Лимит достигнут"}
-                  </div>
-                  <div className="mt-1 text-sm leading-5 text-zinc-400">
-                    {reliabilityRestrictionText ?? "Проверьте требование ниже и продолжите регистрацию."}
-                  </div>
-                </div>
-                {!isLoggedIn ? (
-                  <Button size="lg" asChild className="w-full">
-                    <a href={`/login?callbackUrl=/tournaments/${tournament.id}`}>Войти, чтобы зарегистрироваться</a>
-                  </Button>
-                ) : needsTelegramConnection ? (
-                  <Button size="lg" asChild className="w-full">
-                    <a href="/dashboard/security">Привязать Telegram</a>
-                  </Button>
-                ) : needsTelegramUsername ? (
-                  <Button size="lg" disabled className="w-full">
-                    Нужен публичный @username
-                  </Button>
-                ) : !alreadyRegistered && reliabilityRestrictionText ? (
-                  <Button size="lg" disabled className="w-full">
-                    Надежность {currentUser?.reliabilityScore ?? 0}/100
-                  </Button>
-                ) : (
-                  <Button size="lg" disabled className="w-full">
-                    {alreadyRegistered ? "Вы уже зарегистрированы" : hasFreeSlots ? "Регистрация недоступна" : "Лимит достигнут"}
-                  </Button>
-                )}
-              </div>
-            ) : null}
-          </div>
-          ) : null}
-        </div>
-      </Card>
-
-      <Tabs defaultValue={defaultTournamentTab}>
-        <div className="max-w-full overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <TabsList className="inline-flex min-w-max flex-nowrap gap-1 border-white/10 bg-black/30 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-            <TabsTrigger className={tournamentTabTriggerClass} value="structure">Структура</TabsTrigger>
-            <TabsTrigger className={tournamentTabTriggerClass} value="matches">Расписание</TabsTrigger>
-            <TabsTrigger className={tournamentTabTriggerClass} value="my-matches">Мои матчи</TabsTrigger>
-            {showRosterTab ? <TabsTrigger className={tournamentTabTriggerClass} value="roster">Состав</TabsTrigger> : null}
-            <TabsTrigger className={tournamentTabTriggerClass} value="participants">Участники</TabsTrigger>
-            <TabsTrigger className={tournamentTabTriggerClass} value="rules">Правила</TabsTrigger>
-          </TabsList>
-        </div>
+      <TournamentNavigation tabs={tournamentTabs} initialValue={defaultTournamentTab}>
 
         <TabsContent value="structure">
           {structureOptions.length ? (
-            <TournamentStructureSwitcher options={structureOptions}>
-              {groupStage ? (
-                <div className="space-y-4">
-                  <div className="text-sm uppercase tracking-[0.24em] text-zinc-500">{structureSectionTitle}</div>
-                  <div className="grid min-w-0 gap-4">
-                    {groupStage.groups.map((group) => {
-                      const groupMatches = tournament.matches.filter((match) => match.groupId === group.id);
-                      const groupMembers = participantsByGroupId.get(group.id) ?? [];
-                      const activeMembers = groupMembers.filter((member) => member.status === ParticipantStatus.CONFIRMED);
-                      const groupRows = buildLeagueTable(
-                        groupMembers,
-                        groupMatches,
-                        clubsBySlug,
-                        groupStage,
-                      );
-                      const groupCapacity = group.capacity ?? groupStage.participantsPerGroup ?? 0;
-                      const emptySlots = Array.from({ length: Math.max(groupCapacity - activeMembers.length, 0) }, (_, index) => ({
-                        id: `${group.id}-slot-${index + 1}`,
-                        position: activeMembers.length + index + 1,
-                      }));
+            <TournamentStageSwitcher options={structureOptions}>
+              {tournament.stages.map((stage) => {
+                if (stage.type === StageType.PLAYOFF) {
+                  return (
+                    <BracketView key={stage.id} matches={tournament.matches.filter((match) => match.stageId === stage.id)} clubsByUserId={participantClubMap} currentUserId={currentUserId} />
+                  );
+                }
 
-                      return (
-                        <Card key={group.id} className="w-full min-w-0 max-w-full overflow-hidden p-0">
-                          <div className="border-b border-white/10 px-5 py-4 font-medium text-white">
-                            {tournament.format === TournamentFormat.CUSTOM && groupStage.groups.length > 1 ? group.name : "Таблица лиги"}
-                          </div>
-                          {groupRows.length ? (
-                            <StandingsTable
-                              rows={groupRows}
-                              highlights={customStandingHighlights.get(group.orderIndex) ?? []}
-                            />
-                          ) : (
-                            <div className="px-4 py-4 text-sm text-zinc-500">
-                              {isLeagueStructure ? "Участники лиги появятся здесь после регистрации или распределения." : "Участники группы появятся здесь после регистрации или распределения."}
+                if (stage.groups.length) {
+                  return (
+                    <div key={stage.id} className="grid min-w-0 gap-4 lg:grid-cols-2">
+                      {stage.groups.map((group) => {
+                        const groupMatches = tournament.matches.filter((match) => match.groupId === group.id);
+                        const groupMembers = participantsByGroupId.get(group.id) ?? [];
+                        const activeMembers = groupMembers.filter((member) => member.status === ParticipantStatus.CONFIRMED);
+                        const groupRows = buildPublicLeagueTable(groupMembers, groupMatches, clubsBySlug, stage);
+                        const groupCapacity = group.capacity ?? stage.participantsPerGroup ?? 0;
+                        const emptySlots = Array.from({ length: Math.max(groupCapacity - activeMembers.length, 0) }, (_, index) => ({ id: `${group.id}-slot-${index + 1}`, position: activeMembers.length + index + 1 }));
+                        return (
+                          <Card key={group.id} className="min-w-0 overflow-hidden p-0">
+                            <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5 sm:py-4">
+                              <h3 className="font-semibold text-white">{group.name}</h3>
+                              <span className="text-xs text-zinc-500">{groupRows.length} / {groupCapacity || "—"}</span>
                             </div>
-                          )}
-                          <EmptyGroupSlots slots={emptySlots} />
-                        </Card>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
-
-              {leagueStage || tournament.format === TournamentFormat.ROUND_ROBIN ? (
-                <Card className="w-full min-w-0 max-w-full overflow-hidden p-0">
-                  <div className="border-b border-white/10 px-5 py-4 font-medium text-white">Таблица лиги</div>
-                  {leagueTable.length ? (
-                    <StandingsTable rows={leagueTable} />
-                  ) : (
-                    <div className="px-4 py-4 text-sm text-zinc-500">Таблица лиги заполнится после первых сыгранных матчей.</div>
-                  )}
-                </Card>
-              ) : null}
-
-              {playoffStages.length ? (
-                <div className="space-y-4">
-                  {playoffStages.map((stage) => (
-                    <div key={stage.id} className="space-y-3">
-                      {playoffStages.length > 1 ? (
-                        <div className="text-sm uppercase tracking-[0.24em] text-zinc-500">{stage.name}</div>
-                      ) : null}
-                      <BracketView matches={tournament.matches.filter((match) => match.stageId === stage.id)} clubsByUserId={participantClubMap} currentUserId={currentUserId} />
+                            <div className="p-3 sm:p-4">
+                              {groupRows.length ? <TournamentStandings rows={groupRows} highlights={customStandingHighlights.get(group.orderIndex) ?? []} /> : <TournamentEmptyState title="Группа ещё не сформирована" description="Участники появятся после распределения по группам." />}
+                            </div>
+                            <EmptyGroupSlots slots={emptySlots} />
+                          </Card>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
-              ) : null}
-            </TournamentStructureSwitcher>
+                  );
+                }
+
+                const stageMatches = tournament.matches.filter((match) => match.stageId === stage.id);
+                const stageTable = stage.type === StageType.LEAGUE ? buildPublicLeagueTable(tournament.participants, stageMatches, clubsBySlug, stage) : leagueTable;
+                return (
+                  <Card key={stage.id} className="min-w-0 overflow-hidden p-0">
+                    <div className="border-b border-white/10 px-5 py-4 font-semibold text-white">Таблица лиги</div>
+                    <div className="p-3 sm:p-4">{stageTable.length ? <TournamentStandings rows={stageTable} /> : <TournamentEmptyState title="Нет данных таблицы" description="Статистика появится после первых завершённых матчей." />}</div>
+                  </Card>
+                );
+              })}
+            </TournamentStageSwitcher>
           ) : (
-            <Card className="p-6 text-zinc-500">Структура турнира появится после публикации этапов.</Card>
+            <TournamentEmptyState title="Структура ещё не опубликована" description="Этапы, группы и сетка появятся здесь после формирования турнира." />
           )}
         </TabsContent>
 
@@ -1482,7 +1249,7 @@ export default async function TournamentDetailsPage({
         <TabsContent value="my-matches">
           <div className="grid gap-4">
             {!currentUserId ? (
-              <Card className="p-6 text-zinc-500">Здесь появятся матчи текущего участника после публикации расписания.</Card>
+              <TournamentEmptyState title="Войдите, чтобы увидеть свои матчи" description="После входа здесь будут собраны ваши ближайшие и завершённые встречи." action={<Button asChild><a href={`/login?callbackUrl=/tournaments/${tournament.id}?tab=my-matches`}>Войти</a></Button>} />
             ) : myMatchesWithSubmissions.length ? (
               myMatchesWithSubmissions.map((match) => {
                 const sideOne = resolveMatchSide(match, 1);
@@ -1574,7 +1341,7 @@ export default async function TournamentDetailsPage({
                 );
               })
             ) : (
-              <Card className="p-6 text-zinc-500">Здесь появятся матчи текущего участника после публикации расписания.</Card>
+              <TournamentEmptyState title="Личных матчей пока нет" description="Встречи появятся после публикации расписания или формирования сетки." />
             )}
           </div>
         </TabsContent>
@@ -1596,15 +1363,13 @@ export default async function TournamentDetailsPage({
 
         <TabsContent value="participants">
           <div className="space-y-4">
-            <form className="grid gap-2 rounded-2xl border border-white/10 bg-black/25 p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+            <form aria-label="Поиск участников" className="grid gap-2 rounded-2xl border border-white/10 bg-black/25 p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
               <input type="hidden" name="tab" value="participants" />
-              <input
-                type="search"
-                name="participantSearch"
-                defaultValue={participantSearch}
-                placeholder="Найти по клубу или нику"
-                className="h-11 min-w-0 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-white outline-none transition placeholder:text-zinc-600 focus:border-amber-300/45 focus:bg-black/30"
-              />
+              <label className="relative min-w-0">
+                <span className="sr-only">Клуб или ник участника</span>
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+                <input type="search" name="participantSearch" defaultValue={participantSearch} placeholder="Найти по клубу или нику" className="h-11 w-full min-w-0 rounded-xl border border-white/10 bg-white/[0.04] pl-10 pr-3 text-sm font-medium text-white outline-none transition placeholder:text-zinc-600 focus:border-primary/45 focus:bg-black/30" />
+              </label>
               <Button type="submit" variant="secondary" className="h-11 rounded-xl px-4">
                 Найти
               </Button>
@@ -1648,7 +1413,7 @@ export default async function TournamentDetailsPage({
                         target="_blank"
                         rel="noreferrer"
                         aria-label={`Открыть Telegram ${playerName}`}
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-sky-300/20 bg-sky-500/10 text-sky-200 transition hover:border-sky-300/40 hover:bg-sky-500/20 hover:text-white"
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-sky-300/20 bg-sky-500/10 text-sky-200 transition hover:border-sky-300/40 hover:bg-sky-500/20 hover:text-white"
                       >
                         <Send className="h-4 w-4" />
                       </TelegramProfileLink>
@@ -1657,7 +1422,7 @@ export default async function TournamentDetailsPage({
                         type="button"
                         disabled
                         aria-label="Telegram не указан"
-                        className="flex h-10 w-10 shrink-0 cursor-default items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-zinc-600"
+                        className="flex h-11 w-11 shrink-0 cursor-default items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-zinc-600"
                       >
                         <Send className="h-4 w-4" />
                       </button>
@@ -1668,15 +1433,15 @@ export default async function TournamentDetailsPage({
                 </div>
               )
             ) : (
-              <Card className="p-6 text-sm text-zinc-500">Участники по этому запросу не найдены.</Card>
+              <TournamentEmptyState title="Участники не найдены" description="Измените запрос или сбросьте фильтр, чтобы увидеть весь список." />
             )}
           </div>
         </TabsContent>
 
         <TabsContent value="rules">
-          <Card className="whitespace-pre-wrap p-6 text-zinc-300">{tournament.rules}</Card>
+          {tournament.rules.trim() ? <Card className="p-5 sm:p-7"><h2 className="text-xl font-bold text-white">Правила турнира</h2><div className="mt-4 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-zinc-300 sm:text-base">{tournament.rules}</div></Card> : <TournamentEmptyState title="Правила ещё не опубликованы" description="Организатор добавит регламент до начала турнира." />}
         </TabsContent>
-      </Tabs>
+      </TournamentNavigation>
     </div>
   );
 }
