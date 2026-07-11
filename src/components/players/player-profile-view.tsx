@@ -200,7 +200,7 @@ export function PlayerProfileView({
                 className="object-cover"
               />
             ) : null}
-            {bannerImageSrc ? <div className="absolute inset-0 bg-gradient-to-b from-[rgba(8,10,16,0.18)] to-[rgba(8,10,16,0.7)]" /> : null}
+            {bannerImageSrc ? <div className="profile-banner-overlay absolute inset-0" /> : null}
           </div>
           <div className="profile-banner-grid absolute inset-0 opacity-20" />
 

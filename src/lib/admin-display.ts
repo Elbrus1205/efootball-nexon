@@ -23,12 +23,12 @@ export const userRoleLabel: Record<UserRole, string> = {
 };
 
 export const userRoleColor: Record<UserRole, string> = {
-  FOUNDER: "#21F1A8",
-  ORGANIZER: "#21F1A8",
-  ADMIN: "#21F1A8",
-  JUDGE: "#21F1A8",
-  TRAINEE: "#21F1A8",
-  PLAYER: "#21F1A8",
+  FOUNDER: "#FACC15",
+  ORGANIZER: "#FB923C",
+  ADMIN: "#FB7185",
+  JUDGE: "#4ADE80",
+  TRAINEE: "#C084FC",
+  PLAYER: "#60A5FA",
 };
 
 export const matchStatusLabel: Record<MatchStatus, string> = {

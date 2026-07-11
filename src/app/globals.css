@@ -14,9 +14,10 @@
   --classic-gold-soft: #77F8CB;
   --classic-border: rgba(33, 241, 168, 0.28);
   --classic-border-muted: rgba(33, 241, 168, 0.14);
-  --classic-error: #21F1A8;
-  --classic-success: #21F1A8;
-  --classic-warning: #21F1A8;
+  --classic-error: #FB7185;
+  --classic-success: #4ADE80;
+  --classic-warning: #FBBF24;
+  --classic-info: #60A5FA;
 }
 
 * {
@@ -218,10 +219,6 @@ body [class*="rounded-[2"] {
 }
 
 body .glass-panel,
-body [class^="bg-white/"],
-body [class*=" bg-white/"],
-body [class^="bg-white["],
-body [class*=" bg-white["],
 body [class^="bg-zinc-9"],
 body [class*=" bg-zinc-9"],
 body [class^="bg-slate-9"],
@@ -234,100 +231,21 @@ body [class*=" bg-primary/"],
 body [class~="bg-primary"],
 body [class^="bg-accent/"],
 body [class*=" bg-accent/"],
-body [class~="bg-accent"],
-body [class^="bg-sky-"],
-body [class*=" bg-sky-"],
-body [class^="bg-blue-"],
-body [class*=" bg-blue-"],
-body [class^="bg-cyan-"],
-body [class*=" bg-cyan-"],
-body [class^="bg-violet-"],
-body [class*=" bg-violet-"],
-body [class^="bg-purple-"],
-body [class*=" bg-purple-"],
-body [class^="bg-amber-"],
-body [class*=" bg-amber-"],
-body [class^="bg-yellow-"],
-body [class*=" bg-yellow-"] {
+body [class~="bg-accent"] {
   background-color: rgba(33,241,168, 0.08) !important;
-  color: var(--classic-gold) !important;
-}
-
-body [class^="bg-emerald-"],
-body [class*=" bg-emerald-"],
-body [class^="bg-green-"],
-body [class*=" bg-green-"] {
-  background-color: rgba(33,241,168, 0.16) !important;
-  color: #21F1A8 !important;
-}
-
-body [class^="bg-rose-"],
-body [class*=" bg-rose-"],
-body [class^="bg-red-"],
-body [class*=" bg-red-"] {
-  background-color: rgba(33,241,168, 0.16) !important;
-  color: #21F1A8 !important;
-}
-
-body [class^="bg-orange-"],
-body [class*=" bg-orange-"] {
-  background-color: rgba(33,241,168, 0.16) !important;
-  color: #21F1A8 !important;
 }
 
 body [class^="border-primary"],
 body [class*=" border-primary"],
 body [class^="border-accent"],
-body [class*=" border-accent"],
-body [class^="border-sky-"],
-body [class*=" border-sky-"],
-body [class^="border-blue-"],
-body [class*=" border-blue-"],
-body [class^="border-cyan-"],
-body [class*=" border-cyan-"],
-body [class^="border-violet-"],
-body [class*=" border-violet-"],
-body [class^="border-purple-"],
-body [class*=" border-purple-"],
-body [class^="border-amber-"],
-body [class*=" border-amber-"],
-body [class^="border-yellow-"],
-body [class*=" border-yellow-"] {
+body [class*=" border-accent"] {
   border-color: var(--classic-border) !important;
-}
-
-body [class^="border-emerald-"],
-body [class*=" border-emerald-"],
-body [class^="border-green-"],
-body [class*=" border-green-"] {
-  border-color: rgba(33,241,168, 0.55) !important;
-}
-
-body [class^="border-rose-"],
-body [class*=" border-rose-"],
-body [class^="border-red-"],
-body [class*=" border-red-"] {
-  border-color: rgba(33,241,168, 0.6) !important;
 }
 
 body [class^="text-primary"],
 body [class*=" text-primary"],
 body [class^="text-accent"],
-body [class*=" text-accent"],
-body [class^="text-sky-"],
-body [class*=" text-sky-"],
-body [class^="text-blue-"],
-body [class*=" text-blue-"],
-body [class^="text-cyan-"],
-body [class*=" text-cyan-"],
-body [class^="text-violet-"],
-body [class*=" text-violet-"],
-body [class^="text-purple-"],
-body [class*=" text-purple-"],
-body [class^="text-amber-"],
-body [class*=" text-amber-"],
-body [class^="text-yellow-"],
-body [class*=" text-yellow-"] {
+body [class*=" text-accent"] {
   color: var(--classic-gold) !important;
 }
 
@@ -340,25 +258,6 @@ body [class*=" text-zinc-6"],
 body [class^="text-muted"],
 body [class*=" text-muted"] {
   color: var(--classic-muted) !important;
-}
-
-body [class^="text-emerald-"],
-body [class*=" text-emerald-"],
-body [class^="text-green-"],
-body [class*=" text-green-"] {
-  color: #21F1A8 !important;
-}
-
-body [class^="text-rose-"],
-body [class*=" text-rose-"],
-body [class^="text-red-"],
-body [class*=" text-red-"] {
-  color: #21F1A8 !important;
-}
-
-body [class^="text-orange-"],
-body [class*=" text-orange-"] {
-  color: #21F1A8 !important;
 }
 
 body input,
@@ -448,6 +347,10 @@ body a[role="button"]:not(:disabled):hover {
   background-size: 36px 36px;
 }
 
+.profile-banner-overlay {
+  background: linear-gradient(180deg, rgba(8, 10, 12, 0.12), rgba(8, 10, 12, 0.86));
+}
+
 .profile-status-badge {
   border-width: 1px !important;
   letter-spacing: 0.01em;
@@ -465,27 +368,27 @@ body a[role="button"]:not(:disabled):hover {
 }
 
 .profile-status-tone-gold {
-  border-color: rgba(33,241,168, 0.72) !important;
-  background-color: rgba(29,29,29, 0.92) !important;
-  color: #21F1A8 !important;
+  border-color: rgba(251, 191, 36, 0.58) !important;
+  background-color: rgba(73, 52, 10, 0.94) !important;
+  color: #FDE68A !important;
 }
 
 .profile-status-tone-purple {
-  border-color: rgba(33,241,168, 0.72) !important;
-  background-color: rgba(29,29,29, 0.92) !important;
-  color: #21F1A8 !important;
+  border-color: rgba(192, 132, 252, 0.55) !important;
+  background-color: rgba(50, 30, 70, 0.94) !important;
+  color: #E9D5FF !important;
 }
 
 .profile-status-tone-blue {
-  border-color: rgba(33,241,168, 0.72) !important;
-  background-color: rgba(29,29,29, 0.92) !important;
-  color: #21F1A8 !important;
+  border-color: rgba(96, 165, 250, 0.55) !important;
+  background-color: rgba(18, 48, 82, 0.94) !important;
+  color: #BFDBFE !important;
 }
 
 .profile-status-tone-green {
-  border-color: rgba(33,241,168, 0.72) !important;
+  border-color: rgba(74, 222, 128, 0.52) !important;
   background-color: rgba(8, 55, 38, 0.92) !important;
-  color: #21F1A8 !important;
+  color: #BBF7D0 !important;
 }
 
 .profile-status-tone-gray {
@@ -497,10 +400,10 @@ body a[role="button"]:not(:disabled):hover {
 .profile-status-ambassador {
   position: relative;
   overflow: hidden;
-  border-color: rgba(33,241,168, 0.72) !important;
+  border-color: rgba(251, 113, 133, 0.62) !important;
   background:
-    linear-gradient(135deg, rgba(29,29,29, 0.96), rgba(29,29,29, 0.96)) !important;
-  color: #21F1A8 !important;
+    linear-gradient(135deg, rgba(75, 22, 35, 0.96), rgba(54, 32, 14, 0.96)) !important;
+  color: #FFF1F2 !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.16),
     0 0 20px rgba(33,241,168, 0.14) !important;
@@ -523,7 +426,55 @@ body a[role="button"]:not(:disabled):hover {
 }
 
 .profile-status-youtube-icon {
-  box-shadow: 0 0 14px rgba(33,241,168, 0.36);
+  box-shadow: 0 0 14px rgba(251, 113, 133, 0.28);
+}
+
+.profile-stat-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--stat-border);
+  background: linear-gradient(145deg, var(--stat-bg), rgba(24, 24, 24, 0.92));
+}
+
+.profile-stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--stat-color);
+}
+
+.profile-stat-label,
+.profile-stat-icon {
+  color: var(--stat-color);
+}
+
+.profile-stat-icon {
+  border: 1px solid var(--stat-border);
+  background: var(--stat-bg);
+}
+
+.profile-stat-card--win,
+.profile-stat-card--scored,
+.profile-stat-card--positive {
+  --stat-color: #86EFAC;
+  --stat-border: rgba(74, 222, 128, 0.36);
+  --stat-bg: rgba(74, 222, 128, 0.1);
+}
+
+.profile-stat-card--draw,
+.profile-stat-card--neutral {
+  --stat-color: #93C5FD;
+  --stat-border: rgba(96, 165, 250, 0.34);
+  --stat-bg: rgba(96, 165, 250, 0.1);
+}
+
+.profile-stat-card--loss,
+.profile-stat-card--conceded,
+.profile-stat-card--negative {
+  --stat-color: #FDA4AF;
+  --stat-border: rgba(251, 113, 133, 0.36);
+  --stat-bg: rgba(251, 113, 133, 0.1);
 }
 
 @keyframes brand-logo-breathe {
@@ -782,7 +733,7 @@ body a[role="button"]:not(:disabled):hover {
    page-specific blue, gold, violet or green brand palettes. */
 body [class~="bg-primary"],
 body [class~="bg-accent"],
-body [class*="bg-[#21F1A8" i] {
+body [class~="bg-[#21F1A8]" i] {
   background-color: #21f1a8 !important;
   color: #101010 !important;
 }
@@ -794,23 +745,12 @@ body [class~="border-accent"] {
 
 body [class~="text-primary"],
 body [class~="text-accent"],
-body [class*="text-[#21F1A8" i],
-body [class*="text-[#77F8CB" i] {
+body [class~="text-[#21F1A8]" i],
+body [class~="text-[#77F8CB]" i] {
   color: #21f1a8 !important;
 }
 
-.profile-status-tone-gold,
-.profile-status-tone-purple,
-.profile-status-tone-blue,
-.profile-status-tone-green,
-.profile-status-tone-gray,
-.profile-status-ambassador {
-  border-color: rgba(33, 241, 168, 0.52) !important;
-  background: #20352e !important;
-  color: #c9fff0 !important;
-}
-
 .profile-status-youtube-icon {
-  background: #21f1a8 !important;
+  background: #fb7185 !important;
   color: #101010 !important;
 }

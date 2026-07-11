@@ -36,19 +36,19 @@ const socialStyles = {
   telegram: {
     label: "Telegram",
     className: "border-sky-300/20 bg-sky-400/10 text-sky-100 hover:border-sky-300/45 hover:bg-sky-400/15",
-    iconClassName: "bg-sky-400 text-white shadow-[0_8px_20px_rgba(33,241,168,0.25)]",
+    iconClassName: "bg-sky-400 text-white shadow-[0_8px_20px_rgba(56,189,248,0.25)]",
     icon: TelegramIcon,
   },
   vk: {
     label: "VK",
     className: "border-blue-300/20 bg-blue-500/10 text-blue-100 hover:border-blue-300/45 hover:bg-blue-500/15",
-    iconClassName: "bg-[#21F1A8] text-white shadow-[0_8px_20px_rgba(33,241,168,0.25)]",
+    iconClassName: "bg-[#2787f5] text-white shadow-[0_8px_20px_rgba(39,135,245,0.25)]",
     icon: VkIcon,
   },
   youtube: {
     label: "YouTube",
     className: "border-red-300/20 bg-red-500/10 text-red-50 hover:border-red-300/45 hover:bg-red-500/15",
-    iconClassName: "bg-red-500 text-white shadow-[0_8px_20px_rgba(33,241,168,0.24)]",
+    iconClassName: "bg-red-500 text-white shadow-[0_8px_20px_rgba(239,68,68,0.24)]",
     icon: YoutubeIcon,
   },
 } satisfies Record<PlayerSocialLink["id"], { label: string; className: string; iconClassName: string; icon: typeof TelegramIcon }>;
