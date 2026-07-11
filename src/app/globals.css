@@ -4,16 +4,16 @@
 
 :root {
   color-scheme: dark;
-  --classic-black: #0A0A0A;
-  --classic-true-black: #000000;
-  --classic-panel: #111111;
-  --classic-panel-soft: #151515;
-  --classic-white: #F5F5F5;
-  --classic-muted: #CCCCCC;
-  --classic-gold: #D4AF37;
-  --classic-gold-soft: #C5A028;
-  --classic-border: rgba(212, 175, 55, 0.24);
-  --classic-border-muted: rgba(255, 255, 255, 0.1);
+  --classic-black: #06101F;
+  --classic-true-black: #030912;
+  --classic-panel: #08172B;
+  --classic-panel-soft: #0B203C;
+  --classic-white: #F4F8FF;
+  --classic-muted: #A7B7CC;
+  --classic-gold: #176BFF;
+  --classic-gold-soft: #8FE8FF;
+  --classic-border: rgba(143, 232, 255, 0.24);
+  --classic-border-muted: rgba(143, 232, 255, 0.12);
   --classic-error: #8B3A3A;
   --classic-success: #2F6B47;
   --classic-warning: #9A6A1A;
@@ -41,6 +41,11 @@ select,
 textarea,
 [role="button"] {
   touch-action: manipulation;
+}
+
+:focus-visible {
+  outline: 2px solid #8fe8ff;
+  outline-offset: 3px;
 }
 
 @layer utilities {

@@ -56,9 +56,9 @@ const legalLinks = [
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-white/10 bg-[#0A0A0A]">
+    <footer className="border-t border-[#8fe8ff]/15 bg-[#050d19]">
       <div className="page-shell py-4 sm:py-12">
-        <div className="grid gap-4 rounded-md border border-white/10 bg-[#111111] p-4 sm:gap-6 sm:p-8 lg:grid-cols-[1.2fr_0.8fr_0.9fr]">
+        <div className="grid gap-4 border border-[#8fe8ff]/15 bg-[#08172b] p-4 sm:gap-6 sm:p-8 lg:grid-cols-[1.2fr_0.8fr_0.9fr]">
           <div className="space-y-3 sm:space-y-5">
             <div className="flex items-center gap-3">
               <SiteLogoMark className="h-9 w-9 sm:h-12 sm:w-12" />

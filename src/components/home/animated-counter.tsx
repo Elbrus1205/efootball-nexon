@@ -16,6 +16,11 @@ export function AnimatedCounter({ value, className }: AnimatedCounterProps) {
     const node = nodeRef.current;
     if (!node) return;
 
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setCount(value);
+      return;
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && !animated.current) {

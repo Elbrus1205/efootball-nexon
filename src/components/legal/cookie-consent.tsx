@@ -44,19 +44,19 @@ export function CookieConsent() {
         role="dialog"
         aria-live="polite"
         aria-label="Уведомление об использовании cookie"
-        className="pointer-events-auto relative w-full max-w-3xl overflow-hidden rounded-2xl border border-[#b9944f]/30 bg-[#0b0b0b]/95 shadow-[0_24px_70px_rgba(0,0,0,0.6)] backdrop-blur-2xl animate-mobile-menu-item"
+        className="pointer-events-auto relative w-full max-w-3xl overflow-hidden rounded-xl border border-[#8fe8ff]/25 bg-[#06101f]/95 shadow-[0_24px_70px_rgba(0,0,0,0.6)] backdrop-blur-2xl animate-mobile-menu-item"
       >
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#b9944f]/65 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#176bff]/80 to-transparent" />
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
           <div className="flex items-start gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#b9944f]/30 bg-[#b9944f]/10 text-[#e7cf8f]">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#8fe8ff]/25 bg-[#176bff]/10 text-[#8fe8ff]">
               <Cookie className="h-5 w-5" />
             </span>
             <div className="min-w-0 space-y-1">
               <div className="text-sm font-black text-white sm:text-base">Мы используем cookie</div>
               <p className="text-xs leading-5 text-zinc-400 sm:text-sm sm:leading-6">
                 Сайт использует только обязательные cookie для входа, безопасности и корректной работы турниров. Сторонняя аналитика и маркетинговые cookie не подключены. Кнопка «Понятно» только закрывает уведомление.{" "}
-                <Link href="/cookies" className="font-semibold text-[#e7cf8f] underline-offset-4 transition hover:text-white hover:underline">
+                <Link href="/cookies" className="font-semibold text-[#8fe8ff] underline-offset-4 transition hover:text-white hover:underline">
                   Политика cookie
                 </Link>
                 .
@@ -67,14 +67,14 @@ export function CookieConsent() {
           <div className="flex shrink-0 items-center gap-2 sm:ml-auto">
             <Link
               href="/cookies"
-              className="hidden h-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm font-bold text-zinc-200 transition hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9944f]/60 sm:inline-flex"
+              className="hidden h-10 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] px-4 text-sm font-bold text-zinc-200 transition hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8fe8ff] sm:inline-flex"
             >
               Подробнее
             </Link>
             <button
               type="button"
               onClick={accept}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-black uppercase tracking-[0.06em] text-black shadow-[0_2px_18px_rgba(212,175,55,0.22)] transition-all hover:bg-primary/90 hover:shadow-[0_2px_24px_rgba(212,175,55,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 active:scale-[0.99] sm:w-auto"
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#176bff] px-5 text-sm font-black uppercase tracking-[0.06em] text-white shadow-[0_2px_18px_rgba(23,107,255,0.28)] transition-colors hover:bg-[#2d7aff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8fe8ff] sm:w-auto"
             >
               <ShieldCheck className="h-4 w-4" />
               Понятно
