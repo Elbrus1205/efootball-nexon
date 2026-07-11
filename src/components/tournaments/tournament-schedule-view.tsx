@@ -3,6 +3,7 @@
 import { Clock3, Filter, RotateCcw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
+import { TournamentEmptyState } from "@/components/tournaments/tournament-empty-state";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -154,7 +155,7 @@ export function TournamentScheduleView({ sections }: { sections: TournamentSched
   const hasFilters = roundFilter !== "all" || groupFilter !== "all";
 
   if (!sections.length) {
-    return <Card className="p-6 text-zinc-500">После публикации расписания здесь появится календарь всех матчей турнира.</Card>;
+    return <TournamentEmptyState title="Расписание ещё не опубликовано" description="Календарь всех матчей появится здесь после формирования этапов." />;
   }
 
   return (
@@ -170,7 +171,7 @@ export function TournamentScheduleView({ sections }: { sections: TournamentSched
               value={roundFilter}
               onChange={(event) => setRoundFilter(event.target.value)}
               aria-label="Фильтр по туру"
-              className="h-9 w-full rounded-md border border-white/10 bg-[#1D1D1D] px-2 text-xs font-medium text-white outline-none transition focus:border-primary/60 sm:h-11 sm:px-3 sm:text-sm"
+              className="h-11 w-full rounded-md border border-white/10 bg-[#1D1D1D] px-2 text-xs font-medium text-white outline-none transition focus:border-primary/60 sm:px-3 sm:text-sm"
             >
               <option value="all">Все туры</option>
               {roundOptions.map((option) => (
@@ -187,7 +188,7 @@ export function TournamentScheduleView({ sections }: { sections: TournamentSched
               value={groupFilter}
               onChange={(event) => setGroupFilter(event.target.value)}
               aria-label="Фильтр по группе"
-              className="h-9 w-full rounded-md border border-white/10 bg-[#1D1D1D] px-2 text-xs font-medium text-white outline-none transition focus:border-primary/60 sm:h-11 sm:px-3 sm:text-sm"
+              className="h-11 w-full rounded-md border border-white/10 bg-[#1D1D1D] px-2 text-xs font-medium text-white outline-none transition focus:border-primary/60 sm:px-3 sm:text-sm"
             >
               <option value="all">Все группы</option>
               {groupOptions.map((option) => (
@@ -207,7 +208,7 @@ export function TournamentScheduleView({ sections }: { sections: TournamentSched
               setGroupFilter("all");
             }}
             aria-label="Сбросить фильтры"
-            className="h-9 rounded-md px-0 sm:h-11 sm:px-4"
+            className="h-11 rounded-md px-0 sm:px-4"
           >
             <RotateCcw className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Сбросить</span>
@@ -262,8 +263,8 @@ export function TournamentScheduleView({ sections }: { sections: TournamentSched
                           {match.groupName}
                         </div>
                       ) : null}
-                      <div className="mx-auto grid max-w-[760px] grid-cols-[minmax(88px,1fr)_auto_minmax(88px,1fr)] items-center gap-2 sm:grid-cols-[minmax(180px,220px)_auto_minmax(180px,220px)] sm:gap-4">
-                        <div className="min-w-0 justify-self-end">
+                      <div className="mx-auto grid max-w-[760px] grid-cols-1 items-center gap-3 sm:grid-cols-[minmax(180px,220px)_auto_minmax(180px,220px)] sm:gap-4">
+                        <div className="min-w-0 justify-self-center sm:justify-self-end">
                           <ClubPlayerLine
                             playerId={match.sideOne.playerId}
                             playerName={match.sideOne.playerName}
@@ -279,7 +280,7 @@ export function TournamentScheduleView({ sections }: { sections: TournamentSched
                             {match.scoreLabel}
                           </div>
                         </div>
-                        <div className="min-w-0 justify-self-start">
+                        <div className="min-w-0 justify-self-center sm:justify-self-start">
                           <ClubPlayerLine
                             playerId={match.sideTwo.playerId}
                             playerName={match.sideTwo.playerName}
@@ -298,7 +299,7 @@ export function TournamentScheduleView({ sections }: { sections: TournamentSched
           ))}
         </div>
       ) : (
-        <Card className="p-6 text-zinc-500">По выбранным фильтрам матчей нет.</Card>
+        <TournamentEmptyState title="Матчей по фильтрам нет" description="Сбросьте фильтры или выберите другой тур и группу." />
       )}
     </div>
   );

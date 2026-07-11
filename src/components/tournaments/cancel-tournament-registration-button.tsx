@@ -38,7 +38,7 @@ export function CancelTournamentRegistrationButton({ tournamentId }: { tournamen
         variant="outline"
         onClick={cancelRegistration}
         disabled={isPending}
-        className="h-8 w-full justify-center rounded-lg border-rose-400/25 bg-transparent px-3 text-xs font-semibold text-rose-200 hover:border-rose-300/45 hover:bg-rose-500/10 hover:text-rose-50"
+        className="min-h-11 w-full justify-center rounded-xl border-rose-400/25 bg-transparent px-3 text-xs font-semibold text-rose-200 hover:border-rose-300/45 hover:bg-rose-500/10 hover:text-rose-50"
       >
         {isPending ? "Отмена..." : "Отменить регистрацию"}
       </Button>

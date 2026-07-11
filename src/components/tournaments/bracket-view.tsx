@@ -1,10 +1,11 @@
 "use client";
 
 import type { MatchStatus } from "@prisma/client";
-import { GitBranch, Trophy } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronsRight, GitBranch, Trophy } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { TournamentBracketToolbar } from "@/components/tournaments/tournament-bracket-toolbar";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { cn } from "@/lib/utils";
 
@@ -486,6 +487,10 @@ export function BracketView({
   const orderedRounds = Array.from(rounds.entries()).sort((a, b) => a[0] - b[0]);
   const totalRounds = orderedRounds.length;
   const [activeRound, setActiveRound] = useState(orderedRounds[0]?.[0] ?? 0);
+  const minScale = 0.65;
+  const maxScale = 1.25;
+  const [scale, setScale] = useState(1);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const activeRoundEntry = orderedRounds.find(([round]) => round === activeRound) ?? orderedRounds[0];
   const activeRoundIndex = Math.max(
     orderedRounds.findIndex(([round]) => round === activeRoundEntry?.[0]),
@@ -503,6 +508,12 @@ export function BracketView({
   const boardHeight = Math.max(firstRoundSize * slotHeight, 260);
   const totalBoardHeight = titleHeight + boardHeight;
 
+  const fitBoard = useCallback(() => {
+    const viewportWidth = viewportRef.current?.clientWidth ?? boardWidth;
+    setScale(Math.max(minScale, Math.min(maxScale, (viewportWidth - 32) / Math.max(boardWidth, 1))));
+    viewportRef.current?.scrollTo({ left: 0, top: 0, behavior: "smooth" });
+  }, [boardWidth]);
+
   const getCenterY = (roundIndex: number, matchIndex: number) => {
     const step = slotHeight * 2 ** roundIndex;
     const offset = (slotHeight * (2 ** roundIndex - 1)) / 2;
@@ -517,6 +528,16 @@ export function BracketView({
       setActiveRound(orderedRounds[0][0]);
     }
   }, [activeRound, orderedRounds]);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      if (scale < 1) fitBoard();
+    });
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, [fitBoard, scale]);
 
   return (
     <div className="overflow-hidden rounded-[2rem] border border-emerald-400/20 bg-[radial-gradient(circle_at_50%_45%,rgba(33,241,168,0.22),transparent_22%),radial-gradient(circle_at_18%_10%,rgba(33,241,168,0.2),transparent_26%),linear-gradient(135deg,#03180f_0%,#052817_48%,#02110b_100%)] shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
@@ -541,8 +562,8 @@ export function BracketView({
                       key={round}
                       type="button"
                       onClick={() => setActiveRound(round)}
-                      className={cn(
-                        "inline-flex h-10 shrink-0 items-center gap-2 rounded-full border px-3 text-xs font-black uppercase tracking-[0.12em] transition",
+                    className={cn(
+                        "inline-flex h-11 shrink-0 items-center gap-2 rounded-full border px-3 text-xs font-black uppercase tracking-[0.12em] transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/70 motion-reduce:transition-none",
                         active
                           ? "border-emerald-200/50 bg-emerald-300/16 text-white shadow-[0_0_24px_rgba(33,241,168,0.16)]"
                           : "border-white/10 bg-black/25 text-zinc-400 hover:border-emerald-300/25 hover:text-zinc-100",
@@ -559,10 +580,10 @@ export function BracketView({
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-              <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="mb-3 flex items-center justify-between gap-3" aria-live="polite">
                 <div className="min-w-0">
                   <div className="truncate text-base font-black text-white">{roundTitle(activeRoundEntry?.[0] ?? 1, totalRounds)}</div>
-                  <div className="mt-0.5 text-xs text-zinc-400">Матчи выбранной стадии</div>
+                  <div className="mt-0.5 text-xs text-zinc-400">Раунд {activeRoundIndex + 1} из {orderedRounds.length}</div>
                 </div>
                 <MatchCountBadge count={activeRoundSeries.length + (shouldShowThirdPlaceOnMobile ? thirdPlaceSeries.length : 0)} />
               </div>
@@ -595,8 +616,31 @@ export function BracketView({
               </div>
             </div>
 
+            <div className="grid grid-cols-[44px_minmax(0,1fr)_44px] gap-2">
+              <button
+                type="button"
+                aria-label="Предыдущий раунд"
+                disabled={activeRoundIndex === 0}
+                onClick={() => setActiveRound(orderedRounds[Math.max(activeRoundIndex - 1, 0)][0])}
+                className="flex h-11 items-center justify-center rounded-xl border border-white/10 bg-black/25 text-white transition hover:border-emerald-300/30 disabled:cursor-not-allowed disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/70"
+              ><ChevronLeft className="h-5 w-5" /></button>
+              <button
+                type="button"
+                onClick={() => setActiveRound(orderedRounds[orderedRounds.length - 1][0])}
+                disabled={activeRoundIndex === orderedRounds.length - 1}
+                className="flex h-11 items-center justify-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-3 text-sm font-semibold text-emerald-50 transition hover:bg-emerald-300/15 disabled:cursor-default disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/70"
+              ><ChevronsRight className="h-4 w-4" />К финалу</button>
+              <button
+                type="button"
+                aria-label="Следующий раунд"
+                disabled={activeRoundIndex === orderedRounds.length - 1}
+                onClick={() => setActiveRound(orderedRounds[Math.min(activeRoundIndex + 1, orderedRounds.length - 1)][0])}
+                className="flex h-11 items-center justify-center rounded-xl border border-white/10 bg-black/25 text-white transition hover:border-emerald-300/30 disabled:cursor-not-allowed disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/70"
+              ><ChevronRight className="h-5 w-5" /></button>
+            </div>
+
             <div className="rounded-2xl border border-emerald-300/15 bg-emerald-300/8 px-3 py-2 text-xs leading-5 text-emerald-50/80">
-              Полная турнирная сетка доступна на версии для планшетов и ПК.
+              Выберите раунд выше или переходите кнопками к финалу.
             </div>
           </div>
         ) : (
@@ -606,12 +650,14 @@ export function BracketView({
         )}
       </div>
 
-      <div className="hidden overflow-x-auto px-3 pb-6 pt-4 sm:px-7 sm:pb-8 sm:pt-5 md:block">
+      <div className="hidden md:block">
+        <TournamentBracketToolbar scale={scale} minScale={minScale} maxScale={maxScale} onScale={setScale} onFit={fitBoard} onReset={() => { setScale(1); viewportRef.current?.scrollTo({ left: 0, top: 0, behavior: "smooth" }); }} />
+        <div ref={viewportRef} className="max-h-[76vh] overflow-auto overscroll-contain px-5 pb-8 pt-5 [scrollbar-gutter:stable]">
         <div
-          className="relative min-w-max [height:calc(var(--bracket-height)*0.78)] [width:calc(var(--bracket-width)*0.78)] sm:[height:var(--bracket-height)] sm:[width:var(--bracket-width)]"
-          style={{ "--bracket-width": `${boardWidth}px`, "--bracket-height": `${totalBoardHeight}px` } as CSSProperties}
+          className="relative"
+          style={{ width: boardWidth * scale, height: totalBoardHeight * scale }}
         >
-          <div className="absolute left-0 top-0 origin-top-left scale-[0.78] sm:scale-100" style={{ width: boardWidth, height: totalBoardHeight }}>
+          <div className="absolute left-0 top-0 origin-top-left transition-transform duration-200 motion-reduce:transition-none" style={{ width: boardWidth, height: totalBoardHeight, transform: `scale(${scale})` }}>
             <svg
               className="pointer-events-none absolute inset-0 z-0 overflow-visible"
               width={boardWidth}
@@ -694,6 +740,7 @@ export function BracketView({
             </div>
           </div>
         ) : null}
+        </div>
       </div>
     </div>
   );
