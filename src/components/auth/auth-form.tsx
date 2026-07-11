@@ -392,11 +392,11 @@ export function AuthForm({
             <div className="grid gap-2.5">
               <button
                 type="button"
-                className="flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#0077ff] px-3 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,119,255,0.18)] transition hover:bg-[#096de0] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#21F1A8] px-3 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(33,241,168,0.18)] transition hover:bg-[#21F1A8] disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={() => startVkAuth("/dashboard")}
                 disabled={pending || !externalRegistrationAllowed}
               >
-                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white text-[11px] font-black leading-none text-[#0077ff]">VK</span>
+                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white text-[11px] font-black leading-none text-[#21F1A8]">VK</span>
                 Продолжить с VK ID
               </button>
               <TelegramLogin

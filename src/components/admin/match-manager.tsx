@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { MatchStatus, StageType } from "@prisma/client";
 import { ExternalLink, GripVertical, Search, Shield, ShieldAlert } from "lucide-react";
@@ -205,7 +205,7 @@ function MatchSideSelect({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         aria-label={`Сменить ${label.toLowerCase()}`}
-        className="h-9 w-[118px] shrink-0 rounded-lg border border-white/10 bg-[#0A0A0A] px-2 text-xs text-white outline-none transition focus:border-primary/60 sm:w-44 sm:px-3 sm:text-sm"
+        className="h-9 w-[118px] shrink-0 rounded-lg border border-white/10 bg-[#1D1D1D] px-2 text-xs text-white outline-none transition focus:border-primary/60 sm:w-44 sm:px-3 sm:text-sm"
       >
         <option value="">{placeholder}</option>
         {participants.map((participant) => (
@@ -594,7 +594,7 @@ export function MatchManager({
                                   : {}),
                               });
                             }}
-                            className="h-9 rounded-lg border border-white/10 bg-[#0A0A0A] px-3 text-sm text-white outline-none transition focus:border-primary/60"
+                            className="h-9 rounded-lg border border-white/10 bg-[#1D1D1D] px-3 text-sm text-white outline-none transition focus:border-primary/60"
                           >
                             {Object.values(MatchStatus).map((status) => (
                               <option key={status} value={status}>
@@ -680,7 +680,7 @@ export function MatchManager({
                                       setReliabilityPenaltyTargetByMatch((current) => ({ ...current, [match.id]: "" }));
                                     }
                                   }}
-                                  className="h-9 w-full rounded-lg border border-white/10 bg-[#0A0A0A] px-3 text-xs text-white outline-none transition focus:border-primary/60"
+                                  className="h-9 w-full rounded-lg border border-white/10 bg-[#1D1D1D] px-3 text-xs text-white outline-none transition focus:border-primary/60"
                                 >
                                   <option value="">— Без штрафа</option>
                                   {matchPenaltyReasons.map((reason) => (
@@ -696,7 +696,7 @@ export function MatchManager({
                                   value={reliabilityPenaltyTargetId}
                                   disabled={!reliabilityPenaltyReasonId}
                                   onChange={(event) => setReliabilityPenaltyTargetByMatch((current) => ({ ...current, [match.id]: event.target.value }))}
-                                  className="h-9 w-full rounded-lg border border-white/10 bg-[#0A0A0A] px-3 text-xs text-white outline-none transition focus:border-primary/60 disabled:opacity-50"
+                                  className="h-9 w-full rounded-lg border border-white/10 bg-[#1D1D1D] px-3 text-xs text-white outline-none transition focus:border-primary/60 disabled:opacity-50"
                                 >
                                   <option value="">— Игрок</option>
                                   {match.player1Id ? <option value={match.player1Id}>{participantName(selectedParticipantOne)}</option> : null}
@@ -742,7 +742,7 @@ export function MatchManager({
                           </div>
                         ) : null}
 
-                        <div className="sticky bottom-2 z-20 mt-auto grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-[#080808]/95 p-2 backdrop-blur lg:static lg:flex lg:flex-wrap lg:border-0 lg:bg-transparent lg:p-0">
+                        <div className="sticky bottom-2 z-20 mt-auto grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-[#1D1D1D]/95 p-2 backdrop-blur lg:static lg:flex lg:flex-wrap lg:border-0 lg:bg-transparent lg:p-0">
                           <Button
                             disabled={confirmingIds.has(match.id) || !canConfirm}
                             size="sm"

@@ -13,7 +13,7 @@ export function DeleteUserAccountForm({
   const [confirmed, setConfirmed] = useState(false);
 
   return (
-    <form action={`/api/admin/users/${userId}/delete`} method="post" className="min-w-0 space-y-3 rounded-2xl border border-red-400/20 bg-[linear-gradient(180deg,rgba(239,68,68,0.1),rgba(0,0,0,0.2))] p-4">
+    <form action={`/api/admin/users/${userId}/delete`} method="post" className="min-w-0 space-y-3 rounded-2xl border border-red-400/20 bg-[linear-gradient(180deg,rgba(33,241,168,0.1),rgba(0,0,0,0.2))] p-4">
       <input type="hidden" name="confirmDelete" value={confirmed ? "true" : "false"} />
       <div>
         <div className="text-sm font-medium text-white">Удаление аккаунта</div>

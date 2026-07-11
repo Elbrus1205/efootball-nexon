@@ -208,7 +208,7 @@ export function PlayerProfileView({
             <div className="-mt-10 flex items-end justify-between gap-4 sm:-mt-12">
               <div className="flex min-w-0 items-end gap-4">
                 <div className="relative shrink-0">
-                  <Avatar className="h-20 w-20 rounded-[1.75rem] border-4 border-[#101827] shadow-[0_18px_60px_rgba(0,0,0,0.45)] sm:h-24 sm:w-24">
+                  <Avatar className="h-20 w-20 rounded-[1.75rem] border-4 border-[#1D1D1D] shadow-[0_18px_60px_rgba(0,0,0,0.45)] sm:h-24 sm:w-24">
                     <AvatarImage src={user.image || undefined} alt="Аватар игрока" />
                     <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
@@ -217,7 +217,7 @@ export function PlayerProfileView({
                     <Link
                       href={editHref}
                       aria-label="Редактировать профиль"
-                      className="absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-[#111827] text-white shadow-[0_8px_20px_rgba(0,0,0,0.28)] sm:hidden"
+                      className="absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-[#1D1D1D] text-white shadow-[0_8px_20px_rgba(0,0,0,0.28)] sm:hidden"
                     >
                       <PencilLine className="h-3.5 w-3.5" />
                     </Link>

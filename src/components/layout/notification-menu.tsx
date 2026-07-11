@@ -163,7 +163,7 @@ export function NotificationMenu({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9944f]/60 sm:h-11 sm:w-11"
+          className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21F1A8]/60 sm:h-11 sm:w-11"
         >
           {children}
           {unread > 0 ? (
@@ -177,9 +177,9 @@ export function NotificationMenu({
         align="end"
         sideOffset={10}
         collisionPadding={12}
-        className="max-h-[min(620px,calc(100vh-104px))] w-[calc(100vw-24px)] overflow-hidden rounded-[1.35rem] border-white/10 bg-[#0b0f17]/95 p-0 text-white shadow-[0_24px_70px_rgba(0,0,0,0.5)] backdrop-blur-2xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:w-[420px] sm:rounded-[1.75rem]"
+        className="max-h-[min(620px,calc(100vh-104px))] w-[calc(100vw-24px)] overflow-hidden rounded-[1.35rem] border-white/10 bg-[#1D1D1D]/95 p-0 text-white shadow-[0_24px_70px_rgba(0,0,0,0.5)] backdrop-blur-2xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:w-[420px] sm:rounded-[1.75rem]"
       >
-        <div className="flex items-start justify-between gap-3 border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.22),transparent_38%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] p-3.5 sm:p-5">
+        <div className="flex items-start justify-between gap-3 border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(33,241,168,0.22),transparent_38%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] p-3.5 sm:p-5">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-base font-black leading-tight text-white sm:text-lg">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary/15 text-primary sm:h-8 sm:w-8 sm:rounded-xl">

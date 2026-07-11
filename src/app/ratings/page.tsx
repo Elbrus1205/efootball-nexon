@@ -46,7 +46,7 @@ function seasonChipClass(active: boolean) {
   return cn(
     "inline-flex min-h-10 items-center rounded-lg border px-3 py-2 text-sm font-semibold transition",
     active
-      ? "border-primary/35 bg-primary/15 text-white shadow-[0_0_22px_rgba(59,130,246,0.14)]"
+      ? "border-primary/35 bg-primary/15 text-white shadow-[0_0_22px_rgba(33,241,168,0.14)]"
       : "border-white/10 bg-white/[0.04] text-zinc-400 hover:border-primary/25 hover:text-white",
   );
 }
@@ -112,10 +112,10 @@ export default async function RatingsPage({
 
   return (
     <div className="page-shell space-y-8">
-      <div className="text-sm font-semibold uppercase tracking-[0.28em] text-primary drop-shadow-[0_0_16px_rgba(59,130,246,0.65)]">Рейтинги</div>
+      <div className="text-sm font-semibold uppercase tracking-[0.28em] text-primary drop-shadow-[0_0_16px_rgba(33,241,168,0.65)]">Рейтинги</div>
 
       <Card className="overflow-hidden p-0">
-        <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(217,181,91,0.13),transparent_38%),rgba(255,255,255,0.015)] px-4 py-4 sm:px-5">
+        <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(33,241,168,0.13),transparent_38%),rgba(255,255,255,0.015)] px-4 py-4 sm:px-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -128,8 +128,8 @@ export default async function RatingsPage({
             </div>
 
             <div className="w-full sm:w-[280px]">
-              <div className="rounded-lg border border-[#C9A24D]/25 bg-[#C9A24D]/10 px-4 py-3">
-                <div className="flex items-center gap-1.5 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#E7CF8F]">
+              <div className="rounded-lg border border-[#21F1A8]/25 bg-[#21F1A8]/10 px-4 py-3">
+                <div className="flex items-center gap-1.5 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#77F8CB]">
                   <Trophy className="h-2.5 w-2.5" />
                   Призовой фонд
                 </div>

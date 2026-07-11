@@ -12,7 +12,7 @@ export default async function DashboardPrivacyPage() {
     <div className="page-shell py-8">
       <div className="mx-auto max-w-3xl space-y-6">
         <Badge variant="primary">Конфиденциальность</Badge>
-        <Card className="rounded-[32px] border border-white/10 bg-[#11151d] p-6 sm:p-8">
+        <Card className="rounded-[32px] border border-white/10 bg-[#1D1D1D] p-6 sm:p-8">
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
               <Lock className="h-6 w-6" />

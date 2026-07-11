@@ -87,7 +87,7 @@ const CUSTOM_STANDING_HIGHLIGHT_STYLES = [
 ] as const;
 
 const tournamentTabTriggerClass =
-  "shrink-0 whitespace-nowrap border border-white/10 bg-white/[0.04] px-3.5 py-2 text-[13px] font-bold text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-amber-300/35 hover:bg-amber-300/10 hover:text-amber-50 data-[state=active]:border-amber-300/45 data-[state=active]:bg-amber-300/15 data-[state=active]:text-amber-100 data-[state=active]:shadow-[0_0_18px_rgba(245,158,11,0.14),inset_0_1px_0_rgba(255,255,255,0.08)] sm:px-4";
+  "shrink-0 whitespace-nowrap border border-white/10 bg-white/[0.04] px-3.5 py-2 text-[13px] font-bold text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-amber-300/35 hover:bg-amber-300/10 hover:text-amber-50 data-[state=active]:border-amber-300/45 data-[state=active]:bg-amber-300/15 data-[state=active]:text-amber-100 data-[state=active]:shadow-[0_0_18px_rgba(33,241,168,0.14),inset_0_1px_0_rgba(255,255,255,0.08)] sm:px-4";
 
 const tournamentTabValues = ["structure", "matches", "my-matches", "roster", "participants", "rules"] as const;
 type TournamentTabValue = (typeof tournamentTabValues)[number];

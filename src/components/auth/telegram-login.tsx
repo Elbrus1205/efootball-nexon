@@ -103,7 +103,7 @@ export function TelegramLogin({
             type="button"
             onClick={startTelegramLogin}
             disabled={pending || isBlockedByLegal}
-            className="flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#229ED9] px-3 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(34,158,217,0.18)] transition hover:bg-[#1d8fc5] disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#21F1A8] px-3 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(33,241,168,0.18)] transition hover:bg-[#21F1A8] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             {pending ? "Завершаем вход..." : mode === "register" ? "Зарегистрироваться через Telegram" : "Войти через Telegram"}

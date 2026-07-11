@@ -57,7 +57,7 @@ export default async function AdminStatusesPage({
       ) : null}
 
       <Card className="rounded-lg overflow-hidden p-0">
-        <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] p-5">
+        <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(33,241,168,0.18),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] p-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
@@ -101,7 +101,7 @@ export default async function AdminStatusesPage({
       </Card>
 
       <Card className="overflow-hidden rounded-lg p-0">
-        <div className="border-b border-white/10 bg-[linear-gradient(135deg,rgba(124,58,237,0.16),rgba(59,130,246,0.08),rgba(255,255,255,0.02))] p-5">
+        <div className="border-b border-white/10 bg-[linear-gradient(135deg,rgba(33,241,168,0.16),rgba(33,241,168,0.08),rgba(255,255,255,0.02))] p-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <CardTitle>Добавить статус игроку</CardTitle>

@@ -93,10 +93,10 @@ export function RegulationsUpdateModal() {
 
   return (
     <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/75 px-3 pb-3 pt-8 backdrop-blur-md sm:items-center sm:p-6">
-      <div className="flex max-h-[90dvh] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-white/10 bg-[#0b0b0b] text-white shadow-[0_24px_90px_rgba(0,0,0,0.7)] sm:max-h-[84vh]">
+      <div className="flex max-h-[90dvh] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-white/10 bg-[#1D1D1D] text-white shadow-[0_24px_90px_rgba(0,0,0,0.7)] sm:max-h-[84vh]">
         <div className="border-b border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.015))] px-4 py-3 sm:px-5">
           <div className="flex items-start gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#C9A24D]/30 bg-[#C9A24D]/12 text-[#E7CF8F]">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#21F1A8]/30 bg-[#21F1A8]/12 text-[#77F8CB]">
               <FileText className="h-5 w-5" />
             </span>
             <div className="min-w-0 flex-1">
@@ -108,7 +108,7 @@ export function RegulationsUpdateModal() {
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
             <span className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-1">Версия от {versionLabel}</span>
-            {changedCount ? <span className="rounded-md border border-[#C9A24D]/25 bg-[#C9A24D]/10 px-2 py-1 text-[#E7CF8F]">Изменений: {changedCount}</span> : null}
+            {changedCount ? <span className="rounded-md border border-[#21F1A8]/25 bg-[#21F1A8]/10 px-2 py-1 text-[#77F8CB]">Изменений: {changedCount}</span> : null}
           </div>
         </div>
 
@@ -119,7 +119,7 @@ export function RegulationsUpdateModal() {
                 key={`${index}-${line.text.slice(0, 18)}`}
                 className={cn(
                   "whitespace-pre-wrap rounded-md px-2 py-1",
-                  line.changed ? "border border-[#C9A24D]/25 bg-[#C9A24D]/10 text-[#F4E5B3]" : "text-zinc-300",
+                  line.changed ? "border border-[#21F1A8]/25 bg-[#21F1A8]/10 text-[#C9FFF0]" : "text-zinc-300",
                 )}
               >
                 {line.text || " "}

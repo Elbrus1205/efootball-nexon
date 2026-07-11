@@ -204,7 +204,7 @@ export function BracketEditor({
                                 }}
                                 className={cn(
                                   "relative rounded-2xl border px-4 py-3 text-sm transition",
-                                  participant ? "cursor-move border-primary/20 bg-primary/10 text-white shadow-[0_0_25px_rgba(59,130,246,0.12)]" : "border-dashed border-white/10 bg-black/20 text-zinc-500",
+                                  participant ? "cursor-move border-primary/20 bg-primary/10 text-white shadow-[0_0_25px_rgba(33,241,168,0.12)]" : "border-dashed border-white/10 bg-black/20 text-zinc-500",
                                 )}
                               >
                                 <div className="flex items-start justify-between gap-3">

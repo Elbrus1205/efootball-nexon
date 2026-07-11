@@ -197,7 +197,7 @@ export function MyMatchCard({
       className={cn(
         "overflow-hidden rounded-lg border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.018))] p-0 shadow-[0_14px_40px_rgba(0,0,0,0.22)] transition",
         isConfirmed && "border-emerald-400/25",
-        isDisputed && "border-red-400/30 shadow-[0_14px_40px_rgba(127,29,29,0.14)]",
+        isDisputed && "border-red-400/30 shadow-[0_14px_40px_rgba(29,29,29,0.14)]",
       )}
     >
       {meta ? (
@@ -298,7 +298,7 @@ export function MyMatchCard({
           <button
             onClick={onSubmit}
             disabled={submitDisabled}
-            className="mt-2.5 inline-flex h-10 w-full items-center justify-center rounded-lg bg-primary px-3 text-[10px] font-black uppercase tracking-[0.08em] text-black shadow-[0_2px_18px_rgba(212,175,55,0.22)] transition-all hover:bg-primary/90 hover:shadow-[0_2px_24px_rgba(212,175,55,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 active:scale-[0.99] disabled:pointer-events-none disabled:bg-white/10 disabled:text-zinc-500 disabled:shadow-none sm:mt-3 sm:h-11 sm:text-[11px]"
+            className="mt-2.5 inline-flex h-10 w-full items-center justify-center rounded-lg bg-primary px-3 text-[10px] font-black uppercase tracking-[0.08em] text-black shadow-[0_2px_18px_rgba(33,241,168,0.22)] transition-all hover:bg-primary/90 hover:shadow-[0_2px_24px_rgba(33,241,168,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 active:scale-[0.99] disabled:pointer-events-none disabled:bg-white/10 disabled:text-zinc-500 disabled:shadow-none sm:mt-3 sm:h-11 sm:text-[11px]"
           >
             <span className="truncate">{isPending ? "Отправка..." : isPenaltyInputStep ? "Отправить" : "Подтвердить"}</span>
           </button>

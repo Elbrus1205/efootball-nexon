@@ -36,7 +36,7 @@ export function TournamentStructureSwitcher({
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="flex w-full items-center justify-between gap-3 rounded-lg border border-primary/25 bg-[#0A0A0A] px-4 py-3 text-left transition hover:border-primary/45 hover:bg-white/[0.03] sm:w-auto sm:min-w-72"
+            className="flex w-full items-center justify-between gap-3 rounded-lg border border-primary/25 bg-[#1D1D1D] px-4 py-3 text-left transition hover:border-primary/45 hover:bg-white/[0.03] sm:w-auto sm:min-w-72"
           >
             <span className="min-w-0">
               <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Структура турнира</span>

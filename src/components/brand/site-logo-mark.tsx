@@ -21,8 +21,8 @@ export function SiteLogoMark({ className }: SiteLogoMarkProps) {
           <stop offset="1" stopColor="#f5f5f5" />
         </linearGradient>
         <linearGradient id="brand-logo-accent" x1="10" y1="48" x2="82" y2="8" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#D4AF37" />
-          <stop offset="1" stopColor="#C5A028" />
+          <stop stopColor="#21F1A8" />
+          <stop offset="1" stopColor="#21F1A8" />
         </linearGradient>
       </defs>
       <path d="M12 6H80L88 14V42L80 50H12L4 42V14L12 6Z" fill="rgba(255,255,255,0.035)" stroke="url(#brand-logo-accent)" strokeWidth="2" />

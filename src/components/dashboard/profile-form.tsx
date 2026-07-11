@@ -215,7 +215,7 @@ export function ProfileForm({
             <div className="-mt-10 flex items-end justify-between gap-4 sm:-mt-12">
               <div className="flex min-w-0 items-end gap-4">
                 <div className="relative inline-flex w-fit self-start">
-                  <Avatar className="h-20 w-20 rounded-[1.75rem] border-4 border-[#101827] shadow-[0_18px_60px_rgba(0,0,0,0.45)] sm:h-24 sm:w-24">
+                  <Avatar className="h-20 w-20 rounded-[1.75rem] border-4 border-[#1D1D1D] shadow-[0_18px_60px_rgba(0,0,0,0.45)] sm:h-24 sm:w-24">
                     <AvatarImage src={avatarPreview || undefined} alt="Аватар игрока" />
                     <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
@@ -265,11 +265,11 @@ export function ProfileForm({
                   className="h-10 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none transition focus:border-primary"
                   onChange={(e) => setDraft((v) => ({ ...v, favoriteTeam: e.target.value }))}
                 >
-                  <option value="" className="bg-[#0b1220] text-zinc-300">
+                  <option value="" className="bg-[#1D1D1D] text-zinc-300">
                     Не выбран
                   </option>
                   {clubs.map((club) => (
-                    <option key={club.slug} value={club.slug} className="bg-[#0b1220] text-white">
+                    <option key={club.slug} value={club.slug} className="bg-[#1D1D1D] text-white">
                       {club.name}
                     </option>
                   ))}

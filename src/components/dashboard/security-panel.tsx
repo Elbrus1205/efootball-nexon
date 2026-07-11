@@ -62,7 +62,7 @@ function SecuritySection({
   children: React.ReactNode;
 }) {
   return (
-    <Card className="rounded-2xl border border-white/10 bg-[#11151d] p-0 sm:rounded-[28px]">
+    <Card className="rounded-2xl border border-white/10 bg-[#1D1D1D] p-0 sm:rounded-[28px]">
       <button
         type="button"
         onClick={() => onToggle(sectionId)}
@@ -73,7 +73,7 @@ function SecuritySection({
             className={cn(
               "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border transition-colors duration-200 sm:h-11 sm:w-11 sm:rounded-2xl",
               isOpen
-                ? "border-[#b9944f]/35 bg-[#b9944f]/12 text-[#e7cf8f]"
+                ? "border-[#21F1A8]/35 bg-[#21F1A8]/12 text-[#77F8CB]"
                 : "border-white/10 bg-white/[0.04] text-white",
             )}
           >
@@ -90,7 +90,7 @@ function SecuritySection({
             className={cn(
               "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-white transition-all duration-200 sm:h-11 sm:w-11",
               isOpen
-                ? "border-[#b9944f]/40 bg-[#b9944f]/15 text-[#e7cf8f] shadow-[0_0_0_4px_rgba(185,148,79,0.08)]"
+                ? "border-[#21F1A8]/40 bg-[#21F1A8]/15 text-[#77F8CB] shadow-[0_0_0_4px_rgba(33,241,168,0.08)]"
                 : "border-white/10 bg-white/[0.04] hover:bg-white/[0.07]",
             )}
           >
@@ -142,7 +142,7 @@ function DangerSection({
   onDelete: () => void;
 }) {
   return (
-    <Card className="rounded-2xl border border-red-500/25 bg-[linear-gradient(180deg,rgba(85,18,25,0.24),rgba(22,10,12,0.92))] p-0 sm:rounded-[28px]">
+    <Card className="rounded-2xl border border-red-500/25 bg-[linear-gradient(180deg,rgba(29,29,29,0.24),rgba(29,29,29,0.92))] p-0 sm:rounded-[28px]">
       <button
         type="button"
         onClick={onToggle}
@@ -164,7 +164,7 @@ function DangerSection({
             className={cn(
               "flex h-8 w-8 items-center justify-center rounded-full border text-red-100 transition-all duration-200 sm:h-11 sm:w-11",
               isOpen
-                ? "border-red-400/35 bg-red-500/14 shadow-[0_0_0_4px_rgba(239,68,68,0.08)]"
+                ? "border-red-400/35 bg-red-500/14 shadow-[0_0_0_4px_rgba(33,241,168,0.08)]"
                 : "border-red-500/25 bg-red-500/10 hover:bg-red-500/15",
             )}
           >

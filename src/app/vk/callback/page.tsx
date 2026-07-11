@@ -128,7 +128,7 @@ export default function VkCallbackPage() {
 
   return (
     <div className="page-shell flex min-h-[60vh] items-center justify-center py-10">
-      <Card className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#11151d] p-8 text-center">
+      <Card className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#1D1D1D] p-8 text-center">
         <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full border border-blue-400/20 bg-blue-500/10 text-blue-300">
           <Loader2 className="h-6 w-6 animate-spin" />
         </div>

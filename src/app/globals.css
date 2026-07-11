@@ -4,19 +4,19 @@
 
 :root {
   color-scheme: dark;
-  --classic-black: #06101F;
-  --classic-true-black: #030912;
-  --classic-panel: #08172B;
-  --classic-panel-soft: #0B203C;
-  --classic-white: #F4F8FF;
-  --classic-muted: #A7B7CC;
-  --classic-gold: #176BFF;
-  --classic-gold-soft: #8FE8FF;
-  --classic-border: rgba(143, 232, 255, 0.24);
-  --classic-border-muted: rgba(143, 232, 255, 0.12);
-  --classic-error: #8B3A3A;
-  --classic-success: #2F6B47;
-  --classic-warning: #9A6A1A;
+  --classic-black: #171717;
+  --classic-true-black: #101010;
+  --classic-panel: #1D1D1D;
+  --classic-panel-soft: #232323;
+  --classic-white: #F4FAF7;
+  --classic-muted: #AAB6B2;
+  --classic-gold: #21F1A8;
+  --classic-gold-soft: #77F8CB;
+  --classic-border: rgba(33, 241, 168, 0.28);
+  --classic-border-muted: rgba(33, 241, 168, 0.14);
+  --classic-error: #21F1A8;
+  --classic-success: #21F1A8;
+  --classic-warning: #21F1A8;
 }
 
 * {
@@ -44,7 +44,7 @@ textarea,
 }
 
 :focus-visible {
-  outline: 2px solid #8fe8ff;
+  outline: 2px solid #21f1a8;
   outline-offset: 3px;
 }
 
@@ -53,7 +53,7 @@ textarea,
 
 @layer components {
   .glass-panel {
-    @apply border bg-[#111111];
+    @apply border bg-[#1D1D1D];
   }
 
   .page-shell {
@@ -84,8 +84,8 @@ textarea,
 
   .brand-logo-mark {
     filter:
-      drop-shadow(0 0 12px rgba(59, 130, 246, 0.16))
-      drop-shadow(0 0 20px rgba(34, 211, 238, 0.1));
+      drop-shadow(0 0 12px rgba(33,241,168, 0.16))
+      drop-shadow(0 0 20px rgba(33,241,168, 0.1));
     animation: brand-logo-breathe 4.8s ease-in-out infinite;
   }
 
@@ -102,8 +102,8 @@ textarea,
   .brand-wordmark {
     position: relative;
     text-shadow:
-      0 0 14px rgba(147, 197, 253, 0.16),
-      0 0 26px rgba(34, 211, 238, 0.08);
+      0 0 14px rgba(33,241,168, 0.16),
+      0 0 26px rgba(33,241,168, 0.08);
   }
 
   .brand-wordmark::after {
@@ -114,7 +114,7 @@ textarea,
     bottom: -7px;
     height: 1px;
     border-radius: 9999px;
-    background: linear-gradient(90deg, rgba(59, 130, 246, 0), rgba(125, 211, 252, 0.74), rgba(255, 255, 255, 0));
+    background: linear-gradient(90deg, rgba(33,241,168, 0), rgba(33,241,168, 0.74), rgba(255, 255, 255, 0));
     opacity: 0;
     transform: translateX(-16%) scaleX(0.65);
     transform-origin: left;
@@ -151,7 +151,7 @@ textarea,
     position: absolute;
     inset: -45% -70%;
     z-index: -1;
-    background: linear-gradient(115deg, transparent 35%, rgba(255, 235, 166, 0.24) 48%, rgba(245, 158, 11, 0.18) 55%, transparent 68%);
+    background: linear-gradient(115deg, transparent 35%, rgba(255, 235, 166, 0.24) 48%, rgba(33,241,168, 0.18) 55%, transparent 68%);
     transform: translateX(-58%) rotate(8deg);
     animation: registration-cta-shine 3.2s ease-in-out infinite;
   }
@@ -162,14 +162,14 @@ textarea,
     inset: 1px;
     z-index: -2;
     border-radius: inherit;
-    background: radial-gradient(circle at 50% 0%, rgba(251, 191, 36, 0.18), transparent 62%);
+    background: radial-gradient(circle at 50% 0%, rgba(33,241,168, 0.18), transparent 62%);
   }
 
   .registration-cta:hover {
     transform: translateY(-1px) scale(1.015);
     box-shadow:
-      0 16px 38px rgba(245, 158, 11, 0.25),
-      0 0 0 1px rgba(251, 191, 36, 0.14),
+      0 16px 38px rgba(33,241,168, 0.25),
+      0 0 0 1px rgba(33,241,168, 0.14),
       inset 0 1px 0 rgba(255, 255, 255, 0.18);
   }
 
@@ -249,7 +249,7 @@ body [class^="bg-amber-"],
 body [class*=" bg-amber-"],
 body [class^="bg-yellow-"],
 body [class*=" bg-yellow-"] {
-  background-color: rgba(212, 175, 55, 0.08) !important;
+  background-color: rgba(33,241,168, 0.08) !important;
   color: var(--classic-gold) !important;
 }
 
@@ -257,22 +257,22 @@ body [class^="bg-emerald-"],
 body [class*=" bg-emerald-"],
 body [class^="bg-green-"],
 body [class*=" bg-green-"] {
-  background-color: rgba(47, 107, 71, 0.16) !important;
-  color: #BFE6CC !important;
+  background-color: rgba(33,241,168, 0.16) !important;
+  color: #21F1A8 !important;
 }
 
 body [class^="bg-rose-"],
 body [class*=" bg-rose-"],
 body [class^="bg-red-"],
 body [class*=" bg-red-"] {
-  background-color: rgba(139, 58, 58, 0.16) !important;
-  color: #E7B9B9 !important;
+  background-color: rgba(33,241,168, 0.16) !important;
+  color: #21F1A8 !important;
 }
 
 body [class^="bg-orange-"],
 body [class*=" bg-orange-"] {
-  background-color: rgba(154, 106, 26, 0.16) !important;
-  color: #E5C982 !important;
+  background-color: rgba(33,241,168, 0.16) !important;
+  color: #21F1A8 !important;
 }
 
 body [class^="border-primary"],
@@ -300,14 +300,14 @@ body [class^="border-emerald-"],
 body [class*=" border-emerald-"],
 body [class^="border-green-"],
 body [class*=" border-green-"] {
-  border-color: rgba(47, 107, 71, 0.55) !important;
+  border-color: rgba(33,241,168, 0.55) !important;
 }
 
 body [class^="border-rose-"],
 body [class*=" border-rose-"],
 body [class^="border-red-"],
 body [class*=" border-red-"] {
-  border-color: rgba(139, 58, 58, 0.6) !important;
+  border-color: rgba(33,241,168, 0.6) !important;
 }
 
 body [class^="text-primary"],
@@ -346,19 +346,19 @@ body [class^="text-emerald-"],
 body [class*=" text-emerald-"],
 body [class^="text-green-"],
 body [class*=" text-green-"] {
-  color: #BFE6CC !important;
+  color: #21F1A8 !important;
 }
 
 body [class^="text-rose-"],
 body [class*=" text-rose-"],
 body [class^="text-red-"],
 body [class*=" text-red-"] {
-  color: #E7B9B9 !important;
+  color: #21F1A8 !important;
 }
 
 body [class^="text-orange-"],
 body [class*=" text-orange-"] {
-  color: #E5C982 !important;
+  color: #21F1A8 !important;
 }
 
 body input,
@@ -443,8 +443,8 @@ body a[role="button"]:not(:disabled):hover {
 
 .profile-banner-grid {
   background-image:
-    linear-gradient(90deg, rgba(212, 175, 55, 0.08) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(212, 175, 55, 0.08) 1px, transparent 1px);
+    linear-gradient(90deg, rgba(33,241,168, 0.08) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(33,241,168, 0.08) 1px, transparent 1px);
   background-size: 36px 36px;
 }
 
@@ -465,27 +465,27 @@ body a[role="button"]:not(:disabled):hover {
 }
 
 .profile-status-tone-gold {
-  border-color: rgba(245, 197, 66, 0.72) !important;
-  background-color: rgba(70, 53, 10, 0.92) !important;
-  color: #ffe48a !important;
+  border-color: rgba(33,241,168, 0.72) !important;
+  background-color: rgba(29,29,29, 0.92) !important;
+  color: #21F1A8 !important;
 }
 
 .profile-status-tone-purple {
-  border-color: rgba(192, 132, 252, 0.72) !important;
-  background-color: rgba(47, 28, 72, 0.92) !important;
-  color: #e9d5ff !important;
+  border-color: rgba(33,241,168, 0.72) !important;
+  background-color: rgba(29,29,29, 0.92) !important;
+  color: #21F1A8 !important;
 }
 
 .profile-status-tone-blue {
-  border-color: rgba(96, 165, 250, 0.72) !important;
-  background-color: rgba(12, 38, 72, 0.92) !important;
-  color: #bfdbfe !important;
+  border-color: rgba(33,241,168, 0.72) !important;
+  background-color: rgba(29,29,29, 0.92) !important;
+  color: #21F1A8 !important;
 }
 
 .profile-status-tone-green {
-  border-color: rgba(52, 211, 153, 0.72) !important;
+  border-color: rgba(33,241,168, 0.72) !important;
   background-color: rgba(8, 55, 38, 0.92) !important;
-  color: #bbf7d0 !important;
+  color: #21F1A8 !important;
 }
 
 .profile-status-tone-gray {
@@ -497,13 +497,13 @@ body a[role="button"]:not(:disabled):hover {
 .profile-status-ambassador {
   position: relative;
   overflow: hidden;
-  border-color: rgba(239, 68, 68, 0.72) !important;
+  border-color: rgba(33,241,168, 0.72) !important;
   background:
-    linear-gradient(135deg, rgba(76, 20, 20, 0.96), rgba(36, 24, 12, 0.96)) !important;
-  color: #fff1c2 !important;
+    linear-gradient(135deg, rgba(29,29,29, 0.96), rgba(29,29,29, 0.96)) !important;
+  color: #21F1A8 !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    0 0 20px rgba(239, 68, 68, 0.14) !important;
+    0 0 20px rgba(33,241,168, 0.14) !important;
   animation: ambassador-status-pulse 3.8s ease-in-out infinite;
 }
 
@@ -523,7 +523,7 @@ body a[role="button"]:not(:disabled):hover {
 }
 
 .profile-status-youtube-icon {
-  box-shadow: 0 0 14px rgba(239, 68, 68, 0.36);
+  box-shadow: 0 0 14px rgba(33,241,168, 0.36);
 }
 
 @keyframes brand-logo-breathe {
@@ -614,14 +614,14 @@ body a[role="button"]:not(:disabled):hover {
   0%,
   100% {
     box-shadow:
-      0 12px 32px rgba(245, 158, 11, 0.16),
+      0 12px 32px rgba(33,241,168, 0.16),
       inset 0 1px 0 rgba(255, 255, 255, 0.14);
   }
 
   50% {
     box-shadow:
-      0 16px 42px rgba(245, 158, 11, 0.26),
-      0 0 0 1px rgba(251, 191, 36, 0.1),
+      0 16px 42px rgba(33,241,168, 0.26),
+      0 0 0 1px rgba(33,241,168, 0.1),
       inset 0 1px 0 rgba(255, 255, 255, 0.18);
   }
 }
@@ -663,13 +663,13 @@ body a[role="button"]:not(:disabled):hover {
   100% {
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.16),
-      0 0 16px rgba(239, 68, 68, 0.12);
+      0 0 16px rgba(33,241,168, 0.12);
   }
 
   50% {
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.22),
-      0 0 26px rgba(239, 68, 68, 0.24);
+      0 0 26px rgba(33,241,168, 0.24);
   }
 }
 
@@ -776,4 +776,41 @@ body a[role="button"]:not(:disabled):hover {
     opacity: 1;
     transform: none;
   }
+}
+
+/* Tiffany / Dark Gray brand system. Keep legacy utilities from reintroducing
+   page-specific blue, gold, violet or green brand palettes. */
+body [class~="bg-primary"],
+body [class~="bg-accent"],
+body [class*="bg-[#21F1A8" i] {
+  background-color: #21f1a8 !important;
+  color: #101010 !important;
+}
+
+body [class~="border-primary"],
+body [class~="border-accent"] {
+  border-color: #21f1a8 !important;
+}
+
+body [class~="text-primary"],
+body [class~="text-accent"],
+body [class*="text-[#21F1A8" i],
+body [class*="text-[#77F8CB" i] {
+  color: #21f1a8 !important;
+}
+
+.profile-status-tone-gold,
+.profile-status-tone-purple,
+.profile-status-tone-blue,
+.profile-status-tone-green,
+.profile-status-tone-gray,
+.profile-status-ambassador {
+  border-color: rgba(33, 241, 168, 0.52) !important;
+  background: #20352e !important;
+  color: #c9fff0 !important;
+}
+
+.profile-status-youtube-icon {
+  background: #21f1a8 !important;
+  color: #101010 !important;
 }

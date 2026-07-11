@@ -170,7 +170,7 @@ export function TournamentScheduleView({ sections }: { sections: TournamentSched
               value={roundFilter}
               onChange={(event) => setRoundFilter(event.target.value)}
               aria-label="Фильтр по туру"
-              className="h-9 w-full rounded-md border border-white/10 bg-[#0A0A0A] px-2 text-xs font-medium text-white outline-none transition focus:border-primary/60 sm:h-11 sm:px-3 sm:text-sm"
+              className="h-9 w-full rounded-md border border-white/10 bg-[#1D1D1D] px-2 text-xs font-medium text-white outline-none transition focus:border-primary/60 sm:h-11 sm:px-3 sm:text-sm"
             >
               <option value="all">Все туры</option>
               {roundOptions.map((option) => (
@@ -187,7 +187,7 @@ export function TournamentScheduleView({ sections }: { sections: TournamentSched
               value={groupFilter}
               onChange={(event) => setGroupFilter(event.target.value)}
               aria-label="Фильтр по группе"
-              className="h-9 w-full rounded-md border border-white/10 bg-[#0A0A0A] px-2 text-xs font-medium text-white outline-none transition focus:border-primary/60 sm:h-11 sm:px-3 sm:text-sm"
+              className="h-9 w-full rounded-md border border-white/10 bg-[#1D1D1D] px-2 text-xs font-medium text-white outline-none transition focus:border-primary/60 sm:h-11 sm:px-3 sm:text-sm"
             >
               <option value="all">Все группы</option>
               {groupOptions.map((option) => (

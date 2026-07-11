@@ -34,8 +34,8 @@ async function getTelegramWebApp() {
 function prepareTelegramMiniApp(webApp: TelegramWebApp) {
   webApp.ready?.();
   webApp.expand?.();
-  webApp.setHeaderColor?.("#0A0A0A");
-  webApp.setBackgroundColor?.("#0A0A0A");
+  webApp.setHeaderColor?.("#1D1D1D");
+  webApp.setBackgroundColor?.("#1D1D1D");
 }
 
 export function TelegramMiniAppAutoLogin() {

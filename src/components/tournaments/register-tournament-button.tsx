@@ -343,7 +343,7 @@ export function RegisterTournamentButton({
                           taken
                             ? "cursor-not-allowed border-white/10 bg-white/5 opacity-50"
                             : selected
-                              ? "border-primary bg-primary/15 shadow-[0_0_0_1px_rgba(218,183,106,0.18),0_14px_28px_rgba(185,148,79,0.1)]"
+                              ? "border-primary bg-primary/15 shadow-[0_0_0_1px_rgba(33,241,168,0.18),0_14px_28px_rgba(33,241,168,0.1)]"
                               : "border-white/10 bg-white/[0.03] hover:border-primary/40 hover:bg-white/[0.06]"
                         }`}
                       >

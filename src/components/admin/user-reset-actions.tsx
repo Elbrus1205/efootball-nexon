@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,7 @@ export function UserResetActions({ userId, returnTo, disabled = false }: UserRes
       action={`/api/admin/users/${userId}/reset`}
       method="post"
       onSubmit={handleSubmit}
-      className="min-w-0 space-y-3 rounded-lg border border-rose-300/20 bg-[linear-gradient(180deg,rgba(244,63,94,0.08),rgba(0,0,0,0.2))] p-4"
+      className="min-w-0 space-y-3 rounded-lg border border-rose-300/20 bg-[linear-gradient(180deg,rgba(33,241,168,0.08),rgba(0,0,0,0.2))] p-4"
     >
       <input type="hidden" name="returnTo" value={returnTo} />
       <div>

@@ -153,7 +153,7 @@ function DivisionSummary({ profile, settings, place }: { profile: PlayerRow; set
     <section className="overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(28,28,34,0.96),rgba(18,18,24,0.96))] p-3.5 shadow-[0_16px_44px_rgba(2,6,23,0.3)] sm:rounded-[1.75rem] sm:p-6 sm:shadow-[0_24px_70px_rgba(2,6,23,0.34)]">
       <div className="flex flex-col gap-3 sm:gap-5">
         <div className="flex items-start gap-3 sm:gap-4">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-yellow-300/30 bg-blue-700/50 text-yellow-200 shadow-[0_0_18px_rgba(250,204,21,0.12)] sm:h-16 sm:w-16 sm:rounded-2xl">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-yellow-300/30 bg-blue-700/50 text-yellow-200 shadow-[0_0_18px_rgba(33,241,168,0.12)] sm:h-16 sm:w-16 sm:rounded-2xl">
             <Trophy className="h-4 w-4 sm:h-8 sm:w-8" />
           </div>
           <div className="min-w-0 flex-1">
@@ -337,7 +337,7 @@ function MatchScoreEditor({ match, currentUserId }: { match: DivisionMatch; curr
 }
 
 const PLACE_STYLES: Record<number, string> = {
-  1: "bg-yellow-400 text-black shadow-[0_0_12px_rgba(250,204,21,0.4)]",
+  1: "bg-yellow-400 text-black shadow-[0_0_12px_rgba(33,241,168,0.4)]",
   2: "bg-zinc-300 text-black",
   3: "bg-amber-600 text-white",
 };

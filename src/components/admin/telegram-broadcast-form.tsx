@@ -379,8 +379,8 @@ export function TelegramBroadcastForm({
               <div className="text-sm font-medium text-white">Предпросмотр</div>
               <div className="mt-1 text-xs text-zinc-500">Визуально приближен к Telegram, чтобы удобно проверить разметку перед отправкой.</div>
 
-              <div className="mt-4 rounded-[28px] bg-[#17212b] p-3">
-                <div className="rounded-[20px] bg-[#2b5278] px-4 py-3 text-[15px] leading-6 text-white shadow-[0_14px_28px_rgba(0,0,0,0.24)]">
+              <div className="mt-4 rounded-[28px] bg-[#1D1D1D] p-3">
+                <div className="rounded-[20px] bg-[#1D1D1D] px-4 py-3 text-[15px] leading-6 text-white shadow-[0_14px_28px_rgba(0,0,0,0.24)]">
                   {text.trim() ? (
                     <div
                       className="whitespace-pre-wrap break-words [&_.tg-spoiler]:rounded [&_.tg-spoiler]:bg-white/25 [&_.tg-spoiler]:px-1 [&_.tg-spoiler]:text-transparent hover:[&_.tg-spoiler]:text-white [&_a]:text-sky-200 [&_a]:underline [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:border-white/25 [&_blockquote]:pl-3 [&_code]:rounded [&_code]:bg-black/25 [&_code]:px-1.5 [&_code]:py-0.5 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-black/25 [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:px-0 [&_pre_code]:py-0"

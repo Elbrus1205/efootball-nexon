@@ -135,12 +135,12 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
           setOpen((value) => !value);
         }}
         className={cn(
-          "group relative z-[80] flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white/[0.035] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_26px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-[background-color,border-color,box-shadow,transform] duration-300 ease-out hover:-translate-y-0.5 hover:border-[#b9944f]/25 hover:bg-[#b9944f]/[0.075] hover:shadow-[0_0_28px_rgba(185,148,79,0.1),inset_0_1px_0_rgba(255,255,255,0.1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9944f]/60 sm:h-11 sm:w-11 sm:rounded-2xl",
+          "group relative z-[80] flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white/[0.035] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_26px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-[background-color,border-color,box-shadow,transform] duration-300 ease-out hover:-translate-y-0.5 hover:border-[#21F1A8]/25 hover:bg-[#21F1A8]/[0.075] hover:shadow-[0_0_28px_rgba(33,241,168,0.1),inset_0_1px_0_rgba(255,255,255,0.1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21F1A8]/60 sm:h-11 sm:w-11 sm:rounded-2xl",
           open &&
-            "border-[#b9944f]/35 bg-[#b9944f]/12 shadow-[0_0_0_1px_rgba(185,148,79,0.14),0_18px_44px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.14)]",
+            "border-[#21F1A8]/35 bg-[#21F1A8]/12 shadow-[0_0_0_1px_rgba(33,241,168,0.14),0_18px_44px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.14)]",
         )}
       >
-        <span className="pointer-events-none absolute inset-[1px] rounded-[11px] bg-[radial-gradient(circle_at_top,rgba(185,148,79,0.1),transparent_58%),linear-gradient(180deg,rgba(255,255,255,0.045),transparent)] opacity-80 sm:rounded-[15px]" />
+        <span className="pointer-events-none absolute inset-[1px] rounded-[11px] bg-[radial-gradient(circle_at_top,rgba(33,241,168,0.1),transparent_58%),linear-gradient(180deg,rgba(255,255,255,0.045),transparent)] opacity-80 sm:rounded-[15px]" />
         <span className="relative h-5 w-5">
           <span
             className={cn(
@@ -185,11 +185,11 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
           )}
           onClick={(event) => event.stopPropagation()}
         >
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#b9944f]/65 to-transparent" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#21F1A8]/65 to-transparent" />
           {!session?.user ? (
             <div className="relative border-b border-white/10 px-4 py-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#b9944f]/30 bg-[#b9944f]/10 text-[#e7cf8f] shadow-[0_0_28px_rgba(185,148,79,0.16)]">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#21F1A8]/30 bg-[#21F1A8]/10 text-[#77F8CB] shadow-[0_0_28px_rgba(33,241,168,0.16)]">
                   <User2 className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -212,11 +212,11 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
                     key={link.href}
                     href={link.href}
                     className={cn(
-                      "group flex min-h-[60px] items-center gap-3 overflow-hidden rounded-2xl px-3.5 py-3 text-zinc-200 transition-[background-color,transform,color,box-shadow,border-color] duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9944f]/60",
+                      "group flex min-h-[60px] items-center gap-3 overflow-hidden rounded-2xl px-3.5 py-3 text-zinc-200 transition-[background-color,transform,color,box-shadow,border-color] duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21F1A8]/60",
                       "hover:bg-white/[0.055] hover:text-white active:scale-[0.985]",
                       open && "animate-mobile-menu-item",
                       active &&
-                        "bg-[#b9944f]/[0.1] text-white shadow-[inset_0_0_0_1px_rgba(185,148,79,0.28),0_10px_24px_rgba(0,0,0,0.22)]",
+                        "bg-[#21F1A8]/[0.1] text-white shadow-[inset_0_0_0_1px_rgba(33,241,168,0.28),0_10px_24px_rgba(0,0,0,0.22)]",
                     )}
                     style={{ animationDelay: `${100 + index * 46}ms` }}
                     onClick={closeMenu}
@@ -225,7 +225,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
                       className={cn(
                         "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-zinc-300 transition duration-300",
                         active
-                          ? "border-[#b9944f]/30 bg-[#b9944f]/12 text-[#e7cf8f] shadow-[0_10px_28px_rgba(185,148,79,0.14)]"
+                          ? "border-[#21F1A8]/30 bg-[#21F1A8]/12 text-[#77F8CB] shadow-[0_10px_28px_rgba(33,241,168,0.14)]"
                           : "border-white/10 bg-white/[0.03] group-hover:border-white/15 group-hover:bg-white/[0.07] group-hover:text-white",
                       )}
                     >
@@ -234,7 +234,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
 
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold">{link.label}</span>
-                      <span className={cn("mt-0.5 block text-xs", active ? "text-[#e7cf8f]/70" : "text-zinc-500 group-hover:text-zinc-400")}>
+                      <span className={cn("mt-0.5 block text-xs", active ? "text-[#77F8CB]/70" : "text-zinc-500 group-hover:text-zinc-400")}>
                         {meta.caption}
                       </span>
                     </span>
@@ -242,7 +242,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
                     <span
                       className={cn(
                         "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition duration-300",
-                        active ? "bg-[#b9944f]/12 text-[#e7cf8f]" : "text-white/30 group-hover:bg-white/[0.06] group-hover:text-white/75",
+                        active ? "bg-[#21F1A8]/12 text-[#77F8CB]" : "text-white/30 group-hover:bg-white/[0.06] group-hover:text-white/75",
                       )}
                     >
                       <ArrowRight className="h-4 w-4 transition duration-300 group-hover:translate-x-0.5" />
@@ -259,15 +259,15 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
                 <Link
                   href="/login"
                   onClick={() => setOpen(false)}
-                  className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.045] px-3 text-sm font-bold text-white transition hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9944f]/60"
+                  className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.045] px-3 text-sm font-bold text-white transition hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21F1A8]/60"
                 >
-                  <LogIn className="h-4 w-4 text-[#e7cf8f]" />
+                  <LogIn className="h-4 w-4 text-[#77F8CB]" />
                   Войти
                 </Link>
                 <Link
                   href="/register"
                   onClick={() => setOpen(false)}
-                  className="registration-cta flex min-h-12 items-center justify-center rounded-xl border border-[#b9944f]/30 bg-[#b9944f]/10 px-3 text-sm font-black text-[#e7cf8f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9944f]/70"
+                  className="registration-cta flex min-h-12 items-center justify-center rounded-xl border border-[#21F1A8]/30 bg-[#21F1A8]/10 px-3 text-sm font-black text-[#77F8CB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21F1A8]/70"
                 >
                   Регистрация
                 </Link>

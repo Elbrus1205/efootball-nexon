@@ -53,12 +53,12 @@ type CanvasTextOptions = {
 const CANVAS_SIZE = 1600;
 const SCHEDULE_MATCHES_PER_PAGE = 20;
 const COLORS = {
-  black: "#070707",
+  black: "#1D1D1D",
   panel: "#101010",
-  panelSoft: "#151515",
+  panelSoft: "#1D1D1D",
   line: "#333333",
-  gold: "#D4AF37",
-  goldSoft: "#8D7425",
+  gold: "#21F1A8",
+  goldSoft: "#21F1A8",
   white: "#F5F5F5",
   muted: "#C8C8C8",
   dim: "#7A7A7A",
@@ -166,8 +166,8 @@ function teamMark(value: string) {
 
 async function drawClubBadge(ctx: CanvasRenderingContext2D, src: string | null | undefined, fallback: string, x: number, y: number, size: number) {
   const radius = Math.max(9, size * 0.22);
-  fillRound(ctx, x, y, size, size, radius, "rgba(212,175,55,0.1)");
-  strokeRound(ctx, x, y, size, size, radius, "rgba(212,175,55,0.28)", 1.5);
+  fillRound(ctx, x, y, size, size, radius, "rgba(33,241,168,0.1)");
+  strokeRound(ctx, x, y, size, size, radius, "rgba(33,241,168,0.28)", 1.5);
 
   const image = await loadImage(src);
   if (image) {
@@ -190,8 +190,8 @@ function drawBackground(ctx: CanvasRenderingContext2D) {
   ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
   const gradient = ctx.createRadialGradient(1120, 130, 40, 1120, 130, 980);
-  gradient.addColorStop(0, "rgba(212, 175, 55, 0.16)");
-  gradient.addColorStop(0.4, "rgba(212, 175, 55, 0.04)");
+  gradient.addColorStop(0, "rgba(33,241,168, 0.16)");
+  gradient.addColorStop(0.4, "rgba(33,241,168, 0.04)");
   gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
@@ -246,7 +246,7 @@ function drawFooter(ctx: CanvasRenderingContext2D, pageLabel: string) {
 
 async function drawGroupCard(ctx: CanvasRenderingContext2D, group: ExportGroup, x: number, y: number, width: number, height: number) {
   fillRound(ctx, x, y, width, height, 24, COLORS.panel);
-  strokeRound(ctx, x, y, width, height, 24, "rgba(212, 175, 55, 0.34)", 2);
+  strokeRound(ctx, x, y, width, height, 24, "rgba(33,241,168, 0.34)", 2);
 
   text(ctx, group.name.toUpperCase(), x + 30, y + 48, width - 60, {
     font: "800 28px Inter, Arial, sans-serif",

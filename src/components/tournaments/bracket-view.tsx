@@ -257,7 +257,7 @@ function BracketTeamRow({ side }: { side: BracketSide }) {
         "relative grid min-h-10 grid-cols-[30px_minmax(0,1fr)_68px] items-center gap-2 px-2.5 py-1.5 text-zinc-200 transition",
         hasPenalty && "min-h-11",
         side.isChampion &&
-          "min-h-11 overflow-hidden bg-[linear-gradient(100deg,rgba(250,204,21,0.26),rgba(245,158,11,0.16),rgba(255,255,255,0.05))] shadow-[inset_0_0_34px_rgba(250,204,21,0.24)]",
+          "min-h-11 overflow-hidden bg-[linear-gradient(100deg,rgba(33,241,168,0.26),rgba(33,241,168,0.16),rgba(255,255,255,0.05))] shadow-[inset_0_0_34px_rgba(33,241,168,0.24)]",
         side.isCurrentUser && !side.isChampion && "bg-primary/10 ring-1 ring-inset ring-primary/35",
         side.isWinner && !side.isChampion && "bg-emerald-400/10",
         isLoser && "bg-zinc-950/55 opacity-55 grayscale",
@@ -268,7 +268,7 @@ function BracketTeamRow({ side }: { side: BracketSide }) {
           {[0, 1, 2].map((index) => (
             <Trophy
               key={index}
-              className="champion-cup absolute top-1 h-4 w-4 text-amber-300 drop-shadow-[0_0_8px_rgba(250,204,21,0.85)]"
+              className="champion-cup absolute top-1 h-4 w-4 text-amber-300 drop-shadow-[0_0_8px_rgba(33,241,168,0.85)]"
               style={{ left: `${10 + index * 33}%`, animationDelay: `${index * 0.24}s` }}
             />
           ))}
@@ -278,7 +278,7 @@ function BracketTeamRow({ side }: { side: BracketSide }) {
       <div
         className={cn(
           "relative z-10 flex h-7 w-7 items-center justify-center overflow-hidden rounded-lg border border-white/15 bg-black/30",
-          side.isChampion && "border-amber-200/70 bg-amber-400/15 shadow-[0_0_18px_rgba(250,204,21,0.35)]",
+          side.isChampion && "border-amber-200/70 bg-amber-400/15 shadow-[0_0_18px_rgba(33,241,168,0.35)]",
           side.isWinner && !side.isChampion && "border-emerald-200/45 bg-emerald-400/10",
           isLoser && "border-zinc-600/40 bg-zinc-900/70",
         )}
@@ -294,7 +294,7 @@ function BracketTeamRow({ side }: { side: BracketSide }) {
         <div
           className={cn(
             "truncate text-[13px] font-semibold leading-tight text-white",
-            side.isChampion && "text-amber-100 drop-shadow-[0_0_10px_rgba(250,204,21,0.55)]",
+            side.isChampion && "text-amber-100 drop-shadow-[0_0_10px_rgba(33,241,168,0.55)]",
             isLoser && "text-zinc-500",
           )}
         >
@@ -328,7 +328,7 @@ function BracketTeamRow({ side }: { side: BracketSide }) {
         <span
           className={cn(
             "text-base font-black leading-none text-white",
-            side.isChampion && "text-amber-100 drop-shadow-[0_0_10px_rgba(250,204,21,0.7)]",
+            side.isChampion && "text-amber-100 drop-shadow-[0_0_10px_rgba(33,241,168,0.7)]",
             isLoser && "text-zinc-500",
           )}
         >
@@ -337,7 +337,7 @@ function BracketTeamRow({ side }: { side: BracketSide }) {
         {side.penaltyText ? (
           <span
             className={cn(
-              "inline-flex max-w-full items-center rounded-full border border-amber-300/35 bg-amber-300/10 px-1.5 py-[1px] text-[9px] font-black uppercase leading-none tracking-[0.12em] text-amber-200 shadow-[0_0_12px_rgba(251,191,36,0.12)]",
+              "inline-flex max-w-full items-center rounded-full border border-amber-300/35 bg-amber-300/10 px-1.5 py-[1px] text-[9px] font-black uppercase leading-none tracking-[0.12em] text-amber-200 shadow-[0_0_12px_rgba(33,241,168,0.12)]",
               side.isChampion && "border-amber-100/55 bg-amber-200/15 text-amber-100",
               isLoser && "border-zinc-700/50 bg-zinc-900/60 text-zinc-500 shadow-none",
             )}
@@ -403,8 +403,8 @@ function BracketMatchBox({
     <div
       data-match-label={seriesLabel(series)}
       className={cn(
-        "flex h-full flex-col justify-center overflow-hidden rounded-xl border border-emerald-200/70 bg-emerald-950/60 shadow-[0_0_28px_rgba(16,185,129,0.14)] backdrop-blur",
-        isCurrentUserMatch && "border-primary/80 shadow-[0_0_34px_rgba(218,183,106,0.28)]",
+        "flex h-full flex-col justify-center overflow-hidden rounded-xl border border-emerald-200/70 bg-emerald-950/60 shadow-[0_0_28px_rgba(33,241,168,0.14)] backdrop-blur",
+        isCurrentUserMatch && "border-primary/80 shadow-[0_0_34px_rgba(33,241,168,0.28)]",
       )}
     >
       <BracketTeamRow side={sides[0]} />
@@ -461,7 +461,7 @@ function BracketConnector({
   const middleX = startX + (endX - startX) / 2;
   const path = `M ${startX} ${startY} H ${middleX} V ${endY} H ${endX}`;
 
-  return <path d={path} fill="none" stroke="rgba(187,247,208,0.72)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />;
+  return <path d={path} fill="none" stroke="rgba(33,241,168,0.72)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />;
 }
 
 export function BracketView({
@@ -519,7 +519,7 @@ export function BracketView({
   }, [activeRound, orderedRounds]);
 
   return (
-    <div className="overflow-hidden rounded-[2rem] border border-emerald-400/20 bg-[radial-gradient(circle_at_50%_45%,rgba(34,197,94,0.22),transparent_22%),radial-gradient(circle_at_18%_10%,rgba(16,185,129,0.2),transparent_26%),linear-gradient(135deg,#03180f_0%,#052817_48%,#02110b_100%)] shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+    <div className="overflow-hidden rounded-[2rem] border border-emerald-400/20 bg-[radial-gradient(circle_at_50%_45%,rgba(33,241,168,0.22),transparent_22%),radial-gradient(circle_at_18%_10%,rgba(33,241,168,0.2),transparent_26%),linear-gradient(135deg,#03180f_0%,#052817_48%,#02110b_100%)] shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
       <div className="relative overflow-hidden px-5 pb-2 pt-7 text-center sm:px-8 sm:pt-9">
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:46px_46px] opacity-20" />
         <div className="relative mx-auto inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-black/25 px-4 py-2 text-xs uppercase tracking-[0.28em] text-emerald-100/80">
@@ -544,7 +544,7 @@ export function BracketView({
                       className={cn(
                         "inline-flex h-10 shrink-0 items-center gap-2 rounded-full border px-3 text-xs font-black uppercase tracking-[0.12em] transition",
                         active
-                          ? "border-emerald-200/50 bg-emerald-300/16 text-white shadow-[0_0_24px_rgba(16,185,129,0.16)]"
+                          ? "border-emerald-200/50 bg-emerald-300/16 text-white shadow-[0_0_24px_rgba(33,241,168,0.16)]"
                           : "border-white/10 bg-black/25 text-zinc-400 hover:border-emerald-300/25 hover:text-zinc-100",
                       )}
                     >

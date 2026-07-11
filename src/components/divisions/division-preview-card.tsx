@@ -8,7 +8,7 @@ export function DivisionPreviewCard({ canOpen, coverImage, priorityImage = false
     <div
       className={cn(
         "group relative aspect-video overflow-hidden rounded-[26px] border border-white/10 bg-black shadow-[0_24px_70px_rgba(2,6,23,0.34)] transition duration-300",
-        canOpen ? "hover:-translate-y-1 hover:border-amber-200/25 hover:shadow-[0_28px_80px_rgba(245,158,11,0.12)]" : "cursor-not-allowed",
+        canOpen ? "hover:-translate-y-1 hover:border-amber-200/25 hover:shadow-[0_28px_80px_rgba(33,241,168,0.12)]" : "cursor-not-allowed",
       )}
       aria-disabled={!canOpen}
     >
@@ -23,7 +23,7 @@ export function DivisionPreviewCard({ canOpen, coverImage, priorityImage = false
           className={cn("object-cover transition duration-300", !canOpen && "scale-105 blur-[3px] grayscale opacity-55")}
         />
       ) : (
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_62%_18%,rgba(255,255,255,0.95),transparent_15%),radial-gradient(circle_at_72%_46%,rgba(14,165,233,0.95),transparent_24%),radial-gradient(circle_at_34%_24%,rgba(168,85,247,0.7),transparent_22%),radial-gradient(circle_at_40%_78%,rgba(34,211,238,0.75),transparent_22%),linear-gradient(135deg,#050716_0%,#10104f_42%,#05040d_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_62%_18%,rgba(255,255,255,0.95),transparent_15%),radial-gradient(circle_at_72%_46%,rgba(33,241,168,0.95),transparent_24%),radial-gradient(circle_at_34%_24%,rgba(33,241,168,0.7),transparent_22%),radial-gradient(circle_at_40%_78%,rgba(33,241,168,0.75),transparent_22%),linear-gradient(135deg,#1D1D1D_0%,#1D1D1D_42%,#1D1D1D_100%)]" />
       )}
 
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.08),rgba(0,0,0,0.56)),linear-gradient(90deg,rgba(0,0,0,0.34),rgba(0,0,0,0.08)_52%,rgba(0,0,0,0.4))]" />

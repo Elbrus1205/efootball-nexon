@@ -10,14 +10,14 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "#0A0A0A",
-        foreground: "#F5F5F5",
-        primary: "#D4AF37",
-        accent: "#C5A028",
-        surface: "#111111",
-        card: "#111111",
-        border: "rgba(212,175,55,0.24)",
-        muted: "#CCCCCC",
+        background: "#171717",
+        foreground: "#F4FAF7",
+        primary: "#21F1A8",
+        accent: "#21F1A8",
+        surface: "#1D1D1D",
+        card: "#202020",
+        border: "rgba(33,241,168,0.24)",
+        muted: "#AAB6B2",
       },
       fontFamily: {
         sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "\"Segoe UI\"", "Roboto", "\"Helvetica Neue\"", "Arial", "sans-serif"],
@@ -27,7 +27,7 @@ const config: Config = {
         glow: "none",
       },
       backgroundImage: {
-        hero: "linear-gradient(180deg, #0A0A0A 0%, #000000 100%)",
+        hero: "linear-gradient(180deg, #171717 0%, #111111 100%)",
       },
     },
   },

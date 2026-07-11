@@ -111,7 +111,7 @@ export function AdminNav({ allowedHrefs }: { allowedHrefs: string[] }) {
                 className={cn(
                   "inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm transition",
                   active
-                    ? "border-primary/30 bg-primary/10 text-white shadow-[0_0_24px_rgba(59,130,246,0.14)]"
+                    ? "border-primary/30 bg-primary/10 text-white shadow-[0_0_24px_rgba(33,241,168,0.14)]"
                     : "border-white/10 bg-white/[0.04] text-zinc-400 hover:border-primary/20 hover:text-white",
                 )}
               >

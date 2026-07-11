@@ -95,7 +95,7 @@ export function LegalDocumentPage({ document }: { document: LegalDocument }) {
     <div className="page-shell py-8 sm:py-12">
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(8,14,24,0.96),rgba(5,18,34,0.9))] p-5 shadow-[0_30px_90px_rgba(0,0,0,0.28)] sm:p-8">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.12),transparent_28%),radial-gradient(circle_at_85%_18%,rgba(34,197,94,0.1),transparent_24%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(33,241,168,0.12),transparent_28%),radial-gradient(circle_at_85%_18%,rgba(33,241,168,0.1),transparent_24%)]" />
           <div className="relative">
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-primary">

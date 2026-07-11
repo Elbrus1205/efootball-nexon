@@ -23,12 +23,12 @@ export function DesktopNav({ links }: { links: DesktopNavLink[] }) {
             href={link.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "group relative isolate overflow-hidden rounded-full px-3.5 py-2 text-[13px] font-bold leading-none text-zinc-300 transition-[color,background-color,box-shadow,transform] duration-300 ease-out hover:-translate-y-0.5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9944f]/60 xl:px-4",
-              active && "bg-[#b9944f]/12 text-white shadow-[inset_0_0_0_1px_rgba(185,148,79,0.3),0_0_24px_rgba(185,148,79,0.14)]",
+              "group relative isolate overflow-hidden rounded-full px-3.5 py-2 text-[13px] font-bold leading-none text-zinc-300 transition-[color,background-color,box-shadow,transform] duration-300 ease-out hover:-translate-y-0.5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21F1A8]/60 xl:px-4",
+              active && "bg-[#21F1A8]/12 text-white shadow-[inset_0_0_0_1px_rgba(33,241,168,0.3),0_0_24px_rgba(33,241,168,0.14)]",
             )}
           >
-            <span className="absolute inset-x-3 bottom-1 h-px origin-left scale-x-0 rounded-full bg-gradient-to-r from-transparent via-[#b9944f] to-transparent opacity-0 transition duration-300 group-hover:scale-x-100 group-hover:opacity-80" />
-            <span className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(185,148,79,0.16),transparent_62%)] opacity-0 transition duration-300 group-hover:opacity-100" />
+            <span className="absolute inset-x-3 bottom-1 h-px origin-left scale-x-0 rounded-full bg-gradient-to-r from-transparent via-[#21F1A8] to-transparent opacity-0 transition duration-300 group-hover:scale-x-100 group-hover:opacity-80" />
+            <span className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(33,241,168,0.16),transparent_62%)] opacity-0 transition duration-300 group-hover:opacity-100" />
             {link.label}
           </Link>
         );
