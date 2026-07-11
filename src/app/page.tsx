@@ -12,11 +12,11 @@ import {
   Users,
   Zap,
 } from "lucide-react";
-import { MatchStatus, Prisma, TournamentStatus } from "@prisma/client";
+import { MatchStatus, TournamentStatus } from "@prisma/client";
 import { AnimatedCounter } from "@/components/home/animated-counter";
 import { AutoScrollRow } from "@/components/home/auto-scroll-row";
-import { TournamentCarousel, type CarouselTournament } from "@/components/home/tournament-carousel";
 import { Reveal } from "@/components/shared/reveal";
+import { getCurrentSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getArchivedHomeStats, parsePrizePoolValue } from "@/lib/home-stats";
 import s from "./home.module.css";
@@ -25,52 +25,9 @@ const telegramHref = process.env.NEXT_PUBLIC_SUPPORT_TELEGRAM_URL ?? "https://t.
 const vkHref = process.env.NEXT_PUBLIC_SUPPORT_VK_URL ?? "https://vk.com/efootball_nexon";
 const marketHref = "https://t.me/eFootballNexonMarketBot";
 
-const dateFormatter = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long" });
-
-const formatLabels: Record<string, string> = {
-  LEAGUE: "Лига",
-  GROUPS_PLAYOFF: "Группы + плей-офф",
-  SINGLE_ELIMINATION: "Плей-офф",
-  DOUBLE_ELIMINATION: "Double elimination",
-  SWISS: "Швейцарка",
-  CUSTOM: "Кастомный формат",
-};
-
-type StatusMeta = { label: string; tone: CarouselTournament["statusTone"] };
-
-function statusMeta(status: string): StatusMeta {
-  switch (status) {
-    case TournamentStatus.IN_PROGRESS:
-      return { label: "Идёт турнир", tone: "live" };
-    case TournamentStatus.REGISTRATION_OPEN:
-      return { label: "Идёт набор", tone: "open" };
-    case TournamentStatus.AWAITING_START:
-    case TournamentStatus.REGISTRATION_CLOSED:
-      return { label: "Скоро старт", tone: "soon" };
-    case TournamentStatus.COMPLETED:
-      return { label: "Завершён", tone: "done" };
-    default:
-      return { label: "Черновик", tone: "done" };
-  }
-}
-
-type TournamentRow = {
-  id: string;
-  slug: string;
-  title: string;
-  status: string;
-  startsAt: Date;
-  maxParticipants: number;
-  prizePool: string | null;
-  format: string;
-  hasCoverImage: boolean;
-  updatedAt: Date;
-  participants: number;
-};
-
 const getHomeData = unstable_cache(
   async () => {
-    const [totalUsers, completedTournaments, playedMatches, completedTournamentPrizes, archivedHomeStats, tournamentRows] =
+    const [totalUsers, completedTournaments, playedMatches, completedTournamentPrizes, archivedHomeStats] =
       await Promise.all([
         db.user.count(),
         db.tournament.count({ where: { status: TournamentStatus.COMPLETED, isTest: false } }),
@@ -80,31 +37,6 @@ const getHomeData = unstable_cache(
           select: { prizePool: true },
         }),
         getArchivedHomeStats(),
-        db.$queryRaw<TournamentRow[]>(Prisma.sql`
-          SELECT
-            t.id, t.slug, t.title, t.status::text AS status, t."startsAt",
-            t."maxParticipants", t."prizePool", t.format::text AS format,
-            (t."coverImage" IS NOT NULL AND t."coverImage" <> '') AS "hasCoverImage",
-            t."updatedAt",
-            (
-              SELECT COUNT(*)::int FROM "TournamentRegistration" p
-              WHERE p."tournamentId" = t.id AND p.status <> 'REMOVED'::"ParticipantStatus"
-            ) AS participants
-          FROM "Tournament" t
-          WHERE t."isTest" = false
-          ORDER BY
-            (CASE t.status
-              WHEN 'IN_PROGRESS' THEN 0
-              WHEN 'REGISTRATION_OPEN' THEN 1
-              WHEN 'AWAITING_START' THEN 2
-              WHEN 'REGISTRATION_CLOSED' THEN 3
-              WHEN 'DRAFT' THEN 4
-              WHEN 'COMPLETED' THEN 5
-              ELSE 6
-            END),
-            t."startsAt" DESC
-          LIMIT 8
-        `),
       ]);
 
     const playersCount = Math.max(totalUsers + archivedHomeStats.users, 240);
@@ -114,25 +46,7 @@ const getHomeData = unstable_cache(
       archivedHomeStats.prizePool +
       completedTournamentPrizes.reduce((sum, tournament) => sum + parsePrizePoolValue(tournament.prizePool), 0);
 
-    const tournaments: CarouselTournament[] = tournamentRows.map((row) => {
-      const meta = statusMeta(row.status);
-      const prizeValue = parsePrizePoolValue(row.prizePool);
-      return {
-        id: row.id,
-        slug: row.slug,
-        title: row.title,
-        statusLabel: meta.label,
-        statusTone: meta.tone,
-        dateLabel: dateFormatter.format(new Date(row.startsAt)),
-        formatLabel: formatLabels[row.format] ?? "Турнир",
-        prizeLabel: prizeValue ? `${new Intl.NumberFormat("ru-RU").format(prizeValue)} ₽` : null,
-        participants: row.participants,
-        maxParticipants: row.maxParticipants,
-        coverUrl: row.hasCoverImage ? `/api/tournaments/${row.id}/cover?w=720&h=405&q=84&v=${row.updatedAt.getTime()}` : null,
-      };
-    });
-
-    return { playersCount, tournamentsCount, matchesCount, awardedPrizePool, tournaments };
+    return { playersCount, tournamentsCount, matchesCount, awardedPrizePool };
   },
   ["home-page-data-v4"],
   { revalidate: 300 },
@@ -142,7 +56,8 @@ const brandLetters = "EFOOTBALL".split("");
 const brandLettersTwo = "NEXON".split("");
 
 export default async function HomePage() {
-  const { playersCount, tournamentsCount, matchesCount, awardedPrizePool, tournaments } = await getHomeData();
+  const [{ playersCount, tournamentsCount, matchesCount, awardedPrizePool }, session] = await Promise.all([getHomeData(), getCurrentSession()]);
+  const playHref = session?.user?.id ? "/tournaments" : "/register";
 
   const stats = [
     { icon: Users, value: playersCount, suffix: "+", label: "Игроков" },
@@ -262,7 +177,7 @@ export default async function HomePage() {
             </h1>
 
             <div className={s.heroActions}>
-              <Link href="/register" className={s.heroCta}>
+              <Link href={playHref} className={s.heroCta}>
                 <span className={s.heroCtaGlow} aria-hidden="true" />
                 <Swords className="h-5 w-5" />
                 <span>Начать играть</span>
@@ -273,6 +188,8 @@ export default async function HomePage() {
             <div className={s.heroStats} aria-label="Статистика платформы">
               {stats.map((stat) => (
                 <div key={stat.label} className={s.heroStat}>
+                  <span className={s.statOrbit} aria-hidden="true" />
+                  <span className={s.statShine} aria-hidden="true" />
                   <span className={s.heroStatIcon}>
                     <stat.icon className="h-4 w-4" />
                   </span>
@@ -325,14 +242,7 @@ export default async function HomePage() {
           </Reveal>
         </section>
 
-        {/* ============================ TOURNAMENTS (auto-scroll, no heading) ============================ */}
-        <section className={`${s.shell} ${s.blockTight}`}>
-          <div className={s.bleed}>
-            <TournamentCarousel tournaments={tournaments} />
-          </div>
-        </section>
-
-        {/* ============================ MARKET (auto-scroll cards) ============================ */}
+        {/* ============================ MARKET ============================ */}
         <section className={`${s.shell} ${s.block}`}>
           <Reveal>
             <div className={s.headCenter}>
@@ -348,31 +258,33 @@ export default async function HomePage() {
           </Reveal>
 
           <Reveal>
-            <div className={s.bleed}>
-              <AutoScrollRow ariaLabel="Категории маркета" speed={0.3}>
+            <div className={s.marketStage}>
+              <div className={s.marketAura} aria-hidden="true" />
+              <div className={s.marketGrid}>
                 {marketItems.map((item) => (
                   <Link
                     key={item.title}
                     href={marketHref}
                     target="_blank"
                     rel="noreferrer"
-                    className={`${s.miniCard} ${s.miniMarket}`}
+                    className={s.marketCard}
                     role="listitem"
                   >
-                    <div className={s.miniGlow} aria-hidden="true" />
-                    <span className={s.miniTag}>{item.tag}</span>
-                    <span className={s.miniIcon}>
+                    <span className={s.marketBeam} aria-hidden="true" />
+                    <span className={s.marketNoise} aria-hidden="true" />
+                    <span className={s.marketTag}>{item.tag}</span>
+                    <span className={s.marketIcon}>
                       <item.icon className="h-5 w-5" />
                     </span>
-                    <h3 className={s.miniTitle}>{item.title}</h3>
-                    <p className={s.miniText}>{item.text}</p>
-                    <span className={s.miniFoot}>
+                    <h3 className={s.marketTitle}>{item.title}</h3>
+                    <p className={s.marketText}>{item.text}</p>
+                    <span className={s.marketFoot}>
                       В Telegram-маркет
                       <ArrowRight className="h-4 w-4" />
                     </span>
                   </Link>
                 ))}
-              </AutoScrollRow>
+              </div>
             </div>
           </Reveal>
         </section>

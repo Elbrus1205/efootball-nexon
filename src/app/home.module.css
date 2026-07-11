@@ -459,6 +459,7 @@
   opacity: 0;
   transform: translateY(16px);
   animation: fadeUp 0.9s cubic-bezier(0.22, 1, 0.36, 1) 1.2s forwards;
+  perspective: 900px;
 }
 
 .heroStat {
@@ -470,29 +471,89 @@
   padding: 0.85rem 0.5rem;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 13px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% -20%, rgba(246, 217, 138, 0.18), transparent 52%),
+    linear-gradient(155deg, rgba(28, 25, 18, 0.84), rgba(9, 10, 13, 0.78));
   -webkit-backdrop-filter: blur(16px) saturate(1.2);
   backdrop-filter: blur(16px) saturate(1.2);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
-  transition: transform 0.28s ease, border-color 0.28s ease, background-color 0.28s ease;
+  transform-style: preserve-3d;
+  animation: statFloat 6s ease-in-out infinite;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.28s ease, box-shadow 0.28s ease;
+}
+
+.heroStat:nth-child(2) { animation-delay: -1.5s; }
+.heroStat:nth-child(3) { animation-delay: -3s; }
+.heroStat:nth-child(4) { animation-delay: -4.5s; }
+
+.heroStat::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(115deg, transparent 18%, rgba(255, 244, 207, 0.16) 46%, transparent 68%);
+  transform: translateX(-130%);
+  animation: statGlare 5.5s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .heroStat:hover {
-  transform: translateY(-3px);
+  animation-play-state: paused;
+  transform: translateY(-8px) rotateX(8deg) rotateY(-7deg) scale(1.035);
   border-color: rgba(230, 197, 116, 0.4);
-  background: linear-gradient(180deg, rgba(230, 197, 116, 0.12), rgba(255, 255, 255, 0.03));
+  box-shadow: 0 22px 46px rgba(0, 0, 0, 0.48), 0 0 28px rgba(230, 197, 116, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.statOrbit {
+  position: absolute;
+  width: 4rem;
+  height: 4rem;
+  top: -2.5rem;
+  right: -1.5rem;
+  border: 1px solid rgba(230, 197, 116, 0.2);
+  border-radius: 999px;
+  box-shadow: 0 0 22px rgba(230, 197, 116, 0.12);
+  animation: statOrbit 7s linear infinite;
+}
+
+.statOrbit::before {
+  content: "";
+  position: absolute;
+  width: 0.38rem;
+  height: 0.38rem;
+  top: 50%;
+  left: -0.19rem;
+  border-radius: 999px;
+  background: var(--gold);
+  box-shadow: 0 0 12px var(--gold);
+}
+
+.statShine {
+  position: absolute;
+  inset: auto 10% 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0.7;
 }
 
 .heroStatIcon {
+  position: relative;
+  z-index: 1;
   color: var(--gold);
+  filter: drop-shadow(0 0 8px rgba(230, 197, 116, 0.48));
+  transform: translateZ(28px);
 }
 
 .heroStatValue {
+  position: relative;
+  z-index: 1;
   font-family: var(--mono);
   font-size: clamp(1.05rem, 3.5vw, 1.55rem);
   font-weight: 700;
   line-height: 1;
   color: var(--ink);
+  transform: translateZ(22px);
 }
 
 .heroStatSuffix {
@@ -500,12 +561,15 @@
 }
 
 .heroStatLabel {
+  position: relative;
+  z-index: 1;
   font-family: var(--mono);
   font-size: 0.58rem;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
+  transform: translateZ(16px);
 }
 
 /* ---------- scroll cue ---------- */
@@ -708,6 +772,176 @@
 .miniMarket:hover .miniFoot {
   gap: 0.65rem;
 }
+
+/* =========================================================================
+   MARKET — animated bento showcase
+   ========================================================================= */
+
+.marketStage {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(230, 197, 116, 0.2);
+  border-radius: 28px;
+  padding: clamp(0.8rem, 2.5vw, 1.4rem);
+  background:
+    radial-gradient(circle at 15% 10%, rgba(230, 197, 116, 0.13), transparent 34%),
+    radial-gradient(circle at 88% 92%, rgba(200, 155, 73, 0.1), transparent 38%),
+    #08090c;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.marketAura {
+  position: absolute;
+  width: 22rem;
+  height: 22rem;
+  top: 50%;
+  left: 50%;
+  z-index: -1;
+  border-radius: 999px;
+  background: rgba(230, 197, 116, 0.08);
+  filter: blur(70px);
+  transform: translate(-50%, -50%);
+  animation: marketAura 8s ease-in-out infinite;
+}
+
+.marketGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.marketCard {
+  position: relative;
+  display: flex;
+  min-height: 15rem;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 20px;
+  padding: clamp(1.15rem, 3vw, 1.7rem);
+  background:
+    radial-gradient(circle at 90% 0%, rgba(230, 197, 116, 0.13), transparent 42%),
+    linear-gradient(145deg, rgba(26, 24, 19, 0.9), rgba(10, 11, 15, 0.93));
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+.marketCard:first-child,
+.marketCard:last-child {
+  grid-column: span 1;
+}
+
+.marketCard:hover {
+  z-index: 2;
+  transform: perspective(1000px) translateY(-6px) rotateX(2deg) rotateY(-2deg);
+  border-color: rgba(246, 217, 138, 0.48);
+  box-shadow: 0 26px 58px rgba(0, 0, 0, 0.5), 0 0 34px rgba(230, 197, 116, 0.08);
+}
+
+.marketBeam {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: conic-gradient(from var(--market-angle, 0deg), transparent 0 78%, rgba(246, 217, 138, 0.85) 84%, transparent 90%);
+  padding: 1px;
+  opacity: 0.5;
+  animation: marketBeam 7s linear infinite;
+  pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.marketNoise {
+  position: absolute;
+  inset: 0;
+  opacity: 0.28;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(to bottom right, black, transparent 70%);
+  pointer-events: none;
+}
+
+.marketTag {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1;
+  border: 1px solid rgba(230, 197, 116, 0.22);
+  border-radius: 999px;
+  padding: 0.28rem 0.58rem;
+  background: rgba(230, 197, 116, 0.07);
+  color: #d9c38d;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.marketIcon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border: 1px solid rgba(230, 197, 116, 0.3);
+  border-radius: 15px;
+  background: linear-gradient(145deg, rgba(230, 197, 116, 0.19), rgba(230, 197, 116, 0.035));
+  color: var(--gold);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.13);
+  transform: translateZ(34px);
+  transition: transform 0.4s ease;
+}
+
+.marketCard:hover .marketIcon {
+  transform: translateZ(42px) rotate(-6deg) scale(1.08);
+}
+
+.marketTitle {
+  position: relative;
+  z-index: 1;
+  margin-top: 1.4rem;
+  color: var(--ink);
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  font-weight: 850;
+  transform: translateZ(26px);
+}
+
+.marketText {
+  position: relative;
+  z-index: 1;
+  max-width: 26rem;
+  margin-top: 0.45rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  transform: translateZ(18px);
+}
+
+.marketFoot {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: auto;
+  padding-top: 1.2rem;
+  color: var(--gold);
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transform: translateZ(24px);
+  transition: gap 0.3s ease;
+}
+
+.marketCard:hover .marketFoot { gap: 0.75rem; }
 
 /* =========================================================================
    TOURNAMENT CARDS (auto-scroll)
@@ -1106,6 +1340,29 @@
   55%, 100% { transform: translateX(130%); }
 }
 
+@keyframes statFloat {
+  0%, 100% { transform: translateY(0) rotateX(0deg) rotateY(0deg); }
+  50% { transform: translateY(-5px) rotateX(2deg) rotateY(-2deg); }
+}
+
+@keyframes statGlare {
+  0%, 62% { transform: translateX(-130%); }
+  88%, 100% { transform: translateX(130%); }
+}
+
+@keyframes statOrbit {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes marketAura {
+  0%, 100% { opacity: 0.65; transform: translate(-50%, -50%) scale(0.9); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.18); }
+}
+
+@keyframes marketBeam {
+  to { transform: rotate(360deg); }
+}
+
 @keyframes cardSpin3d {
   0%, 100% { transform: perspective(1100px) rotateY(-13deg) rotateX(2deg); }
   50% { transform: perspective(1100px) rotateY(13deg) rotateX(-2deg); }
@@ -1157,6 +1414,14 @@
     gap: 0.5rem;
   }
 
+  .marketGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .marketCard {
+    min-height: 13.5rem;
+  }
+
   .title {
     font-size: clamp(1.35rem, 6vw, 1.75rem);
   }
@@ -1198,6 +1463,11 @@
   .heroCta,
   .heroCta::after,
   .heroStats,
+  .heroStat,
+  .heroStat::after,
+  .statOrbit,
+  .marketAura,
+  .marketBeam,
   .miniCard,
   .scrollCue,
   .scrollThumb,
