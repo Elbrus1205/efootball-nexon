@@ -2,7 +2,6 @@ import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import {
   ArrowRight,
-  BadgeCheck,
   Coins,
   Gamepad2,
   ShieldCheck,
@@ -102,27 +101,17 @@ export default async function HomePage() {
   const marketItems = [
     {
       icon: Gamepad2,
-      tag: "Аккаунты",
-      title: "Готовые составы",
-      text: "Проверенные аккаунты с сильными карточками и рейтингом.",
+      tag: "Покупка · Продажа",
+      title: "Аккаунты eFootball",
+      text: "Покупай готовые аккаунты или безопасно выставляй свой на продажу через Telegram-бота.",
+      action: "Выбрать аккаунт",
     },
     {
       icon: Coins,
-      tag: "GP и монеты",
-      title: "Внутриигровая валюта",
-      text: "Пополнение GP и eFootball Coins по курсу сообщества.",
-    },
-    {
-      icon: BadgeCheck,
-      tag: "Буст",
-      title: "Прокачка и буст",
-      text: "Помощь с прокачкой профиля и рейтинга под задачу.",
-    },
-    {
-      icon: ShoppingBag,
-      tag: "Обмен",
-      title: "Скупка и продажа",
-      text: "Продай или обменяй аккаунт через проверенный маркет.",
+      tag: "Пополнение",
+      title: "Донат в игру",
+      text: "Оформляй пополнение eFootball быстро и удобно — весь процесс проходит внутри Telegram-бота.",
+      action: "Пополнить через бота",
     },
   ];
 
@@ -223,13 +212,15 @@ export default async function HomePage() {
           <Reveal>
             <div className={s.bleed}>
               <AutoScrollRow ariaLabel="Возможности платформы" speed={0.35}>
-                {features.map((feature) => (
+                {features.map((feature, index) => (
                   <article
                     key={feature.title}
                     className={`${s.miniCard} ${feature.accent === "gold" ? s.miniGold : s.miniIce}`}
                     role="listitem"
                   >
                     <div className={s.miniGlow} aria-hidden="true" />
+                    <span className={s.miniBeam} aria-hidden="true" />
+                    <span className={s.miniNumber} aria-hidden="true">0{index + 1}</span>
                     <span className={s.miniIcon}>
                       <feature.icon className="h-5 w-5" />
                     </span>
@@ -247,7 +238,7 @@ export default async function HomePage() {
           <Reveal>
             <div className={s.headCenter}>
               <span className={s.eyebrow}>Маркет</span>
-              <h2 className={s.title}>Магазин сообщества</h2>
+              <h2 className={s.title}>Всё нужное — внутри Telegram-бота</h2>
               <div className={s.headAction}>
                 <Link href={marketHref} target="_blank" rel="noreferrer" className={s.glassButton}>
                   <ShoppingBag className="h-4 w-4" />
@@ -279,7 +270,7 @@ export default async function HomePage() {
                     <h3 className={s.marketTitle}>{item.title}</h3>
                     <p className={s.marketText}>{item.text}</p>
                     <span className={s.marketFoot}>
-                      В Telegram-маркет
+                      {item.action}
                       <ArrowRight className="h-4 w-4" />
                     </span>
                   </Link>
@@ -293,10 +284,12 @@ export default async function HomePage() {
         <section className={`${s.shell} ${s.block}`}>
           <Reveal>
             <div className={s.community}>
+              <span className={s.communityHalo} aria-hidden="true" />
+              <span className={s.communityBall} aria-hidden="true"><Swords className="h-5 w-5" /></span>
               <span className={s.eyebrow}>Сообщество</span>
-              <h2 className={s.communityTitle}>Присоединяйся к сообществу</h2>
+              <h2 className={s.communityTitle}>Будь внутри игры</h2>
               <p className={s.communityText}>
-                Анонсы турниров, результаты матчей и разборы — в наших каналах. Выбирай, где тебе удобнее.
+                Турниры, результаты и всё важное — без лишнего шума.
               </p>
 
               <div className={s.socialGrid}>
@@ -347,7 +340,7 @@ export default async function HomePage() {
                     <ShoppingBag className="h-5 w-5" />
                   </span>
                   <span className={s.socialName}>Telegram-маркет</span>
-                  <span className={s.socialMeta}>Аккаунты, валюта и буст от продавцов сообщества.</span>
+                  <span className={s.socialMeta}>Аккаунты eFootball и донат через официального бота маркета.</span>
                   <span className={s.socialArrow}>
                     Перейти
                     <ArrowRight className="h-4 w-4" />
