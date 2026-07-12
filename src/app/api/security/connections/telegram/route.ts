@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth/session";
 import { verifyTelegramAuth, type TelegramPayload } from "@/lib/auth/telegram";
+import { maybeCacheTelegramAvatar } from "@/lib/media-processing";
 
 export async function POST(request: Request) {
   try {
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
       where: { id: session.user.id },
       select: {
         telegramId: true,
+        image: true,
       },
     });
 
@@ -49,12 +51,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Этот Telegram уже привязан к другому аккаунту." }, { status: 409 });
     }
 
+    const cachedAvatar = await maybeCacheTelegramAvatar({
+      telegramImage: payload.photo_url,
+      currentImage: currentUser.image,
+      identity: payload.id,
+    });
+
     await db.user.update({
       where: { id: session.user.id },
       data: {
         telegramId: payload.id,
         telegramUsername: payload.username ?? null,
-        image: payload.photo_url || undefined,
+        image: cachedAvatar,
       },
     });
 

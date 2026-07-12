@@ -50,14 +50,17 @@ export async function uploadToStorage(params: {
   bytes: ArrayBuffer | Buffer | Uint8Array;
   contentType: string;
   ext?: string;
+  path?: string;
+  cacheControl?: string;
 }) {
   const client = getServiceClient();
   const ext = params.ext ?? extensionForContentType(params.contentType);
-  const path = `${params.folder}/${randomUUID()}.${ext}`;
+  const path = params.path ?? `${params.folder}/${randomUUID()}.${ext}`;
   const body = params.bytes instanceof ArrayBuffer ? Buffer.from(params.bytes) : params.bytes;
 
   const { error } = await client.storage.from(STORAGE_BUCKET).upload(path, body, {
     contentType: params.contentType,
+    cacheControl: params.cacheControl,
     upsert: false,
   });
 

@@ -16,6 +16,7 @@ export function isInlineImageUrl(src?: string | null) {
 
 export function optimizedImageUrl(src?: string | null, options: ImageTransformOptions = {}) {
   if (!src || isInlineImageUrl(src)) return src ?? undefined;
+  if (src.startsWith("/")) return src;
 
   try {
     const url = new URL(src);

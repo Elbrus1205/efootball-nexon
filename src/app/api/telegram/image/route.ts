@@ -1,10 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
+import { normalizeAvatarImage } from "@/lib/media-processing";
 import { isTelegramAssetUrl } from "@/lib/telegram-assets";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const maxImageBytes = 6 * 1024 * 1024;
+
+async function avatarImageResponse(body: ArrayBuffer, contentType: string) {
+  const processed = await normalizeAvatarImage(body, contentType, { size: 256, quality: 84 });
+
+  return new NextResponse(new Uint8Array(processed.bytes), {
+    headers: {
+      "Content-Type": processed.contentType,
+      "Cache-Control": "public, max-age=604800, stale-while-revalidate=2592000",
+    },
+  });
+}
+
+async function safeAvatarImageResponse(body: ArrayBuffer, contentType: string) {
+  try {
+    return await avatarImageResponse(body, contentType);
+  } catch (error) {
+    console.warn("[telegram-image] transform-failed", {
+      contentType,
+      error: error instanceof Error ? error.message : "unknown-error",
+    });
+    return NextResponse.json({ error: "Image type is unsupported." }, { status: 415 });
+  }
+}
 
 export async function GET(request: NextRequest) {
   const fileId = request.nextUrl.searchParams.get("fileId")?.trim();
@@ -54,12 +78,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Image is too large." }, { status: 413 });
     }
 
-    return new NextResponse(body, {
-      headers: {
-        "Content-Type": contentType,
-        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
-      },
-    });
+    return safeAvatarImageResponse(body, contentType);
   }
 
   const rawUrl = request.nextUrl.searchParams.get("url");
@@ -110,10 +129,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Image is too large." }, { status: 413 });
   }
 
-  return new NextResponse(body, {
-    headers: {
-      "Content-Type": contentType,
-      "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
-    },
-  });
+  return safeAvatarImageResponse(body, contentType);
 }

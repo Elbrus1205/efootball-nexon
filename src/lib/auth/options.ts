@@ -9,6 +9,7 @@ import { createLoginHistory, createSecuritySession, deleteSecuritySessions, reso
 import { fetchVkUserProfile } from "@/lib/auth/vk";
 import { db } from "@/lib/db";
 import { ADULT_AGE, getRegistrationAge, getRegistrationConsentData, hasSeparateRegistrationConsents } from "@/lib/legal-acceptance";
+import { maybeCacheTelegramAvatar } from "@/lib/media-processing";
 import { generateFallbackName } from "@/lib/player-name";
 import { generateUniquePublicPlayerId } from "@/lib/public-player-id";
 import { describeTelegramOidcError, verifyAndConsumeTelegramIdToken } from "@/lib/telegram-oidc-server";
@@ -345,12 +346,18 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
+          const cachedAvatar = await maybeCacheTelegramAvatar({
+            telegramImage: profile.picture,
+            currentImage: user.image,
+            identity: telegramId,
+          });
+
           user = await db.user.update({
             where: { id: user.id },
             data: {
               name: undefined,
               telegramUsername: profile.username ?? null,
-              image: profile.picture || undefined,
+              image: cachedAvatar,
               role: existingRoleUpdate,
               ...(!user.personalDataConsentAt && registrationConsentData ? registrationConsentData : {}),
             },
@@ -363,13 +370,18 @@ export const authOptions: NextAuthOptions = {
           }
 
           const displayName = await generateUniqueDisplayName(telegramId, telegramUsername);
+          const cachedAvatar = await maybeCacheTelegramAvatar({
+            telegramImage: profile.picture,
+            currentImage: null,
+            identity: telegramId,
+          });
 
           user = await db.user.create({
             data: {
               publicId: await generateUniquePublicPlayerId(),
               telegramId,
               telegramUsername: profile.username ?? null,
-              image: profile.picture || undefined,
+              image: cachedAvatar,
               name: displayName,
               role,
               ...registrationConsentData,
@@ -479,11 +491,17 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        const cachedAvatar = await maybeCacheTelegramAvatar({
+          telegramImage: profile.user.photoUrl,
+          currentImage: user.image,
+          identity: telegramId,
+        });
+
         user = await db.user.update({
           where: { id: user.id },
           data: {
             telegramUsername: profile.user.username ?? null,
-            image: user.image ?? profile.user.photoUrl ?? undefined,
+            image: cachedAvatar,
           },
         });
 

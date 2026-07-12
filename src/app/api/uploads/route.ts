@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
 import { getCurrentSession } from "@/lib/auth/session";
+import { IMMUTABLE_MEDIA_CACHE_CONTROL, normalizeProfileUploadImage } from "@/lib/media-processing";
 import { isStorageConfigured, uploadToStorage, type StorageFolder } from "@/lib/storage/supabase-storage";
 
 export const runtime = "nodejs";
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"]);
+const ALLOWED_PROFILE_IMAGE_TYPES = new Set(["image/avif", "image/png", "image/jpeg", "image/webp"]);
 const ALLOWED_FAQ_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml", "application/pdf"]);
 
 const FOLDER_RULES: Record<StorageFolder, { maxBytes: number; allowed: Set<string> }> = {
-  avatars: { maxBytes: 4 * 1024 * 1024, allowed: ALLOWED_IMAGE_TYPES },
-  banners: { maxBytes: 8 * 1024 * 1024, allowed: ALLOWED_IMAGE_TYPES },
+  avatars: { maxBytes: 4 * 1024 * 1024, allowed: ALLOWED_PROFILE_IMAGE_TYPES },
+  banners: { maxBytes: 8 * 1024 * 1024, allowed: ALLOWED_PROFILE_IMAGE_TYPES },
   tournaments: { maxBytes: 16 * 1024 * 1024, allowed: ALLOWED_IMAGE_TYPES },
   divisions: { maxBytes: 16 * 1024 * 1024, allowed: ALLOWED_IMAGE_TYPES },
   faq: { maxBytes: 16 * 1024 * 1024, allowed: ALLOWED_FAQ_TYPES },
@@ -55,7 +57,14 @@ export async function POST(request: Request) {
 
   try {
     const bytes = await file.arrayBuffer();
-    const url = await uploadToStorage({ folder: folderRaw, bytes, contentType });
+    const processed = await normalizeProfileUploadImage(folderRaw, bytes, contentType);
+    const url = await uploadToStorage({
+      folder: folderRaw,
+      bytes: processed?.bytes ?? bytes,
+      contentType: processed?.contentType ?? contentType,
+      ext: processed?.ext,
+      cacheControl: processed ? IMMUTABLE_MEDIA_CACHE_CONTROL : undefined,
+    });
     return NextResponse.json({ url });
   } catch (error) {
     console.error("Upload to Supabase Storage failed", error);
