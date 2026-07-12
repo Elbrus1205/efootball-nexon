@@ -38,7 +38,8 @@ async function createMatchOutcomeNotifications(match: {
   );
 }
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
   await assertCanManageMatch(session, params.id);
 

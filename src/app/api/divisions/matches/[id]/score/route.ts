@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { isDivisionAdminRole, submitDivisionScore } from "@/lib/services/divisions";
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requireAuth();
   if (!isDivisionAdminRole(session.user.role)) {
     return NextResponse.json({ error: "Режим дивизионов доступен только администраторам." }, { status: 403 });

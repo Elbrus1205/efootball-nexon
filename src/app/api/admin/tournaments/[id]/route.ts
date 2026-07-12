@@ -14,7 +14,8 @@ import {
   startTournament,
 } from "@/lib/services/tournaments";
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requirePermission("tournaments.createEdit");
   const formData = await request.formData();
   const method = formData.get("_method");

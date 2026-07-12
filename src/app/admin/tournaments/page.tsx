@@ -37,11 +37,12 @@ const wideActionButtonClass = `${actionButtonClass} col-span-2 sm:col-span-1`;
 const quickButtonClass =
   "h-full min-h-11 w-full gap-1.5 whitespace-normal rounded-md px-2.5 py-2 text-center text-[12px] leading-tight sm:min-h-10 sm:px-2.5 sm:text-sm [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:shrink-0 sm:[&_svg]:h-4 sm:[&_svg]:w-4";
 
-export default async function AdminTournamentsPage({
-  searchParams,
-}: {
-  searchParams?: { created?: string; warning?: string };
-}) {
+export default async function AdminTournamentsPage(
+  props: {
+    searchParams?: Promise<{ created?: string; warning?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const session = await requireAnyPermission(["tournaments.createEdit", "tournaments.manageParticipants", "tournaments.manageStructure", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
   const canDeleteTournaments = session.user.role !== UserRole.TRAINEE;
   const tournamentAccessWhere = getAdminTournamentAccessWhere(session);

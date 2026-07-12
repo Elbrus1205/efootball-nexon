@@ -5,7 +5,8 @@ import { db } from "@/lib/db";
 import { TournamentBuilderForm } from "@/components/admin/tournament-builder-form";
 import { formatMoscowDateTimeLocalInput } from "@/lib/utils";
 
-export default async function AdminTournamentEditPage({ params }: { params: { id: string } }) {
+export default async function AdminTournamentEditPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requirePermission("tournaments.createEdit");
 
   const tournament = await db.tournament.findFirst({

@@ -11,7 +11,8 @@ import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 
-export default async function AdminTournamentHistoryPage({ params }: { params: { id: string } }) {
+export default async function AdminTournamentHistoryPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requireAnyPermission(["tournaments.createEdit", "tournaments.manageParticipants", "tournaments.manageStructure", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
   const tournament = await db.tournament.findFirst({

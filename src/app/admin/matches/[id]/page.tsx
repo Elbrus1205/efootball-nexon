@@ -51,7 +51,8 @@ function PlayerSubmissionCard({
   );
 }
 
-export default async function AdminMatchWorkspacePage({ params }: { params: { id: string } }) {
+export default async function AdminMatchWorkspacePage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
   const match = await db.match.findFirst({

@@ -12,7 +12,8 @@ import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { formatDate } from "@/lib/utils";
 
-export default async function AdminModerationWorkspacePage({ params }: { params: { id: string } }) {
+export default async function AdminModerationWorkspacePage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
   const match = await db.match.findFirst({

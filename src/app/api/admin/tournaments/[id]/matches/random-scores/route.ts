@@ -113,7 +113,8 @@ async function fallbackAdvancePlayoffWinner(matchId: string) {
   }
 }
 
-export async function POST(_request: Request, { params }: { params: { id: string } }) {
+export async function POST(_request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requirePermission("matches.generate");
   await assertCanManageTournament(session, params.id);
   const tournament = await db.tournament.findUnique({

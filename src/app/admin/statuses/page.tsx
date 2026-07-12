@@ -15,11 +15,12 @@ const approvalBadge: Record<ProfileStatusApprovalStatus, { label: string; varian
   REJECTED: { label: "Отклонён", variant: "danger" },
 };
 
-export default async function AdminStatusesPage({
-  searchParams,
-}: {
-  searchParams?: { statusApproved?: string; statusRejected?: string; statusAdded?: string; error?: string };
-}) {
+export default async function AdminStatusesPage(
+  props: {
+    searchParams?: Promise<{ statusApproved?: string; statusRejected?: string; statusAdded?: string; error?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   await requirePermission("profileStatuses.manage");
   await notifyExpiredProfileStatuses();
 

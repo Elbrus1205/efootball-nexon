@@ -4,11 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
-export default async function AdminBroadcastsPage({
-  searchParams,
-}: {
-  searchParams?: { sent?: string; failed?: string; error?: string };
-}) {
+export default async function AdminBroadcastsPage(
+  props: {
+    searchParams?: Promise<{ sent?: string; failed?: string; error?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   await requirePermission("broadcasts.manage");
 
   const [telegramRecipients, totalUsers, latestBroadcasts] = await db.$transaction([

@@ -13,7 +13,7 @@ function sessionIcon(platform: string | null): "laptop" | "phone" {
 
 export default async function DashboardSecurityPage() {
   const session = await requireAuth();
-  const currentContext = await resolveSecurityContext(headers());
+  const currentContext = await resolveSecurityContext(await headers());
   const telegramClientId = process.env.TELEGRAM_CLIENT_ID;
   const telegramEnabled = Boolean(telegramClientId);
   const vkAppId = process.env.NEXT_PUBLIC_VK_APP_ID ?? process.env.VK_CLIENT_ID;

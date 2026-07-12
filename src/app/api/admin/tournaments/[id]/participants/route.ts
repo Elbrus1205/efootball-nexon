@@ -96,7 +96,8 @@ async function findAbsorbableDuplicateRegistration({
   };
 }
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(_: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requireAnyPermission(["tournaments.manageParticipants", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
   await assertCanManageTournament(session, params.id);
 
@@ -130,7 +131,8 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
   return NextResponse.json({ participants });
 }
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requirePermission("tournaments.manageParticipants");
   await assertCanManageTournament(session, params.id);
   const body = participantManageSchema.parse(await request.json());

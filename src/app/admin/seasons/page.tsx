@@ -16,11 +16,12 @@ function dateRange(startsAt: Date | null, endsAt: Date | null) {
   return `${formatDate(startsAt!, "d MMM yyyy")} - ${formatDate(endsAt!, "d MMM yyyy")}`;
 }
 
-export default async function AdminSeasonsPage({
-  searchParams,
-}: {
-  searchParams?: { created?: string; deleted?: string; cleared?: string; finished?: string; error?: string };
-}) {
+export default async function AdminSeasonsPage(
+  props: {
+    searchParams?: Promise<{ created?: string; deleted?: string; cleared?: string; finished?: string; error?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   await requirePermission("tournaments.createEdit");
 
   const [seasons, tournamentsWithoutSeason, pendingStatusesCount] = await db.$transaction([

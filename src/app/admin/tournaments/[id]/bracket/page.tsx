@@ -7,7 +7,8 @@ import { getAdminTournamentAccessWhere } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
-export default async function AdminTournamentBracketPage({ params }: { params: { id: string } }) {
+export default async function AdminTournamentBracketPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requirePermission("tournaments.manageStructure");
 
   const tournament = await db.tournament.findFirst({

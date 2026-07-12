@@ -8,7 +8,8 @@ export const dynamic = "force-dynamic";
 
 const statuses = new Set(Object.values(DivisionMatchStatus));
 
-export default async function AdminDivisionsPage({ searchParams }: { searchParams?: { status?: string } }) {
+export default async function AdminDivisionsPage(props: { searchParams?: Promise<{ status?: string }> }) {
+  const searchParams = await props.searchParams;
   await requirePermission("divisions.manage");
   await syncDivisionSeasons();
   await autoResolveExpiredDivisionMatches();

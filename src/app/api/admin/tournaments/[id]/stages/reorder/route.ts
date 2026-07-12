@@ -6,7 +6,8 @@ import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { stageReorderSchema } from "@/lib/validators";
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requirePermission("tournaments.manageStructure");
   await assertCanManageTournament(session, params.id);
   const body = stageReorderSchema.parse({

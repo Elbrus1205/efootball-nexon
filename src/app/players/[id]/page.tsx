@@ -8,13 +8,14 @@ import { getActiveProfileStatusWhere } from "@/lib/profile-status-query";
 import { getPlayerRatings } from "@/lib/ratings";
 import { getReliabilitySummary } from "@/lib/services/reliability";
 
-export default async function PlayerProfilePage({
-  params,
-  searchParams,
-}: {
-  params: { id: string };
-  searchParams?: { season?: string };
-}) {
+export default async function PlayerProfilePage(
+  props: {
+    params: Promise<{ id: string }>;
+    searchParams?: Promise<{ season?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const [user, clubs, seasons] = await Promise.all([
     db.user.findFirst({
       where: {

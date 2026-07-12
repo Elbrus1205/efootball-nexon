@@ -4,7 +4,8 @@ import { requirePermission } from "@/lib/auth/session";
 import { assignParticipantsToGroups } from "@/lib/services/tournaments";
 import { groupAssignmentSchema } from "@/lib/validators";
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requirePermission("tournaments.manageStructure");
   await assertCanManageTournament(session, params.id);
 

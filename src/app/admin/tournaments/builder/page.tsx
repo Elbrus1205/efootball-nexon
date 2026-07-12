@@ -3,11 +3,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TournamentBuilderForm } from "@/components/admin/tournament-builder-form";
 
-export default async function AdminTournamentBuilderPage({
-  searchParams,
-}: {
-  searchParams?: { error?: string };
-}) {
+export default async function AdminTournamentBuilderPage(
+  props: {
+    searchParams?: Promise<{ error?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   await requirePermission("tournaments.createEdit");
 
   return (

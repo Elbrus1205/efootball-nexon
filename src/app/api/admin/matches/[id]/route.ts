@@ -186,7 +186,8 @@ async function getMultiLegPenaltyDecision(match: Match, nextPlayer1Score: number
   };
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
   await assertCanManageMatch(session, params.id);
   const body = matchUpdateSchema.parse(await request.json());

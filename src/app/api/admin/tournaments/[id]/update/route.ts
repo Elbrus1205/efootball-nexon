@@ -18,7 +18,8 @@ function resolveUpdatedStatus(status: TournamentStatus, startsAt: Date, autoOpen
   return resolveAutoRegistrationStatus(status, autoOpenRegistration, startsAt);
 }
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requirePermission("tournaments.createEdit");
   await assertCanManageTournament(session, params.id);
 

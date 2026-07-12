@@ -69,11 +69,12 @@ function getRatingAvatarSrc(src?: string | null) {
   return null;
 }
 
-export default async function RatingsPage({
-  searchParams,
-}: {
-  searchParams?: { season?: string };
-}) {
+export default async function RatingsPage(
+  props: {
+    searchParams?: Promise<{ season?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const [session, seasons] = await Promise.all([
     getCurrentSession(),
     db.season.findMany({
@@ -113,7 +114,6 @@ export default async function RatingsPage({
   return (
     <div className="page-shell space-y-8">
       <div className="text-sm font-semibold uppercase tracking-[0.28em] text-primary drop-shadow-[0_0_16px_rgba(33,241,168,0.65)]">Рейтинги</div>
-
       <Card className="overflow-hidden p-0">
         <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(33,241,168,0.13),transparent_38%),rgba(255,255,255,0.015)] px-4 py-4 sm:px-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -164,7 +164,6 @@ export default async function RatingsPage({
                         <div className="py-3 pl-1 pr-2 text-right sm:pl-2 sm:pr-4 sm:text-center">...</div>
                       </div>
                     ) : null}
-
                     <div
                       key={player.playerId}
                       className={`grid grid-cols-[52px_minmax(0,1fr)_112px] items-center text-sm transition hover:bg-white/[0.03] sm:grid-cols-[72px_minmax(0,1fr)_120px] ${
@@ -181,14 +180,14 @@ export default async function RatingsPage({
                           <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/20 sm:h-10 sm:w-10">
                             {avatarSrc ? (
                               // eslint-disable-next-line @next/next/no-img-element
-                              <img
+                              (<img
                                 src={avatarSrc}
                                 alt={player.playerName}
                                 loading="lazy"
                                 decoding="async"
                                 referrerPolicy="no-referrer"
                                 className="h-full w-full object-cover"
-                              />
+                              />)
                             ) : (
                               <Shield className="h-4 w-4 text-zinc-500" />
                             )}
@@ -230,7 +229,6 @@ export default async function RatingsPage({
           </div>
         </div>
       </Card>
-
       <Card className="rounded-lg p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>

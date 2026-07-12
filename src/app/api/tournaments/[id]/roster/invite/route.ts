@@ -5,7 +5,8 @@ import { db } from "@/lib/db";
 import { createNotification } from "@/lib/services/notifications";
 import { syncTournamentLifecycleStatus, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requireAuth();
   const payload = await request.json().catch(() => ({}));
   const rawNickname = typeof payload.nickname === "string" ? payload.nickname.trim() : "";
@@ -127,7 +128,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requireAuth();
   const payload = await request.json().catch(() => ({}));
   const memberId = typeof payload.memberId === "string" ? payload.memberId : "";

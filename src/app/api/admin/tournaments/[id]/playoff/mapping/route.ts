@@ -7,7 +7,8 @@ import { logAdminAction } from "@/lib/services/admin-actions";
 import { savePlayoffMapping } from "@/lib/services/tournaments";
 import { playoffMappingSchema } from "@/lib/validators";
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requirePermission("tournaments.manageStructure");
   await assertCanManageTournament(session, params.id);
   const body = playoffMappingSchema.parse(await request.json());

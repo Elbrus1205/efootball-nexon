@@ -7,7 +7,10 @@ import { autoResolveExpiredDivisionMatches, getDivisionLeaderboard, getDivisionP
 
 export const dynamic = "force-dynamic";
 
-export default async function DivisionsPage({ searchParams }: { searchParams?: { page?: string; archiveSeason?: string } }) {
+export default async function DivisionsPage(
+  props: { searchParams?: Promise<{ page?: string; archiveSeason?: string }> }
+) {
+  const searchParams = await props.searchParams;
   const session = await requireAuth();
   await syncDivisionSeasons();
   const settings = await getDivisionSettings();

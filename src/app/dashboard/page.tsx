@@ -9,11 +9,12 @@ import { notifyExpiredProfileStatuses } from "@/lib/profile-statuses";
 import { getPlayerRatings } from "@/lib/ratings";
 import { getReliabilitySummary } from "@/lib/services/reliability";
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams?: { season?: string };
-}) {
+export default async function DashboardPage(
+  props: {
+    searchParams?: Promise<{ season?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const session = await requireAuth();
   await syncUserAchievements(session.user.id);
   await notifyExpiredProfileStatuses({ userId: session.user.id });

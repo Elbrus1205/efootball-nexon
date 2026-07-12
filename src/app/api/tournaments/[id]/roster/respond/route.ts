@@ -6,7 +6,8 @@ import { db } from "@/lib/db";
 import { createNotification } from "@/lib/services/notifications";
 import { syncTournamentLifecycleStatus, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requireAuth();
   const payload = await request.json().catch(() => ({}));
   const action = payload.action === "accept" ? "accept" : payload.action === "decline" ? "decline" : null;

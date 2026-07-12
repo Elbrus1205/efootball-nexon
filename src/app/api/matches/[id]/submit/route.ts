@@ -44,7 +44,8 @@ async function createMatchOutcomeNotifications(match: {
   );
 }
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requireAuth();
   const body = resultSubmissionSchema.parse(await request.json());
 

@@ -6,7 +6,8 @@ import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getReliabilityPenaltyReasons } from "@/lib/services/reliability";
 
-export default async function AdminTournamentParticipantsPage({ params }: { params: { id: string } }) {
+export default async function AdminTournamentParticipantsPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requirePermission("tournaments.manageParticipants");
 
   const [tournament, participants, stages, replacementPenaltyReasons] = await Promise.all([

@@ -4,7 +4,8 @@ import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { roleSchema } from "@/lib/validators";
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   await requirePermission("users.changeLowerRoles");
   const formData = await request.formData();
   const body = roleSchema.parse({ role: formData.get("role") });

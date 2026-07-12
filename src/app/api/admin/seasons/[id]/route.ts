@@ -20,7 +20,8 @@ function isDeleteConfirmed(value: FormDataEntryValue | null) {
   return typeof value === "string" && value.trim().toUpperCase() === "УДАЛИТЬ";
 }
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   await requirePermission("tournaments.createEdit");
 
   const formData = await request.formData();

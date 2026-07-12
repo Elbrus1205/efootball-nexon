@@ -4,7 +4,8 @@ import { getRequestBaseUrl } from "@/lib/affiliate";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requireRole([UserRole.FOUNDER]);
   const formData = await request.formData();
   const confirmed = formData.get("confirmDelete") === "true";

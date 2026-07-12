@@ -19,11 +19,12 @@ function VkMark({ className }: { className?: string }) {
   );
 }
 
-export default async function PlayersPage({
-  searchParams,
-}: {
-  searchParams?: { q?: string };
-}) {
+export default async function PlayersPage(
+  props: {
+    searchParams?: Promise<{ q?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const query = searchParams?.q?.trim() ?? "";
   const users = await db.user.findMany({
     where: query

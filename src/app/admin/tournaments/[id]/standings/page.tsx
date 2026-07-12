@@ -6,7 +6,8 @@ import { db } from "@/lib/db";
 import { StandingsManager } from "@/components/admin/standings-manager";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default async function AdminTournamentStandingsPage({ params }: { params: { id: string } }) {
+export default async function AdminTournamentStandingsPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requireAnyPermission(["tournaments.manageParticipants", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
   const tournament = await db.tournament.findFirst({

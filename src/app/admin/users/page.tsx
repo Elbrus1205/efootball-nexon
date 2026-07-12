@@ -23,11 +23,12 @@ function buildUsersHref(query: string, filter: UsersFilter) {
   return `/admin/users${params ? `?${params}` : ""}`;
 }
 
-export default async function AdminUsersPage({
-  searchParams,
-}: {
-  searchParams?: { q?: string; filter?: string; updated?: string; error?: string };
-}) {
+export default async function AdminUsersPage(
+  props: {
+    searchParams?: Promise<{ q?: string; filter?: string; updated?: string; error?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const session = await requireAnyPermission(["users.view", "users.ban", "users.changeLowerRoles"]);
 
   const query = searchParams?.q?.trim() ?? "";

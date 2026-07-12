@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   await requirePermission("divisions.manage");
   const body = await request.json().catch(() => null);
   const division = Number(body?.division);

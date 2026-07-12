@@ -1,11 +1,12 @@
 import { AuthForm } from "@/components/auth/auth-form";
 import { Card } from "@/components/ui/card";
 
-export default function LoginPage({
-  searchParams,
-}: {
-  searchParams?: { banned?: string };
-}) {
+export default async function LoginPage(
+  props: {
+    searchParams?: Promise<{ banned?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const telegramClientId = process.env.TELEGRAM_CLIENT_ID;
   const telegramEnabled = Boolean(telegramClientId);
   const vkAppId = process.env.NEXT_PUBLIC_VK_APP_ID ?? process.env.VK_CLIENT_ID;

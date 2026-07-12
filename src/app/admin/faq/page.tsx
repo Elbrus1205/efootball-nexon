@@ -4,11 +4,12 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
-export default async function AdminFaqPage({
-  searchParams,
-}: {
-  searchParams?: { created?: string; updated?: string; deleted?: string; error?: string };
-}) {
+export default async function AdminFaqPage(
+  props: {
+    searchParams?: Promise<{ created?: string; updated?: string; deleted?: string; error?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   await requirePermission("content.manage");
 
   const items = await db.faqItem.findMany({

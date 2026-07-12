@@ -535,7 +535,8 @@ function logTiming(label: string, start: number) {
   console.log(`${label}: ${(performance.now() - start).toFixed(3)}ms`);
 }
 
-export async function generateMetadata({ params }: { params: { id: string } }) {
+export async function generateMetadata(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const metadataStart = performance.now();
   const tournament = await db.tournament.findUnique({ where: { id: params.id }, select: { title: true } });
   logTiming("tournament-metadata", metadataStart);
@@ -555,13 +556,14 @@ function canSeeTestTournaments(role?: string | null) {
   return role === "FOUNDER" || role === "ADMIN" || role === "ORGANIZER" || role === "JUDGE" || role === "TRAINEE";
 }
 
-export default async function TournamentDetailsPage({
-  params,
-  searchParams,
-}: {
-  params: { id: string };
-  searchParams?: { tab?: string; participantSearch?: string };
-}) {
+export default async function TournamentDetailsPage(
+  props: {
+    params: Promise<{ id: string }>;
+    searchParams?: Promise<{ tab?: string; participantSearch?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const pageStart = performance.now();
   noStore();
   const sessionStart = performance.now();

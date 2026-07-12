@@ -151,7 +151,8 @@ function exportRoundTitle(match: {
   return `${match.round} тур`;
 }
 
-export default async function AdminTournamentWorkspacePage({ params }: { params: { id: string } }) {
+export default async function AdminTournamentWorkspacePage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requireAnyPermission(["tournaments.createEdit", "tournaments.manageParticipants", "tournaments.manageStructure", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
   const canDeleteTournament = session.user.role !== UserRole.TRAINEE;
 

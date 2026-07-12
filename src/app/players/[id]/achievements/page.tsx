@@ -7,7 +7,8 @@ import { getUserAchievementProgress } from "@/lib/achievements";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
 
-export default async function PlayerAchievementsPage({ params }: { params: { id: string } }) {
+export default async function PlayerAchievementsPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const user = await db.user.findFirst({
     where: {
       OR: [{ id: params.id }, { publicId: params.id }],

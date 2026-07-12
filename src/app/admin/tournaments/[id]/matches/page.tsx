@@ -22,7 +22,8 @@ function getConfiguredMatchPenalty(matchId: string, events: Array<{ userId: stri
   return reasonId ? { reasonId, userId: event.userId } : null;
 }
 
-export default async function AdminTournamentMatchesPage({ params }: { params: { id: string } }) {
+export default async function AdminTournamentMatchesPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requireAnyPermission(["matches.reviewResults", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
 
   const [tournament, matchPenaltyReasons] = await Promise.all([

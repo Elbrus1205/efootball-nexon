@@ -13,7 +13,8 @@ import { getTournamentGroupCapacityLimit, syncTournamentLifecycleStatus, syncTou
 import { hasTelegramRegistrationContact } from "@/lib/social-links";
 import { formatTournamentBanMessage } from "@/lib/user-ban";
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requireAuth();
   const user = await db.user.findUnique({
     where: { id: session.user.id },
@@ -202,7 +203,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
   return NextResponse.redirect(new URL(`/tournaments/${params.id}`, origin));
 }
 
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requireAuth();
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
