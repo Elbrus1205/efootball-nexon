@@ -18,3 +18,10 @@ test("renders platform statistics as one bordered panel", () => {
   assert.match(css, /\.stats \{[^}]*border-radius: 18px/);
   assert.match(css, /font-variant-numeric: tabular-nums/);
 });
+
+test("styles only the stat label so counters keep one dot and one font size", () => {
+  assert.match(css, /\.stat > span::before/);
+  assert.doesNotMatch(css, /\.stat span::before/);
+  assert.match(css, /\.stat strong \{[^}]*white-space: nowrap/);
+  assert.match(css, /\.stat > span \{[^}]*white-space: nowrap/);
+});
