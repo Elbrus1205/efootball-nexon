@@ -18,6 +18,7 @@ export function DivisionPreviewCard({ canOpen, coverImage, priorityImage = false
           alt=""
           fill
           priority={priorityImage}
+          fetchPriority={priorityImage ? "high" : undefined}
           quality={86}
           sizes="(min-width: 1280px) 1216px, (min-width: 768px) calc(100vw - 48px), calc(100vw - 32px)"
           className={cn("object-cover transition duration-300", !canOpen && "scale-105 blur-[3px] grayscale opacity-55")}

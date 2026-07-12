@@ -81,7 +81,7 @@ export function TournamentHero({
 
         <div className="relative min-h-60 overflow-hidden border-t border-white/10 lg:min-h-full lg:border-l lg:border-t-0">
           {coverUrl ? (
-            <Image src={coverUrl} alt={`Обложка турнира «${title}»`} fill priority sizes="(min-width: 1024px) 45vw, 100vw" className="object-cover" />
+            <Image src={coverUrl} alt={`Обложка турнира «${title}»`} fill priority fetchPriority="high" sizes="(min-width: 1024px) 45vw, 100vw" className="object-cover" />
           ) : (
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_62%_35%,rgba(33,241,168,0.3),transparent_20%),linear-gradient(135deg,#06110d_0%,#123428_48%,#080b0e_100%)]" />
           )}
