@@ -7,7 +7,6 @@ import {
   ChevronRight,
   CircleDot,
   Gamepad2,
-  Radio,
   ShieldCheck,
   ShoppingBag,
   Swords,
@@ -15,6 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import { MatchStatus, ParticipantStatus, TournamentStatus } from "@prisma/client";
+import { AnimatedBrandHero } from "@/components/home/animated-brand-hero";
 import { AnimatedCounter } from "@/components/home/animated-counter";
 import { Reveal } from "@/components/shared/reveal";
 import { getCurrentSession } from "@/lib/auth/session";
@@ -111,46 +111,11 @@ export default async function HomePage() {
         <div className={s.heroGrid} aria-hidden="true" />
         <div className={s.heroLight} aria-hidden="true" />
         <div className={s.shell}>
-          <div className={s.heroLayout}>
-            <div className={s.heroCopy}>
-              <p className={s.kicker}><span /> Турниры по eFootball Mobile</p>
-              <h1 id="hero-title">Твой матч.<br /><em>Твоя сетка.</em></h1>
-              <p className={s.heroLead}>
-                Участвуй в турнирах, отправляй результаты и следи за движением к финалу в одном месте.
-              </p>
-              <div className={s.actions}>
-                <Link href={playHref} className={s.primaryButton}>
-                  <Swords aria-hidden="true" />
-                  {session?.user?.id ? "Смотреть турниры" : "Участвовать в турнире"}
-                  <ChevronRight aria-hidden="true" />
-                </Link>
-                <Link href={telegramHref} target="_blank" rel="noreferrer" className={s.textButton}>
-                  Telegram-сообщество <ArrowUpRight aria-hidden="true" />
-                </Link>
-              </div>
-            </div>
-
-            <div className={s.tactics} aria-label="Турнирный путь от регистрации до финала">
-              <div className={s.pitch} aria-hidden="true">
-                <span className={s.pitchHalf} />
-                <span className={s.pitchCircle} />
-                <span className={s.pitchBoxTop} />
-                <span className={s.pitchBoxBottom} />
-              </div>
-              <svg className={s.route} viewBox="0 0 520 510" fill="none" aria-hidden="true">
-                <path className={s.routeGhost} d="M64 434C88 352 168 360 188 286C210 207 310 232 333 158C347 112 401 96 461 62" />
-                <path className={s.routeLine} pathLength="1" d="M64 434C88 352 168 360 188 286C210 207 310 232 333 158C347 112 401 96 461 62" />
-              </svg>
-              <div className={`${s.routePoint} ${s.pointStart}`}><span>Заявка</span><i /></div>
-              <div className={`${s.routePoint} ${s.pointMatch}`}><span>Матч</span><i /></div>
-              <div className={`${s.routePoint} ${s.pointFinal}`}><span>Финал</span><i /></div>
-              <div className={s.matchHud}>
-                <span><Radio aria-hidden="true" /> Турнирный центр</span>
-                <strong>Путь к финалу<br />начинается здесь</strong>
-                <small>регистрация · сетка · результат</small>
-              </div>
-            </div>
-          </div>
+          <AnimatedBrandHero
+            playHref={playHref}
+            telegramHref={telegramHref}
+            isSignedIn={Boolean(session?.user?.id)}
+          />
 
           <div className={s.stats} aria-label="Статистика платформы">
             {stats.map((stat) => (
