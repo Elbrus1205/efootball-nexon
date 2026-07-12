@@ -45,6 +45,27 @@ function groupLabel(match: TournamentScheduleMatch) {
   return match.groupName ?? "Без группы";
 }
 
+function groupScheduleMatches(matches: TournamentScheduleMatch[]) {
+  const groups = new Map<string, { key: string; label: string | null; matches: TournamentScheduleMatch[] }>();
+
+  for (const match of matches) {
+    const key = groupKey(match);
+    const group = groups.get(key);
+
+    if (group) {
+      group.matches.push(match);
+    } else {
+      groups.set(key, {
+        key,
+        label: match.groupName,
+        matches: [match],
+      });
+    }
+  }
+
+  return Array.from(groups.values());
+}
+
 function pluralMatches(count: number) {
   const mod10 = count % 10;
   const mod100 = count % 100;
@@ -93,6 +114,48 @@ function deadlineToneClass(tone: NonNullable<ReturnType<typeof formatLiveDeadlin
   if (tone === "warning") return "border-amber-300/30 bg-amber-300/10 text-amber-100";
   if (tone === "today") return "border-primary/30 bg-primary/10 text-primary";
   return "border-white/10 bg-white/[0.04] text-zinc-300";
+}
+
+function ScheduleMatchCard({ match }: { match: TournamentScheduleMatch }) {
+  return (
+    <article
+      aria-label={`Матч ${match.matchNumber}: ${match.sideOne.clubName ?? match.sideOne.playerName} — ${match.sideTwo.clubName ?? match.sideTwo.playerName}`}
+      className="relative overflow-hidden rounded-xl border border-white/10 bg-black/20 px-2.5 pb-3 pt-8 transition-colors hover:border-primary/25 hover:bg-white/[0.035] sm:px-4 sm:pb-4 sm:pt-9"
+    >
+      <div className="absolute inset-x-0 top-0 flex h-7 items-center justify-between border-b border-white/[0.07] bg-white/[0.025] px-3 text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-600 sm:h-8 sm:text-[10px]">
+        <span>Матч {match.matchNumber}</span>
+        <span>{match.roundLabel}</span>
+      </div>
+
+      <div className="grid grid-cols-[minmax(0,1fr)_3.5rem_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1fr)] sm:gap-3">
+        <div className="min-w-0">
+          <ClubPlayerLine
+            playerId={match.sideOne.playerId}
+            playerName={match.sideOne.playerName}
+            clubName={match.sideOne.clubName}
+            badgePath={match.sideOne.clubBadgePath}
+            compact
+            stack
+          />
+        </div>
+
+        <div className="flex min-h-11 items-center justify-center self-center rounded-lg border border-primary/15 bg-[#111513] px-1.5 text-center text-xs font-bold tabular-nums tracking-[0.12em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:min-h-12 sm:text-sm">
+          {match.scoreLabel}
+        </div>
+
+        <div className="min-w-0">
+          <ClubPlayerLine
+            playerId={match.sideTwo.playerId}
+            playerName={match.sideTwo.playerName}
+            clubName={match.sideTwo.clubName}
+            badgePath={match.sideTwo.clubBadgePath}
+            compact
+            stack
+          />
+        </div>
+      </div>
+    </article>
+  );
 }
 
 export function TournamentScheduleView({ sections }: { sections: TournamentScheduleSection[] }) {
@@ -223,80 +286,56 @@ export function TournamentScheduleView({ sections }: { sections: TournamentSched
 
       {filteredSections.length ? (
         <div className="space-y-6 sm:space-y-8">
-          {filteredSections.map((section) => (
-            <section key={section.key} className="space-y-4 rounded-lg border border-white/10 bg-white/[0.04] p-4 sm:p-5">
-              {(() => {
-                const liveDeadline = formatLiveDeadline(section.deadlineAt);
+          {filteredSections.map((section) => {
+            const liveDeadline = formatLiveDeadline(section.deadlineAt);
+            const matchGroups = groupScheduleMatches(section.matches);
 
-                return (
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-zinc-300">{section.title}</h3>
-                <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.16em]">
+            return (
+              <section key={section.key} className="space-y-5 rounded-xl border border-white/10 bg-white/[0.035] p-3 sm:p-5 lg:p-6">
+                <div className="space-y-3 border-b border-white/10 pb-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.22em] text-zinc-200 sm:text-base">{section.title}</h3>
+                    <div className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500 sm:text-xs">
+                      {pluralMatches(section.matches.length)}
+                    </div>
+                  </div>
+
                   {section.deadlineLabel ? (
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="grid gap-2 text-[10px] uppercase tracking-[0.1em] sm:flex sm:flex-wrap sm:items-center sm:text-xs sm:tracking-[0.14em]">
                       {liveDeadline ? (
-                        <div className={cn("inline-flex items-center gap-2 rounded-full border px-3 py-1 font-semibold", deadlineToneClass(liveDeadline.tone))}>
-                          <Clock3 className="h-3.5 w-3.5" />
-                          {liveDeadline.label}
+                        <div className={cn("inline-flex w-full justify-center sm:w-auto gap-2 rounded-lg border px-3 py-2 font-semibold sm:rounded-full sm:py-1", deadlineToneClass(liveDeadline.tone))}>
+                          <Clock3 className="h-3.5 w-3.5 shrink-0" />
+                          <span>{liveDeadline.label}</span>
                         </div>
                       ) : null}
-                      <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1 text-zinc-400">
+                      <div className="inline-flex w-full justify-center rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-center text-zinc-400 sm:w-auto sm:rounded-full sm:py-1">
                         Дедлайн: {section.deadlineLabel}
                       </div>
                     </div>
                   ) : null}
-                  <div className="text-zinc-500">{pluralMatches(section.matches.length)}</div>
                 </div>
-              </div>
-                );
-              })()}
 
-              <div className="divide-y divide-white/10">
-                {section.matches.map((match, matchIndex) => {
-                  const prevGroupName = matchIndex > 0 ? section.matches[matchIndex - 1].groupName : null;
-                  const showGroupLabel = match.groupName && match.groupName !== prevGroupName;
-
-                  return (
-                    <div key={match.id} className="py-4 first:pt-0 last:pb-0">
-                      {showGroupLabel ? (
-                        <div className="mb-3 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                          {match.groupName}
+                <div className="space-y-6">
+                  {matchGroups.map((group) => (
+                    <div key={group.key} className="space-y-3">
+                      {group.label ? (
+                        <div className="flex items-center gap-3" aria-label={`Группа ${group.label}`}>
+                          <span className="h-px flex-1 bg-white/[0.08]" aria-hidden="true" />
+                          <h4 className="text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500 sm:text-xs">
+                            {group.label}
+                          </h4>
+                          <span className="h-px flex-1 bg-white/[0.08]" aria-hidden="true" />
                         </div>
                       ) : null}
-                      <div className="mx-auto grid max-w-[760px] grid-cols-1 items-center gap-3 sm:grid-cols-[minmax(180px,220px)_auto_minmax(180px,220px)] sm:gap-4">
-                        <div className="min-w-0 justify-self-center sm:justify-self-end">
-                          <ClubPlayerLine
-                            playerId={match.sideOne.playerId}
-                            playerName={match.sideOne.playerName}
-                            clubName={match.sideOne.clubName}
-                            badgePath={match.sideOne.clubBadgePath}
-                            align="center"
-                            compact
-                            reverse
-                          />
-                        </div>
-                        <div className="flex shrink-0 items-center justify-center self-center">
-                          <div className="flex min-w-[54px] items-center justify-center rounded-md border border-white/10 bg-black/20 px-2 py-2 text-center text-xs font-semibold tracking-[0.16em] text-zinc-200 sm:min-w-[72px] sm:text-sm">
-                            {match.scoreLabel}
-                          </div>
-                        </div>
-                        <div className="min-w-0 justify-self-center sm:justify-self-start">
-                          <ClubPlayerLine
-                            playerId={match.sideTwo.playerId}
-                            playerName={match.sideTwo.playerName}
-                            clubName={match.sideTwo.clubName}
-                            badgePath={match.sideTwo.clubBadgePath}
-                            align="center"
-                            compact
-                          />
-                        </div>
+                      <div className="grid gap-3 lg:grid-cols-2">
+                        {group.matches.map((match) => <ScheduleMatchCard key={match.id} match={match} />)}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
+                  ))}
+                </div>
+              </section>
+            );
+          })}
         </div>
       ) : (
         <TournamentEmptyState title="Матчей по фильтрам нет" description="Сбросьте фильтры или выберите другой тур и группу." />
