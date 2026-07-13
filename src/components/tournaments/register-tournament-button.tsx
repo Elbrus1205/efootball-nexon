@@ -1,12 +1,13 @@
 "use client";
 
 import { ClubSelectionMode, TournamentParticipantMode } from "@prisma/client";
-import { CheckCircle2, Search, ScrollText, X } from "lucide-react";
+import { CheckCircle2, ImagePlus, Loader2, Search, ScrollText, Trash2, Upload, X } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { uploadFile } from "@/lib/storage/upload-client";
 
 type ClubOption = {
   slug: string;
@@ -31,6 +32,7 @@ export function RegisterTournamentButton({
   clubSelectionMode,
   participantMode = TournamentParticipantMode.SINGLE,
   rosterSize = 1,
+  requireLineupPhoto = false,
   clubs,
   takenClubSlugs,
 }: {
@@ -38,6 +40,7 @@ export function RegisterTournamentButton({
   clubSelectionMode: ClubSelectionMode;
   participantMode?: TournamentParticipantMode;
   rosterSize?: number;
+  requireLineupPhoto?: boolean;
   clubs: ClubOption[];
   takenClubSlugs: string[];
 }) {
@@ -46,6 +49,10 @@ export function RegisterTournamentButton({
   const [selectedClubSlug, setSelectedClubSlug] = useState("");
   const [clubSearch, setClubSearch] = useState("");
   const [teamName, setTeamName] = useState("");
+  const [lineupPhotoUrl, setLineupPhotoUrl] = useState("");
+  const [lineupOpen, setLineupOpen] = useState(false);
+  const [lineupUploading, setLineupUploading] = useState(false);
+  const [lineupError, setLineupError] = useState("");
   const [message, setMessage] = useState("");
   const [regulations, setRegulations] = useState<RegulationsState | null>(null);
   const [regulationsOpen, setRegulationsOpen] = useState(false);
@@ -104,12 +111,22 @@ export function RegisterTournamentButton({
     setRegulationsOpen(true);
   };
 
-  const submitRegistration = async (clubSlug?: string) => {
+  const submitRegistration = async (clubSlug?: string, photoUrl?: string) => {
+    if (requireLineupPhoto && !photoUrl) {
+      setPendingClubSlug(clubSlug);
+      setIsOpen(false);
+      setLineupOpen(true);
+      setMessage("");
+      return;
+    }
+
     setMessage("Регистрация...");
+    if (photoUrl) setLineupError("");
 
     const body: Record<string, string> = {};
     if (clubSlug) body.clubSlug = clubSlug;
     if (participantMode === TournamentParticipantMode.TEAM) body.teamName = teamName.trim();
+    if (photoUrl) body.lineupPhotoUrl = photoUrl;
 
     const response = await fetch(`/api/tournaments/${tournamentId}/register`, {
       method: "POST",
@@ -130,15 +147,54 @@ export function RegisterTournamentButton({
         setSelectedClubSlug("");
         router.refresh();
       }
-      setMessage(result.error ?? "Не удалось зарегистрироваться.");
+      const errorMessage = result.error ?? "Не удалось зарегистрироваться.";
+      if (photoUrl) {
+        setLineupError(errorMessage);
+        setMessage("");
+      } else {
+        setMessage(errorMessage);
+      }
       return;
     }
 
     setIsOpen(false);
+    setLineupOpen(false);
     setRegulationsOpen(false);
     setPendingClubSlug(undefined);
+    setLineupPhotoUrl("");
+    setLineupError("");
     setMessage("");
     router.refresh();
+  };
+
+  const uploadLineupPhoto = async (file?: File) => {
+    if (!file) return;
+
+    const allowedTypes = new Set(["image/avif", "image/jpeg", "image/png", "image/webp"]);
+    if (!allowedTypes.has(file.type)) {
+      setLineupError("Поддерживаются JPG, PNG, WebP и AVIF.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setLineupError("Максимальный размер фото — 10 МБ.");
+      return;
+    }
+
+    setLineupUploading(true);
+    setLineupError("");
+    try {
+      setLineupPhotoUrl(await uploadFile(file, "lineups"));
+    } catch (error) {
+      setLineupError(error instanceof Error ? error.message : "Не удалось загрузить фото состава.");
+    } finally {
+      setLineupUploading(false);
+    }
+  };
+
+  const submitLineupApplication = () => {
+    startTransition(async () => {
+      await submitRegistration(pendingClubSlug, lineupPhotoUrl);
+    });
   };
 
   const submit = (clubSlug?: string) => {
@@ -263,6 +319,83 @@ export function RegisterTournamentButton({
     </div>
   ) : null;
 
+  const lineupModal = lineupOpen ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 backdrop-blur-sm sm:p-4">
+      <Card className="w-full max-w-xl overflow-hidden p-0">
+        <div className="flex items-start justify-between gap-4 border-b border-white/10 p-4 sm:p-5">
+          <div>
+            <div className="flex items-center gap-2 text-xl font-semibold text-white">
+              <ImagePlus className="h-5 w-5 text-primary" />
+              Фото игрового состава
+            </div>
+            <p className="mt-2 text-sm leading-6 text-zinc-400">
+              Прикрепите один чёткий скриншот, где виден весь заявленный состав. После отправки заявку проверит администратор.
+            </p>
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => setLineupOpen(false)} aria-label="Закрыть загрузку фото">
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+
+        <div className="space-y-4 p-4 sm:p-5">
+          {lineupPhotoUrl ? (
+            <div className="overflow-hidden rounded-md border border-primary/25 bg-black/30">
+              <div className="relative aspect-[16/9]">
+                <Image
+                  src={lineupPhotoUrl}
+                  alt="Предпросмотр фото игрового состава"
+                  fill
+                  sizes="(min-width: 640px) 560px, 100vw"
+                  className="object-contain"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3 border-t border-white/10 px-3 py-2.5">
+                <span className="flex items-center gap-2 text-xs font-medium text-emerald-200">
+                  <CheckCircle2 className="h-4 w-4" /> Фото загружено
+                </span>
+                <Button type="button" size="sm" variant="ghost" className="text-rose-200" onClick={() => setLineupPhotoUrl("")}>
+                  <Trash2 className="mr-2 h-4 w-4" /> Удалить
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <label className="flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed border-white/15 bg-white/[0.025] p-6 text-center transition hover:border-primary/40 hover:bg-primary/[0.04] focus-within:ring-2 focus-within:ring-primary">
+              <input
+                type="file"
+                accept="image/avif,image/jpeg,image/png,image/webp"
+                className="sr-only"
+                disabled={lineupUploading}
+                onChange={(event) => {
+                  void uploadLineupPhoto(event.target.files?.[0]);
+                  event.target.value = "";
+                }}
+              />
+              {lineupUploading ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> : <Upload className="h-8 w-8 text-primary" />}
+              <span className="mt-3 font-semibold text-white">{lineupUploading ? "Загружаем фото..." : "Выбрать фото состава"}</span>
+              <span className="mt-1 text-xs leading-5 text-zinc-500">JPG, PNG, WebP или AVIF · до 10 МБ</span>
+            </label>
+          )}
+
+          {lineupError ? <div role="alert" className="rounded-md border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">{lineupError}</div> : null}
+
+          <div className="rounded-md border border-amber-300/20 bg-amber-300/[0.07] px-4 py-3 text-sm leading-6 text-amber-100">
+            До одобрения вы не будете добавлены в список участников турнира.
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 border-t border-white/10 pt-4 sm:flex sm:justify-end">
+            <Button variant="outline" onClick={() => setLineupOpen(false)}>
+              Назад
+            </Button>
+            <Button onClick={submitLineupApplication} disabled={!lineupPhotoUrl || lineupUploading || isPending}>
+              {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+              {isPending ? "Отправляем..." : "Отправить заявку"}
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </div>
+  ) : null;
+
   if (clubSelectionMode === ClubSelectionMode.ADMIN_RANDOM && participantMode !== TournamentParticipantMode.TEAM) {
     return (
       <div className="space-y-2">
@@ -271,6 +404,7 @@ export function RegisterTournamentButton({
         </Button>
         {message ? <div aria-live="polite" className="text-sm text-red-300">{message}</div> : null}
         {regulationsModal}
+        {lineupModal}
       </div>
     );
   }
@@ -283,6 +417,7 @@ export function RegisterTournamentButton({
         </Button>
         {message ? <div aria-live="polite" className="text-sm text-red-300">{message}</div> : null}
         {regulationsModal}
+        {lineupModal}
       </div>
 
       {isOpen ? (

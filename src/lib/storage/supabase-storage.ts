@@ -3,7 +3,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export const STORAGE_BUCKET = "public-media";
 
-export type StorageFolder = "avatars" | "banners" | "tournaments" | "divisions" | "faq";
+export type StorageFolder = "avatars" | "banners" | "tournaments" | "divisions" | "faq" | "lineups";
 
 const EXTENSION_BY_MIME: Record<string, string> = {
   "image/png": "png",

@@ -200,6 +200,7 @@ export const tournamentBuilderSchema = z.object({
   manualPlayoffSelection: z.coerce.boolean().default(false),
   checkInRequired: z.coerce.boolean().default(false),
   requireTelegramForRegistration: z.coerce.boolean().default(false),
+  requireLineupPhoto: z.coerce.boolean().default(false),
   clubSelectionMode: z.nativeEnum(ClubSelectionMode).default(ClubSelectionMode.ADMIN_RANDOM),
   sortRules: z.array(z.nativeEnum(SortRule)).default([SortRule.POINTS, SortRule.GOAL_DIFFERENCE, SortRule.GOALS_FOR, SortRule.WINS]),
 }).superRefine((data, ctx) => {

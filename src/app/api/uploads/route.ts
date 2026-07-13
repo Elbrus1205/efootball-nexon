@@ -15,6 +15,7 @@ const FOLDER_RULES: Record<StorageFolder, { maxBytes: number; allowed: Set<strin
   tournaments: { maxBytes: 16 * 1024 * 1024, allowed: ALLOWED_IMAGE_TYPES },
   divisions: { maxBytes: 16 * 1024 * 1024, allowed: ALLOWED_IMAGE_TYPES },
   faq: { maxBytes: 16 * 1024 * 1024, allowed: ALLOWED_FAQ_TYPES },
+  lineups: { maxBytes: 10 * 1024 * 1024, allowed: ALLOWED_PROFILE_IMAGE_TYPES },
 };
 
 function isStorageFolder(value: string): value is StorageFolder {

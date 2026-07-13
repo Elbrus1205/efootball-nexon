@@ -64,6 +64,7 @@ export async function normalizeBannerImage(bytes: ArrayBuffer | Buffer | Uint8Ar
 export async function normalizeProfileUploadImage(folder: StorageFolder, bytes: ArrayBuffer | Buffer | Uint8Array, contentType?: string | null) {
   if (folder === "avatars") return normalizeAvatarImage(bytes, contentType);
   if (folder === "banners") return normalizeBannerImage(bytes, contentType);
+  if (folder === "lineups") return normalizeBannerImage(bytes, contentType);
   return null;
 }
 

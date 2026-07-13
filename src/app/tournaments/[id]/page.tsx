@@ -1,5 +1,5 @@
-import { ClubSelectionMode, MatchStatus, ParticipantStatus, StageType, TournamentFormat, TournamentStatus } from "@prisma/client";
-import { Search, Send } from "lucide-react";
+import { ClubSelectionMode, MatchStatus, ParticipantStatus, StageType, TournamentApplicationStatus, TournamentFormat, TournamentStatus } from "@prisma/client";
+import { Clock3, Search, Send } from "lucide-react";
 import { unstable_noStore as noStore } from "next/cache";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -613,6 +613,22 @@ export default async function TournamentDetailsPage(
       rosterSize: true,
       matchupFormat: true,
       bestOfWins: true,
+      requireLineupPhoto: true,
+      registrationApplications: {
+        where: {
+          OR: [
+            { status: TournamentApplicationStatus.PENDING },
+            { userId: session?.user.id ?? "__anonymous__" },
+          ],
+        },
+        select: {
+          id: true,
+          userId: true,
+          status: true,
+          clubSlug: true,
+          rejectionReason: true,
+        },
+      },
       participants: {
         select: {
           id: true,
@@ -895,6 +911,10 @@ export default async function TournamentDetailsPage(
   const isRegistrationOpen = tournament.status === TournamentStatus.REGISTRATION_OPEN;
   const isLoggedIn = Boolean(currentUserId);
   const alreadyRegistered = !!currentUserId && activeParticipants.some((entry) => entry.userId === currentUserId);
+  const currentApplication = currentUserId
+    ? tournament.registrationApplications.find((application) => application.userId === currentUserId) ?? null
+    : null;
+  const hasPendingApplication = currentApplication?.status === TournamentApplicationStatus.PENDING;
   const needsTelegramConnection = Boolean(isLoggedIn && !currentUser?.telegramId);
   const needsTelegramUsername = Boolean(isLoggedIn && currentUser?.telegramId && !hasPublicTelegramUsername(currentUser.telegramUsername));
   const needsTelegram = Boolean(isLoggedIn && !hasTelegramRegistrationContact(currentUser));
@@ -911,7 +931,7 @@ export default async function TournamentDetailsPage(
   const reliabilityWarningText = currentUser && !isReliabilityRestrictedForRegistration && currentUser.reliabilityScore < 80
     ? `Надежность ${currentUser.reliabilityScore}/100 ниже стабильного уровня. Участвовать можно, но техпоражения могут ограничить регистрацию в будущие турниры.`
     : null;
-  const canRegister = isLoggedIn && isRegistrationOpen && hasFreeSlots && !alreadyRegistered && !needsTelegram && !isReliabilityRestrictedForRegistration;
+  const canRegister = isLoggedIn && isRegistrationOpen && hasFreeSlots && !alreadyRegistered && !hasPendingApplication && !needsTelegram && !isReliabilityRestrictedForRegistration;
   const canCancelRegistration =
     isLoggedIn &&
     alreadyRegistered &&
@@ -986,7 +1006,12 @@ export default async function TournamentDetailsPage(
       ? buildPublicLeagueTable(tournament.participants, leagueMatches, clubsBySlug)
       : [];
 
-  const takenClubSlugs = activeParticipants.map((entry) => entry.clubSlug).filter(Boolean) as string[];
+  const takenClubSlugs = [
+    ...activeParticipants.map((entry) => entry.clubSlug),
+    ...tournament.registrationApplications
+      .filter((application) => application.status === TournamentApplicationStatus.PENDING)
+      .map((application) => application.clubSlug),
+  ].filter(Boolean) as string[];
   const customStandingHighlights = buildCustomStandingHighlights(tournament);
   const structureOptions: TournamentStageOption[] = tournament.stages.map((stage) => ({
     id: stage.id,
@@ -1140,9 +1165,15 @@ export default async function TournamentDetailsPage(
       clubSelectionMode={tournament.clubSelectionMode ?? ClubSelectionMode.ADMIN_RANDOM}
       participantMode={tournament.participantMode}
       rosterSize={tournament.rosterSize}
+      requireLineupPhoto={tournament.requireLineupPhoto}
       clubs={availableClubs}
       takenClubSlugs={takenClubSlugs}
     />
+  ) : hasPendingApplication ? (
+    <Button size="lg" disabled className="gap-2 border-amber-300/30 text-amber-100">
+      <Clock3 className="h-4 w-4" />
+      Заявка на проверке
+    </Button>
   ) : alreadyRegistered ? (
     <Button size="lg" asChild><a href={`/tournaments/${tournament.id}?tab=my-matches`}>Открыть мои матчи</a></Button>
   ) : isRegistrationOpen && !isLoggedIn ? (

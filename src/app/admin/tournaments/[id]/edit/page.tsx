@@ -56,6 +56,7 @@ export default async function AdminTournamentEditPage(props: { params: Promise<{
           manualPlayoffSelection: tournament.manualPlayoffSelection,
           checkInRequired: tournament.checkInRequired,
           requireTelegramForRegistration: tournament.requireTelegramForRegistration,
+          requireLineupPhoto: tournament.requireLineupPhoto,
           clubSelectionMode: tournament.clubSelectionMode,
           sortRules: tournament.sortRules,
         }}

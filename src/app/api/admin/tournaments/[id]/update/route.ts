@@ -61,6 +61,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     manualPlayoffSelection: checkboxValue(formData.get("manualPlayoffSelection")),
     checkInRequired: checkboxValue(formData.get("checkInRequired")),
     requireTelegramForRegistration: checkboxValue(formData.get("requireTelegramForRegistration")),
+    requireLineupPhoto: checkboxValue(formData.get("requireLineupPhoto")),
     clubSelectionMode: formData.get("clubSelectionMode"),
     sortRules: formData.getAll("sortRules"),
   });
@@ -118,6 +119,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       manualPlayoffSelection: body.manualPlayoffSelection,
       checkInRequired: body.checkInRequired,
       requireTelegramForRegistration: body.requireTelegramForRegistration,
+      requireLineupPhoto: body.requireLineupPhoto,
       notificationsEnabled: session.user.role !== UserRole.TRAINEE && !isTest,
       clubSelectionMode: body.clubSelectionMode,
       sortRules: body.sortRules,

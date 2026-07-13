@@ -1,4 +1,4 @@
-import { ClubSelectionMode, NotificationType, ParticipantStatus, TournamentParticipantMode, TournamentStatus } from "@prisma/client";
+import { ClubSelectionMode, NotificationType, ParticipantStatus, TournamentApplicationStatus, TournamentParticipantMode, TournamentStatus } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
@@ -11,6 +11,7 @@ import { formatReliabilityRegistrationRestriction, syncReliabilityRestriction } 
 import { createNotification } from "@/lib/services/notifications";
 import { getTournamentGroupCapacityLimit, syncTournamentLifecycleStatus, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
 import { hasTelegramRegistrationContact } from "@/lib/social-links";
+import { isLineupPhotoStorageUrl, lineupPhotoUrlSchema } from "@/lib/tournament-applications";
 import { formatTournamentBanMessage } from "@/lib/user-ban";
 
 export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
@@ -61,8 +62,9 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       clubSelectionMode: true,
       participantMode: true,
       rosterSize: true,
+      requireLineupPhoto: true,
       participants: {
-        where: { status: { not: "REMOVED" } },
+        where: { status: { notIn: ["REMOVED", "REJECTED"] } },
         select: {
           id: true,
           userId: true,
@@ -72,6 +74,15 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       rosterMembers: {
         where: { userId: session.user.id, status: { not: "REMOVED" } },
         select: { id: true },
+      },
+      registrationApplications: {
+        where: {
+          OR: [
+            { userId: session.user.id },
+            { status: TournamentApplicationStatus.PENDING },
+          ],
+        },
+        select: { id: true, userId: true, status: true, clubSlug: true },
       },
     },
   });
@@ -118,6 +129,25 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   let clubBadgePath: string | null = null;
   const teamName = typeof payload.teamName === "string" ? payload.teamName.trim() : "";
   const teamLogo = typeof payload.teamLogo === "string" ? payload.teamLogo.trim() : "";
+  const lineupPhotoUrl = typeof payload.lineupPhotoUrl === "string" ? payload.lineupPhotoUrl.trim() : "";
+
+  if (tournament.requireLineupPhoto) {
+    const photoResult = lineupPhotoUrlSchema.safeParse(lineupPhotoUrl);
+    if (!photoResult.success) {
+      return NextResponse.json({ error: photoResult.error.issues[0]?.message ?? "Прикрепите фото состава." }, { status: 400 });
+    }
+    if (!isLineupPhotoStorageUrl(photoResult.data, process.env.NEXT_PUBLIC_SUPABASE_URL)) {
+      return NextResponse.json({ error: "Фото состава должно быть загружено через форму турнира." }, { status: 400 });
+    }
+
+    const existingApplication = tournament.registrationApplications.find((application) => application.userId === session.user.id);
+    if (existingApplication?.status === TournamentApplicationStatus.PENDING) {
+      return NextResponse.json({ error: "Ваша заявка уже находится на проверке." }, { status: 409 });
+    }
+    if (existingApplication?.status === TournamentApplicationStatus.APPROVED) {
+      return NextResponse.json({ error: "Ваша заявка уже одобрена." }, { status: 409 });
+    }
+  }
 
   if (tournament.participantMode === TournamentParticipantMode.TEAM && teamName.length < 2) {
     return NextResponse.json({ error: "Укажите название команды." }, { status: 400 });
@@ -136,13 +166,70 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     }
 
     const takenClub = tournament.participants.find((entry) => entry.clubSlug === selectedClub.slug);
-    if (takenClub) {
+    const reservedByApplication = tournament.registrationApplications.find(
+      (application) =>
+        application.userId !== session.user.id &&
+        application.status === TournamentApplicationStatus.PENDING &&
+        application.clubSlug === selectedClub.slug,
+    );
+    if (takenClub || reservedByApplication) {
       return NextResponse.json({ error: "Этот клуб уже занят другим участником." }, { status: 409 });
     }
 
     clubSlug = selectedClub.slug;
     clubName = selectedClub.name;
     clubBadgePath = selectedClub.imagePath;
+  }
+
+  if (tournament.requireLineupPhoto) {
+    try {
+      await db.tournamentRegistrationApplication.upsert({
+        where: {
+          tournamentId_userId: {
+            tournamentId: params.id,
+            userId: session.user.id,
+          },
+        },
+        create: {
+          tournamentId: params.id,
+          userId: session.user.id,
+          clubSlug,
+          clubName,
+          clubBadgePath,
+          teamName: tournament.participantMode === TournamentParticipantMode.TEAM ? teamName : null,
+          teamLogo: tournament.participantMode === TournamentParticipantMode.TEAM ? teamLogo || null : null,
+          lineupPhotoUrl,
+        },
+        update: {
+          status: TournamentApplicationStatus.PENDING,
+          clubSlug,
+          clubName,
+          clubBadgePath,
+          teamName: tournament.participantMode === TournamentParticipantMode.TEAM ? teamName : null,
+          teamLogo: tournament.participantMode === TournamentParticipantMode.TEAM ? teamLogo || null : null,
+          lineupPhotoUrl,
+          rejectionReason: null,
+          reviewedAt: null,
+          reviewedById: null,
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        return NextResponse.json({ error: "Этот клуб уже указан в другой заявке." }, { status: 409 });
+      }
+      throw error;
+    }
+
+    revalidatePath(`/tournaments/${params.id}`);
+    revalidatePath(`/admin/tournaments/${params.id}`);
+    revalidatePath(`/admin/tournaments/${params.id}/applications`);
+
+    if (contentType.includes("application/json")) {
+      return NextResponse.json({ ok: true, pendingReview: true });
+    }
+
+    const origin = getRequestBaseUrl(request);
+    return NextResponse.redirect(new URL(`/tournaments/${params.id}`, origin));
   }
 
   try {

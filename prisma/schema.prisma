@@ -83,6 +83,12 @@ enum ParticipantStatus {
   REMOVED
 }
 
+enum TournamentApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum StageType {
   LEAGUE
   GROUP_STAGE
@@ -284,6 +290,8 @@ model User {
   sessions            Session[]
   tournamentEntries   TournamentRegistration[]
   tournamentRosterMemberships TournamentRegistrationMember[]
+  tournamentRegistrationApplications TournamentRegistrationApplication[] @relation("registrationApplicant")
+  reviewedTournamentRegistrationApplications TournamentRegistrationApplication[] @relation("registrationReviewer")
   playerOneMatches    Match[]                  @relation("playerOne")
   playerTwoMatches    Match[]                  @relation("playerTwo")
   winningMatches      Match[]                  @relation("winner")
@@ -649,6 +657,7 @@ model Tournament {
   registrationClosedAt   DateTime?
   checkInRequired        Boolean                  @default(false)
   requireTelegramForRegistration Boolean          @default(false)
+  requireLineupPhoto   Boolean                    @default(false)
   notificationsEnabled Boolean                    @default(true)
   isTest               Boolean                    @default(false)
   participantMode      TournamentParticipantMode  @default(SINGLE)
@@ -677,6 +686,7 @@ model Tournament {
   updatedAt              DateTime                 @updatedAt
   season                 Season?                  @relation(fields: [seasonId], references: [id], onDelete: SetNull)
   participants           TournamentRegistration[]
+  registrationApplications TournamentRegistrationApplication[]
   rosterMembers          TournamentRegistrationMember[]
   matches                Match[]
   stages                 TournamentStage[]
@@ -688,6 +698,32 @@ model Tournament {
   @@index([seasonId, status])
   @@index([participantMode, status])
   @@index([isTest, status])
+}
+
+model TournamentRegistrationApplication {
+  id                String                      @id @default(cuid())
+  tournamentId      String
+  userId            String
+  status            TournamentApplicationStatus @default(PENDING)
+  clubSlug          String?
+  clubName          String?
+  clubBadgePath     String?
+  teamName          String?
+  teamLogo          String?
+  lineupPhotoUrl    String                      @db.Text
+  rejectionReason   String?                     @db.Text
+  reviewedAt        DateTime?
+  reviewedById      String?
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+  tournament        Tournament                  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user              User                        @relation("registrationApplicant", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy        User?                       @relation("registrationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@unique([tournamentId, userId])
+  @@index([tournamentId, status, createdAt])
+  @@index([userId, status])
+  @@index([reviewedById])
 }
 
 model TournamentStage {

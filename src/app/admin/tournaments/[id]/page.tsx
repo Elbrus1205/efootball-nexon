@@ -1,7 +1,7 @@
 ﻿import Link from "next/link";
-import { MatchStatus, ParticipantStatus, StageType, UserRole } from "@prisma/client";
+import { MatchStatus, ParticipantStatus, StageType, TournamentApplicationStatus, UserRole } from "@prisma/client";
 import { notFound } from "next/navigation";
-import { Activity, CalendarClock, Dices, GitBranch, History, Pencil, Swords, Trash2, Trophy, Users } from "lucide-react";
+import { Activity, CalendarClock, ClipboardCheck, Dices, GitBranch, History, Pencil, Swords, Trash2, Trophy, Users } from "lucide-react";
 import { RandomScoresButton } from "@/components/admin/random-scores-button";
 import { TournamentImageExporterLazy, type ExportGroup, type ExportScheduleRound } from "@/components/admin/tournament-image-exporter-lazy";
 import { Badge } from "@/components/ui/badge";
@@ -164,6 +164,10 @@ export default async function AdminTournamentWorkspacePage(props: { params: Prom
         title: true,
         status: true,
         playoffType: true,
+        registrationApplications: {
+          where: { status: TournamentApplicationStatus.PENDING },
+          select: { id: true },
+        },
         participants: {
           select: {
             id: true,
@@ -395,6 +399,10 @@ export default async function AdminTournamentWorkspacePage(props: { params: Prom
             <Link href={`/admin/tournaments/${tournament.id}/participants`} className={actionButtonClass}>
               <Users className="h-4 w-4" />
               Участники
+            </Link>
+            <Link href={`/admin/tournaments/${tournament.id}/applications`} className={actionButtonClass}>
+              <ClipboardCheck className="h-4 w-4" />
+              Заявки на участие{tournament.registrationApplications.length ? ` · ${tournament.registrationApplications.length}` : ""}
             </Link>
             <Link href={`/admin/tournaments/${tournament.id}/stages`} className={actionButtonClass}>
               <GitBranch className="h-4 w-4" />
