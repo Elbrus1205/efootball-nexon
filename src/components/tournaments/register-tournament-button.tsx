@@ -1,10 +1,11 @@
 "use client";
 
 import { ClubSelectionMode, TournamentParticipantMode } from "@prisma/client";
-import { CheckCircle2, ImagePlus, Loader2, Search, ScrollText, Trash2, Upload, X } from "lucide-react";
+import { ArrowRight, CheckCircle2, ImagePlus, Loader2, Search, ScrollText, Trash2, Upload, UserPlus, X } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { type ReactNode, useEffect, useMemo, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { uploadFile } from "@/lib/storage/upload-client";
@@ -25,6 +26,14 @@ type AfterRegulationsAction = "register" | "choose-club";
 
 function normalizeClubSearch(value: string) {
   return value.trim().toLowerCase().replace(/ё/g, "е");
+}
+
+function ModalPortal({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  return mounted ? createPortal(children, document.body) : null;
 }
 
 export function RegisterTournamentButton({
@@ -61,6 +70,27 @@ export function RegisterTournamentButton({
   const [afterRegulationsAction, setAfterRegulationsAction] = useState<AfterRegulationsAction>("register");
   const [regulationsError, setRegulationsError] = useState("");
   const [isPending, startTransition] = useTransition();
+  const modalOpen = isOpen || lineupOpen || regulationsOpen;
+
+  useEffect(() => {
+    if (!modalOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (lineupOpen) setLineupOpen(false);
+      else if (regulationsOpen) setRegulationsOpen(false);
+      else setIsOpen(false);
+    };
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [lineupOpen, modalOpen, regulationsOpen]);
 
   const availableClubs = useMemo(
     () => clubs.filter((club) => !takenClubSlugs.includes(club.slug)),
@@ -271,73 +301,76 @@ export function RegisterTournamentButton({
   };
 
   const regulationsModal = regulationsOpen ? (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-      <Card className="w-full max-w-3xl overflow-hidden p-0">
-        <div className="flex items-start justify-between gap-4 border-b border-white/10 p-5">
-          <div>
-            <div className="flex items-center gap-2 text-xl font-semibold text-white">
-              <ScrollText className="h-5 w-5 text-primary" />
-              Принятие регламента
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/80 pt-4 backdrop-blur-sm sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="regulations-title">
+        <Card className="flex max-h-[calc(100dvh-1rem)] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border-primary/20 bg-[#101516] p-0 shadow-[0_-20px_70px_rgba(0,0,0,0.45)] sm:max-h-[min(88dvh,760px)] sm:rounded-3xl sm:shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+          <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 bg-[radial-gradient(circle_at_10%_0%,rgba(33,241,168,0.12),transparent_45%)] p-4 sm:p-5">
+            <div className="min-w-0">
+              <div id="regulations-title" className="flex items-center gap-2.5 text-lg font-semibold text-white sm:text-xl">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/10"><ScrollText className="h-5 w-5 text-primary" /></span>
+                Принятие регламента
+              </div>
+              <p className="mt-2 text-sm leading-6 text-zinc-400">
+                Перед регистрацией на турнир нужно прочитать и принять актуальную версию регламента.
+              </p>
             </div>
-            <p className="mt-2 text-sm text-zinc-400">
-              Перед регистрацией на турнир нужно прочитать и принять актуальную версию регламента.
-            </p>
-          </div>
-          <Button variant="ghost" size="icon" onClick={() => setRegulationsOpen(false)}>
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
-
-        <div className="space-y-4 p-5">
-          <div className="max-h-[48vh] overflow-y-auto rounded-xl border border-white/10 bg-black/25 p-4 text-sm leading-7 text-zinc-200">
-            <div className="whitespace-pre-wrap">{regulations?.body ?? "Загрузка регламента..."}</div>
-          </div>
-
-          <label className="flex items-start gap-3 rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">
-            <input
-              type="checkbox"
-              checked={regulationsAccepted}
-              onChange={(event) => setRegulationsAccepted(event.target.checked)}
-              className="mt-1 h-4 w-4 rounded border-white/20 bg-black/40"
-            />
-            <span>Я прочитал актуальный регламент и принимаю его условия.</span>
-          </label>
-
-          {regulationsError ? <div className="rounded-xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">{regulationsError}</div> : null}
-
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <Button variant="outline" onClick={() => setRegulationsOpen(false)}>
-              Отмена
-            </Button>
-            <Button onClick={acceptRegulationsAndContinue} disabled={isPending || !regulationsAccepted} className="gap-2">
-              <CheckCircle2 className="h-4 w-4" />
-              {isPending ? "Сохраняем..." : afterRegulationsAction === "choose-club" ? "Принять и выбрать клуб" : "Принять и зарегистрироваться"}
+            <Button variant="ghost" size="icon" className="shrink-0" onClick={() => setRegulationsOpen(false)} aria-label="Закрыть регламент">
+              <X className="h-5 w-5" />
             </Button>
           </div>
-        </div>
-      </Card>
-    </div>
+
+          <div className="min-h-0 space-y-4 overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-5">
+            <div className="max-h-[48vh] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-black/30 p-4 text-sm leading-7 text-zinc-200">
+              <div className="whitespace-pre-wrap">{regulations?.body ?? "Загрузка регламента..."}</div>
+            </div>
+
+            <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-primary/20 bg-primary/[0.07] p-4 text-sm leading-6 text-zinc-100 transition hover:border-primary/35">
+              <input
+                type="checkbox"
+                checked={regulationsAccepted}
+                onChange={(event) => setRegulationsAccepted(event.target.checked)}
+                className="mt-1 h-5 w-5 shrink-0 rounded border-white/20 bg-black/40 accent-[#21F1A8]"
+              />
+              <span>Я прочитал актуальный регламент и принимаю его условия.</span>
+            </label>
+
+            {regulationsError ? <div role="alert" className="rounded-xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">{regulationsError}</div> : null}
+
+            <div className="grid grid-cols-2 gap-2 border-t border-white/10 pt-4 sm:flex sm:justify-end">
+              <Button variant="outline" onClick={() => setRegulationsOpen(false)}>
+                Отмена
+              </Button>
+              <Button onClick={acceptRegulationsAndContinue} disabled={isPending || !regulationsAccepted} className="gap-2 px-3">
+                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                <span className="truncate">{isPending ? "Сохраняем..." : afterRegulationsAction === "choose-club" ? "Принять и выбрать" : "Принять"}</span>
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+    </ModalPortal>
   ) : null;
 
   const lineupModal = lineupOpen ? (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 backdrop-blur-sm sm:p-4">
-      <Card className="w-full max-w-xl overflow-hidden p-0">
-        <div className="flex items-start justify-between gap-4 border-b border-white/10 p-4 sm:p-5">
-          <div>
-            <div className="flex items-center gap-2 text-xl font-semibold text-white">
-              <ImagePlus className="h-5 w-5 text-primary" />
-              Фото игрового состава
-            </div>
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/80 pt-4 backdrop-blur-sm sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="lineup-title">
+        <Card className="flex max-h-[calc(100dvh-1rem)] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl border-primary/20 bg-[#101516] p-0 shadow-[0_-20px_70px_rgba(0,0,0,0.45)] sm:max-h-[min(88dvh,760px)] sm:rounded-3xl sm:shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+          <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 bg-[radial-gradient(circle_at_10%_0%,rgba(33,241,168,0.12),transparent_45%)] p-4 sm:p-5">
+            <div className="min-w-0">
+              <div id="lineup-title" className="flex items-center gap-2.5 text-lg font-semibold text-white sm:text-xl">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/10"><ImagePlus className="h-5 w-5 text-primary" /></span>
+                Фото игрового состава
+              </div>
             <p className="mt-2 text-sm leading-6 text-zinc-400">
               Прикрепите один чёткий скриншот, где виден весь заявленный состав. После отправки заявку проверит администратор.
             </p>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setLineupOpen(false)} aria-label="Закрыть загрузку фото">
+          <Button variant="ghost" size="icon" className="shrink-0" onClick={() => setLineupOpen(false)} aria-label="Закрыть загрузку фото">
             <X className="h-5 w-5" />
           </Button>
         </div>
 
-        <div className="space-y-4 p-4 sm:p-5">
+        <div className="min-h-0 space-y-4 overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-5">
           {lineupPhotoUrl ? (
             <div className="overflow-hidden rounded-md border border-primary/25 bg-black/30">
               <div className="relative aspect-[16/9]">
@@ -359,7 +392,7 @@ export function RegisterTournamentButton({
               </div>
             </div>
           ) : (
-            <label className="flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed border-white/15 bg-white/[0.025] p-6 text-center transition hover:border-primary/40 hover:bg-primary/[0.04] focus-within:ring-2 focus-within:ring-primary">
+            <label className="flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-primary/25 bg-primary/[0.04] p-6 text-center transition duration-200 hover:border-primary/50 hover:bg-primary/[0.07] focus-within:ring-2 focus-within:ring-primary motion-reduce:transition-none">
               <input
                 type="file"
                 accept="image/avif,image/jpeg,image/png,image/webp"
@@ -392,17 +425,30 @@ export function RegisterTournamentButton({
             </Button>
           </div>
         </div>
-      </Card>
-    </div>
+        </Card>
+      </div>
+    </ModalPortal>
   ) : null;
+
+  const registrationTrigger = (onClick: () => void) => (
+    <Button
+      size="lg"
+      onClick={onClick}
+      disabled={isPending}
+      aria-haspopup="dialog"
+      className="group min-h-12 w-full gap-3 overflow-hidden rounded-xl border-primary bg-primary px-5 font-bold text-[#06110d] shadow-[0_12px_32px_rgba(33,241,168,0.18)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#58f5bd] hover:shadow-[0_16px_38px_rgba(33,241,168,0.24)] active:translate-y-0 motion-reduce:transform-none motion-reduce:transition-none sm:w-auto sm:min-w-60"
+    >
+      {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <UserPlus className="h-5 w-5" />}
+      <span>{isPending ? "Проверяем..." : "Участвовать в турнире"}</span>
+      {!isPending ? <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transform-none" /> : null}
+    </Button>
+  );
 
   if (clubSelectionMode === ClubSelectionMode.ADMIN_RANDOM && participantMode !== TournamentParticipantMode.TEAM) {
     return (
-      <div className="space-y-2">
-        <Button size="lg" onClick={() => submit()} disabled={isPending}>
-          {isPending ? "Регистрация..." : "Зарегистрироваться"}
-        </Button>
-        {message ? <div aria-live="polite" className="text-sm text-red-300">{message}</div> : null}
+      <div className="min-w-0 space-y-2">
+        {registrationTrigger(() => submit())}
+        {message ? <div role="alert" aria-live="polite" className="max-w-sm text-sm leading-5 text-rose-300">{message}</div> : null}
         {regulationsModal}
         {lineupModal}
       </div>
@@ -411,37 +457,40 @@ export function RegisterTournamentButton({
 
   return (
     <>
-      <div className="space-y-2">
-        <Button size="lg" onClick={openClubSelection} disabled={isPending}>
-          {isPending ? "Проверяем..." : "Зарегистрироваться"}
-        </Button>
-        {message ? <div aria-live="polite" className="text-sm text-red-300">{message}</div> : null}
+      <div className="min-w-0 space-y-2">
+        {registrationTrigger(openClubSelection)}
+        {message ? <div role="alert" aria-live="polite" className="max-w-sm text-sm leading-5 text-rose-300">{message}</div> : null}
         {regulationsModal}
         {lineupModal}
       </div>
 
       {isOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm sm:p-4">
-          <Card className="flex max-h-[92svh] w-full max-w-3xl flex-col gap-4 overflow-hidden p-4 sm:gap-5 sm:p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-xl font-semibold text-white">Выберите клуб</h3>
-                <p className="mt-1.5 max-w-xl text-sm leading-6 text-zinc-400 sm:mt-2">
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/80 pt-4 backdrop-blur-sm sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="club-selection-title">
+          <Card className="flex max-h-[calc(100dvh-1rem)] w-full max-w-3xl min-w-0 flex-col gap-0 overflow-hidden rounded-t-3xl border-primary/20 bg-[#101516] p-0 shadow-[0_-20px_70px_rgba(0,0,0,0.45)] sm:max-h-[min(88dvh,780px)] sm:rounded-3xl sm:shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 bg-[radial-gradient(circle_at_10%_0%,rgba(33,241,168,0.14),transparent_48%)] p-4 sm:p-5">
+              <div className="min-w-0">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/10"><Search className="h-5 w-5 text-primary" /></span>
+                  <h3 id="club-selection-title" className="text-lg font-semibold text-white sm:text-xl">Выберите клуб</h3>
+                </div>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">
                   Один клуб может быть только у одного участника. Уже занятые клубы недоступны для выбора.
                 </p>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
+              <Button variant="ghost" size="icon" className="shrink-0" onClick={() => setIsOpen(false)} aria-label="Закрыть выбор клуба">
                 <X className="h-5 w-5" />
               </Button>
             </div>
 
+            <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 sm:gap-5 sm:p-5">
             {participantMode === TournamentParticipantMode.TEAM ? (
               <label className="block space-y-2">
                 <span className="text-sm font-medium text-zinc-200">Название команды</span>
                 <input
                   value={teamName}
                   onChange={(event) => setTeamName(event.target.value)}
-                  className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-primary/60"
+                  className="h-12 w-full rounded-xl border border-white/10 bg-black/35 px-4 text-base text-white outline-none transition placeholder:text-zinc-600 focus:border-primary/60 focus:ring-2 focus:ring-primary/15 sm:text-sm"
                   placeholder="Например: Nexon Elite"
                 />
                 <span className="block text-xs text-zinc-500">Размер состава: {rosterSize} игроков</span>
@@ -450,20 +499,20 @@ export function RegisterTournamentButton({
 
             {clubSelectionMode === ClubSelectionMode.PLAYER_PICK ? (
               <>
-                <label className="block space-y-2">
+                <label className="block shrink-0 space-y-2">
                   <span className="text-sm font-medium text-zinc-200">Поиск клуба</span>
                   <div className="relative">
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
                     <input
                       value={clubSearch}
                       onChange={(event) => setClubSearch(event.target.value)}
-                      className="h-11 w-full rounded-2xl border border-white/10 bg-black/40 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-primary/60"
+                      className="h-12 w-full rounded-xl border border-white/10 bg-black/35 pl-10 pr-4 text-base text-white outline-none transition placeholder:text-zinc-600 focus:border-primary/60 focus:ring-2 focus:ring-primary/15 sm:text-sm"
                       placeholder="Введите название клуба"
                     />
                   </div>
                 </label>
 
-                <div className="grid min-h-0 flex-1 grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3 sm:gap-3">
+                <div className="grid min-h-0 flex-1 grid-cols-2 gap-2 overflow-y-auto overscroll-contain pr-1 sm:grid-cols-3 sm:gap-3">
                   {filteredClubs.map((club) => {
                     const taken = takenClubSlugs.includes(club.slug);
                     const selected = selectedClubSlug === club.slug;
@@ -474,24 +523,26 @@ export function RegisterTournamentButton({
                         type="button"
                         disabled={taken}
                         onClick={() => setSelectedClubSlug(club.slug)}
-                        className={`group flex min-h-[112px] flex-col items-center justify-center gap-2 rounded-xl border px-2.5 py-3 text-center transition sm:min-h-[118px] sm:px-3 ${
+                        aria-pressed={selected}
+                        className={`group relative flex min-h-[126px] min-w-0 flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border px-2.5 py-3 text-center transition duration-200 focus-visible:ring-2 focus-visible:ring-primary motion-reduce:transition-none sm:min-h-[132px] sm:px-3 ${
                           taken
-                            ? "cursor-not-allowed border-white/10 bg-white/5 opacity-50"
+                            ? "cursor-not-allowed border-white/5 bg-[#15191a] opacity-45"
                             : selected
-                              ? "border-primary bg-primary/15 shadow-[0_0_0_1px_rgba(33,241,168,0.18),0_14px_28px_rgba(33,241,168,0.1)]"
-                              : "border-white/10 bg-white/[0.03] hover:border-primary/40 hover:bg-white/[0.06]"
+                              ? "border-primary bg-[linear-gradient(180deg,rgba(33,241,168,0.14),rgba(33,241,168,0.06))] shadow-[0_0_0_1px_rgba(33,241,168,0.12),0_14px_30px_rgba(0,0,0,0.22)]"
+                              : "border-white/10 bg-[#171c1d] hover:border-primary/40 hover:bg-[#1b2321]"
                         }`}
                       >
+                        {selected ? <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[#06110d]"><CheckCircle2 className="h-4 w-4" /></span> : null}
                         <div
-                          className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-black/30 transition sm:h-14 sm:w-14 ${
+                          className={`flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border bg-black/30 transition sm:h-16 sm:w-16 ${
                             selected ? "border-primary/60" : "border-white/10 group-hover:border-white/20"
                           }`}
                         >
-                          <Image src={club.imagePath} alt={club.name} width={56} height={56} className="h-full w-full object-contain p-1" />
+                          <Image src={club.imagePath} alt="" width={64} height={64} className="h-full w-full object-contain p-1.5" />
                         </div>
-                        <div className="min-w-0 space-y-1">
+                        <div className="w-full min-w-0 space-y-1">
                           <div className="line-clamp-2 text-xs font-semibold leading-snug text-white sm:text-sm">{club.name}</div>
-                          <div className={`text-[10px] font-medium leading-tight sm:text-xs ${taken ? "text-red-300/80" : selected ? "text-primary" : "text-zinc-500"}`}>
+                          <div className={`text-[11px] font-medium leading-tight ${taken ? "text-rose-300/80" : selected ? "text-primary" : "text-zinc-500"}`}>
                             {taken ? "Клуб уже занят" : selected ? "Выбран" : "Свободен"}
                           </div>
                         </div>
@@ -507,17 +558,18 @@ export function RegisterTournamentButton({
                 </div>
               </>
             ) : null}
+            </div>
 
-            <div className="flex flex-col gap-3 border-t border-white/10 pt-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex shrink-0 flex-col gap-3 border-t border-white/10 bg-black/20 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:flex-row sm:items-center sm:justify-between sm:p-5">
               <div className="text-sm text-zinc-400">
                 {availableClubs.length ? `Свободно клубов: ${availableClubs.length}` : "Свободных клубов больше нет."}
               </div>
               <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
-                <Button variant="outline" className="h-11 px-3" onClick={() => setIsOpen(false)}>
+                <Button variant="outline" className="h-11 px-3 sm:min-w-28" onClick={() => setIsOpen(false)}>
                   Отмена
                 </Button>
                 <Button
-                  className="h-11 px-3"
+                  className="h-11 px-3 sm:min-w-44"
                   onClick={clubSelectionMode === ClubSelectionMode.PLAYER_PICK ? submitSelectedClub : () => submit(undefined)}
                   disabled={
                     isPending ||
@@ -530,7 +582,8 @@ export function RegisterTournamentButton({
               </div>
             </div>
           </Card>
-        </div>
+          </div>
+        </ModalPortal>
       ) : null}
     </>
   );

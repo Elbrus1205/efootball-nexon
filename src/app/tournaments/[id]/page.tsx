@@ -1218,6 +1218,10 @@ export default async function TournamentDetailsPage(
         />
       </div>
 
+      <div className="md:hidden [&>a]:w-full [&>button]:w-full [&_button]:w-full">
+        {primaryAction}
+      </div>
+
       {reliabilityWarningText ? <div className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] px-4 py-3 text-sm leading-6 text-amber-100">{reliabilityWarningText}</div> : null}
 
       <TournamentNavigation tabs={tournamentTabs} initialValue={defaultTournamentTab}>
