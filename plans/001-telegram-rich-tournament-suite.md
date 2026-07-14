@@ -153,3 +153,12 @@ Run all gates, review the diff for unrelated files and secret leakage, commit on
 - Telegram tables should remain summaries; link to the website for full standings and schedules.
 - Rate-limit/coalesce bulletin edits because one confirmed result can trigger standings, bracket, and notification updates together.
 - Review all private group replies for fail-closed behavior whenever Telegram webhook handling changes.
+
+## Execution notes
+
+- Implemented the complete rich tournament publication suite in PR [#3](https://github.com/Elbrus1205/efootball-nexon/pull/3).
+- Added Bot API 10.2 rich transport and legacy fallback, idempotent publication storage, tournament templates, segmented broadcasts, automatic result/bulletin updates, personal notifications, and receiver-scoped community commands.
+- Redesigned the admin composer and tournament Telegram settings using the `ui-ux-pro-max` guidance: responsive sections, visible labels/focus states, 44px controls, loading feedback, semantic status cards, and Lucide icons.
+- Added deterministic publication/audience tests and long-message coverage. Final gates: focused tests 10/10, full tests 30/30, TypeScript, lint, Prisma validation/generation, and production build all passed.
+- The production build completed all 76 pages; prerendering logged transient pre-existing PostgreSQL connection-pool errors (`P1017`/`P2024`, connection limit 1) and recovered without failing the build.
+- No plan deviation changed product scope. Legacy rich-edit fallback was strengthened during review so an unsupported rich edit updates the existing HTML message instead of creating duplicate bulletins.
