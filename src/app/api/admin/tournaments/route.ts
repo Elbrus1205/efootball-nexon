@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { parseFormatBlueprintJson } from "@/lib/format-blueprint";
 import { createNotificationForAllUsers } from "@/lib/services/notifications";
+import { publishTournamentAnnouncement, syncTournamentBulletin } from "@/lib/services/telegram-publications";
 import { getActiveSeason } from "@/lib/services/seasons";
 import {
   generateTournamentMatches,
@@ -68,6 +69,10 @@ export async function POST(request: Request) {
       checkInRequired: checkboxValue(formData.get("checkInRequired")),
       requireTelegramForRegistration: checkboxValue(formData.get("requireTelegramForRegistration")),
       requireLineupPhoto: checkboxValue(formData.get("requireLineupPhoto")),
+      telegramCommunityId: formData.get("telegramCommunityId"),
+      telegramChannelId: formData.get("telegramChannelId"),
+      telegramGroupId: formData.get("telegramGroupId"),
+      telegramAutoPublish: checkboxValue(formData.get("telegramAutoPublish")),
       clubSelectionMode: formData.get("clubSelectionMode"),
       sortRules: formData.getAll("sortRules"),
     });
@@ -129,6 +134,10 @@ export async function POST(request: Request) {
         requireTelegramForRegistration: body.requireTelegramForRegistration,
         requireLineupPhoto: body.requireLineupPhoto,
         notificationsEnabled,
+        telegramCommunityId: body.telegramCommunityId || null,
+        telegramChannelId: body.telegramChannelId || null,
+        telegramGroupId: body.telegramGroupId || null,
+        telegramAutoPublish: body.telegramAutoPublish,
         clubSelectionMode: body.clubSelectionMode,
         sortRules: body.sortRules,
         createdById: session.user.id,
@@ -161,6 +170,13 @@ export async function POST(request: Request) {
         link: `/tournaments/${tournament.id}`,
         dedupeWithinHours: 24,
       });
+    }
+
+    if (body.telegramAutoPublish) {
+      const publication = status === TournamentStatus.REGISTRATION_OPEN
+        ? publishTournamentAnnouncement(tournament.id)
+        : syncTournamentBulletin(tournament.id);
+      await publication.catch((error) => console.error("Failed to publish Telegram tournament message", error));
     }
 
     return NextResponse.redirect(new URL("/admin/tournaments?created=1", origin), 303);

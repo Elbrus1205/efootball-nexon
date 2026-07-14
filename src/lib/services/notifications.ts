@@ -3,9 +3,9 @@ import { NotificationType } from "@prisma/client";
 import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
 import { broadcastNotification } from "@/lib/realtime/notifications-realtime";
-import { isTelegramRecipientUnavailableError, sendTelegramMessage } from "@/lib/telegram-bot";
+import { isTelegramRecipientUnavailableError, sendTelegramRichMessageWithFallback } from "@/lib/telegram-bot";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
-import { tgEmoji } from "@/lib/telegram-emoji";
+import { buildNotificationRichMessage, type TelegramRichMessageDraft } from "@/lib/telegram-rich";
 import { repairMojibake } from "@/lib/text-encoding";
 
 const pusher =
@@ -28,6 +28,7 @@ export async function createNotification({
   dedupeKey,
   dedupeWithinHours,
   skipTelegram,
+  telegramRichMessage,
 }: {
   userId: string;
   title: string;
@@ -37,6 +38,7 @@ export async function createNotification({
   dedupeKey?: string;
   dedupeWithinHours?: number;
   skipTelegram?: boolean;
+  telegramRichMessage?: TelegramRichMessageDraft;
 }) {
   const safeTitle = repairMojibake(title);
   const safeBody = repairMojibake(body);
@@ -126,19 +128,17 @@ export async function createNotification({
 
   if (shouldDeliver && !skipTelegram && notification.user.telegramId && process.env.TELEGRAM_BOT_TOKEN) {
     const absoluteLink = buildAbsoluteNotificationLink(link);
-    await sendTelegramMessage({
+    const richMessage = telegramRichMessage ?? buildNotificationRichMessage({
+        title: safeTitle,
+        body: safeBody,
+        typeLabel: getTelegramNotificationTypeLabel(notification.type),
+        url: absoluteLink,
+        buttonText: absoluteLink ? getTelegramNotificationButtonText(notification.type) : null,
+      });
+    await sendTelegramRichMessageWithFallback({
       chatId: notification.user.telegramId,
-      text: buildTelegramNotificationText(notification.type, safeTitle, safeBody),
-      disableWebPagePreview: true,
-      replyMarkup: absoluteLink
-        ? buildTelegramInlineKeyboard([
-            {
-              text: getTelegramNotificationButtonText(notification.type),
-              url: absoluteLink,
-              row: 1,
-            },
-          ])
-        : undefined,
+      message: richMessage,
+      replyMarkup: buildTelegramInlineKeyboard(richMessage.buttons ?? []),
     }).catch((error) => {
       if (isTelegramRecipientUnavailableError(error)) {
         if (process.env.TELEGRAM_DEBUG === "true") {
@@ -223,36 +223,6 @@ export async function createNotificationForAllUsers({
   });
 }
 
-function buildTelegramNotificationText(type: NotificationType, title: string, body: string) {
-  const safeTitle = escapeTelegramHtml(title);
-  const safeBody = escapeTelegramHtml(body);
-  const typeLabel = getTelegramNotificationTypeLabel(type);
-  const typeEmoji = getTelegramNotificationEmoji(type);
-  const brand = `${tgEmoji("gamepad")} <b>eFootball Nexon</b>`;
-
-  if (!safeBody) {
-    return [
-      brand,
-      `${typeEmoji} <b>${safeTitle}</b>`,
-      `${tgEmoji("sparkles")} <i>${typeLabel}</i>`,
-    ].join("\n\n");
-  }
-
-  return [
-    brand,
-    `${typeEmoji} <b>${safeTitle}</b>`,
-    `<blockquote>${safeBody}</blockquote>`,
-    `${tgEmoji("sparkles")} <i>${typeLabel}</i>`,
-  ].join("\n\n");
-}
-
-function getTelegramNotificationEmoji(type: NotificationType) {
-  if (type === NotificationType.TOURNAMENT) return tgEmoji("crown");
-  if (type === NotificationType.MATCH) return tgEmoji("fire");
-  if (type === NotificationType.RESULT) return tgEmoji("chart");
-  return tgEmoji("bell");
-}
-
 function getTelegramNotificationTypeLabel(type: NotificationType) {
   if (type === NotificationType.TOURNAMENT) return "Турнирное уведомление";
   if (type === NotificationType.MATCH) return "Матчевое уведомление";
@@ -270,12 +240,4 @@ function getTelegramNotificationButtonText(type: NotificationType) {
 function buildAbsoluteNotificationLink(link?: string | null) {
   const appUrl = getConfiguredSiteBaseUrl();
   return link && appUrl ? new URL(link, appUrl).toString() : "";
-}
-
-function escapeTelegramHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }

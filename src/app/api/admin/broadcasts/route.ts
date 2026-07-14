@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRequestBaseUrl } from "@/lib/affiliate";
 import { requirePermission } from "@/lib/auth/session";
-import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import {
   buildTelegramInlineKeyboard,
@@ -13,13 +12,24 @@ import {
   TELEGRAM_TEXT_LIMIT,
   validateTelegramHtmlStructure,
 } from "@/lib/telegram-format";
-import { sendTelegramMedia, sendTelegramMessage, type TelegramMediaType } from "@/lib/telegram-bot";
+import {
+  sendTelegramMedia,
+  sendTelegramMessage,
+  sendTelegramRichMessageWithFallback,
+  type TelegramInlineKeyboardMarkup,
+  type TelegramMediaType,
+} from "@/lib/telegram-bot";
+import type { TelegramAudienceScope } from "@/lib/telegram-publications";
+import type { TelegramRichMessageDraft } from "@/lib/telegram-rich";
+import { getTelegramBroadcastRecipients } from "@/lib/services/telegram-audiences";
+import { buildTournamentAnnouncementDraft, buildTournamentBulletin } from "@/lib/services/telegram-publications";
 
 export const runtime = "nodejs";
 
 const mediaTypes = new Set<TelegramMediaType>(["photo", "video", "document", "animation", "audio"]);
 const textChunkLimit = 3900;
 const sendConcurrency = 4;
+const audienceScopes = new Set<TelegramAudienceScope>(["all", "participants", "group", "applicants", "unresolved"]);
 
 function redirectToBroadcasts(request: Request, params: Record<string, string | number>) {
   const url = new URL("/admin/broadcasts", getRequestBaseUrl(request));
@@ -87,8 +97,18 @@ async function sendBroadcastToChat(params: {
   mediaType: "text" | TelegramMediaType;
   mediaUrl: string;
   mediaFile: File | null;
-  replyMarkup?: { inline_keyboard: Array<Array<{ text: string; url: string }>> };
+  richMessage?: TelegramRichMessageDraft | null;
+  replyMarkup?: TelegramInlineKeyboardMarkup;
 }) {
+  if (params.richMessage) {
+    await sendTelegramRichMessageWithFallback({
+      chatId: params.chatId,
+      message: params.richMessage,
+      replyMarkup: params.replyMarkup,
+    });
+    return;
+  }
+
   if (params.mediaType === "text") {
     if (params.useHtml || params.replyMarkup) {
       await sendTelegramMessage({
@@ -155,12 +175,19 @@ export async function POST(request: Request) {
     return redirectToBroadcasts(request, { error: "Подтвердите отправку рассылки всем получателям." });
   }
 
-  const text = getString(formData.get("text"));
-  const formattedText = sanitizeTelegramHtml(text);
-  const renderedTextLength = getTelegramRenderedTextLength(formattedText);
-  const useHtml = hasTelegramHtmlFormatting(formattedText);
+  const contentSource = getString(formData.get("contentSource")) === "tournament" ? "tournament" : "manual";
+  const template = getString(formData.get("template")) === "bulletin" ? "bulletin" : "announcement";
+  const tournamentId = getString(formData.get("tournamentId"));
+  const groupId = getString(formData.get("groupId"));
+  const rawAudience = getString(formData.get("audience")) as TelegramAudienceScope;
+  const audience: TelegramAudienceScope = audienceScopes.has(rawAudience) ? rawAudience : "all";
+  let text = getString(formData.get("text"));
+  let formattedText = sanitizeTelegramHtml(text);
+  let renderedTextLength = getTelegramRenderedTextLength(formattedText);
+  let useHtml = hasTelegramHtmlFormatting(formattedText);
+  let richMessage: TelegramRichMessageDraft | null = null;
   const rawMediaType = getString(formData.get("mediaType"));
-  const mediaType: "text" | TelegramMediaType = mediaTypes.has(rawMediaType as TelegramMediaType)
+  let mediaType: "text" | TelegramMediaType = mediaTypes.has(rawMediaType as TelegramMediaType)
     ? (rawMediaType as TelegramMediaType)
     : "text";
   const mediaUrl = getString(formData.get("mediaUrl"));
@@ -173,6 +200,24 @@ export async function POST(request: Request) {
     return redirectToBroadcasts(request, {
       error: error instanceof Error ? error.message : "Не удалось обработать кнопки рассылки.",
     });
+  }
+
+  if (contentSource === "tournament") {
+    if (!tournamentId) {
+      return redirectToBroadcasts(request, { error: "Выберите турнир для шаблонной публикации." });
+    }
+    richMessage = template === "bulletin"
+      ? await buildTournamentBulletin(tournamentId)
+      : await buildTournamentAnnouncementDraft(tournamentId);
+    if (!richMessage) {
+      return redirectToBroadcasts(request, { error: "Не удалось собрать Telegram-шаблон выбранного турнира." });
+    }
+    text = richMessage.fallbackText;
+    formattedText = sanitizeTelegramHtml(text);
+    renderedTextLength = getTelegramRenderedTextLength(formattedText);
+    useHtml = true;
+    mediaType = "text";
+    buttons = [...(richMessage.buttons ?? []), ...buttons];
   }
 
   const replyMarkup = buildTelegramInlineKeyboard(buttons);
@@ -192,28 +237,26 @@ export async function POST(request: Request) {
     return redirectToBroadcasts(request, { error: "Для медиа-рассылки прикрепите файл или укажите ссылку." });
   }
 
-  if (useHtml && renderedTextLength > TELEGRAM_TEXT_LIMIT) {
+  if (!richMessage && useHtml && renderedTextLength > TELEGRAM_TEXT_LIMIT) {
     return redirectToBroadcasts(request, {
       error: `Сообщение с Telegram-разметкой должно помещаться в ${TELEGRAM_TEXT_LIMIT} символов после форматирования.`,
     });
   }
 
-  if (mediaType === "text" && buttons.length && renderedTextLength > TELEGRAM_TEXT_LIMIT) {
+  if (!richMessage && mediaType === "text" && buttons.length && renderedTextLength > TELEGRAM_TEXT_LIMIT) {
     return redirectToBroadcasts(request, {
       error: `Текстовая рассылка с кнопками должна помещаться в ${TELEGRAM_TEXT_LIMIT} символов.`,
     });
   }
 
-  const recipients = await db.user.findMany({
-    where: {
-      telegramId: { not: null },
-    },
-    select: {
-      id: true,
-      telegramId: true,
-      telegramUsername: true,
-    },
-  });
+  let recipients;
+  try {
+    recipients = await getTelegramBroadcastRecipients({ scope: audience, tournamentId, groupId });
+  } catch (error) {
+    return redirectToBroadcasts(request, {
+      error: error instanceof Error ? error.message : "Не удалось определить аудиторию рассылки.",
+    });
+  }
 
   if (!recipients.length) {
     return redirectToBroadcasts(request, { error: "Нет пользователей с привязанным Telegram." });
@@ -229,6 +272,7 @@ export async function POST(request: Request) {
         mediaType,
         mediaUrl,
         mediaFile,
+        richMessage,
         replyMarkup,
       });
 
@@ -253,6 +297,11 @@ export async function POST(request: Request) {
     actionType: "PUBLISH",
     afterJson: {
       mediaType,
+      contentSource,
+      template: contentSource === "tournament" ? template : null,
+      audience,
+      tournamentId: tournamentId || null,
+      groupId: groupId || null,
       textLength: text.length,
       renderedTextLength,
       useHtml,

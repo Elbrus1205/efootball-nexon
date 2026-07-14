@@ -6,6 +6,7 @@ import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { parseFormatBlueprintJson } from "@/lib/format-blueprint";
 import { createNotificationForAllUsers } from "@/lib/services/notifications";
+import { publishTournamentAnnouncement, syncTournamentBulletin } from "@/lib/services/telegram-publications";
 import { resolveAutoRegistrationStatus } from "@/lib/services/tournaments";
 import { tournamentBuilderSchema } from "@/lib/validators";
 import { parseMoscowDateTimeLocal } from "@/lib/utils";
@@ -62,6 +63,10 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     checkInRequired: checkboxValue(formData.get("checkInRequired")),
     requireTelegramForRegistration: checkboxValue(formData.get("requireTelegramForRegistration")),
     requireLineupPhoto: checkboxValue(formData.get("requireLineupPhoto")),
+    telegramCommunityId: formData.get("telegramCommunityId"),
+    telegramChannelId: formData.get("telegramChannelId"),
+    telegramGroupId: formData.get("telegramGroupId"),
+    telegramAutoPublish: checkboxValue(formData.get("telegramAutoPublish")),
     clubSelectionMode: formData.get("clubSelectionMode"),
     sortRules: formData.getAll("sortRules"),
   });
@@ -121,6 +126,10 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       requireTelegramForRegistration: body.requireTelegramForRegistration,
       requireLineupPhoto: body.requireLineupPhoto,
       notificationsEnabled: session.user.role !== UserRole.TRAINEE && !isTest,
+      telegramCommunityId: body.telegramCommunityId || null,
+      telegramChannelId: body.telegramChannelId || null,
+      telegramGroupId: body.telegramGroupId || null,
+      telegramAutoPublish: body.telegramAutoPublish,
       clubSelectionMode: body.clubSelectionMode,
       sortRules: body.sortRules,
     },
@@ -134,6 +143,13 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       link: `/tournaments/${updated.id}`,
       dedupeWithinHours: 24,
     });
+  }
+
+  if (updated.telegramAutoPublish) {
+    const publication = updated.status === TournamentStatus.REGISTRATION_OPEN
+      ? publishTournamentAnnouncement(updated.id)
+      : syncTournamentBulletin(updated.id);
+    await publication.catch((error) => console.error("Failed to update Telegram tournament publication", error));
   }
 
   const origin = getRequestBaseUrl(request);
