@@ -659,6 +659,10 @@ model Tournament {
   requireTelegramForRegistration Boolean          @default(false)
   requireLineupPhoto   Boolean                    @default(false)
   notificationsEnabled Boolean                    @default(true)
+  telegramCommunityId String?
+  telegramChannelId   String?
+  telegramGroupId     String?
+  telegramAutoPublish Boolean                     @default(false)
   isTest               Boolean                    @default(false)
   participantMode      TournamentParticipantMode  @default(SINGLE)
   rosterSize           Int                        @default(1)
@@ -693,11 +697,28 @@ model Tournament {
   deadlines              RoundDeadline[]
   brackets               PlayoffBracket[]
   actions                AdminAction[]
+  telegramPublications   TelegramPublication[]
 
   @@index([status, startsAt])
   @@index([seasonId, status])
   @@index([participantMode, status])
   @@index([isTest, status])
+}
+
+model TelegramPublication {
+  id           String     @id @default(cuid())
+  tournamentId String
+  chatId       String
+  messageId    String
+  kind         String
+  contentHash  String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, chatId, kind])
+  @@index([tournamentId, updatedAt])
+  @@index([chatId, kind])
 }
 
 model TournamentRegistrationApplication {

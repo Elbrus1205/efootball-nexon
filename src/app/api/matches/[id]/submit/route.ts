@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { ensureMatchLineupSnapshot } from "@/lib/services/match-lineups";
 import { createNotification } from "@/lib/services/notifications";
 import { recordConfirmedMatchReliability } from "@/lib/services/reliability";
+import { publishTournamentResult, syncTournamentBulletin } from "@/lib/services/telegram-publications";
 import { recalculateGroupStandings, resolveConfirmedMatch } from "@/lib/services/tournaments";
 import { resultSubmissionSchema } from "@/lib/validators";
 
@@ -241,6 +242,10 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       player1Submission.player2Score,
     );
     await syncUserAchievementsForUsers([match.player1Id, match.player2Id]);
+    await Promise.all([
+      publishTournamentResult(match.id).catch((error) => console.error("Failed to publish Telegram match result", error)),
+      syncTournamentBulletin(match.tournamentId).catch((error) => console.error("Failed to update Telegram bulletin", error)),
+    ]);
 
     return NextResponse.json({
       ok: true,

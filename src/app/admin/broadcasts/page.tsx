@@ -12,7 +12,7 @@ export default async function AdminBroadcastsPage(
   const searchParams = await props.searchParams;
   await requirePermission("broadcasts.manage");
 
-  const [telegramRecipients, totalUsers, latestBroadcasts] = await db.$transaction([
+  const [telegramRecipients, totalUsers, latestBroadcasts, tournaments] = await db.$transaction([
     db.user.count({ where: { telegramId: { not: null } } }),
     db.user.count(),
     db.adminAction.findMany({
@@ -20,6 +20,28 @@ export default async function AdminBroadcastsPage(
       include: { admin: true },
       orderBy: { createdAt: "desc" },
       take: 5,
+    }),
+    db.tournament.findMany({
+      where: { isTest: false },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        startsAt: true,
+        registrationEndsAt: true,
+        maxParticipants: true,
+        prizePool: true,
+        coverImage: true,
+        stages: {
+          orderBy: { orderIndex: "asc" },
+          select: {
+            groups: { orderBy: { orderIndex: "asc" }, select: { id: true, name: true } },
+          },
+        },
+        _count: { select: { participants: { where: { status: "CONFIRMED" } } } },
+      },
     }),
   ]);
 
@@ -33,18 +55,34 @@ export default async function AdminBroadcastsPage(
               Рассылки в Telegram
             </CardTitle>
             <CardDescription>
-              Отправьте текст, фото, видео, GIF, аудио или документ всем пользователям, у которых привязан Telegram. Поддерживаются Telegram HTML и inline-кнопки.
+              Создавайте ручные сообщения или готовые rich-публикации турниров с таблицами, расписанием, медиа, аудиториями и inline-кнопками.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <TelegramBroadcastForm error={searchParams?.error} sent={searchParams?.sent} failed={searchParams?.failed} />
+            <TelegramBroadcastForm
+              error={searchParams?.error}
+              sent={searchParams?.sent}
+              failed={searchParams?.failed}
+              tournaments={tournaments.map((tournament) => ({
+                id: tournament.id,
+                title: tournament.title,
+                status: tournament.status,
+                startsAt: tournament.startsAt.toISOString(),
+                registrationEndsAt: tournament.registrationEndsAt.toISOString(),
+                maxParticipants: tournament.maxParticipants,
+                participantsCount: tournament._count.participants,
+                prizePool: tournament.prizePool,
+                coverImage: tournament.coverImage,
+                groups: tournament.stages.flatMap((stage) => stage.groups),
+              }))}
+            />
           </CardContent>
         </Card>
 
         <Card className="h-fit">
           <CardHeader>
             <CardTitle>Получатели</CardTitle>
-            <CardDescription>Сейчас рассылку получат только аккаунты с Telegram ID.</CardDescription>
+            <CardDescription>Максимальная доступная аудитория. Точный сегмент выбирается в форме.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-semibold text-white">{telegramRecipients}</div>

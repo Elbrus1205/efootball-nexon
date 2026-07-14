@@ -4,6 +4,7 @@ import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { notifyActiveTournamentRoundsStarted } from "@/lib/services/tournaments";
+import { syncTournamentBulletin } from "@/lib/services/telegram-publications";
 import { stageUpdateSchema } from "@/lib/validators";
 
 export async function PATCH(request: Request, props: { params: Promise<{ id: string }> }) {
@@ -40,6 +41,7 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
   if (stage.status === StageStatus.ACTIVE && before?.status !== StageStatus.ACTIVE) {
     await notifyActiveTournamentRoundsStarted(stage.tournamentId);
   }
+  await syncTournamentBulletin(stage.tournamentId).catch((error) => console.error("Failed to update Telegram bulletin", error));
 
   return NextResponse.json({ ok: true, stage });
 }

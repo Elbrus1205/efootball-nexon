@@ -1,7 +1,22 @@
 import crypto from "crypto";
+import {
+  toTelegramInputRichMessage,
+  type TelegramRichMessageDraft,
+} from "@/lib/telegram-rich";
 
 export type TelegramInlineKeyboardMarkup = {
-  inline_keyboard: Array<Array<{ text: string; url: string }>>;
+  inline_keyboard: Array<Array<{
+    text: string;
+    url?: string;
+    callback_data?: string;
+    web_app?: { url: string };
+  }>>;
+};
+
+export type TelegramSentMessage = {
+  message_id?: number;
+  ephemeral_message_id?: number;
+  chat?: { id?: number | string };
 };
 
 type TelegramErrorPayload = {
@@ -80,6 +95,21 @@ export function isTelegramRecipientUnavailableError(error: unknown) {
     normalized.includes("chat not found") ||
     normalized.includes("bot was blocked by the user") ||
     normalized.includes("user is deactivated")
+  );
+}
+
+export function isTelegramRichMessageUnsupportedError(error: unknown) {
+  if (!(error instanceof Error)) return false;
+  const description = error instanceof TelegramApiError ? error.description ?? error.message : error.message;
+  const normalized = description.toLowerCase();
+  return (
+    normalized.includes("method not found") ||
+    normalized.includes("sendrichmessage") ||
+    normalized.includes("rich message") && (
+      normalized.includes("unsupported") ||
+      normalized.includes("not supported") ||
+      normalized.includes("can't parse")
+    )
   );
 }
 
@@ -188,7 +218,7 @@ export async function ensureTelegramWebhook(baseUrl: string) {
     body: JSON.stringify({
       url: webhookUrl,
       secret_token: webhookSecret,
-      allowed_updates: ["message"],
+      allowed_updates: ["message", "edited_message", "callback_query"],
       drop_pending_updates: false,
     }),
   });
@@ -221,7 +251,7 @@ export async function sendTelegramMessage(params: {
   parseMode?: "HTML" | "MarkdownV2" | null;
   disableWebPagePreview?: boolean;
   replyMarkup?: TelegramInlineKeyboardMarkup;
-}) {
+}): Promise<TelegramSentMessage> {
   const botToken = getTelegramBotToken();
   const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: "POST",
@@ -237,8 +267,107 @@ export async function sendTelegramMessage(params: {
     }),
   });
 
-  if (!res.ok) {
-    throw await readTelegramError(res, "Failed to send Telegram message");
+  const payload = (await res.json().catch(() => null)) as {
+    ok?: boolean;
+    result?: TelegramSentMessage;
+    description?: string;
+    error_code?: number;
+  } | null;
+
+  if (!res.ok || !payload?.ok) {
+    const description = payload?.description || "Failed to send Telegram message";
+    throw new TelegramApiError(description, {
+      status: res.status,
+      errorCode: payload?.error_code,
+      description,
+    });
+  }
+
+  return payload.result ?? {};
+}
+
+export async function sendTelegramRichMessage(params: {
+  chatId: string;
+  message: TelegramRichMessageDraft;
+  replyMarkup?: TelegramInlineKeyboardMarkup;
+  receiverUserId?: string;
+  callbackQueryId?: string;
+  disableNotification?: boolean;
+}) {
+  return callTelegramApi<TelegramSentMessage>("sendRichMessage", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: params.chatId,
+      rich_message: toTelegramInputRichMessage(params.message),
+      ...(params.replyMarkup ? { reply_markup: params.replyMarkup } : {}),
+      ...(params.receiverUserId ? { receiver_user_id: params.receiverUserId } : {}),
+      ...(params.callbackQueryId ? { callback_query_id: params.callbackQueryId } : {}),
+      ...(params.disableNotification ? { disable_notification: true } : {}),
+    }),
+  });
+}
+
+export async function editTelegramRichMessage(params: {
+  chatId: string;
+  messageId: string;
+  message: TelegramRichMessageDraft;
+  replyMarkup?: TelegramInlineKeyboardMarkup;
+}) {
+  return callTelegramApi<TelegramSentMessage | true>("editMessageText", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: params.chatId,
+      message_id: Number(params.messageId),
+      rich_message: toTelegramInputRichMessage(params.message),
+      ...(params.replyMarkup ? { reply_markup: params.replyMarkup } : {}),
+    }),
+  });
+}
+
+export async function editTelegramRichMessageWithFallback(params: {
+  chatId: string;
+  messageId: string;
+  message: TelegramRichMessageDraft;
+  replyMarkup?: TelegramInlineKeyboardMarkup;
+}) {
+  try {
+    return await editTelegramRichMessage(params);
+  } catch (error) {
+    if (!isTelegramRichMessageUnsupportedError(error)) throw error;
+    return callTelegramApi<TelegramSentMessage | true>("editMessageText", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: params.chatId,
+        message_id: Number(params.messageId),
+        text: params.message.fallbackText,
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+        ...(params.replyMarkup ? { reply_markup: params.replyMarkup } : {}),
+      }),
+    });
+  }
+}
+
+export async function sendTelegramRichMessageWithFallback(params: {
+  chatId: string;
+  message: TelegramRichMessageDraft;
+  replyMarkup?: TelegramInlineKeyboardMarkup;
+  receiverUserId?: string;
+  callbackQueryId?: string;
+}) {
+  try {
+    return await sendTelegramRichMessage(params);
+  } catch (error) {
+    if (params.receiverUserId || !isTelegramRichMessageUnsupportedError(error)) throw error;
+    return sendTelegramMessage({
+      chatId: params.chatId,
+      text: params.message.fallbackText,
+      replyMarkup: params.replyMarkup,
+      disableWebPagePreview: true,
+    });
   }
 }
 

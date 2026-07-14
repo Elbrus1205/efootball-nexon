@@ -71,4 +71,13 @@ Optional for extra features:
 - `NEXT_PUBLIC_PUSHER_KEY`
 - `NEXT_PUBLIC_PUSHER_CLUSTER`
 
+## Telegram tournament publishing
 
+When the Telegram bot variables are configured, organizers can connect a tournament to a channel and group from the tournament builder:
+
+- `telegramChannelId` — numeric channel chat ID (usually `-100…`) or `@channel` username used for rich announcements, live bulletins, results, and final recaps.
+- `telegramGroupId` — numeric group/supergroup chat ID used by the private tournament commands `/mymatch`, `/deadline`, `/table`, `/schedule`, and `/rules`.
+- `telegramCommunityId` — optional Telegram Community identifier used to match commands with the connected tournament.
+- `telegramAutoPublish` — enables automatic publication and idempotent bulletin edits for the tournament.
+
+The bot must be an administrator in configured destinations. Rich messages use Bot API 10.2 structured blocks and safely fall back to legacy HTML for ordinary direct messages. Receiver-scoped group commands never fall back to public replies.

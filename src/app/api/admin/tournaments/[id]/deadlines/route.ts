@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { notifyActiveTournamentRoundsStarted } from "@/lib/services/tournaments";
+import { syncTournamentBulletin } from "@/lib/services/telegram-publications";
 import { roundDeadlineSchema } from "@/lib/validators";
 
 const staffRoles = [UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE, UserRole.TRAINEE];
@@ -85,6 +86,8 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       });
     }
 
+    await syncTournamentBulletin(params.id).catch((error) => console.error("Failed to update Telegram bulletin", error));
+
     return NextResponse.json({ ok: true, deadline: null });
   }
 
@@ -123,6 +126,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   });
 
   await notifyActiveTournamentRoundsStarted(params.id);
+  await syncTournamentBulletin(params.id).catch((error) => console.error("Failed to update Telegram bulletin", error));
 
   return NextResponse.json({ ok: true, deadline });
 }

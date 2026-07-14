@@ -8,6 +8,7 @@ import { requireAnyPermission } from "@/lib/auth/session";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { recalculateGroupStandings, resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { createNotification } from "@/lib/services/notifications";
+import { publishTournamentResult, syncTournamentBulletin } from "@/lib/services/telegram-publications";
 import { reviewSchema } from "@/lib/validators";
 
 async function createMatchOutcomeNotifications(match: {
@@ -111,6 +112,10 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     await resolveConfirmedMatch(match.id);
     await createMatchOutcomeNotifications({ ...match, winnerId }, player1Score, player2Score);
     await syncUserAchievementsForUsers([match.player1Id, match.player2Id]);
+    await Promise.all([
+      publishTournamentResult(match.id).catch((error) => console.error("Failed to publish Telegram match result", error)),
+      syncTournamentBulletin(match.tournamentId).catch((error) => console.error("Failed to update Telegram bulletin", error)),
+    ]);
   } else if (body.action === "reject") {
     await db.match.update({
       where: { id: params.id },

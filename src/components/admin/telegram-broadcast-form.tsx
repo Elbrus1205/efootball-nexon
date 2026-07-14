@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Plus, Send, Trash2 } from "lucide-react";
+import { FileText, LoaderCircle, Plus, Radio, Send, Sparkles, TableProperties, Trash2, Trophy, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,6 +13,18 @@ type TelegramBroadcastFormProps = {
   error?: string;
   sent?: string;
   failed?: string;
+  tournaments: Array<{
+    id: string;
+    title: string;
+    status: string;
+    startsAt: string;
+    registrationEndsAt: string;
+    maxParticipants: number;
+    participantsCount: number;
+    prizePool: string | null;
+    coverImage: string | null;
+    groups: Array<{ id: string; name: string }>;
+  }>;
 };
 
 type DraftButton = TelegramBroadcastButtonDraft & {
@@ -23,7 +35,7 @@ function createButtonDraft(row = 1): DraftButton {
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     text: "",
-    url: "https://",
+    url: "",
     row,
   };
 }
@@ -48,13 +60,20 @@ export function TelegramBroadcastForm({
   error,
   sent,
   failed,
+  tournaments,
 }: TelegramBroadcastFormProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [text, setText] = useState("");
   const [mediaType, setMediaType] = useState("text");
   const [mediaUrl, setMediaUrl] = useState("");
   const [buttons, setButtons] = useState<DraftButton[]>([]);
+  const [contentSource, setContentSource] = useState<"manual" | "tournament">("manual");
+  const [template, setTemplate] = useState<"announcement" | "bulletin">("announcement");
+  const [audience, setAudience] = useState<"all" | "participants" | "group" | "applicants" | "unresolved">("all");
+  const [tournamentId, setTournamentId] = useState("");
+  const [groupId, setGroupId] = useState("");
   const [isDraftReady, setIsDraftReady] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -77,6 +96,11 @@ export function TelegramBroadcastForm({
         mediaType?: string;
         mediaUrl?: string;
         buttons?: Array<{ id?: string; text?: string; url?: string; row?: number }>;
+        contentSource?: "manual" | "tournament";
+        template?: "announcement" | "bulletin";
+        audience?: "all" | "participants" | "group" | "applicants" | "unresolved";
+        tournamentId?: string;
+        groupId?: string;
       };
 
       setText(typeof draft.text === "string" ? draft.text : "");
@@ -87,11 +111,18 @@ export function TelegramBroadcastForm({
           ? draft.buttons.map((button, index) => ({
               id: typeof button.id === "string" ? button.id : `restored-${index}`,
               text: typeof button.text === "string" ? button.text : "",
-              url: typeof button.url === "string" ? button.url : "https://",
+              url: typeof button.url === "string" ? button.url : "",
               row: typeof button.row === "number" && Number.isInteger(button.row) ? button.row : 1,
             }))
           : [],
       );
+      setContentSource(draft.contentSource === "tournament" ? "tournament" : "manual");
+      setTemplate(draft.template === "bulletin" ? "bulletin" : "announcement");
+      setAudience(["participants", "group", "applicants", "unresolved"].includes(draft.audience ?? "")
+        ? draft.audience as "participants" | "group" | "applicants" | "unresolved"
+        : "all");
+      setTournamentId(typeof draft.tournamentId === "string" ? draft.tournamentId : "");
+      setGroupId(typeof draft.groupId === "string" ? draft.groupId : "");
     } catch {
       window.localStorage.removeItem(DRAFT_STORAGE_KEY);
     } finally {
@@ -109,9 +140,14 @@ export function TelegramBroadcastForm({
         mediaType,
         mediaUrl,
         buttons,
+        contentSource,
+        template,
+        audience,
+        tournamentId,
+        groupId,
       }),
     );
-  }, [buttons, isDraftReady, mediaType, mediaUrl, text]);
+  }, [audience, buttons, contentSource, groupId, isDraftReady, mediaType, mediaUrl, template, text, tournamentId]);
 
   function focusTextarea(selectionStart: number, selectionEnd: number) {
     requestAnimationFrame(() => {
@@ -179,6 +215,8 @@ export function TelegramBroadcastForm({
   }
 
   const previewHtml = buildTelegramPreviewHtml(text);
+  const selectedTournament = tournaments.find((tournament) => tournament.id === tournamentId) ?? null;
+  const availableGroups = selectedTournament?.groups ?? [];
   const buttonRows = groupButtonsByRow(buttons.filter((button) => button.text.trim() && button.url.trim()));
   const buttonsPayload = buttons
     .filter((button) => button.text.trim() || button.url.trim())
@@ -191,20 +229,163 @@ export function TelegramBroadcastForm({
   return (
     <>
       {error ? (
-        <div className="rounded-xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">{error}</div>
+        <div role="alert" className="rounded-xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">{error}</div>
       ) : null}
       {sent ? (
-        <div className="rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+        <div role="status" aria-live="polite" className="rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
           Отправлено: {sent}. Ошибок: {failed ?? 0}.
         </div>
       ) : null}
 
-      <form action="/api/admin/broadcasts" method="post" encType="multipart/form-data" className="space-y-6">
+      <form
+        action="/api/admin/broadcasts"
+        method="post"
+        encType="multipart/form-data"
+        className="space-y-6"
+        onSubmit={() => setIsSubmitting(true)}
+      >
         <input type="hidden" name="buttonsJson" value={JSON.stringify(buttonsPayload)} />
+
+        <section className="overflow-hidden rounded-3xl border border-sky-400/20 bg-gradient-to-br from-sky-500/[0.10] via-[#07111f] to-cyan-500/[0.06] p-4 shadow-[0_24px_80px_rgba(2,132,199,0.10)] sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-base font-semibold text-white">
+                <Sparkles className="h-5 w-5 text-sky-300" aria-hidden="true" />
+                Сценарий публикации
+              </div>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-300">
+                Создайте сообщение вручную или соберите готовый rich-пост из актуальных данных турнира.
+              </p>
+            </div>
+            <div className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-200">
+              Bot API Rich Messages
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <label className="space-y-2">
+              <span className="text-sm font-medium text-white">Источник</span>
+              <select
+                name="contentSource"
+                value={contentSource}
+                onChange={(event) => setContentSource(event.target.value === "tournament" ? "tournament" : "manual")}
+                className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white outline-none transition focus-visible:ring-2 focus-visible:ring-sky-400"
+              >
+                <option className="bg-zinc-950" value="manual">Ручное сообщение</option>
+                <option className="bg-zinc-950" value="tournament">Данные турнира</option>
+              </select>
+            </label>
+
+            <label className="space-y-2">
+              <span className="text-sm font-medium text-white">Аудитория</span>
+              <select
+                name="audience"
+                value={audience}
+                onChange={(event) => setAudience(event.target.value as typeof audience)}
+                className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white outline-none transition focus-visible:ring-2 focus-visible:ring-sky-400"
+              >
+                <option className="bg-zinc-950" value="all">Все связанные аккаунты</option>
+                <option className="bg-zinc-950" value="participants">Участники турнира</option>
+                <option className="bg-zinc-950" value="group">Участники группы</option>
+                <option className="bg-zinc-950" value="applicants">Заявки на рассмотрении</option>
+                <option className="bg-zinc-950" value="unresolved">Игроки без результата</option>
+              </select>
+            </label>
+
+            <label className="space-y-2 xl:col-span-2">
+              <span className="text-sm font-medium text-white">Турнир</span>
+              <select
+                name="tournamentId"
+                value={tournamentId}
+                onChange={(event) => {
+                  setTournamentId(event.target.value);
+                  setGroupId("");
+                }}
+                required={contentSource === "tournament" || audience !== "all"}
+                className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white outline-none transition focus-visible:ring-2 focus-visible:ring-sky-400 disabled:opacity-50"
+              >
+                <option className="bg-zinc-950" value="">Выберите турнир</option>
+                {tournaments.map((tournament) => (
+                  <option className="bg-zinc-950" key={tournament.id} value={tournament.id}>{tournament.title}</option>
+                ))}
+              </select>
+            </label>
+
+            {contentSource === "tournament" ? (
+              <label className="space-y-2 md:col-span-1">
+                <span className="text-sm font-medium text-white">Шаблон</span>
+                <select
+                  name="template"
+                  value={template}
+                  onChange={(event) => setTemplate(event.target.value === "bulletin" ? "bulletin" : "announcement")}
+                  className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white outline-none transition focus-visible:ring-2 focus-visible:ring-sky-400"
+                >
+                  <option className="bg-zinc-950" value="announcement">Анонс регистрации</option>
+                  <option className="bg-zinc-950" value="bulletin">Таблицы и расписание</option>
+                </select>
+              </label>
+            ) : <input type="hidden" name="template" value="announcement" />}
+
+            {audience === "group" ? (
+              <label className="space-y-2 md:col-span-1">
+                <span className="text-sm font-medium text-white">Группа</span>
+                <select
+                  name="groupId"
+                  value={groupId}
+                  onChange={(event) => setGroupId(event.target.value)}
+                  required
+                  className="h-12 w-full rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white outline-none transition focus-visible:ring-2 focus-visible:ring-sky-400"
+                >
+                  <option className="bg-zinc-950" value="">Выберите группу</option>
+                  {availableGroups.map((group) => (
+                    <option className="bg-zinc-950" key={group.id} value={group.id}>{group.name}</option>
+                  ))}
+                </select>
+              </label>
+            ) : <input type="hidden" name="groupId" value="" />}
+          </div>
+        </section>
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-6">
-            <label className="block space-y-2">
+            {contentSource === "tournament" ? (
+              <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-400/10 text-sky-300">
+                    {template === "announcement" ? <Trophy className="h-5 w-5" aria-hidden="true" /> : <TableProperties className="h-5 w-5" aria-hidden="true" />}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-white">
+                      {template === "announcement" ? "Анонс регистрации" : "Турнирный бюллетень"}
+                    </div>
+                    <p className="mt-1 text-sm leading-6 text-zinc-400">
+                      {selectedTournament
+                        ? `Сообщение будет собрано из актуальных данных «${selectedTournament.title}» непосредственно перед отправкой.`
+                        : "Выберите турнир выше, чтобы сформировать rich-сообщение."}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                    <FileText className="h-4 w-4 text-sky-300" aria-hidden="true" />
+                    <div className="mt-2 text-xs text-zinc-500">Формат</div>
+                    <div className="mt-0.5 text-sm font-medium text-white">Rich blocks</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                    <UsersRound className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                    <div className="mt-2 text-xs text-zinc-500">Участники</div>
+                    <div className="mt-0.5 text-sm font-medium text-white tabular-nums">{selectedTournament?.participantsCount ?? 0}</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                    <Radio className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+                    <div className="mt-2 text-xs text-zinc-500">Доставка</div>
+                    <div className="mt-0.5 text-sm font-medium text-white">С fallback</div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            <label className={contentSource === "manual" ? "block space-y-2" : "hidden"}>
               <span className="text-sm font-medium text-white">Текст</span>
               <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
                 <div className="mb-3 flex flex-wrap gap-2">
@@ -255,7 +436,7 @@ export function TelegramBroadcastForm({
               </div>
             </label>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className={contentSource === "manual" ? "grid gap-4 md:grid-cols-2" : "hidden"}>
               <label className="block space-y-2">
                 <span className="text-sm font-medium text-white">Тип рассылки</span>
                 <select
@@ -297,7 +478,7 @@ export function TelegramBroadcastForm({
               </label>
             </div>
 
-            <label className="block space-y-2">
+            <label className={contentSource === "manual" ? "block space-y-2" : "hidden"}>
               <span className="text-sm font-medium text-white">Файл</span>
               <Input
                 name="mediaFile"
@@ -364,13 +545,18 @@ export function TelegramBroadcastForm({
             </div>
 
             <label className="flex items-start gap-3 rounded-xl border border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">
-              <input name="confirm" type="checkbox" className="mt-1 h-4 w-4 rounded border-white/20 bg-black/40" required />
-              <span>Подтверждаю отправку всем пользователям с привязанным Telegram.</span>
+              <input name="confirm" type="checkbox" className="mt-1 h-5 w-5 shrink-0 rounded border-white/20 bg-black/40 accent-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200 focus-visible:ring-offset-2 focus-visible:ring-offset-black" required />
+              <span>
+                Подтверждаю отправку выбранной аудитории
+                {selectedTournament && audience !== "all" ? ` турнира «${selectedTournament.title}»` : ""}.
+              </span>
             </label>
 
-            <Button type="submit" className="w-full gap-2 sm:w-auto">
-              <Send className="h-4 w-4" />
-              Отправить рассылку
+            <Button type="submit" className="min-h-11 w-full gap-2 sm:w-auto" disabled={isSubmitting}>
+              {isSubmitting
+                ? <LoaderCircle className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+                : <Send className="h-4 w-4" aria-hidden="true" />}
+              {isSubmitting ? "Отправляем…" : "Отправить рассылку"}
             </Button>
           </div>
 
@@ -381,7 +567,49 @@ export function TelegramBroadcastForm({
 
               <div className="mt-4 rounded-[28px] bg-[#1D1D1D] p-3">
                 <div className="rounded-[20px] bg-[#1D1D1D] px-4 py-3 text-[15px] leading-6 text-white shadow-[0_14px_28px_rgba(0,0,0,0.24)]">
-                  {text.trim() ? (
+                  {contentSource === "tournament" && selectedTournament ? (
+                    <div className="space-y-4">
+                      <div className="overflow-hidden rounded-2xl border border-sky-300/15 bg-gradient-to-br from-sky-500/15 via-white/[0.04] to-cyan-400/10 p-4">
+                        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-200">
+                          {template === "announcement" ? <Trophy className="h-4 w-4" aria-hidden="true" /> : <TableProperties className="h-4 w-4" aria-hidden="true" />}
+                          {template === "announcement" ? "Регистрация открыта" : "Центр турнира"}
+                        </div>
+                        <div className="mt-3 text-lg font-semibold leading-6 text-white">{selectedTournament.title}</div>
+                        {template === "announcement" ? (
+                          <div className="mt-4 overflow-hidden rounded-xl border border-white/10 text-xs">
+                            {[
+                              ["Старт", new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Moscow" }).format(new Date(selectedTournament.startsAt))],
+                              ["Участники", `${selectedTournament.participantsCount} из ${selectedTournament.maxParticipants}`],
+                              ["Свободно", String(Math.max(0, selectedTournament.maxParticipants - selectedTournament.participantsCount))],
+                              ["Призовой фонд", selectedTournament.prizePool || "Не указан"],
+                            ].map(([label, value], index) => (
+                              <div key={label} className={`grid grid-cols-[105px_1fr] gap-3 px-3 py-2.5 ${index % 2 ? "bg-white/[0.04]" : "bg-black/10"}`}>
+                                <span className="text-zinc-400">{label}</span>
+                                <span className="text-right font-medium text-white">{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="mt-4 space-y-3">
+                            <div className="rounded-xl border border-white/10 bg-black/15 p-3">
+                              <div className="text-xs font-semibold text-white">Таблицы</div>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {(selectedTournament.groups.length ? selectedTournament.groups : [{ id: "empty", name: "Основной этап" }]).slice(0, 4).map((group) => (
+                                  <span key={group.id} className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] text-zinc-300">{group.name}</span>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="rounded-xl border border-white/10 bg-black/15 p-3 text-xs text-zinc-300">
+                              Ближайшие матчи, статусы и дедлайны будут подставлены автоматически.
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="rounded-xl border border-sky-400/20 bg-sky-500/10 px-3 py-2 text-center text-sm font-medium text-sky-100">
+                        {template === "announcement" ? "Зарегистрироваться" : "Открыть турнир"}
+                      </div>
+                    </div>
+                  ) : text.trim() ? (
                     <div
                       className="whitespace-pre-wrap break-words [&_.tg-spoiler]:rounded [&_.tg-spoiler]:bg-white/25 [&_.tg-spoiler]:px-1 [&_.tg-spoiler]:text-transparent hover:[&_.tg-spoiler]:text-white [&_a]:text-sky-200 [&_a]:underline [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:border-white/25 [&_blockquote]:pl-3 [&_code]:rounded [&_code]:bg-black/25 [&_code]:px-1.5 [&_code]:py-0.5 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-black/25 [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:px-0 [&_pre_code]:py-0"
                       dangerouslySetInnerHTML={{ __html: previewHtml }}

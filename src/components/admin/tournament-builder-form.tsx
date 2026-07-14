@@ -4,6 +4,7 @@ import { ClubSelectionMode, MatchupFormat, SeedingMethod, SortRule, TournamentFo
 import type { PlayoffType } from "@prisma/client";
 import { ChangeEvent, useState } from "react";
 import Image from "next/image";
+import { Radio, Send, UsersRound } from "lucide-react";
 import { seedingMethodLabel, sortRuleLabel, tournamentStatusLabel } from "@/lib/admin-display";
 import { FormatBlueprintBuilder } from "@/components/admin/format-blueprint-builder";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,10 @@ type BuilderValues = {
   checkInRequired?: boolean;
   requireTelegramForRegistration?: boolean;
   requireLineupPhoto?: boolean;
+  telegramCommunityId?: string;
+  telegramChannelId?: string;
+  telegramGroupId?: string;
+  telegramAutoPublish?: boolean;
   clubSelectionMode?: ClubSelectionMode;
   sortRules?: SortRule[];
 };
@@ -290,6 +295,73 @@ export function TournamentBuilderForm({
       </Card>
 
       <FormatBlueprintBuilder name="formatBlueprintJson" initialValue={initialValues?.formatBlueprint ?? null} visible />
+
+      <Card className="overflow-hidden border-sky-400/20 bg-gradient-to-br from-sky-500/[0.08] via-black/20 to-cyan-500/[0.05]">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Send className="h-5 w-5 text-sky-300" aria-hidden="true" />
+            Telegram турнира
+          </CardTitle>
+          <CardDescription>
+            Подключите канал и группу, чтобы автоматически публиковать rich-анонсы, расписание, таблицы и результаты.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-5 md:grid-cols-2">
+          <label className="space-y-2">
+            <span className="flex items-center gap-2 text-sm font-medium text-white">
+              <Radio className="h-4 w-4 text-sky-300" aria-hidden="true" />
+              Канал для публикаций
+            </span>
+            <Input
+              name="telegramChannelId"
+              defaultValue={initialValues?.telegramChannelId ?? ""}
+              placeholder="-1001234567890 или @channel"
+              autoComplete="off"
+            />
+            <span className="block text-xs leading-5 text-zinc-400">Бот должен быть администратором канала с правом публикации.</span>
+          </label>
+
+          <label className="space-y-2">
+            <span className="flex items-center gap-2 text-sm font-medium text-white">
+              <UsersRound className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              Группа участников
+            </span>
+            <Input
+              name="telegramGroupId"
+              defaultValue={initialValues?.telegramGroupId ?? ""}
+              placeholder="-1001234567890"
+              autoComplete="off"
+            />
+            <span className="block text-xs leading-5 text-zinc-400">В группе станут доступны приватные команды /mymatch, /deadline, /table и /rules.</span>
+          </label>
+
+          <label className="space-y-2 md:col-span-2">
+            <span className="text-sm font-medium text-white">ID сообщества Telegram</span>
+            <Input
+              name="telegramCommunityId"
+              defaultValue={initialValues?.telegramCommunityId ?? ""}
+              placeholder="Необязательно — для связанного Telegram Community"
+              autoComplete="off"
+            />
+          </label>
+
+          <label className="flex min-h-14 items-start gap-3 rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.08] px-4 py-4 md:col-span-2">
+            <input
+              type="checkbox"
+              name="telegramAutoPublish"
+              value="true"
+              defaultChecked={initialValues?.telegramAutoPublish ?? false}
+              className="mt-1 h-5 w-5 shrink-0 rounded border-white/20 bg-black/40 accent-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+            />
+            <span>
+              <span className="block font-medium text-white">Автопубликация включена</span>
+              <span className="mt-1 block text-sm leading-6 text-zinc-300">
+                Telegram будет обновлять единый турнирный бюллетень и выпускать аккуратные карточки регистрации, матчей и итогов.
+              </span>
+            </span>
+          </label>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

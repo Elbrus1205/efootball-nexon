@@ -13,12 +13,15 @@ import {
   TournamentStatus,
   type TournamentStage,
 } from "@prisma/client";
+import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
 import { getAvailableClubs } from "@/lib/clubs";
 import { normalizeFormatBlueprint, type FormatBlueprint, type PlayoffSelectionRule } from "@/lib/format-blueprint";
 import { applyTournamentAbsenceRatingPenalty } from "@/lib/ratings";
 import { grantCurrentChampionProfileStatus } from "@/lib/profile-statuses";
 import { createNotification, createNotificationsForUsers } from "@/lib/services/notifications";
+import { publishTournamentCompletion } from "@/lib/services/telegram-publications";
+import { buildPersonalMatchMessage } from "@/lib/telegram-rich";
 
 function createGroupSourceRef(groupId: string, rank: number) {
   return `group:${groupId}:rank:${rank}`;
@@ -973,6 +976,8 @@ export async function notifyUpcomingRoundDeadlineReminders({ userId }: { userId?
       ].filter((side): side is { userId: string; opponentName: string } => Boolean(side.userId && (!userId || side.userId === userId)));
 
       for (const side of sides) {
+        const matchPath = `/tournaments/${deadline.tournament.id}?tab=my-matches`;
+        const baseUrl = getConfiguredSiteBaseUrl();
         await createNotification({
           userId: side.userId,
           title: "Дедлайн через 6 часов",
@@ -985,9 +990,20 @@ export async function notifyUpcomingRoundDeadlineReminders({ userId }: { userId?
             deadlineAt: deadline.deadlineAt,
           }),
           type: NotificationType.MATCH,
-          link: `/tournaments/${deadline.tournament.id}?tab=my-matches`,
+          link: matchPath,
           dedupeKey: `deadline-6h:${deadline.id}:${match.id}`,
           dedupeWithinHours: 24 * 365,
+          telegramRichMessage: baseUrl
+            ? buildPersonalMatchMessage({
+                tournamentTitle: deadline.tournament.title,
+                stageName: deadline.stage.name,
+                round: deadline.round,
+                opponentName: side.opponentName,
+                deadlineAt: deadline.deadlineAt,
+                statusLabel: "До дедлайна менее 6 часов",
+                matchUrl: new URL(matchPath, baseUrl).toString(),
+              })
+            : undefined,
         });
         notifiedCount += 1;
       }
@@ -1022,6 +1038,11 @@ export async function notifyMatchReady(matchId: string) {
   const scheduleDate = formatScheduleDate(match.scheduledAt ?? match.schedules[0]?.startsAt);
   const scheduleText = scheduleDate ? ` Время: ${scheduleDate}.` : "";
   const descriptor = formatMatchDescriptor(match);
+  const deadline = match.stageId
+    ? await db.roundDeadline.findUnique({ where: { stageId_round: { stageId: match.stageId, round: match.round } } })
+    : null;
+  const matchPath = `/tournaments/${match.tournamentId}?tab=my-matches`;
+  const baseUrl = getConfiguredSiteBaseUrl();
 
   await Promise.all([
     createNotification({
@@ -1032,6 +1053,18 @@ export async function notifyMatchReady(matchId: string) {
       link: `/tournaments/${match.tournamentId}`,
       dedupeKey: `match-ready:${match.id}`,
       dedupeWithinHours: 24 * 365,
+      telegramRichMessage: baseUrl
+        ? buildPersonalMatchMessage({
+            tournamentTitle: match.tournament.title,
+            stageName: descriptor,
+            round: match.round,
+            opponentName: getPlayerName(match.player2),
+            scheduledAt: match.scheduledAt ?? match.schedules[0]?.startsAt,
+            deadlineAt: deadline?.deadlineAt,
+            statusLabel: "Матч готов к игре",
+            matchUrl: new URL(matchPath, baseUrl).toString(),
+          })
+        : undefined,
     }),
     createNotification({
       userId: match.player2Id,
@@ -1041,6 +1074,18 @@ export async function notifyMatchReady(matchId: string) {
       link: `/tournaments/${match.tournamentId}`,
       dedupeKey: `match-ready:${match.id}`,
       dedupeWithinHours: 24 * 365,
+      telegramRichMessage: baseUrl
+        ? buildPersonalMatchMessage({
+            tournamentTitle: match.tournament.title,
+            stageName: descriptor,
+            round: match.round,
+            opponentName: getPlayerName(match.player1),
+            scheduledAt: match.scheduledAt ?? match.schedules[0]?.startsAt,
+            deadlineAt: deadline?.deadlineAt,
+            statusLabel: "Матч готов к игре",
+            matchUrl: new URL(matchPath, baseUrl).toString(),
+          })
+        : undefined,
     }),
   ]);
 }
@@ -1117,6 +1162,10 @@ async function notifyTournamentCompleted(tournamentId: string) {
       tournamentTitle: tournament.title,
     });
   }
+
+  await publishTournamentCompletion(tournamentId).catch((error) => {
+    console.error("Failed to publish Telegram tournament completion", error);
+  });
 
   if (!tournamentNotificationsEnabled(tournament)) return;
 

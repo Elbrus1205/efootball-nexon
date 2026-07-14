@@ -2,6 +2,7 @@
 import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
+import { syncTournamentBulletin } from "@/lib/services/telegram-publications";
 import { standingUpdateSchema } from "@/lib/validators";
 
 export async function PATCH(request: Request, props: { params: Promise<{ id: string }> }) {
@@ -42,6 +43,7 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
     beforeJson: before,
     afterJson: standing,
   });
+  await syncTournamentBulletin(standing.participant.tournamentId).catch((error) => console.error("Failed to update Telegram bulletin", error));
 
   return NextResponse.json({ ok: true, standing });
 }
