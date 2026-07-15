@@ -51,6 +51,7 @@ function makeWritable(dir) {
 
 const serverPath = existsSync(dockerServer) ? dockerServer : standaloneServer;
 const runtimeDatabaseScript = path.join(root, "scripts", "ensure-runtime-database.mjs");
+const telegramWebhookScript = path.join(root, "scripts", "ensure-telegram-webhook.mjs");
 
 if (!existsSync(serverPath)) {
   console.error("Standalone server was not found. Run `npm run build` before `npm start`.");
@@ -84,6 +85,20 @@ if (existsSync(runtimeDatabaseScript)) {
 
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
+  }
+}
+
+if (existsSync(telegramWebhookScript)) {
+  const result = spawnSync(process.execPath, [telegramWebhookScript], {
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      NODE_ENV: process.env.NODE_ENV || "production",
+    },
+  });
+
+  if (result.status !== 0) {
+    console.warn("Telegram webhook check failed; application startup will continue.");
   }
 }
 

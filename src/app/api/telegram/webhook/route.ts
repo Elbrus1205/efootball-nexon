@@ -5,9 +5,11 @@ import { db } from "@/lib/db";
 import {
   getTelegramWebhookSecret,
   isTelegramRecipientUnavailableError,
+  sendTelegramMessage,
   sendTelegramRichMessage,
   sendTelegramRichMessageWithFallback,
 } from "@/lib/telegram-bot";
+import { tgEmoji } from "@/lib/telegram-emoji";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
 import { buildPersonalMatchMessage, type TelegramRichMessageDraft } from "@/lib/telegram-rich";
 import { buildTournamentBulletin } from "@/lib/services/telegram-publications";
@@ -80,52 +82,48 @@ function siteUrl(path: string) {
   return baseUrl ? new URL(path, baseUrl).toString() : null;
 }
 
-function welcomeMessage(firstName: string | null, linked: boolean): TelegramRichMessageDraft {
-  const name = firstName?.trim() ? `, ${firstName.trim()}` : "";
+async function deliverWelcomeMessage(params: {
+  message: TelegramWebhookMessage;
+  linked: boolean;
+  registeredUsers: number;
+}) {
+  const chatId = normalizeId(params.message.chat?.id ?? params.message.from?.id);
+  if (!chatId) return;
+
+  const firstName = params.message.from?.first_name?.trim();
+  const greetingName = firstName ? `, ${escapeTelegramHtml(firstName)}` : "";
   const platformUrl = siteUrl("/");
-  return {
-    blocks: [
-      { type: "section_heading", text: `Добро пожаловать${name}` },
-      { type: "paragraph", text: "eFootball Nexon объединяет турниры, матчи, рейтинги и достижения. Бот присылает только важные игровые события." },
-      {
-        type: "table",
-        columns: ["Команда", "Что покажет"],
-        rows: [
-          ["/mymatch", "Ваш ближайший матч"],
-          ["/deadline", "Дедлайн текущего тура"],
-          ["/table", "Таблицы турнира"],
-          ["/schedule", "Ближайшие матчи"],
-          ["/rules", "Регламент"],
-        ],
-      },
-      {
-        type: linked ? "footer" : "blockquote",
-        text: linked
-          ? "Telegram привязан к вашему аккаунту — персональные уведомления включены."
-          : "Привяжите Telegram на платформе, чтобы бот мог найти ваши матчи и дедлайны.",
-      },
-    ],
-    fallbackText: [
-      `<b>Добро пожаловать${escapeTelegramHtml(name)}</b>`,
-      "",
-      "eFootball Nexon — турниры, матчи, рейтинги и достижения.",
-      "",
-      "/mymatch — ближайший матч",
-      "/deadline — дедлайн тура",
-      "/table — таблицы",
-      "/schedule — расписание",
-      "/rules — регламент",
-      "",
-      linked ? "Telegram привязан к аккаунту." : "Привяжите Telegram на платформе.",
-    ].join("\n"),
-    buttons: platformUrl
-      ? [
-          { text: "Открыть платформу", url: platformUrl, row: 1 },
-          { text: "Турниры", url: siteUrl("/tournaments")!, row: 2 },
-          { text: "Рейтинги", url: siteUrl("/ratings")!, row: 2 },
-        ]
+
+  const lines = [
+    `${tgEmoji("gamepad")} <b>eFootball Nexon</b>`,
+    `${tgEmoji("party")} <b>Добро пожаловать${greetingName}!</b>`,
+    "<blockquote>Это официальный бот киберспортивной платформы eFootball Nexon — турниры, матчи, рейтинги и достижения в одном месте.</blockquote>",
+    "",
+    `${tgEmoji("bell")} <b>Сюда будут приходить:</b>`,
+    `${tgEmoji("crown")} приглашения и старты турниров`,
+    `${tgEmoji("fire")} назначения и напоминания о матчах`,
+    `${tgEmoji("chart")} подтверждённые результаты и изменения рейтинга`,
+    `${tgEmoji("lock")} коды входа и оповещения безопасности`,
+    "",
+    `${tgEmoji("info")} <b>В боте зарегистрировано:</b> ${params.registeredUsers}`,
+    "",
+    params.linked
+      ? `${tgEmoji("check")} <b>Telegram привязан к вашему аккаунту.</b> Уведомления уже включены.`
+      : `${tgEmoji("link")} <b>Аккаунт ещё не привязан.</b> Войдите на сайте через Telegram, чтобы получать уведомления здесь.`,
+  ];
+
+  await sendTelegramMessage({
+    chatId,
+    text: lines.join("\n"),
+    disableWebPagePreview: true,
+    replyMarkup: platformUrl
+      ? buildTelegramInlineKeyboard([
+          { text: "🎮 Открыть платформу", url: platformUrl, row: 1 },
+          { text: "🏆 Турниры", url: siteUrl("/tournaments")!, row: 2 },
+          { text: "📊 Рейтинги", url: siteUrl("/ratings")!, row: 2 },
+        ])
       : undefined,
-  };
+  });
 }
 
 async function deliverCommandMessage(params: {
@@ -241,12 +239,25 @@ async function handleCommand(message: TelegramWebhookMessage) {
   const command = commandName(message.text);
   if (!command || !["start", "mymatch", "deadline", "table", "schedule", "rules"].includes(command)) return;
 
+  if (command === "start") {
+    const telegramId = normalizeId(message.from?.id);
+    const [linkedUser, registeredUsers] = await Promise.all([
+      telegramId && !telegramId.startsWith("-")
+        ? db.user.findUnique({ where: { telegramId }, select: { id: true } })
+        : null,
+      db.user.count({ where: { telegramId: { not: null }, isBanned: false } }),
+    ]);
+    await deliverWelcomeMessage({ message, linked: Boolean(linkedUser), registeredUsers }).catch((error) => {
+      if (isTelegramRecipientUnavailableError(error)) return;
+      console.error("Failed to send Telegram welcome message", error);
+    });
+    return;
+  }
+
   const context = await resolveCommandContext(message);
   let draft: TelegramRichMessageDraft;
 
-  if (command === "start") {
-    draft = welcomeMessage(message.from?.first_name?.trim() || null, Boolean(context.user));
-  } else if (!context.user) {
+  if (!context.user) {
     const url = siteUrl("/dashboard/security");
     draft = infoMessage(
       "Сначала привяжите Telegram",

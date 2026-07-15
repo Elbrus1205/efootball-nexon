@@ -38,8 +38,6 @@
     "motion": "^12.42.2",
     "next": "15.5.9",
     "next-auth": "^4.24.13",
-    "pusher": "^5.2.0",
-    "pusher-js": "^8.4.0",
     "react": "^18",
     "react-dom": "^18",
     "react-dropzone": "^14.3.8",
@@ -47,6 +45,7 @@
     "sharp": "^0.35.3",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
+    "web-push": "^3.6.7",
     "zod": "^4.1.5"
   },
   "devDependencies": {
@@ -54,6 +53,7 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@types/web-push": "^3.6.4",
     "eslint": "^8",
     "eslint-config-next": "15.5.9",
     "postcss": "^8",

@@ -6,11 +6,13 @@ import { TimeZoneReporter } from "@/components/profile/time-zone-reporter";
 import { RegulationsUpdateModal } from "@/components/legal/regulations-update-modal";
 import { CookieConsent } from "@/components/legal/cookie-consent";
 import { TelegramMiniAppAutoLogin } from "@/components/telegram/telegram-mini-app-auto-login";
+import { PushNotificationRegistrar } from "@/components/providers/push-notification-registrar";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
       {children}
+      <PushNotificationRegistrar />
       <TelegramMiniAppAutoLogin />
       <TimeZoneReporter />
       <RegulationsUpdateModal />

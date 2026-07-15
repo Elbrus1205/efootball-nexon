@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { getCurrentSession } from "@/lib/auth/session";
-import { db } from "@/lib/db";
 import { MobileMenu } from "@/components/layout/mobile-menu";
 import { AuthNav } from "@/components/layout/auth-nav";
 import { DesktopNav } from "@/components/layout/desktop-nav";
@@ -15,10 +13,7 @@ const links = [
   { href: "/contacts", label: "Контакты" },
 ];
 
-export async function Navbar() {
-  const session = await getCurrentSession();
-  const unread = session?.user ? await db.notification.count({ where: { userId: session.user.id, isRead: false } }) : 0;
-
+export function Navbar() {
   return (
     <header className="mobile-premium-header sticky top-0 z-40 overflow-visible border-b border-[#77F8CB]/15 bg-[#171717]/95 backdrop-blur-xl">
       <div className="pointer-events-none absolute inset-x-4 bottom-0 h-px bg-gradient-to-r from-transparent via-[#21F1A8]/70 to-transparent" />
@@ -44,7 +39,7 @@ export async function Navbar() {
         </div>
 
         <div className="shrink-0 flex items-center gap-1 sm:gap-2">
-          <AuthNav unread={unread} />
+          <AuthNav />
         </div>
       </div>
     </header>

@@ -298,6 +298,7 @@ model User {
   matchLineupEntries  MatchLineupPlayer[]
   submittedResults    MatchResultSubmission[]
   notifications       Notification[]
+  webPushSubscriptions WebPushSubscription[]
   achievements        UserAchievement[]
   warningsReceived    UserWarning[]             @relation("warningTarget")
   warningsIssued      UserWarning[]             @relation("warningIssuer")
@@ -1051,6 +1052,19 @@ model Notification {
 
   @@unique([userId, dedupeKey])
   @@index([userId, isRead, createdAt])
+}
+
+model WebPushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique @db.Text
+  p256dh    String   @db.Text
+  auth      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model UserAchievement {

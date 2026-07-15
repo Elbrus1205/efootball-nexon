@@ -20,4 +20,5 @@ test("runtime database checks cover Telegram rich publication schema", () => {
 
   assert.match(runtimeDatabaseScript, /telegramCommunityId/);
   assert.match(runtimeDatabaseScript, /TelegramPublication/);
+  assert.match(runtimeDatabaseScript, /WebPushSubscription/);
 });

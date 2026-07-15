@@ -59,6 +59,7 @@ const publicTablesRequiringRls = [
   "UserProfileStatus",
   "UserWarning",
   "VerificationToken",
+  "WebPushSubscription",
   "_prisma_migrations",
 ];
 
@@ -180,6 +181,43 @@ async function ensureTelegramRichPublications() {
   `);
 }
 
+async function ensureWebPushSubscriptions() {
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "WebPushSubscription" (
+      "id" TEXT NOT NULL,
+      "userId" TEXT NOT NULL,
+      "endpoint" TEXT NOT NULL,
+      "p256dh" TEXT NOT NULL,
+      "auth" TEXT NOT NULL,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL,
+      CONSTRAINT "WebPushSubscription_pkey" PRIMARY KEY ("id")
+    )
+  `);
+  await prisma.$executeRawUnsafe(
+    'CREATE UNIQUE INDEX IF NOT EXISTS "WebPushSubscription_endpoint_key" ON "WebPushSubscription"("endpoint")',
+  );
+  await prisma.$executeRawUnsafe(
+    'CREATE INDEX IF NOT EXISTS "WebPushSubscription_userId_idx" ON "WebPushSubscription"("userId")',
+  );
+  await prisma.$executeRawUnsafe(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'WebPushSubscription_userId_fkey'
+          AND conrelid = '"WebPushSubscription"'::regclass
+      ) THEN
+        ALTER TABLE "WebPushSubscription"
+          ADD CONSTRAINT "WebPushSubscription_userId_fkey"
+          FOREIGN KEY ("userId") REFERENCES "User"("id")
+          ON DELETE CASCADE ON UPDATE CASCADE;
+      END IF;
+    END $$;
+  `);
+}
+
 async function ensurePublicTableRls() {
   for (const tableName of publicTablesRequiringRls) {
     await prisma.$executeRawUnsafe(`ALTER TABLE IF EXISTS public.${sqlIdentifier(tableName)} ENABLE ROW LEVEL SECURITY`);
@@ -240,6 +278,7 @@ async function main() {
   await ensureUserProfileStatusColumns();
   await ensureReliabilityPenaltyReasons();
   await ensureTelegramRichPublications();
+  await ensureWebPushSubscriptions();
   await ensurePublicTableRls();
   await ensurePublicTableDenyPolicies();
   await ensureRlsAutoEnableExecuteRevoked();

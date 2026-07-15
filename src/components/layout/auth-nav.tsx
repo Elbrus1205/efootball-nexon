@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { Bell, LogIn, LogOut, Shield, ShieldCheck, User2 } from "lucide-react";
+import { LogIn, LogOut, Shield, ShieldCheck, User2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { NotificationMenu } from "@/components/layout/notification-menu";
 
-export function AuthNav({ unread = 0 }: { unread?: number }) {
+export function AuthNav() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
@@ -59,10 +58,6 @@ export function AuthNav({ unread = 0 }: { unread?: number }) {
 
   return (
     <>
-      <NotificationMenu userId={session.user.id} unreadCount={unread}>
-        <Bell className="h-5 w-5" />
-      </NotificationMenu>
-
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="group relative flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.035] p-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_30px_rgba(0,0,0,0.26)] transition duration-300 hover:-translate-y-0.5 hover:border-[#21F1A8]/30 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21F1A8]/60 sm:h-12 sm:w-12">

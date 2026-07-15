@@ -1,23 +1,11 @@
-import Pusher from "pusher";
 import { NotificationType } from "@prisma/client";
 import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
-import { broadcastNotification } from "@/lib/realtime/notifications-realtime";
 import { isTelegramRecipientUnavailableError, sendTelegramRichMessageWithFallback } from "@/lib/telegram-bot";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
 import { buildNotificationRichMessage, type TelegramRichMessageDraft } from "@/lib/telegram-rich";
 import { repairMojibake } from "@/lib/text-encoding";
-
-const pusher =
-  process.env.PUSHER_APP_ID && process.env.PUSHER_KEY && process.env.PUSHER_SECRET && process.env.PUSHER_CLUSTER
-    ? new Pusher({
-        appId: process.env.PUSHER_APP_ID,
-        key: process.env.PUSHER_KEY,
-        secret: process.env.PUSHER_SECRET,
-        cluster: process.env.PUSHER_CLUSTER,
-        useTLS: true,
-      })
-    : null;
+import { sendWebPushNotification } from "@/lib/services/web-push";
 
 export async function createNotification({
   userId,
@@ -112,17 +100,14 @@ export async function createNotification({
     createdAt: notification.createdAt,
   };
 
-  if (shouldDeliver && pusher) {
-    await pusher.trigger(`user-${userId}`, "notification:new", payload).catch((error) => {
-      console.error("Failed to push notification", error);
-    });
-  }
-
-  // Supabase Realtime — основной канал доставки. Pusher оставлен как fallback.
-  // Клиент дедуплицирует по notification.id, если сработают оба канала.
   if (shouldDeliver) {
-    await broadcastNotification(userId, payload).catch((error) => {
-      console.error("Failed to broadcast notification via Supabase Realtime", error);
+    await sendWebPushNotification(userId, {
+      title: safeTitle,
+      body: safeBody,
+      link,
+      tag: dedupeKey || notification.id,
+    }).catch((error) => {
+      console.error("Failed to deliver phone push notification", error);
     });
   }
 
