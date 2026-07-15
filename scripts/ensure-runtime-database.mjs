@@ -51,6 +51,7 @@ const publicTablesRequiringRls = [
   "TournamentRegistration",
   "TournamentRegistrationMember",
   "TournamentStage",
+  "TelegramPublication",
   "TwinAccountAlert",
   "TwoFactorChallenge",
   "User",
@@ -125,6 +126,60 @@ async function ensureReliabilityPenaltyReasons() {
   `);
 }
 
+async function ensureTelegramRichPublications() {
+  await prisma.$executeRawUnsafe(
+    'ALTER TABLE "Tournament" ADD COLUMN IF NOT EXISTS "telegramCommunityId" TEXT',
+  );
+  await prisma.$executeRawUnsafe(
+    'ALTER TABLE "Tournament" ADD COLUMN IF NOT EXISTS "telegramChannelId" TEXT',
+  );
+  await prisma.$executeRawUnsafe(
+    'ALTER TABLE "Tournament" ADD COLUMN IF NOT EXISTS "telegramGroupId" TEXT',
+  );
+  await prisma.$executeRawUnsafe(
+    'ALTER TABLE "Tournament" ADD COLUMN IF NOT EXISTS "telegramAutoPublish" BOOLEAN NOT NULL DEFAULT false',
+  );
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "TelegramPublication" (
+      "id" TEXT NOT NULL,
+      "tournamentId" TEXT NOT NULL,
+      "chatId" TEXT NOT NULL,
+      "messageId" TEXT NOT NULL,
+      "kind" TEXT NOT NULL,
+      "contentHash" TEXT NOT NULL,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL,
+      CONSTRAINT "TelegramPublication_pkey" PRIMARY KEY ("id")
+    )
+  `);
+  await prisma.$executeRawUnsafe(
+    'CREATE UNIQUE INDEX IF NOT EXISTS "TelegramPublication_tournamentId_chatId_kind_key" ON "TelegramPublication"("tournamentId", "chatId", "kind")',
+  );
+  await prisma.$executeRawUnsafe(
+    'CREATE INDEX IF NOT EXISTS "TelegramPublication_tournamentId_updatedAt_idx" ON "TelegramPublication"("tournamentId", "updatedAt")',
+  );
+  await prisma.$executeRawUnsafe(
+    'CREATE INDEX IF NOT EXISTS "TelegramPublication_chatId_kind_idx" ON "TelegramPublication"("chatId", "kind")',
+  );
+  await prisma.$executeRawUnsafe(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'TelegramPublication_tournamentId_fkey'
+          AND conrelid = '"TelegramPublication"'::regclass
+      ) THEN
+        ALTER TABLE "TelegramPublication"
+          ADD CONSTRAINT "TelegramPublication_tournamentId_fkey"
+          FOREIGN KEY ("tournamentId") REFERENCES "Tournament"("id")
+          ON DELETE CASCADE ON UPDATE CASCADE;
+      END IF;
+    END $$;
+  `);
+}
+
 async function ensurePublicTableRls() {
   for (const tableName of publicTablesRequiringRls) {
     await prisma.$executeRawUnsafe(`ALTER TABLE IF EXISTS public.${sqlIdentifier(tableName)} ENABLE ROW LEVEL SECURITY`);
@@ -184,6 +239,7 @@ async function main() {
 
   await ensureUserProfileStatusColumns();
   await ensureReliabilityPenaltyReasons();
+  await ensureTelegramRichPublications();
   await ensurePublicTableRls();
   await ensurePublicTableDenyPolicies();
   await ensureRlsAutoEnableExecuteRevoked();
