@@ -144,9 +144,6 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     if (existingApplication?.status === TournamentApplicationStatus.PENDING) {
       return NextResponse.json({ error: "Ваша заявка уже находится на проверке." }, { status: 409 });
     }
-    if (existingApplication?.status === TournamentApplicationStatus.APPROVED) {
-      return NextResponse.json({ error: "Ваша заявка уже одобрена." }, { status: 409 });
-    }
   }
 
   if (tournament.participantMode === TournamentParticipantMode.TEAM && teamName.length < 2) {
