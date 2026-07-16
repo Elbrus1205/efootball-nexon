@@ -643,6 +643,7 @@ model Tournament {
   description            String                   @db.Text
   rules                  String                   @db.Text
   coverImage             String?
+  lineupPhotoExampleUrl  String?                  @db.Text
   prizePool              String?
   format                 TournamentFormat
   formatBlueprintJson    Json?

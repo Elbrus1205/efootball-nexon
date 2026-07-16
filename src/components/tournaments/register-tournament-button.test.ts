@@ -4,6 +4,8 @@ import { test } from "node:test";
 
 const source = readFileSync(new URL("./register-tournament-button.tsx", import.meta.url), "utf8");
 const tournamentPage = readFileSync(new URL("../../app/tournaments/[id]/page.tsx", import.meta.url), "utf8");
+const builderSource = readFileSync(new URL("../admin/tournament-builder-form.tsx", import.meta.url), "utf8");
+const schemaSource = readFileSync(new URL("../../../prisma/schema.prisma", import.meta.url), "utf8");
 
 test("renders registration dialogs at the document level with mobile-safe positioning", () => {
   assert.match(source, /createPortal/);
@@ -23,4 +25,17 @@ test("keeps club selection compact and prevents content overflow", () => {
   assert.match(source, /min-w-0[^\"]*overflow-hidden/);
   assert.match(source, /overflow-y-auto[^\"]*overscroll-contain/);
   assert.match(source, /aria-pressed=\{selected\}/);
+});
+
+test("shows the admin-configured lineup example before a compact file picker", () => {
+  assert.match(schemaSource, /lineupPhotoExampleUrl\s+String\?/);
+  assert.match(builderSource, /name="lineupPhotoExampleUrl"/);
+  assert.match(tournamentPage, /lineupPhotoExampleUrl=\{tournament\.lineupPhotoExampleUrl\}/);
+  assert.match(source, /lineupPhotoExampleUrl\?: string/);
+
+  const examplePosition = source.indexOf("Пример правильного фото состава");
+  const pickerPosition = source.indexOf("Выбрать файл");
+  assert.ok(examplePosition >= 0, "lineup example must be visible in the registration dialog");
+  assert.ok(pickerPosition > examplePosition, "file picker must be rendered below the lineup example");
+  assert.doesNotMatch(source, /min-h-44 cursor-pointer/);
 });

@@ -87,6 +87,12 @@ async function ensureUserProfileStatusColumns() {
   );
 }
 
+async function ensureTournamentColumns() {
+  await prisma.$executeRawUnsafe(
+    'ALTER TABLE "Tournament" ADD COLUMN IF NOT EXISTS "lineupPhotoExampleUrl" TEXT',
+  );
+}
+
 async function ensureReliabilityPenaltyReasons() {
   await prisma.$executeRawUnsafe(`
     DO $$
@@ -276,6 +282,7 @@ async function main() {
   }
 
   await ensureUserProfileStatusColumns();
+  await ensureTournamentColumns();
   await ensureReliabilityPenaltyReasons();
   await ensureTelegramRichPublications();
   await ensureWebPushSubscriptions();

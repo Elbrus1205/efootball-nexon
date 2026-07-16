@@ -180,6 +180,13 @@ export const tournamentBuilderSchema = z.object({
     })
     .optional()
     .or(z.literal("")),
+  lineupPhotoExampleUrl: z
+    .string()
+    .refine((value) => !value || value.startsWith("data:image/") || value.startsWith("http://") || value.startsWith("https://"), {
+      message: "Пример фото состава должен быть картинкой или ссылкой на картинку.",
+    })
+    .optional()
+    .or(z.literal("")),
   playoffType: z.nativeEnum(PlayoffType).optional().nullable(),
   playoffLegs: optionalIntField(1, 2, "В плей-офф можно выбрать 1 или 2 матча в серии."),
   playoffThirdPlace: z.coerce.boolean().default(false),

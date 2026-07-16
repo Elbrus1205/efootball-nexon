@@ -32,6 +32,7 @@ type BuilderValues = {
   format?: TournamentFormat;
   status?: TournamentStatus;
   coverImage?: string;
+  lineupPhotoExampleUrl?: string;
   playoffType?: PlayoffType | "";
   playoffLegs?: number;
   playoffThirdPlace?: boolean;
@@ -75,6 +76,9 @@ export function TournamentBuilderForm({
   const [coverImage, setCoverImage] = useState(initialValues?.coverImage ?? "");
   const [coverUploading, setCoverUploading] = useState(false);
   const [coverUploadError, setCoverUploadError] = useState("");
+  const [lineupPhotoExampleUrl, setLineupPhotoExampleUrl] = useState(initialValues?.lineupPhotoExampleUrl ?? "");
+  const [lineupExampleUploading, setLineupExampleUploading] = useState(false);
+  const [lineupExampleUploadError, setLineupExampleUploadError] = useState("");
   const [participantMode, setParticipantMode] = useState(initialValues?.participantMode ?? TournamentParticipantMode.SINGLE);
   const [matchupFormat, setMatchupFormat] = useState(initialValues?.matchupFormat ?? MatchupFormat.SINGLE_MATCH);
   const coverPreviewSrc = optimizedImageUrl(coverImage, {
@@ -82,6 +86,13 @@ export function TournamentBuilderForm({
     height: 384,
     quality: 86,
     resize: "cover",
+    format: "webp",
+  });
+  const lineupExamplePreviewSrc = optimizedImageUrl(lineupPhotoExampleUrl, {
+    width: 960,
+    height: 540,
+    quality: 88,
+    resize: "contain",
     format: "webp",
   });
 
@@ -108,6 +119,30 @@ export function TournamentBuilderForm({
       setCoverUploadError(error instanceof Error ? error.message : "Не удалось загрузить обложку. Попробуйте другое изображение.");
     } finally {
       setCoverUploading(false);
+      event.target.value = "";
+    }
+  };
+
+  const onLineupExampleChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setLineupExampleUploadError("Выберите изображение JPG, PNG, WebP или AVIF.");
+      event.target.value = "";
+      return;
+    }
+
+    setLineupExampleUploading(true);
+    setLineupExampleUploadError("");
+
+    try {
+      const url = await uploadFile(file, "tournaments");
+      setLineupPhotoExampleUrl(url);
+    } catch (error) {
+      setLineupPhotoExampleUrl("");
+      setLineupExampleUploadError(error instanceof Error ? error.message : "Не удалось загрузить пример фото состава.");
+    } finally {
+      setLineupExampleUploading(false);
       event.target.value = "";
     }
   };
@@ -264,6 +299,44 @@ export function TournamentBuilderForm({
             ) : (
               <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-400">
                 Загрузите обложку турнира с устройства.
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="lineupPhotoExampleFile">Пример фото состава</Label>
+            <input type="hidden" name="lineupPhotoExampleUrl" value={lineupPhotoExampleUrl} />
+            <Input
+              id="lineupPhotoExampleFile"
+              type="file"
+              accept="image/avif,image/jpeg,image/png,image/webp"
+              onChange={onLineupExampleChange}
+              disabled={lineupExampleUploading}
+            />
+            <p className="text-xs leading-5 text-zinc-400">
+              Игроки увидят этот пример перед выбором своего скриншота состава.
+            </p>
+            {lineupExampleUploading ? <div className="text-sm text-primary">Загружаем пример...</div> : null}
+            {lineupExampleUploadError ? <div role="alert" className="text-sm text-red-300">{lineupExampleUploadError}</div> : null}
+            {lineupPhotoExampleUrl ? (
+              <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+                <div className="relative aspect-video overflow-hidden rounded-xl bg-black/40">
+                  <Image
+                    src={lineupExamplePreviewSrc ?? lineupPhotoExampleUrl}
+                    alt="Пример правильного фото состава"
+                    fill
+                    sizes="(min-width: 768px) 50vw, 100vw"
+                    quality={88}
+                    className="object-contain"
+                  />
+                </div>
+                <Button type="button" variant="outline" className="w-full" onClick={() => setLineupPhotoExampleUrl("")}>
+                  Убрать пример
+                </Button>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-400">
+                Необязательно. Рекомендуемый формат — горизонтальный скриншот 16:9.
               </div>
             )}
           </div>
@@ -480,11 +553,11 @@ export function TournamentBuilderForm({
       </Card>
 
       <div className="flex flex-wrap gap-3">
-        <Button type="submit" disabled={coverUploading}>
+        <Button type="submit" disabled={coverUploading || lineupExampleUploading}>
           {submitLabel}
         </Button>
         {secondaryLabel ? (
-          <Button type="submit" name="status" value={TournamentStatus.DRAFT} variant="secondary" disabled={coverUploading}>
+          <Button type="submit" name="status" value={TournamentStatus.DRAFT} variant="secondary" disabled={coverUploading || lineupExampleUploading}>
             {secondaryLabel}
           </Button>
         ) : null}

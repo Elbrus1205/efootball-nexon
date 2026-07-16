@@ -36,6 +36,7 @@ export default async function AdminTournamentEditPage(props: { params: Promise<{
           format: tournament.format,
           status: tournament.status,
           coverImage: tournament.coverImage ?? "",
+          lineupPhotoExampleUrl: tournament.lineupPhotoExampleUrl ?? "",
           playoffType: tournament.playoffType ?? "",
           playoffLegs: tournament.playoffLegs,
           playoffThirdPlace: tournament.playoffThirdPlace,

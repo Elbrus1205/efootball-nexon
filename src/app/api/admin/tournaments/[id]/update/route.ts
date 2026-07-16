@@ -41,6 +41,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     format: TournamentFormat.CUSTOM,
     status: formData.get("status"),
     coverImage: formData.get("coverImage"),
+    lineupPhotoExampleUrl: formData.get("lineupPhotoExampleUrl"),
     formatBlueprintJson: formData.get("formatBlueprintJson"),
     playoffType: formData.get("playoffType") || null,
     playoffLegs: formData.get("playoffLegs") || 1,
@@ -104,6 +105,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       registrationClosedAt:
         status === TournamentStatus.DRAFT || status === TournamentStatus.REGISTRATION_OPEN ? null : undefined,
       coverImage: body.coverImage || null,
+      lineupPhotoExampleUrl: body.lineupPhotoExampleUrl || null,
       playoffType: null,
       playoffLegs: 1,
       playoffThirdPlace: false,

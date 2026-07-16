@@ -42,6 +42,7 @@ export function RegisterTournamentButton({
   participantMode = TournamentParticipantMode.SINGLE,
   rosterSize = 1,
   requireLineupPhoto = false,
+  lineupPhotoExampleUrl,
   clubs,
   takenClubSlugs,
 }: {
@@ -50,6 +51,7 @@ export function RegisterTournamentButton({
   participantMode?: TournamentParticipantMode;
   rosterSize?: number;
   requireLineupPhoto?: boolean;
+  lineupPhotoExampleUrl?: string | null;
   clubs: ClubOption[];
   takenClubSlugs: string[];
 }) {
@@ -371,6 +373,36 @@ export function RegisterTournamentButton({
         </div>
 
         <div className="min-h-0 space-y-4 overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-5">
+          <section aria-labelledby="lineup-example-title" className="space-y-2">
+            <div>
+              <h4 id="lineup-example-title" className="text-sm font-semibold text-white">Пример правильного фото состава</h4>
+              <p className="mt-1 text-xs leading-5 text-zinc-400">Сделайте похожий скриншот: весь игровой состав должен быть виден целиком.</p>
+            </div>
+            {lineupPhotoExampleUrl ? (
+              <div className="relative aspect-video overflow-hidden rounded-2xl border border-primary/25 bg-black/40 shadow-[0_12px_36px_rgba(0,0,0,0.25)]">
+                <Image
+                  src={lineupPhotoExampleUrl}
+                  alt="Пример правильного фото состава, заданный организатором турнира"
+                  fill
+                  sizes="(min-width: 640px) 560px, 100vw"
+                  className="object-contain"
+                />
+              </div>
+            ) : (
+              <div className="flex min-h-28 items-center gap-3 rounded-2xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-5 text-sm leading-6 text-zinc-400">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/30">
+                  <ImagePlus className="h-5 w-5 text-zinc-500" aria-hidden="true" />
+                </span>
+                Организатор не добавил отдельный пример. Загрузите чёткий скриншот, где виден весь состав.
+              </div>
+            )}
+          </section>
+
+          <div className="border-t border-white/10 pt-4">
+            <h4 className="text-sm font-semibold text-white">Ваше фото на проверку</h4>
+            <p className="mt-1 text-xs leading-5 text-zinc-400">JPG, PNG, WebP или AVIF · до 10 МБ</p>
+          </div>
+
           {lineupPhotoUrl ? (
             <div className="overflow-hidden rounded-md border border-primary/25 bg-black/30">
               <div className="relative aspect-[16/9]">
@@ -392,7 +424,7 @@ export function RegisterTournamentButton({
               </div>
             </div>
           ) : (
-            <label className="flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-primary/25 bg-primary/[0.04] p-6 text-center transition duration-200 hover:border-primary/50 hover:bg-primary/[0.07] focus-within:ring-2 focus-within:ring-primary motion-reduce:transition-none">
+            <label className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border border-primary/35 bg-primary/[0.08] px-4 py-3 text-center font-semibold text-white transition duration-200 hover:border-primary/60 hover:bg-primary/[0.13] focus-within:ring-2 focus-within:ring-primary motion-reduce:transition-none">
               <input
                 type="file"
                 accept="image/avif,image/jpeg,image/png,image/webp"
@@ -403,9 +435,8 @@ export function RegisterTournamentButton({
                   event.target.value = "";
                 }}
               />
-              {lineupUploading ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> : <Upload className="h-8 w-8 text-primary" />}
-              <span className="mt-3 font-semibold text-white">{lineupUploading ? "Загружаем фото..." : "Выбрать фото состава"}</span>
-              <span className="mt-1 text-xs leading-5 text-zinc-500">JPG, PNG, WebP или AVIF · до 10 МБ</span>
+              {lineupUploading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <Upload className="h-5 w-5 text-primary" />}
+              <span>{lineupUploading ? "Загружаем фото..." : "Выбрать файл"}</span>
             </label>
           )}
 

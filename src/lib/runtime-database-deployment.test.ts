@@ -22,3 +22,12 @@ test("runtime database checks cover Telegram rich publication schema", () => {
   assert.match(runtimeDatabaseScript, /TelegramPublication/);
   assert.match(runtimeDatabaseScript, /WebPushSubscription/);
 });
+
+test("runtime database checks add the optional tournament lineup example column", () => {
+  const runtimeDatabaseScript = readFileSync(
+    path.join(root, "scripts", "ensure-runtime-database.mjs"),
+    "utf8",
+  );
+
+  assert.match(runtimeDatabaseScript, /ADD COLUMN IF NOT EXISTS "lineupPhotoExampleUrl" TEXT/);
+});

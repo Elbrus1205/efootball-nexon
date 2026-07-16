@@ -614,6 +614,7 @@ export default async function TournamentDetailsPage(
       matchupFormat: true,
       bestOfWins: true,
       requireLineupPhoto: true,
+      lineupPhotoExampleUrl: true,
       registrationApplications: {
         where: {
           OR: [
@@ -1166,6 +1167,7 @@ export default async function TournamentDetailsPage(
       participantMode={tournament.participantMode}
       rosterSize={tournament.rosterSize}
       requireLineupPhoto={tournament.requireLineupPhoto}
+      lineupPhotoExampleUrl={tournament.lineupPhotoExampleUrl}
       clubs={availableClubs}
       takenClubSlugs={takenClubSlugs}
     />
