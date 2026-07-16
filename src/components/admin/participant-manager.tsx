@@ -48,6 +48,12 @@ type GroupItem = {
   name: string;
 };
 
+type ClubItem = {
+  slug: string;
+  name: string;
+  imagePath: string;
+};
+
 type PenaltyReasonOption = {
   id: string;
   title: string;
@@ -107,6 +113,7 @@ export function ParticipantManager({
   rosterSize,
   participants,
   groups,
+  clubs,
   replacementPenaltyReasons,
 }: {
   tournamentId: string;
@@ -114,11 +121,14 @@ export function ParticipantManager({
   rosterSize: number;
   participants: ParticipantItem[];
   groups: GroupItem[];
+  clubs: ClubItem[];
   replacementPenaltyReasons: PenaltyReasonOption[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [selectedUserId, setSelectedUserId] = useState("");
+  const [selectedClubSlug, setSelectedClubSlug] = useState("");
+  const [selectedGroupId, setSelectedGroupId] = useState("");
   const [userSearch, setUserSearch] = useState("");
   const [userOptions, setUserOptions] = useState<UserOption[]>([]);
   const [isUserSearchLoading, setIsUserSearchLoading] = useState(false);
@@ -126,6 +136,7 @@ export function ParticipantManager({
   const [openParticipantId, setOpenParticipantId] = useState<string | null>(null);
   const [openReplacementTargetId, setOpenReplacementTargetId] = useState<string | null>(null);
   const [replacementByParticipant, setReplacementByParticipant] = useState<Record<string, string>>({});
+  const [replacementClubByParticipant, setReplacementClubByParticipant] = useState<Record<string, string>>({});
   const [replacementSearchByParticipant, setReplacementSearchByParticipant] = useState<Record<string, string>>({});
   const [replacementOptionsByParticipant, setReplacementOptionsByParticipant] = useState<Record<string, UserOption[]>>({});
   const [replacementPenaltyByTarget, setReplacementPenaltyByTarget] = useState<Record<string, string>>({});
@@ -142,6 +153,11 @@ export function ParticipantManager({
   const visibleParticipants = normalizedParticipantQuery
     ? participants.filter((participant) => participantSearchText(participant).includes(normalizedParticipantQuery))
     : [];
+  const takenClubSlugs = useMemo(
+    () => new Set(participants.filter((participant) => participant.status !== ParticipantStatus.REMOVED).map((participant) => participant.clubSlug).filter(Boolean)),
+    [participants],
+  );
+  const availableAddClubs = clubs.filter((club) => !takenClubSlugs.has(club.slug));
 
   const searchUsers = useCallback(async (query: string, scope: "general" | "roster" = "general") => {
     const normalized = normalizeSearch(query);
@@ -236,9 +252,14 @@ export function ParticipantManager({
       // (иначе остаётся прежний выбранный игрок/запрос, и кандидаты не подгружаются заново).
       setOpenReplacementTargetId(null);
       setReplacementByParticipant({});
+      setReplacementClubByParticipant({});
       setReplacementSearchByParticipant({});
       setReplacementOptionsByParticipant({});
       setReplacementPenaltyByTarget({});
+      setSelectedUserId("");
+      setUserSearch("");
+      setSelectedClubSlug("");
+      setSelectedGroupId("");
 
       router.refresh();
     });
@@ -274,7 +295,7 @@ export function ParticipantManager({
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-white/10 bg-white/[0.035] p-3 sm:p-4">
-        <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto_auto]">
+        <div className="grid gap-3 lg:grid-cols-2">
           <div className="min-w-0 space-y-2">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
@@ -331,14 +352,48 @@ export function ParticipantManager({
               </div>
             ) : null}
           </div>
-          <Button className="h-10 rounded-lg" disabled={pending || !selectedUserId} onClick={() => run({ action: "add", userId: selectedUserId })}>
-            <Plus className="mr-2 h-4 w-4" />
-            Добавить
-          </Button>
-          <Button className="h-10 rounded-lg" variant="secondary" disabled={pending || !groups.length} onClick={autoAssignGroups}>
-            <Shuffle className="mr-2 h-4 w-4" />
-            Автораспределение
-          </Button>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="space-y-1.5 text-xs font-medium text-zinc-400">
+              <span>Клуб участника</span>
+              <select
+                value={selectedClubSlug}
+                onChange={(event) => setSelectedClubSlug(event.target.value)}
+                className="h-10 w-full rounded-lg border border-white/10 bg-black/30 px-3 text-sm text-white outline-none transition focus:border-primary/60 focus:ring-2 focus:ring-primary/15"
+              >
+                <option value="">Выберите клуб</option>
+                {availableAddClubs.map((club) => (
+                  <option key={club.slug} value={club.slug}>{club.name}</option>
+                ))}
+              </select>
+            </label>
+            <label className="space-y-1.5 text-xs font-medium text-zinc-400">
+              <span>Группа</span>
+              <select
+                value={selectedGroupId}
+                onChange={(event) => setSelectedGroupId(event.target.value)}
+                className="h-10 w-full rounded-lg border border-white/10 bg-black/30 px-3 text-sm text-white outline-none transition focus:border-primary/60 focus:ring-2 focus:ring-primary/15"
+              >
+                <option value="">Без группы — распределить автоматически по рейтингу</option>
+                {groups.map((group) => (
+                  <option key={group.id} value={group.id}>{group.name}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row lg:col-span-2 lg:justify-end">
+            <Button
+              className="h-10 rounded-lg"
+              disabled={pending || !selectedUserId || !selectedClubSlug}
+              onClick={() => run({ action: "add", userId: selectedUserId, clubSlug: selectedClubSlug, groupId: selectedGroupId }, "Участник добавлен в турнир.")}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Добавить
+            </Button>
+            <Button className="h-10 rounded-lg" variant="secondary" disabled={pending || !groups.length} onClick={autoAssignGroups}>
+              <Shuffle className="mr-2 h-4 w-4" />
+              Автораспределение
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -384,6 +439,7 @@ export function ParticipantManager({
         ) : visibleParticipants.length ? (
           visibleParticipants.map((participant) => {
             const replacementUserId = replacementByParticipant[participant.id] ?? "";
+            const replacementClubSlug = replacementClubByParticipant[participant.id] ?? participant.clubSlug ?? "";
             const replacementQuery = replacementSearchByParticipant[participant.id] ?? "";
             const normalizedReplacementQuery = normalizeSearch(replacementQuery);
             const selectedReplacement = usersById.get(replacementUserId);
@@ -477,6 +533,20 @@ export function ParticipantManager({
                       {hasRosterReplacement ? (
                         <div className="mb-3 space-y-2">
                           <div className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Состав команды</div>
+                          <label className="block space-y-1.5 text-xs font-medium text-zinc-400">
+                            <span>Клуб после замены</span>
+                            <select
+                              value={replacementClubSlug}
+                              disabled={pending || !canReplace}
+                              onChange={(event) => setReplacementClubByParticipant((current) => ({ ...current, [participant.id]: event.target.value }))}
+                              className="h-10 w-full rounded-lg border border-white/10 bg-black/30 px-3 text-sm text-white outline-none transition focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:opacity-50"
+                            >
+                              <option value="">Выберите клуб</option>
+                              {clubs.filter((club) => !takenClubSlugs.has(club.slug) || club.slug === participant.clubSlug).map((club) => (
+                                <option key={club.slug} value={club.slug}>{club.name}</option>
+                              ))}
+                            </select>
+                          </label>
                           {rosterSlots.map((member, slotIndex) => {
                             const targetId = member ? `member:${member.id}` : `slot:${participant.id}:${slotIndex}`;
                             const memberReplacementUserId = replacementByParticipant[targetId] ?? "";
@@ -610,7 +680,7 @@ export function ParticipantManager({
                                   <Button
                                     variant="secondary"
                                     className="h-9 shrink-0 rounded-lg px-3 text-xs"
-                                    disabled={pending || !canReplace || !memberReplacementUserId}
+                                    disabled={pending || !canReplace || !memberReplacementUserId || Boolean(member && !replacementClubSlug)}
                                     onClick={() =>
                                       run(
                                         member
@@ -618,6 +688,7 @@ export function ParticipantManager({
                                               action: "replaceMember",
                                               memberId: member.id,
                                               replacementUserId: memberReplacementUserId,
+                                              clubSlug: replacementClubSlug,
                                               reliabilityPenaltyReasonId: replacementPenaltyByTarget[targetId] ?? "",
                                             }
                                           : { action: "addMember", registrationId: participant.id, replacementUserId: memberReplacementUserId },
@@ -695,6 +766,21 @@ export function ParticipantManager({
                             </div>
                           ) : null}
 
+                          <label className="block space-y-1.5 text-xs font-medium text-zinc-400">
+                            <span>Клуб после замены</span>
+                            <select
+                              value={replacementClubSlug}
+                              disabled={pending || !canReplace}
+                              onChange={(event) => setReplacementClubByParticipant((current) => ({ ...current, [participant.id]: event.target.value }))}
+                              className="h-10 w-full rounded-lg border border-white/10 bg-black/30 px-3 text-sm text-white outline-none transition focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:opacity-50"
+                            >
+                              <option value="">Выберите клуб</option>
+                              {clubs.filter((club) => !takenClubSlugs.has(club.slug) || club.slug === participant.clubSlug).map((club) => (
+                                <option key={club.slug} value={club.slug}>{club.name}</option>
+                              ))}
+                            </select>
+                          </label>
+
                           {renderReplacementPenaltySelect(participant.id)}
 
                           {normalizedReplacementQuery ? (
@@ -740,13 +826,14 @@ export function ParticipantManager({
                         <Button
                           variant="secondary"
                           className="h-10 rounded-lg px-5"
-                          disabled={pending || !canReplace || !replacementUserId}
+                          disabled={pending || !canReplace || !replacementUserId || !replacementClubSlug}
                           onClick={() =>
                             run(
                               {
                                 action: "replace",
                                 registrationId: participant.id,
                                 replacementUserId,
+                                clubSlug: replacementClubSlug,
                                 reliabilityPenaltyReasonId: replacementPenaltyByTarget[participant.id] ?? "",
                               },
                               "Игрок заменён. Таблица слота сохранена за новым участником.",

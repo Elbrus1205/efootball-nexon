@@ -4,13 +4,14 @@ import { ParticipantManager } from "@/components/admin/participant-manager";
 import { getAdminTournamentAccessWhere } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { getAvailableClubs } from "@/lib/clubs";
 import { getReliabilityPenaltyReasons } from "@/lib/services/reliability";
 
 export default async function AdminTournamentParticipantsPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const session = await requirePermission("tournaments.manageParticipants");
 
-  const [tournament, participants, stages, replacementPenaltyReasons] = await Promise.all([
+  const [tournament, participants, stages, replacementPenaltyReasons, clubs] = await Promise.all([
     db.tournament.findFirst({
       where: { id: params.id, ...getAdminTournamentAccessWhere(session) },
       select: { id: true, participantMode: true, rosterSize: true },
@@ -73,6 +74,7 @@ export default async function AdminTournamentParticipantsPage(props: { params: P
       orderBy: { orderIndex: "asc" },
     }),
     getReliabilityPenaltyReasons(ReliabilityPenaltyScope.PLAYER_REPLACEMENT),
+    getAvailableClubs(),
   ]);
 
   if (!tournament) notFound();
@@ -84,6 +86,7 @@ export default async function AdminTournamentParticipantsPage(props: { params: P
       rosterSize={tournament.rosterSize}
       participants={participants}
       groups={stages.flatMap((stage) => stage.groups)}
+      clubs={clubs}
       replacementPenaltyReasons={replacementPenaltyReasons}
     />
   );

@@ -52,7 +52,6 @@ type BuilderValues = {
   manualBracketControl?: boolean;
   manualPlayoffSelection?: boolean;
   checkInRequired?: boolean;
-  requireTelegramForRegistration?: boolean;
   requireLineupPhoto?: boolean;
   telegramCommunityId?: string;
   telegramChannelId?: string;
@@ -541,7 +540,6 @@ export function TournamentBuilderForm({
           {[
             ["manualBracketControl", "Ручное управление сеткой", initialValues?.manualBracketControl ?? false],
             ["manualPlayoffSelection", "Ручной выбор в плей-офф", initialValues?.manualPlayoffSelection ?? false],
-            ["requireTelegramForRegistration", "Требовать привязанный Telegram для регистрации", initialValues?.requireTelegramForRegistration ?? false],
             ["requireLineupPhoto", "Проверять фото состава перед регистрацией", initialValues?.requireLineupPhoto ?? false],
           ].map(([name, label, checked]) => (
             <label key={String(name)} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-sm text-zinc-300">

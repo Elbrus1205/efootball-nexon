@@ -3,12 +3,14 @@ import { MatchStatus, NotificationType, ParticipantStatus, ReliabilityPenaltySco
 import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requireAnyPermission, requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { getAvailableClubs } from "@/lib/clubs";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { createNotification } from "@/lib/services/notifications";
 import { applyConfiguredReliabilityPenaltyToUsers, formatReliabilityRegistrationRestriction, syncReliabilityRestriction } from "@/lib/services/reliability";
 import { getAcceptedRosterPenaltyUserIds, uniqueReliabilityPenaltyUserIds } from "@/lib/services/reliability-penalty-targets";
 import { recalculateGroupStandings } from "@/lib/services/tournaments";
 import { hasTelegramRegistrationContact } from "@/lib/social-links";
+import { resolveParticipantClub } from "@/lib/tournament-participant-assignment";
 import { participantManageSchema } from "@/lib/validators";
 import { formatTournamentBanMessage } from "@/lib/user-ban";
 
@@ -19,15 +21,6 @@ const replaceableMatchStatuses: MatchStatus[] = [
   MatchStatus.LIVE,
   MatchStatus.REJECTED,
 ];
-
-async function tournamentRequiresTelegram(tournamentId: string) {
-  const tournament = await db.tournament.findUnique({
-    where: { id: tournamentId },
-    select: { requireTelegramForRegistration: true },
-  });
-
-  return Boolean(tournament?.requireTelegramForRegistration);
-}
 
 async function findAbsorbableDuplicateRegistration({
   tournamentId,
@@ -138,6 +131,29 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   const body = participantManageSchema.parse(await request.json());
 
   if (body.action === "add" && body.userId) {
+    let clubAssignment;
+    try {
+      clubAssignment = resolveParticipantClub(body.clubSlug, await getAvailableClubs());
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : "Выберите клуб участника." }, { status: 400 });
+    }
+
+    const [takenClub, selectedGroup] = await Promise.all([
+      db.tournamentRegistration.findFirst({
+        where: { tournamentId: params.id, clubSlug: clubAssignment.clubSlug, status: { not: ParticipantStatus.REMOVED } },
+        select: { id: true },
+      }),
+      body.groupId
+        ? db.tournamentGroup.findFirst({ where: { id: body.groupId, stage: { tournamentId: params.id } }, select: { id: true } })
+        : Promise.resolve(null),
+    ]);
+    if (takenClub) {
+      return NextResponse.json({ error: "Этот клуб уже занят другим участником." }, { status: 409 });
+    }
+    if (body.groupId && !selectedGroup) {
+      return NextResponse.json({ error: "Выбранная группа не относится к этому турниру." }, { status: 400 });
+    }
+
     const user = await db.user.findUnique({
       where: { id: body.userId },
       select: { isBanned: true, banReason: true, bannedUntil: true, telegramId: true, telegramUsername: true },
@@ -154,7 +170,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       return NextResponse.json({ error: reliabilityRestriction }, { status: 403 });
     }
 
-    if ((await tournamentRequiresTelegram(params.id)) && !hasTelegramRegistrationContact(user)) {
+    if (!hasTelegramRegistrationContact(user)) {
       return NextResponse.json(
         { error: "Для участия в этом турнире у игрока должен быть привязан Telegram с публичным @username." },
         { status: 403 },
@@ -168,6 +184,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
         status: ParticipantStatus.CONFIRMED,
         groupId: body.groupId || null,
         seed: body.seed ?? null,
+        ...clubAssignment,
       },
       include: { user: true, group: true },
     });
@@ -223,6 +240,26 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       return NextResponse.json({ error: "Выберите другого игрока для замены." }, { status: 400 });
     }
 
+    let clubAssignment;
+    try {
+      clubAssignment = resolveParticipantClub(body.clubSlug, await getAvailableClubs());
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : "Выберите клуб участника." }, { status: 400 });
+    }
+
+    const takenClub = await db.tournamentRegistration.findFirst({
+      where: {
+        tournamentId: params.id,
+        id: { not: before.id },
+        clubSlug: clubAssignment.clubSlug,
+        status: { not: ParticipantStatus.REMOVED },
+      },
+      select: { id: true },
+    });
+    if (takenClub) {
+      return NextResponse.json({ error: "Этот клуб уже занят другим участником." }, { status: 409 });
+    }
+
     const replacementUser = await db.user.findUnique({
       where: { id: replacementUserId },
       select: { id: true, name: true, email: true, isBanned: true, banReason: true, bannedUntil: true, telegramId: true, telegramUsername: true },
@@ -244,7 +281,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       return NextResponse.json({ error: reliabilityRestriction }, { status: 403 });
     }
 
-    if ((await tournamentRequiresTelegram(params.id)) && !hasTelegramRegistrationContact(replacementUser)) {
+    if (!hasTelegramRegistrationContact(replacementUser)) {
       return NextResponse.json(
         { error: "Для замены в этом турнире у нового игрока должен быть привязан Telegram с публичным @username." },
         { status: 403 },
@@ -309,9 +346,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
           groupId: before.groupId,
           seed: before.seed,
           stageSeed: before.stageSeed,
-          clubSlug: before.clubSlug,
-          clubName: before.clubName,
-          clubBadgePath: before.clubBadgePath,
+          ...clubAssignment,
           approvedAt: replacedAt,
           checkedInAt: before.checkedInAt,
         },
@@ -480,6 +515,26 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       return NextResponse.json({ error: "Выберите другого игрока для замены." }, { status: 400 });
     }
 
+    let clubAssignment;
+    try {
+      clubAssignment = resolveParticipantClub(body.clubSlug, await getAvailableClubs());
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : "Выберите клуб участника." }, { status: 400 });
+    }
+
+    const takenClub = await db.tournamentRegistration.findFirst({
+      where: {
+        tournamentId: params.id,
+        id: { not: member.registration.id },
+        clubSlug: clubAssignment.clubSlug,
+        status: { not: ParticipantStatus.REMOVED },
+      },
+      select: { id: true },
+    });
+    if (takenClub) {
+      return NextResponse.json({ error: "Этот клуб уже занят другим участником." }, { status: 409 });
+    }
+
     const replacementUser = await db.user.findUnique({
       where: { id: replacementUserId },
       select: { id: true, name: true, email: true, isBanned: true, banReason: true, bannedUntil: true, telegramId: true, telegramUsername: true },
@@ -500,7 +555,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       return NextResponse.json({ error: reliabilityRestriction }, { status: 403 });
     }
 
-    if ((await tournamentRequiresTelegram(params.id)) && !hasTelegramRegistrationContact(replacementUser)) {
+    if (!hasTelegramRegistrationContact(replacementUser)) {
       return NextResponse.json(
         { error: "Для замены в этом турнире у нового игрока должен быть привязан Telegram с публичным @username." },
         { status: 403 },
@@ -614,6 +669,11 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
         replacedMatchesCount = replaceableMatches.length;
       }
 
+      await tx.tournamentRegistration.update({
+        where: { id: registrationId },
+        data: { ...clubAssignment },
+      });
+
       return { replacedMatchesCount };
     });
 
@@ -714,7 +774,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       return NextResponse.json({ error: reliabilityRestriction }, { status: 403 });
     }
 
-    if ((await tournamentRequiresTelegram(params.id)) && !hasTelegramRegistrationContact(replacementUser)) {
+    if (!hasTelegramRegistrationContact(replacementUser)) {
       return NextResponse.json(
         { error: "Для добавления в этот турнир у нового игрока должен быть привязан Telegram с публичным @username." },
         { status: 403 },

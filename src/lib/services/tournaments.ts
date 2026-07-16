@@ -17,7 +17,8 @@ import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
 import { getAvailableClubs } from "@/lib/clubs";
 import { normalizeFormatBlueprint, type FormatBlueprint, type PlayoffSelectionRule } from "@/lib/format-blueprint";
-import { applyTournamentAbsenceRatingPenalty } from "@/lib/ratings";
+import { applyTournamentAbsenceRatingPenalty, getPlayerRatings } from "@/lib/ratings";
+import { orderParticipantsByRating } from "@/lib/tournament-participant-assignment";
 import { grantCurrentChampionProfileStatus } from "@/lib/profile-statuses";
 import { createNotification, createNotificationsForUsers } from "@/lib/services/notifications";
 import { publishTournamentCompletion } from "@/lib/services/telegram-publications";
@@ -2153,6 +2154,12 @@ export async function assignParticipantsToGroups(
       participants: {
         where: { status: ParticipantStatus.CONFIRMED },
         orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
+        include: {
+          rosterMembers: {
+            where: { status: TeamInviteStatus.ACCEPTED },
+            select: { userId: true },
+          },
+        },
       },
       stages: {
         where: { type: StageType.GROUP_STAGE },
@@ -2185,7 +2192,16 @@ export async function assignParticipantsToGroups(
       ),
     );
   } else {
-    const ordered = tournament.seedingMethod === "RANDOM" ? shuffle(tournament.participants) : tournament.participants;
+    let ordered = tournament.participants;
+    if (tournament.seedingMethod === "RANDOM") {
+      ordered = shuffle(tournament.participants);
+    } else if (tournament.seedingMethod === "RANKING") {
+      const ratings = await getPlayerRatings({ seasonId: tournament.seasonId });
+      ordered = orderParticipantsByRating(
+        tournament.participants,
+        new Map(ratings.map((row) => [row.playerId, row.rating])),
+      );
+    }
     await Promise.all(
       ordered.map((entry, index) =>
         db.tournamentRegistration.update({

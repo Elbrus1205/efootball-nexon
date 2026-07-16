@@ -91,6 +91,12 @@ async function ensureTournamentColumns() {
   await prisma.$executeRawUnsafe(
     'ALTER TABLE "Tournament" ADD COLUMN IF NOT EXISTS "lineupPhotoExampleUrl" TEXT',
   );
+  await prisma.$executeRawUnsafe(
+    'ALTER TABLE "Tournament" ALTER COLUMN "requireTelegramForRegistration" SET DEFAULT true',
+  );
+  await prisma.$executeRawUnsafe(
+    'UPDATE "Tournament" SET "requireTelegramForRegistration" = true WHERE "requireTelegramForRegistration" = false',
+  );
 }
 
 async function ensureReliabilityPenaltyReasons() {
