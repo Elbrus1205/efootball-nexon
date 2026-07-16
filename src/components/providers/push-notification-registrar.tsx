@@ -47,13 +47,7 @@ export function PushNotificationRegistrar() {
   const { status } = useSession();
 
   useEffect(() => {
-    if (
-      status !== "authenticated" ||
-      !("serviceWorker" in navigator) ||
-      !("PushManager" in window) ||
-      !("Notification" in window) ||
-      !isInstalledApp()
-    ) return;
+    if (!("serviceWorker" in navigator)) return;
 
     let cancelled = false;
     let removePermissionListener: (() => void) | null = null;
@@ -61,6 +55,12 @@ export function PushNotificationRegistrar() {
     const setup = async () => {
       const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
       if (cancelled) return;
+      if (
+        status !== "authenticated" ||
+        !("PushManager" in window) ||
+        !("Notification" in window) ||
+        !isInstalledApp()
+      ) return;
 
       if (Notification.permission === "granted") {
         await subscribeToPhoneNotifications(registration);

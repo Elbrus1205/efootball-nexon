@@ -7,10 +7,12 @@ import { RegulationsUpdateModal } from "@/components/legal/regulations-update-mo
 import { CookieConsent } from "@/components/legal/cookie-consent";
 import { TelegramMiniAppAutoLogin } from "@/components/telegram/telegram-mini-app-auto-login";
 import { PushNotificationRegistrar } from "@/components/providers/push-notification-registrar";
+import { AppLaunchSplash } from "@/components/providers/app-launch-splash";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
+      <AppLaunchSplash />
       {children}
       <PushNotificationRegistrar />
       <TelegramMiniAppAutoLogin />

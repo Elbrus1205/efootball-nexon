@@ -1,0 +1,89 @@
+"use client";
+
+import Image from "next/image";
+import { useEffect, useState } from "react";
+import styles from "./app-launch-splash.module.css";
+
+type SplashPhase = "loading" | "leaving" | "hidden";
+
+function delay(milliseconds: number) {
+  return new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+function pageLoaded() {
+  if (document.readyState === "complete") return Promise.resolve();
+  return new Promise<void>((resolve) => window.addEventListener("load", () => resolve(), { once: true }));
+}
+
+export function AppLaunchSplash() {
+  const [phase, setPhase] = useState<SplashPhase>("loading");
+  const [forceVisible, setForceVisible] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(display-mode: standalone)");
+    const sourceIsAndroid = new URLSearchParams(window.location.search).get("source") === "android";
+    const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
+    const isInstalled = sourceIsAndroid || media.matches || navigatorWithStandalone.standalone === true;
+
+    if (!isInstalled) {
+      setPhase("hidden");
+      return;
+    }
+
+    if (sourceIsAndroid || media.matches || navigatorWithStandalone.standalone === true) {
+      localStorage.setItem("efootball-nexon-installed-app", "true");
+    }
+
+    setForceVisible(true);
+    let cancelled = false;
+    let leaveTimer: number | undefined;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const fontReady = document.fonts?.ready ?? Promise.resolve();
+    const essentialsReady = Promise.allSettled([
+      pageLoaded(),
+      fontReady,
+      delay(reducedMotion ? 180 : 1050),
+    ]);
+    const maximumWait = delay(4500);
+
+    Promise.race([essentialsReady, maximumWait]).then(() => {
+      if (cancelled) return;
+      setPhase("leaving");
+      leaveTimer = window.setTimeout(() => setPhase("hidden"), reducedMotion ? 40 : 430);
+    });
+
+    return () => {
+      cancelled = true;
+      if (leaveTimer) window.clearTimeout(leaveTimer);
+    };
+  }, []);
+
+  if (phase === "hidden") return null;
+
+  return (
+    <div
+      className={`${styles.splash} ${forceVisible ? styles.forceVisible : ""} ${phase === "leaving" ? styles.leaving : ""}`}
+      role="status"
+      aria-live="polite"
+      aria-label="Загрузка eFootball Nexon"
+      aria-busy={phase === "loading"}
+    >
+      <div className={styles.grid} aria-hidden="true" />
+      <div className={styles.orbit} aria-hidden="true" />
+      <div className={styles.content}>
+        <div className={styles.iconFrame}>
+          <span className={styles.iconGlow} aria-hidden="true" />
+          <Image src="/icons/icon-192.png" alt="" width={112} height={112} priority className={styles.icon} />
+          <span className={styles.scan} aria-hidden="true" />
+        </div>
+        <div className={styles.brand}>
+          <strong>eFootball</strong>
+          <span>Nexon</span>
+        </div>
+        <p>Турнирная платформа</p>
+        <div className={styles.progress} aria-hidden="true"><span /></div>
+        <small>Подготавливаем приложение</small>
+      </div>
+    </div>
+  );
+}

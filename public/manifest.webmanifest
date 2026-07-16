@@ -1,16 +1,22 @@
 {
   "name": "eFootball Nexon",
   "short_name": "Nexon",
+  "id": "/",
   "description": "Профессиональная платформа eFootball Nexon для турниров, матчей, рейтингов и админского управления.",
   "start_url": "/?source=android",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#080d16",
   "theme_color": "#080d16",
   "categories": ["sports", "games", "entertainment"],
   "lang": "ru",
   "dir": "ltr",
+  "prefer_related_applications": false,
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
   "icons": [
     {
       "src": "/icons/icon-192.png",

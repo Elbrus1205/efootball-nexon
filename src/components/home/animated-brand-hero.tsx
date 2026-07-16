@@ -9,6 +9,7 @@ import {
   useSpring,
 } from "motion/react";
 import s from "@/app/home.module.css";
+import { InstallAppButton } from "@/components/home/install-app-button";
 
 const efootballLetters = Array.from("EFOOTBALL");
 
@@ -138,6 +139,7 @@ export function AnimatedBrandHero({ playHref, telegramHref, isSignedIn }: Animat
             {isSignedIn ? "Смотреть турниры" : "Участвовать в турнире"}
             <ChevronRight aria-hidden="true" />
           </Link>
+          <InstallAppButton />
           <Link href={telegramHref} target="_blank" rel="noreferrer" className={s.textButton}>
             Telegram-сообщество <ArrowUpRight aria-hidden="true" />
           </Link>
