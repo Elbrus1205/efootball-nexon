@@ -56,7 +56,7 @@ export const metadata: Metadata = {
   description:
     "Платформа для турниров по eFootball Mobile с регистрацией, профилями, турнирными сетками, модерацией результатов и realtime-уведомлениями.",
   applicationName: "eFootball Nexon",
-  manifest: "/manifest.webmanifest",
+  manifest: "/manifest.webmanifest?v=20260717",
   appleWebApp: {
     capable: true,
     title: "eFootball Nexon",
@@ -64,10 +64,11 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/icons/efootball-nexon-app-192-v2.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/efootball-nexon-app-512-v2.png", sizes: "512x512", type: "image/png" },
     ],
-    apple: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+    shortcut: ["/icons/efootball-nexon-app-192-v2.png"],
+    apple: [{ url: "/icons/efootball-nexon-app-192-v2.png", sizes: "192x192", type: "image/png" }],
   },
 };
 

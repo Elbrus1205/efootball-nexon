@@ -9,8 +9,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title || "eFootball Nexon", {
       body: payload.body || "Новое уведомление",
-      icon: payload.icon || "/icons/icon-192.png",
-      badge: payload.badge || "/icons/icon-192.png",
+      icon: payload.icon || "/icons/efootball-nexon-app-192-v2.png",
+      badge: payload.badge || "/icons/efootball-nexon-app-192-v2.png",
       tag: payload.tag || "efootball-nexon",
       data: { url: payload.url || "/" },
     }),

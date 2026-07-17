@@ -73,7 +73,14 @@ export function AppLaunchSplash() {
       <div className={styles.content}>
         <div className={styles.iconFrame}>
           <span className={styles.iconGlow} aria-hidden="true" />
-          <Image src="/icons/icon-192.png" alt="" width={112} height={112} priority className={styles.icon} />
+          <Image
+            src="/icons/efootball-nexon-maskable-512-v2.png"
+            alt=""
+            width={112}
+            height={112}
+            priority
+            className={styles.icon}
+          />
           <span className={styles.scan} aria-hidden="true" />
         </div>
         <div className={styles.brand}>

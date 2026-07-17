@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import sharp from "sharp";
@@ -29,14 +29,36 @@ test("manifest describes a stable standalone Android identity", () => {
 
   assert.equal(manifest.id, "/");
   assert.equal(manifest.display, "standalone");
-  assert.ok(manifest.icons?.some((icon) => icon.src === "/icons/maskable-512.png" && icon.purpose === "maskable"));
+  assert.ok(manifest.icons?.some((icon) => icon.src === "/icons/efootball-nexon-app-512-v2.png" && icon.purpose === "any"));
+  assert.ok(manifest.icons?.some((icon) => icon.src === "/icons/efootball-nexon-maskable-512-v2.png" && icon.purpose === "maskable"));
 });
 
 test("maskable launcher icon is full-bleed and opaque", async () => {
-  const metadata = await sharp(path.join(root, "public", "icons", "maskable-512.png")).metadata();
+  const metadata = await sharp(path.join(root, "public", "icons", "efootball-nexon-maskable-512-v2.png")).metadata();
   assert.equal(metadata.width, 512);
   assert.equal(metadata.height, 512);
   assert.equal(metadata.hasAlpha, false);
+});
+
+test("site and installed app use the new cache-busted icon set", () => {
+  const layout = read("src", "app", "layout.tsx");
+  const provider = read("src", "components", "providers", "app-launch-splash.tsx");
+
+  assert.equal(existsSync(path.join(root, "src", "app", "favicon.ico")), false, "legacy favicon must not override the new site icon");
+  assert.match(layout, /efootball-nexon-app-192-v2\.png/);
+  assert.match(layout, /efootball-nexon-app-512-v2\.png/);
+  assert.match(provider, /efootball-nexon-maskable-512-v2\.png/);
+});
+
+test("full-screen launch animation belongs only to the installed app", () => {
+  const styles = read("src", "components", "providers", "app-launch-splash.module.css");
+  const routeLoading = read("src", "app", "loading.tsx");
+
+  assert.doesNotMatch(routeLoading, /app-launch-splash|routeSplash|<Image/);
+  assert.match(routeLoading, /return null/);
+  assert.match(styles, /\.splash\s*\{[\s\S]*?display:\s*none/);
+  assert.match(styles, /@media\s*\(display-mode:\s*standalone\)[\s\S]*?\.splash\s*\{\s*display:\s*grid/);
+  assert.match(styles, /background-color:\s*#080d16/);
 });
 
 test("home page offers the trusted browser install flow instead of a raw APK download", () => {
