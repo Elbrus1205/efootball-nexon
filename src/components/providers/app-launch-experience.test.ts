@@ -14,7 +14,7 @@ test("installed Android app gets a branded startup screen until essential assets
 
   assert.match(provider, /document\.fonts\?\.ready/);
   assert.match(provider, /display-mode: standalone/);
-  assert.match(provider, /efootball-nexon-installed-app/);
+  assert.doesNotMatch(provider, /source\) === "android"|source=android|localStorage/);
   assert.match(provider, /aria-label="Загрузка eFootball Nexon"/);
   assert.match(styles, /prefers-reduced-motion: reduce/);
   assert.match(appProviders, /<AppLaunchSplash \/>/);
@@ -28,6 +28,7 @@ test("manifest describes a stable standalone Android identity", () => {
   };
 
   assert.equal(manifest.id, "/");
+  assert.equal(manifest.start_url, "/");
   assert.equal(manifest.display, "standalone");
   assert.ok(manifest.icons?.some((icon) => icon.src === "/icons/efootball-nexon-app-512-v2.png" && icon.purpose === "any"));
   assert.ok(manifest.icons?.some((icon) => icon.src === "/icons/efootball-nexon-maskable-512-v2.png" && icon.purpose === "maskable"));
@@ -73,4 +74,5 @@ test("home page offers the trusted browser install flow instead of a raw APK dow
     registrar.indexOf('serviceWorker.register("/sw.js"') < registrar.indexOf('status !== "authenticated"'),
     "service worker must be registered before authentication is required",
   );
+  assert.doesNotMatch(registrar, /source=android|localStorage/);
 });

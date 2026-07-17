@@ -5,12 +5,8 @@ import { useSession } from "next-auth/react";
 
 function isInstalledApp() {
   const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
-  const launchedFromAndroid = new URLSearchParams(window.location.search).get("source") === "android";
-  if (launchedFromAndroid) localStorage.setItem("efootball-nexon-installed-app", "true");
 
   return (
-    launchedFromAndroid ||
-    localStorage.getItem("efootball-nexon-installed-app") === "true" ||
     window.matchMedia("(display-mode: standalone)").matches ||
     navigatorWithStandalone.standalone === true
   );

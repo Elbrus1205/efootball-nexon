@@ -21,17 +21,12 @@ export function AppLaunchSplash() {
 
   useEffect(() => {
     const media = window.matchMedia("(display-mode: standalone)");
-    const sourceIsAndroid = new URLSearchParams(window.location.search).get("source") === "android";
     const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
-    const isInstalled = sourceIsAndroid || media.matches || navigatorWithStandalone.standalone === true;
+    const isInstalled = media.matches || navigatorWithStandalone.standalone === true;
 
     if (!isInstalled) {
       setPhase("hidden");
       return;
-    }
-
-    if (sourceIsAndroid || media.matches || navigatorWithStandalone.standalone === true) {
-      localStorage.setItem("efootball-nexon-installed-app", "true");
     }
 
     setForceVisible(true);

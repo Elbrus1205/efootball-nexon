@@ -3,7 +3,7 @@
   "short_name": "Nexon",
   "id": "/",
   "description": "Профессиональная платформа eFootball Nexon для турниров, матчей, рейтингов и админского управления.",
-  "start_url": "/?source=android",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],

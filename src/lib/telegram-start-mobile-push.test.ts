@@ -29,13 +29,15 @@ test("the website notification bell and inbox are removed", () => {
   assert.doesNotMatch(navbar, /db\.notification\.count/);
 });
 
-test("the installed Android app and PWA register phone push notifications", () => {
+test("the installed PWA registers phone push notifications only in standalone mode", () => {
   const providers = read("src", "components", "providers", "app-providers.tsx");
   const registrar = read("src", "components", "providers", "push-notification-registrar.tsx");
   const notifications = read("src", "lib", "services", "notifications.ts");
 
   assert.match(providers, /PushNotificationRegistrar/);
-  assert.match(registrar, /source.*android/);
+  assert.match(registrar, /display-mode: standalone/);
+  assert.match(registrar, /navigatorWithStandalone\.standalone === true/);
+  assert.doesNotMatch(registrar, /source=android|localStorage/);
   assert.match(registrar, /serviceWorker\.register\("\/sw\.js"/);
   assert.match(notifications, /sendWebPushNotification/);
   assert.doesNotMatch(notifications, /broadcastNotification|Pusher/);
