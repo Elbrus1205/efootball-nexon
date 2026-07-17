@@ -54,9 +54,13 @@ test("site and installed app use the new cache-busted icon set", () => {
 test("full-screen launch animation belongs only to the installed app", () => {
   const styles = read("src", "components", "providers", "app-launch-splash.module.css");
   const routeLoading = read("src", "app", "loading.tsx");
+  const routeLoadingStyles = read("src", "app", "loading.module.css");
 
   assert.doesNotMatch(routeLoading, /app-launch-splash|routeSplash|<Image/);
-  assert.match(routeLoading, /return null/);
+  assert.match(routeLoading, /Подождите/);
+  assert.match(routeLoading, /Загружаем страницу/);
+  assert.match(routeLoadingStyles, /prefers-reduced-motion: reduce/);
+  assert.match(routeLoadingStyles, /safe-area-inset/);
   assert.match(styles, /\.splash\s*\{[\s\S]*?display:\s*none/);
   assert.match(styles, /@media\s*\(display-mode:\s*standalone\)[\s\S]*?\.splash\s*\{\s*display:\s*grid/);
   assert.match(styles, /background-color:\s*#080d16/);

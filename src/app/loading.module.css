@@ -1,0 +1,174 @@
+.screen {
+  min-height: calc(100dvh - 72px);
+  display: grid;
+  place-items: center;
+  padding: max(28px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+  background:
+    linear-gradient(90deg, rgba(33, 241, 168, 0.07) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(33, 241, 168, 0.06) 1px, transparent 1px),
+    #171717;
+  background-size: 44px 44px;
+  color: #f4faf7;
+}
+
+.panel {
+  width: min(100%, 420px);
+  display: grid;
+  justify-items: center;
+  gap: 22px;
+  padding: clamp(28px, 7vw, 42px);
+  border: 1px solid rgba(33, 241, 168, 0.24);
+  border-radius: 8px;
+  background: rgba(29, 29, 29, 0.94);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  text-align: center;
+}
+
+.mark {
+  position: relative;
+  width: 86px;
+  height: 86px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(33, 241, 168, 0.44);
+  border-radius: 8px;
+  background: #101010;
+  color: #21f1a8;
+  font-family: var(--font-brand-display), var(--font-efootball-sans), sans-serif;
+  text-transform: uppercase;
+}
+
+.mark::before {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border: 1px solid rgba(33, 241, 168, 0.22);
+}
+
+.mark::after {
+  content: "";
+  position: absolute;
+  inset: -55% -20%;
+  background: linear-gradient(105deg, transparent 36%, rgba(119, 248, 203, 0.28), transparent 64%);
+  transform: translateX(-60%) rotate(10deg);
+  animation: sweep 1.8s ease-in-out infinite;
+}
+
+.mark span,
+.mark strong {
+  position: relative;
+  z-index: 1;
+  line-height: 1;
+}
+
+.mark span {
+  align-self: end;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.mark strong {
+  align-self: start;
+  margin-top: 2px;
+  color: #f4faf7;
+  font-size: 2.05rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.copy {
+  display: grid;
+  gap: 8px;
+}
+
+.copy p,
+.copy h2,
+.copy span {
+  margin: 0;
+}
+
+.copy p {
+  color: #21f1a8;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.copy h2 {
+  color: #f4faf7;
+  font-family: var(--font-brand-display), var(--font-efootball-sans), sans-serif;
+  font-size: clamp(1.6rem, 7vw, 2.2rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.copy span {
+  color: #aab6b2;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.progress {
+  width: min(100%, 260px);
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(244, 250, 247, 0.1);
+}
+
+.progress span {
+  display: block;
+  width: 42%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, #21f1a8, #77f8cb);
+  animation: progress 1.15s ease-in-out infinite;
+}
+
+@keyframes sweep {
+  from {
+    transform: translateX(-65%) rotate(10deg);
+  }
+
+  to {
+    transform: translateX(65%) rotate(10deg);
+  }
+}
+
+@keyframes progress {
+  from {
+    transform: translateX(-120%);
+  }
+
+  to {
+    transform: translateX(240%);
+  }
+}
+
+@media (max-width: 480px) {
+  .screen {
+    min-height: calc(100dvh - 62px);
+  }
+
+  .panel {
+    gap: 18px;
+    padding: 26px 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mark::after,
+  .progress span {
+    animation: none;
+  }
+
+  .progress span {
+    width: 100%;
+    transform: none;
+  }
+}
