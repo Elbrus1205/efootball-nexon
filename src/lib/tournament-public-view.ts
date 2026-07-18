@@ -3,6 +3,7 @@ import {
   ParticipantStatus,
   StageStatus,
   TournamentParticipantMode,
+  TournamentStatus,
 } from "@prisma/client";
 import { getPlayerDisplayName } from "@/lib/player-name";
 
@@ -70,6 +71,10 @@ export function participantModeLabel(mode: TournamentParticipantMode, rosterSize
   if (mode === TournamentParticipantMode.SINGLE) return "1x1";
   if (mode === TournamentParticipantMode.COOP) return `${rosterSize}x${rosterSize}`;
   return `Команды ${rosterSize}`;
+}
+
+export function shouldShowOpenMyMatchesAction(status: TournamentStatus, alreadyRegistered: boolean) {
+  return alreadyRegistered && status !== TournamentStatus.IN_PROGRESS && status !== TournamentStatus.COMPLETED;
 }
 
 export function stagePresentationState(status: StageStatus): TournamentStagePresentationState {

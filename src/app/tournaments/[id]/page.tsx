@@ -38,6 +38,7 @@ import {
   getTournamentTabs,
   isTournamentTabValue as isPublicTournamentTabValue,
   participantModeLabel as publicParticipantModeLabel,
+  shouldShowOpenMyMatchesAction,
   stagePresentationState,
 } from "@/lib/tournament-public-view";
 
@@ -1166,9 +1167,9 @@ export default async function TournamentDetailsPage(
       <Clock3 className="h-4 w-4" />
       Заявка на проверке
     </Button>
-  ) : alreadyRegistered ? (
+  ) : shouldShowOpenMyMatchesAction(tournament.status, alreadyRegistered) ? (
     <Button size="lg" asChild><a href={`/tournaments/${tournament.id}?tab=my-matches`}>Открыть мои матчи</a></Button>
-  ) : isRegistrationOpen && !isLoggedIn ? (
+  ) : alreadyRegistered ? null : isRegistrationOpen && !isLoggedIn ? (
     <Button size="lg" asChild><a href={`/login?callbackUrl=/tournaments/${tournament.id}`}>Войти и участвовать</a></Button>
   ) : isRegistrationOpen && needsTelegramConnection ? (
     <Button size="lg" asChild><a href="/dashboard/security">Привязать Telegram</a></Button>

@@ -5,7 +5,7 @@ import type { PlayoffType } from "@prisma/client";
 import { ChangeEvent, useState } from "react";
 import Image from "next/image";
 import { Radio, Send, UsersRound } from "lucide-react";
-import { seedingMethodLabel, sortRuleLabel, tournamentStatusLabel } from "@/lib/admin-display";
+import { selectableTournamentSeedingMethods, seedingMethodLabel, sortRuleLabel, tournamentStatusLabel } from "@/lib/admin-display";
 import { FormatBlueprintBuilder } from "@/components/admin/format-blueprint-builder";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -494,7 +494,7 @@ export function TournamentBuilderForm({
               defaultValue={initialValues?.seedingMethod ?? SeedingMethod.MANUAL}
               className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white"
             >
-              {Object.values(SeedingMethod).map((method) => (
+              {selectableTournamentSeedingMethods.map((method) => (
                 <option key={method} value={method}>
                   {seedingMethodLabel[method]}
                 </option>

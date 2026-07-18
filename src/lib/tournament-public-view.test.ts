@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { MatchStatus, ParticipantStatus, StageStatus, TournamentParticipantMode } from "@prisma/client";
+import { MatchStatus, ParticipantStatus, StageStatus, TournamentParticipantMode, TournamentStatus } from "@prisma/client";
 import {
   buildLeagueTable,
   getTournamentTabs,
   isTournamentTabValue,
   participantModeLabel,
+  shouldShowOpenMyMatchesAction,
   stagePresentationState,
 } from "@/lib/tournament-public-view";
 
@@ -48,6 +49,13 @@ test("maps every persisted stage status to a distinct presentation state", () =>
   assert.equal(stagePresentationState(StageStatus.ACTIVE), "active");
   assert.equal(stagePresentationState(StageStatus.PENDING), "upcoming");
   assert.equal(stagePresentationState(StageStatus.DRAFT), "locked");
+});
+
+test("hides the open-my-matches hero action after the tournament starts", () => {
+  assert.equal(shouldShowOpenMyMatchesAction(TournamentStatus.REGISTRATION_OPEN, true), true);
+  assert.equal(shouldShowOpenMyMatchesAction(TournamentStatus.IN_PROGRESS, true), false);
+  assert.equal(shouldShowOpenMyMatchesAction(TournamentStatus.COMPLETED, true), false);
+  assert.equal(shouldShowOpenMyMatchesAction(TournamentStatus.IN_PROGRESS, false), false);
 });
 
 test("calculates standings and preserves deterministic tie ordering", () => {

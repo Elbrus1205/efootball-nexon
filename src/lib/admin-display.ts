@@ -76,6 +76,12 @@ export const seedingMethodLabel: Record<SeedingMethod, string> = {
   GROUP_RESULTS: "По итогам групп",
 };
 
+export const selectableTournamentSeedingMethods = [
+  SeedingMethod.MANUAL,
+  SeedingMethod.RANDOM,
+  SeedingMethod.RANKING,
+] as const satisfies readonly SeedingMethod[];
+
 export const sortRuleLabel: Record<SortRule, string> = {
   POINTS: "Очки",
   GOAL_DIFFERENCE: "Разница мячей",

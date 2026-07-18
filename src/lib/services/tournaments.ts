@@ -5,6 +5,7 @@ import {
   NotificationType,
   ParticipantStatus,
   PlayoffType,
+  SeedingMethod,
   StageStatus,
   StageType,
   TeamInviteStatus,
@@ -19,7 +20,11 @@ import { getAvailableClubs } from "@/lib/clubs";
 import { normalizeFormatBlueprint, type FormatBlueprint, type PlayoffSelectionRule } from "@/lib/format-blueprint";
 import { applyTournamentAbsenceRatingPenalty, getPlayerRatings } from "@/lib/ratings";
 import { invalidatePlayerRatings } from "@/lib/ratings-cache";
-import { orderParticipantsByRating } from "@/lib/tournament-participant-assignment";
+import {
+  assignParticipantsByGroupCapacity,
+  orderParticipantsByRating,
+  shuffleParticipants,
+} from "@/lib/tournament-participant-assignment";
 import { grantCurrentChampionProfileStatus } from "@/lib/profile-statuses";
 import { createNotification, createNotificationsForUsers } from "@/lib/services/notifications";
 import { publishTournamentCompletion } from "@/lib/services/telegram-publications";
@@ -208,6 +213,34 @@ function seededShuffle<T>(items: T[], seed: string) {
   }
 
   return shuffled;
+}
+
+type TournamentSeedParticipant = {
+  userId: string;
+  rosterMembers: readonly { userId: string }[];
+};
+
+async function orderTournamentParticipantsForSeeding<T extends TournamentSeedParticipant>(
+  participants: readonly T[],
+  seedingMethod: SeedingMethod,
+  seasonId: string | null,
+) {
+  if (seedingMethod === SeedingMethod.RANDOM) {
+    return { ordered: shuffleParticipants(participants), shouldPersistSeeds: true };
+  }
+
+  if (seedingMethod === SeedingMethod.RANKING) {
+    const ratings = await getPlayerRatings({ seasonId });
+    return {
+      ordered: orderParticipantsByRating(
+        participants,
+        new Map(ratings.map((row) => [row.playerId, row.rating])),
+      ),
+      shouldPersistSeeds: true,
+    };
+  }
+
+  return { ordered: [...participants], shouldPersistSeeds: false };
 }
 
 function pairEntriesAcrossGroups(leftEntries: GroupPlayoffEntry[], rightEntries: GroupPlayoffEntry[], seed: string) {
@@ -740,10 +773,6 @@ function parseCustomBracketSettings(value: unknown): CustomPlayoffSettings | nul
     upperEntriesCount: Math.max(0, Number(data.upperEntriesCount ?? 0) || 0),
     lowerEntriesCount: Math.max(0, Number(data.lowerEntriesCount ?? 0) || 0),
   };
-}
-
-function shuffle<T>(items: T[]) {
-  return [...items].sort(() => Math.random() - 0.5);
 }
 
 function getPlayerName(user?: { name?: string | null; telegramUsername?: string | null; email?: string | null } | null) {
@@ -2177,8 +2206,13 @@ export async function assignParticipantsToGroups(
   const groups = groupStage.groups;
   if (!groups.length) throw new Error("No groups configured");
 
-  const capacityLimit = groups.reduce((total, group) => total + (group.capacity ?? groupStage.participantsPerGroup ?? 0), 0);
-  if (capacityLimit > 0 && tournament.participants.length > capacityLimit) {
+  const fallbackGroupCapacity = groupStage.participantsPerGroup ?? Math.max(1, Math.ceil(tournament.participants.length / groups.length));
+  const seedGroups = groups.map((group) => ({
+    id: group.id,
+    capacity: group.capacity ?? fallbackGroupCapacity,
+  }));
+  const capacityLimit = seedGroups.reduce((total, group) => total + group.capacity, 0);
+  if (tournament.participants.length > capacityLimit) {
     throw new Error(`В группах есть место только для ${capacityLimit} участников.`);
   }
 
@@ -2193,21 +2227,22 @@ export async function assignParticipantsToGroups(
       ),
     );
   } else {
-    let ordered = tournament.participants;
-    if (tournament.seedingMethod === "RANDOM") {
-      ordered = shuffle(tournament.participants);
-    } else if (tournament.seedingMethod === "RANKING") {
-      const ratings = await getPlayerRatings({ seasonId: tournament.seasonId });
-      ordered = orderParticipantsByRating(
-        tournament.participants,
-        new Map(ratings.map((row) => [row.playerId, row.rating])),
-      );
-    }
+    const { ordered, shouldPersistSeeds } = await orderTournamentParticipantsForSeeding(
+      tournament.participants,
+      tournament.seedingMethod,
+      tournament.seasonId,
+    );
+    const assignments = assignParticipantsByGroupCapacity(ordered, seedGroups, {
+      preserveExisting: !shouldPersistSeeds,
+    });
     await Promise.all(
-      ordered.map((entry, index) =>
+      assignments.map((assignment) =>
         db.tournamentRegistration.update({
-          where: { id: entry.id },
-          data: { groupId: groups[index % groups.length]?.id ?? null },
+          where: { id: assignment.participant.id },
+          data: {
+            groupId: assignment.groupId,
+            ...(shouldPersistSeeds ? { seed: assignment.seed } : {}),
+          },
         }),
       ),
     );
@@ -2581,7 +2616,7 @@ export async function assignRandomClubsToTournament(tournamentId: string) {
   if (!clubs.length) throw new Error("No club badges found in public/club-badges.");
 
   const usedClubs = tournament.participants.map((item) => item.clubSlug).filter(Boolean) as string[];
-  const freeClubs = shuffle(clubs.filter((club) => !usedClubs.includes(club.slug)));
+  const freeClubs = shuffleParticipants(clubs.filter((club) => !usedClubs.includes(club.slug)));
   const unassigned = tournament.participants.filter((item) => !item.clubSlug);
 
   if (freeClubs.length < unassigned.length) {
@@ -3260,7 +3295,13 @@ export async function startTournament(tournamentId: string) {
     include: {
       participants: {
         where: { status: ParticipantStatus.CONFIRMED },
-        include: { user: true },
+        include: {
+          user: true,
+          rosterMembers: {
+            where: { status: TeamInviteStatus.ACCEPTED },
+            select: { userId: true },
+          },
+        },
         orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
       },
       matches: true,
@@ -3296,6 +3337,22 @@ export async function startTournament(tournamentId: string) {
 
   if (requiresGroupAssignments) {
     await assignParticipantsToGroups(tournamentId, { mode: "auto" });
+  } else {
+    const { ordered, shouldPersistSeeds } = await orderTournamentParticipantsForSeeding(
+      tournament.participants,
+      tournament.seedingMethod,
+      tournament.seasonId,
+    );
+    if (shouldPersistSeeds) {
+      await Promise.all(
+        ordered.map((participant, index) =>
+          db.tournamentRegistration.update({
+            where: { id: participant.id },
+            data: { seed: index + 1 },
+          }),
+        ),
+      );
+    }
   }
 
   const playoffStage = await db.tournamentStage.findFirst({
