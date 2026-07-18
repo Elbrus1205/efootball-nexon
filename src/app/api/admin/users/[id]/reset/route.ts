@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getRequestBaseUrl } from "@/lib/affiliate";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { invalidatePlayerRatings } from "@/lib/ratings-cache";
 
 const PLAYER_RATING_RESET_PREFIX = "playerRatingResetAt:";
 const PLAYER_STATS_RESET_PREFIX = "playerStatsResetAt:";
@@ -84,6 +85,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   });
 
   revalidatePath("/admin/users");
+  if (shouldResetRating || shouldResetStats) invalidatePlayerRatings();
   revalidatePath("/ratings");
   revalidatePath(`/players/${targetUser.publicId}`);
   revalidatePath(`/players/${targetUser.id}`);

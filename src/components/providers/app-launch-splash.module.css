@@ -15,12 +15,12 @@
   background-color: #080d16;
   color: #f4faf7;
   opacity: 1;
-  transition: opacity 380ms ease-in, filter 380ms ease-in;
+  transition: opacity 120ms ease-out;
 }
 
 .forceVisible { display: grid; }
 
-.leaving { opacity: 0; filter: blur(8px); pointer-events: none; }
+.leaving { opacity: 0; pointer-events: none; }
 
 .grid {
   position: absolute;

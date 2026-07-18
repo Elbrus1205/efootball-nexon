@@ -65,12 +65,16 @@ export async function normalizeProfileUploadImage(folder: StorageFolder, bytes: 
   if (folder === "avatars") return normalizeAvatarImage(bytes, contentType);
   if (folder === "banners") return normalizeBannerImage(bytes, contentType);
   if (folder === "lineups") return normalizeBannerImage(bytes, contentType);
+  if (folder === "tournaments") return normalizeBannerImage(bytes, contentType);
+  if (folder === "divisions") return normalizeBannerImage(bytes, contentType);
+  if (folder === "faq" && contentType !== "application/pdf") return normalizeBannerImage(bytes, contentType);
   return null;
 }
 
 async function fetchTelegramImageBytes(src: string) {
   const response = await fetch(src, {
     cache: "no-store",
+    signal: AbortSignal.timeout(8_000),
     headers: {
       "User-Agent": "Mozilla/5.0 efootball-nexon media cache",
       Accept: "image/avif,image/webp,image/png,image/jpeg,image/*,*/*;q=0.8",

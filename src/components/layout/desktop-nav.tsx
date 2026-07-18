@@ -21,6 +21,7 @@ export function DesktopNav({ links }: { links: DesktopNavLink[] }) {
           <Link
             key={link.href}
             href={link.href}
+            prefetch={false}
             aria-current={active ? "page" : undefined}
             className={cn(
               "group relative isolate overflow-hidden rounded-full px-3.5 py-2 text-[13px] font-bold leading-none text-zinc-300 transition-[color,background-color,box-shadow,transform] duration-300 ease-out hover:-translate-y-0.5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21F1A8]/60 xl:px-4",

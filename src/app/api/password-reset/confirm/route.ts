@@ -1,6 +1,7 @@
 import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { enforceRateLimit } from "@/lib/request-rate-limit";
 
 export async function POST(request: Request) {
   const { token, password } = (await request.json()) as { token: string; password: string };
@@ -12,6 +13,9 @@ export async function POST(request: Request) {
   if (typeof password !== "string" || password.length < 8) {
     return NextResponse.json({ error: "Пароль должен содержать минимум 8 символов." }, { status: 400 });
   }
+
+  const limited = enforceRateLimit(request, "password-reset-confirm", { limit: 10, windowMs: 15 * 60 * 1_000 }, token);
+  if (limited) return limited;
 
   const record = await db.passwordResetToken.findUnique({ where: { token } });
   if (!record || record.expiresAt < new Date() || record.usedAt) {

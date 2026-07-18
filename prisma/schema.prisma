@@ -235,89 +235,89 @@ enum DivisionSeasonStatus {
 }
 
 model User {
-  id                  String                   @id @default(cuid())
-  publicId            String                   @unique
-  name                String?
-  nameUpdatedAt       DateTime?
-  email               String?                  @unique
-  emailVerified       DateTime?
-  image               String?
-  bannerImage         String?
-  bio                 String?                  @db.Text
-  passwordHash        String?
-  favoriteTeam        String?
-  timeZone            String?
-  timeZoneUpdatedAt   DateTime?
-  telegramId          String?                  @unique
-  telegramUsername    String?
-  telegram2faEnabled  Boolean                  @default(false)
-  telegram2faEnabledAt DateTime?
-  vkId                String?                  @unique
-  role                UserRole                 @default(PLAYER)
-  isBanned            Boolean                  @default(false)
-  banReason           String?                  @db.Text
-  bannedUntil         DateTime?
-  bannedAt            DateTime?
-  legalAcceptedAt     DateTime?
-  legalAcceptedVersion String?
-  legalAcceptedIp     String?
-  legalAcceptedUserAgent String?               @db.Text
-  dateOfBirth         DateTime?                 @db.Date
-  termsAcceptedAt     DateTime?
-  termsAcceptedVersion String?
-  personalDataConsentAt DateTime?
-  personalDataConsentVersion String?
-  personalDataConsentIp String?
-  personalDataConsentUserAgent String?          @db.Text
-  publicDataConsentAt DateTime?
-  publicDataConsentVersion String?
-  publicDataConsentIp String?
-  publicDataConsentUserAgent String?            @db.Text
-  publicDataConsentCategories String[]          @default([])
-  guardianFullName    String?
-  guardianEmail       String?
-  guardianConsentAt   DateTime?
-  guardianConsentVersion String?
-  guardianConsentIp   String?
-  guardianConsentUserAgent String?              @db.Text
-  reliabilityScore    Int                      @default(100)
-  reliabilityRestrictedUntil DateTime?
-  reliabilityConfirmStreak Int                 @default(0)
-  reliabilityCleanMatchStreak Int              @default(0)
-  createdAt           DateTime                 @default(now())
-  updatedAt           DateTime                 @updatedAt
-  accounts            Account[]
-  sessions            Session[]
-  tournamentEntries   TournamentRegistration[]
-  tournamentRosterMemberships TournamentRegistrationMember[]
-  tournamentRegistrationApplications TournamentRegistrationApplication[] @relation("registrationApplicant")
+  id                                         String                              @id @default(cuid())
+  publicId                                   String                              @unique
+  name                                       String?
+  nameUpdatedAt                              DateTime?
+  email                                      String?                             @unique
+  emailVerified                              DateTime?
+  image                                      String?
+  bannerImage                                String?
+  bio                                        String?                             @db.Text
+  passwordHash                               String?
+  favoriteTeam                               String?
+  timeZone                                   String?
+  timeZoneUpdatedAt                          DateTime?
+  telegramId                                 String?                             @unique
+  telegramUsername                           String?
+  telegram2faEnabled                         Boolean                             @default(false)
+  telegram2faEnabledAt                       DateTime?
+  vkId                                       String?                             @unique
+  role                                       UserRole                            @default(PLAYER)
+  isBanned                                   Boolean                             @default(false)
+  banReason                                  String?                             @db.Text
+  bannedUntil                                DateTime?
+  bannedAt                                   DateTime?
+  legalAcceptedAt                            DateTime?
+  legalAcceptedVersion                       String?
+  legalAcceptedIp                            String?
+  legalAcceptedUserAgent                     String?                             @db.Text
+  dateOfBirth                                DateTime?                           @db.Date
+  termsAcceptedAt                            DateTime?
+  termsAcceptedVersion                       String?
+  personalDataConsentAt                      DateTime?
+  personalDataConsentVersion                 String?
+  personalDataConsentIp                      String?
+  personalDataConsentUserAgent               String?                             @db.Text
+  publicDataConsentAt                        DateTime?
+  publicDataConsentVersion                   String?
+  publicDataConsentIp                        String?
+  publicDataConsentUserAgent                 String?                             @db.Text
+  publicDataConsentCategories                String[]                            @default([])
+  guardianFullName                           String?
+  guardianEmail                              String?
+  guardianConsentAt                          DateTime?
+  guardianConsentVersion                     String?
+  guardianConsentIp                          String?
+  guardianConsentUserAgent                   String?                             @db.Text
+  reliabilityScore                           Int                                 @default(100)
+  reliabilityRestrictedUntil                 DateTime?
+  reliabilityConfirmStreak                   Int                                 @default(0)
+  reliabilityCleanMatchStreak                Int                                 @default(0)
+  createdAt                                  DateTime                            @default(now())
+  updatedAt                                  DateTime                            @updatedAt
+  accounts                                   Account[]
+  sessions                                   Session[]
+  tournamentEntries                          TournamentRegistration[]
+  tournamentRosterMemberships                TournamentRegistrationMember[]
+  tournamentRegistrationApplications         TournamentRegistrationApplication[] @relation("registrationApplicant")
   reviewedTournamentRegistrationApplications TournamentRegistrationApplication[] @relation("registrationReviewer")
-  playerOneMatches    Match[]                  @relation("playerOne")
-  playerTwoMatches    Match[]                  @relation("playerTwo")
-  winningMatches      Match[]                  @relation("winner")
-  matchLineupEntries  MatchLineupPlayer[]
-  submittedResults    MatchResultSubmission[]
-  notifications       Notification[]
-  webPushSubscriptions WebPushSubscription[]
-  achievements        UserAchievement[]
-  warningsReceived    UserWarning[]             @relation("warningTarget")
-  warningsIssued      UserWarning[]             @relation("warningIssuer")
-  passwordResetTokens PasswordResetToken[]
-  emailVerificationCodes EmailVerificationCode[]
-  adminActions        AdminAction[]
-  securitySessions    SecuritySession[]
-  loginHistory        LoginHistory[]
-  twoFactorChallenges TwoFactorChallenge[]
-  profileStatuses      UserProfileStatus[]         @relation("profileStatusOwner")
-  reviewedProfileStatuses UserProfileStatus[]      @relation("profileStatusReviewer")
-  divisionProfile      DivisionPlayer?
-  divisionQueueEntries DivisionQueueEntry[]
-  divisionMatchesAsOne DivisionMatch[]             @relation("divisionPlayerOne")
-  divisionMatchesAsTwo DivisionMatch[]             @relation("divisionPlayerTwo")
-  divisionScoreSubmissions DivisionScoreSubmission[]
-  divisionSeasonArchives DivisionSeasonArchive[]
-  reliabilityEvents    ReliabilityEvent[]          @relation("reliabilityTarget")
-  reliabilityEventsIssued ReliabilityEvent[]        @relation("reliabilityActor")
+  playerOneMatches                           Match[]                             @relation("playerOne")
+  playerTwoMatches                           Match[]                             @relation("playerTwo")
+  winningMatches                             Match[]                             @relation("winner")
+  matchLineupEntries                         MatchLineupPlayer[]
+  submittedResults                           MatchResultSubmission[]
+  notifications                              Notification[]
+  webPushSubscriptions                       WebPushSubscription[]
+  achievements                               UserAchievement[]
+  warningsReceived                           UserWarning[]                       @relation("warningTarget")
+  warningsIssued                             UserWarning[]                       @relation("warningIssuer")
+  passwordResetTokens                        PasswordResetToken[]
+  emailVerificationCodes                     EmailVerificationCode[]
+  adminActions                               AdminAction[]
+  securitySessions                           SecuritySession[]
+  loginHistory                               LoginHistory[]
+  twoFactorChallenges                        TwoFactorChallenge[]
+  profileStatuses                            UserProfileStatus[]                 @relation("profileStatusOwner")
+  reviewedProfileStatuses                    UserProfileStatus[]                 @relation("profileStatusReviewer")
+  divisionProfile                            DivisionPlayer?
+  divisionQueueEntries                       DivisionQueueEntry[]
+  divisionMatchesAsOne                       DivisionMatch[]                     @relation("divisionPlayerOne")
+  divisionMatchesAsTwo                       DivisionMatch[]                     @relation("divisionPlayerTwo")
+  divisionScoreSubmissions                   DivisionScoreSubmission[]
+  divisionSeasonArchives                     DivisionSeasonArchive[]
+  reliabilityEvents                          ReliabilityEvent[]                  @relation("reliabilityTarget")
+  reliabilityEventsIssued                    ReliabilityEvent[]                  @relation("reliabilityActor")
 
   @@index([role, isBanned, createdAt])
 }
@@ -361,27 +361,27 @@ model ReliabilityPenaltyReason {
 }
 
 model DivisionSettings {
-  id            String   @id @default("default")
-  betaEnabled   Boolean  @default(true)
+  id            String    @id @default("default")
+  betaEnabled   Boolean   @default(true)
   coverImage    String?
   phaseStartsAt DateTime?
   phaseEndsAt   DateTime?
-  rulesText     String?  @db.Text
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  rulesText     String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 model DivisionSeason {
-  id         String               @id @default(cuid())
+  id         String                  @id @default(cuid())
   name       String
-  status     DivisionSeasonStatus @default(SCHEDULED)
+  status     DivisionSeasonStatus    @default(SCHEDULED)
   startsAt   DateTime
   endsAt     DateTime
   startedAt  DateTime?
   finishedAt DateTime?
   pausedAt   DateTime?
-  createdAt  DateTime             @default(now())
-  updatedAt  DateTime             @updatedAt
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
   archives   DivisionSeasonArchive[]
 
   @@index([status, startsAt, endsAt])
@@ -411,19 +411,19 @@ model DivisionSeasonArchive {
 }
 
 model DivisionPlayer {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  division      Int      @default(5)
-  points        Int      @default(0)
+  id            String                 @id @default(cuid())
+  userId        String                 @unique
+  division      Int                    @default(5)
+  points        Int                    @default(0)
   rating        Int?
-  wins          Int      @default(0)
-  draws         Int      @default(0)
-  losses        Int      @default(0)
-  winStreak     Int      @default(0)
-  bestWinStreak Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wins          Int                    @default(0)
+  draws         Int                    @default(0)
+  losses        Int                    @default(0)
+  winStreak     Int                    @default(0)
+  bestWinStreak Int                    @default(0)
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  user          User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   history       DivisionMatchHistory[]
 
   @@index([division, points])
@@ -442,22 +442,22 @@ model DivisionQueueEntry {
 }
 
 model DivisionMatch {
-  id               String              @id @default(cuid())
-  playerOneId      String
-  playerTwoId      String
-  playerOneScore   Int?
-  playerTwoScore   Int?
-  status           DivisionMatchStatus @default(WAITING_GAME)
-  deadlineAt       DateTime
-  finishedAt       DateTime?
-  autoResolved     Boolean             @default(false)
-  adminNote        String?             @db.Text
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
-  playerOne        User                @relation("divisionPlayerOne", fields: [playerOneId], references: [id], onDelete: Cascade)
-  playerTwo        User                @relation("divisionPlayerTwo", fields: [playerTwoId], references: [id], onDelete: Cascade)
-  submissions      DivisionScoreSubmission[]
-  history          DivisionMatchHistory[]
+  id             String                    @id @default(cuid())
+  playerOneId    String
+  playerTwoId    String
+  playerOneScore Int?
+  playerTwoScore Int?
+  status         DivisionMatchStatus       @default(WAITING_GAME)
+  deadlineAt     DateTime
+  finishedAt     DateTime?
+  autoResolved   Boolean                   @default(false)
+  adminNote      String?                   @db.Text
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  playerOne      User                      @relation("divisionPlayerOne", fields: [playerOneId], references: [id], onDelete: Cascade)
+  playerTwo      User                      @relation("divisionPlayerTwo", fields: [playerTwoId], references: [id], onDelete: Cascade)
+  submissions    DivisionScoreSubmission[]
+  history        DivisionMatchHistory[]
 
   @@index([status, deadlineAt])
   @@index([playerOneId, createdAt])
@@ -465,15 +465,15 @@ model DivisionMatch {
 }
 
 model DivisionScoreSubmission {
-  id             String   @id @default(cuid())
+  id             String        @id @default(cuid())
   matchId        String
   submittedById  String
   playerOneScore Int
   playerTwoScore Int
-  screenshotUrl  String?  @db.Text
-  createdAt      DateTime @default(now())
+  screenshotUrl  String?       @db.Text
+  createdAt      DateTime      @default(now())
   match          DivisionMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  submittedBy    User     @relation(fields: [submittedById], references: [id], onDelete: Cascade)
+  submittedBy    User          @relation(fields: [submittedById], references: [id], onDelete: Cascade)
 
   @@unique([matchId, submittedById])
   @@index([matchId, createdAt])
@@ -516,13 +516,13 @@ model RolePermission {
 }
 
 model UserWarning {
-  id        String   @id @default(cuid())
-  userId    String
+  id         String   @id @default(cuid())
+  userId     String
   issuedById String
-  reason    String?  @db.Text
-  createdAt DateTime @default(now())
-  user      User     @relation("warningTarget", fields: [userId], references: [id], onDelete: Cascade)
-  issuedBy  User     @relation("warningIssuer", fields: [issuedById], references: [id], onDelete: Cascade)
+  reason     String?  @db.Text
+  createdAt  DateTime @default(now())
+  user       User     @relation("warningTarget", fields: [userId], references: [id], onDelete: Cascade)
+  issuedBy   User     @relation("warningIssuer", fields: [issuedById], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
   @@index([issuedById, createdAt])
@@ -574,132 +574,132 @@ model PasswordResetToken {
 }
 
 model EmailVerificationCode {
-  id        String   @id @default(cuid())
+  id        String                  @id @default(cuid())
   userId    String
   email     String
   purpose   VerificationCodePurpose @default(EMAIL_CONFIRMATION)
   codeHash  String
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime                @default(now())
+  user      User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, email, purpose, createdAt])
   @@index([email, expiresAt])
 }
 
 model Season {
-  id          String       @id @default(cuid())
-  name        String
-  slug        String       @unique
-  description String?      @db.Text
-  startsAt    DateTime?
-  endsAt      DateTime?
-  isActive    Boolean      @default(false)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  tournaments Tournament[]
+  id              String              @id @default(cuid())
+  name            String
+  slug            String              @unique
+  description     String?             @db.Text
+  startsAt        DateTime?
+  endsAt          DateTime?
+  isActive        Boolean             @default(false)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  tournaments     Tournament[]
   profileStatuses UserProfileStatus[]
 
   @@index([isActive])
 }
 
 model UserProfileStatus {
-  id             String                      @id @default(cuid())
-  userId         String
-  seasonId       String?
-  type           ProfileStatusType
-  title          String
-  description    String                      @db.Text
-  tone           ProfileStatusTone           @default(GRAY)
-  youtubeUrl     String?
+  id                  String                      @id @default(cuid())
+  userId              String
+  seasonId            String?
+  type                ProfileStatusType
+  title               String
+  description         String                      @db.Text
+  tone                ProfileStatusTone           @default(GRAY)
+  youtubeUrl          String?
   youtubeChannelTitle String?
-  sourceRank     Int?
-  approvalStatus ProfileStatusApprovalStatus @default(PENDING)
-  selectedOrder  Int?
-  createdAt      DateTime                    @default(now())
-  updatedAt      DateTime                    @updatedAt
-  approvedAt     DateTime?
-  expiresAt      DateTime?
-  expiredNotifiedAt DateTime?
-  reviewedAt     DateTime?
-  reviewedById   String?
-  user           User                        @relation("profileStatusOwner", fields: [userId], references: [id], onDelete: Cascade)
-  season         Season?                     @relation(fields: [seasonId], references: [id], onDelete: SetNull)
-  reviewedBy     User?                       @relation("profileStatusReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  sourceRank          Int?
+  approvalStatus      ProfileStatusApprovalStatus @default(PENDING)
+  selectedOrder       Int?
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+  approvedAt          DateTime?
+  expiresAt           DateTime?
+  expiredNotifiedAt   DateTime?
+  reviewedAt          DateTime?
+  reviewedById        String?
+  user                User                        @relation("profileStatusOwner", fields: [userId], references: [id], onDelete: Cascade)
+  season              Season?                     @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  reviewedBy          User?                       @relation("profileStatusReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@unique([userId, seasonId, type])
   @@index([userId, approvalStatus, selectedOrder])
   @@index([approvalStatus, createdAt])
-  @@index([approvalStatus, expiresAt, expiredNotifiedAt])
+  @@index([approvalStatus, expiresAt, expiredNotifiedAt], map: "UserProfileStatus_approvalStatus_expiresAt_expiredNotifiedAt_id")
   @@index([seasonId, sourceRank])
 }
 
 model Tournament {
-  id                     String                   @id @default(cuid())
-  seasonId               String?
-  slug                   String                   @unique
-  title                  String
-  description            String                   @db.Text
-  rules                  String                   @db.Text
-  coverImage             String?
-  lineupPhotoExampleUrl  String?                  @db.Text
-  prizePool              String?
-  format                 TournamentFormat
-  formatBlueprintJson    Json?
-  playoffType            PlayoffType?
-  playoffLegs            Int                      @default(1)
-  playoffThirdPlace      Boolean                  @default(false)
-  seedingMethod          SeedingMethod            @default(MANUAL)
-  status                 TournamentStatus         @default(DRAFT)
-  startsAt               DateTime
-  endsAt                 DateTime?
-  registrationStartsAt   DateTime?
-  registrationEndsAt     DateTime
-  registrationClosedAt   DateTime?
-  checkInRequired        Boolean                  @default(false)
-  requireTelegramForRegistration Boolean          @default(true)
-  requireLineupPhoto   Boolean                    @default(false)
-  notificationsEnabled Boolean                    @default(true)
-  telegramCommunityId String?
-  telegramChannelId   String?
-  telegramGroupId     String?
-  telegramAutoPublish Boolean                     @default(false)
-  isTest               Boolean                    @default(false)
-  participantMode      TournamentParticipantMode  @default(SINGLE)
-  rosterSize           Int                        @default(1)
-  matchupFormat        MatchupFormat             @default(SINGLE_MATCH)
-  bestOfWins           Int                        @default(1)
-  autoCreateMatches      Boolean                  @default(true)
-  autoCreateStages       Boolean                  @default(true)
-  autoCreateSchedule     Boolean                  @default(false)
-  autoOpenRegistration   Boolean                  @default(false)
-  autoAdvanceFromGroups  Boolean                  @default(false)
-  manualBracketControl   Boolean                  @default(false)
-  manualPlayoffSelection Boolean                  @default(false)
-  clubSelectionMode      ClubSelectionMode        @default(ADMIN_RANDOM)
-  maxParticipants        Int
-  pointsForWin           Int                      @default(3)
-  pointsForDraw          Int                      @default(1)
-  pointsForLoss          Int                      @default(0)
-  roundsInLeague         Int                      @default(1)
-  groupsCount            Int?
-  participantsPerGroup   Int?
-  playoffTeamsPerGroup   Int?
-  sortRules              SortRule[]                @default([POINTS, GOAL_DIFFERENCE, GOALS_FOR, WINS])
-  createdById            String?
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
-  season                 Season?                  @relation(fields: [seasonId], references: [id], onDelete: SetNull)
-  participants           TournamentRegistration[]
-  registrationApplications TournamentRegistrationApplication[]
-  rosterMembers          TournamentRegistrationMember[]
-  matches                Match[]
-  stages                 TournamentStage[]
-  deadlines              RoundDeadline[]
-  brackets               PlayoffBracket[]
-  actions                AdminAction[]
-  telegramPublications   TelegramPublication[]
+  id                             String                              @id @default(cuid())
+  seasonId                       String?
+  slug                           String                              @unique
+  title                          String
+  description                    String                              @db.Text
+  rules                          String                              @db.Text
+  coverImage                     String?
+  lineupPhotoExampleUrl          String?                             @db.Text
+  prizePool                      String?
+  format                         TournamentFormat
+  formatBlueprintJson            Json?
+  playoffType                    PlayoffType?
+  playoffLegs                    Int                                 @default(1)
+  playoffThirdPlace              Boolean                             @default(false)
+  seedingMethod                  SeedingMethod                       @default(MANUAL)
+  status                         TournamentStatus                    @default(DRAFT)
+  startsAt                       DateTime
+  endsAt                         DateTime?
+  registrationStartsAt           DateTime?
+  registrationEndsAt             DateTime
+  registrationClosedAt           DateTime?
+  checkInRequired                Boolean                             @default(false)
+  requireTelegramForRegistration Boolean                             @default(true)
+  requireLineupPhoto             Boolean                             @default(false)
+  notificationsEnabled           Boolean                             @default(true)
+  telegramCommunityId            String?
+  telegramChannelId              String?
+  telegramGroupId                String?
+  telegramAutoPublish            Boolean                             @default(false)
+  isTest                         Boolean                             @default(false)
+  participantMode                TournamentParticipantMode           @default(SINGLE)
+  rosterSize                     Int                                 @default(1)
+  matchupFormat                  MatchupFormat                       @default(SINGLE_MATCH)
+  bestOfWins                     Int                                 @default(1)
+  autoCreateMatches              Boolean                             @default(true)
+  autoCreateStages               Boolean                             @default(true)
+  autoCreateSchedule             Boolean                             @default(false)
+  autoOpenRegistration           Boolean                             @default(false)
+  autoAdvanceFromGroups          Boolean                             @default(false)
+  manualBracketControl           Boolean                             @default(false)
+  manualPlayoffSelection         Boolean                             @default(false)
+  clubSelectionMode              ClubSelectionMode                   @default(ADMIN_RANDOM)
+  maxParticipants                Int
+  pointsForWin                   Int                                 @default(3)
+  pointsForDraw                  Int                                 @default(1)
+  pointsForLoss                  Int                                 @default(0)
+  roundsInLeague                 Int                                 @default(1)
+  groupsCount                    Int?
+  participantsPerGroup           Int?
+  playoffTeamsPerGroup           Int?
+  sortRules                      SortRule[]                          @default([POINTS, GOAL_DIFFERENCE, GOALS_FOR, WINS])
+  createdById                    String?
+  createdAt                      DateTime                            @default(now())
+  updatedAt                      DateTime                            @updatedAt
+  season                         Season?                             @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  participants                   TournamentRegistration[]
+  registrationApplications       TournamentRegistrationApplication[]
+  rosterMembers                  TournamentRegistrationMember[]
+  matches                        Match[]
+  stages                         TournamentStage[]
+  deadlines                      RoundDeadline[]
+  brackets                       PlayoffBracket[]
+  actions                        AdminAction[]
+  telegramPublications           TelegramPublication[]
 
   @@index([status, startsAt])
   @@index([seasonId, status])
@@ -724,27 +724,27 @@ model TelegramPublication {
 }
 
 model TournamentRegistrationApplication {
-  id                String                      @id @default(cuid())
-  tournamentId      String
-  userId            String
-  status            TournamentApplicationStatus @default(PENDING)
-  clubSlug          String?
-  clubName          String?
-  clubBadgePath     String?
-  teamName          String?
-  teamLogo          String?
-  lineupPhotoUrl    String                      @db.Text
-  rejectionReason   String?                     @db.Text
-  reviewedAt        DateTime?
-  reviewedById      String?
-  createdAt         DateTime                    @default(now())
-  updatedAt         DateTime                    @updatedAt
-  tournament        Tournament                  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  user              User                        @relation("registrationApplicant", fields: [userId], references: [id], onDelete: Cascade)
-  reviewedBy        User?                       @relation("registrationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  id              String                      @id @default(cuid())
+  tournamentId    String
+  userId          String
+  status          TournamentApplicationStatus @default(PENDING)
+  clubSlug        String?
+  clubName        String?
+  clubBadgePath   String?
+  teamName        String?
+  teamLogo        String?
+  lineupPhotoUrl  String                      @db.Text
+  rejectionReason String?                     @db.Text
+  reviewedAt      DateTime?
+  reviewedById    String?
+  createdAt       DateTime                    @default(now())
+  updatedAt       DateTime                    @updatedAt
+  tournament      Tournament                  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user            User                        @relation("registrationApplicant", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy      User?                       @relation("registrationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@unique([tournamentId, userId])
-  @@index([tournamentId, status, createdAt])
+  @@index([tournamentId, status, createdAt], map: "TournamentRegistrationApplication_tournamentId_status_createdAt")
   @@index([userId, status])
   @@index([reviewedById])
 }
@@ -765,7 +765,7 @@ model TournamentStage {
   pointsForWin         Int?
   pointsForDraw        Int?
   pointsForLoss        Int?
-  sortRules            SortRule[]      @default([POINTS, GOAL_DIFFERENCE, GOALS_FOR, WINS])
+  sortRules            SortRule[]        @default([POINTS, GOAL_DIFFERENCE, GOALS_FOR, WINS])
   startsAt             DateTime?
   endsAt               DateTime?
   createdAt            DateTime          @default(now())
@@ -813,10 +813,10 @@ model TournamentGroup {
 }
 
 model TournamentRegistration {
-  id                  String            @id @default(cuid())
+  id                  String                         @id @default(cuid())
   tournamentId        String
   userId              String
-  status              ParticipantStatus @default(CONFIRMED)
+  status              ParticipantStatus              @default(CONFIRMED)
   seed                Int?
   stageSeed           Int?
   groupId             String?
@@ -827,17 +827,17 @@ model TournamentRegistration {
   teamLogo            String?
   approvedAt          DateTime?
   checkedInAt         DateTime?
-  notes               String?           @db.Text
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-  tournament          Tournament        @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  group               TournamentGroup?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  notes               String?                        @db.Text
+  createdAt           DateTime                       @default(now())
+  updatedAt           DateTime                       @updatedAt
+  tournament          Tournament                     @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user                User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group               TournamentGroup?               @relation(fields: [groupId], references: [id], onDelete: SetNull)
   standings           GroupStanding[]
   bracketSlots        BracketSlot[]
-  participant1Matches Match[]           @relation("participantOneRegistration")
-  participant2Matches Match[]           @relation("participantTwoRegistration")
-  winningMatches      Match[]           @relation("winningRegistration")
+  participant1Matches Match[]                        @relation("participantOneRegistration")
+  participant2Matches Match[]                        @relation("participantTwoRegistration")
+  winningMatches      Match[]                        @relation("winningRegistration")
   rosterMembers       TournamentRegistrationMember[]
   matchLineupEntries  MatchLineupPlayer[]
 
@@ -849,19 +849,19 @@ model TournamentRegistration {
 }
 
 model TournamentRegistrationMember {
-  id             String             @id @default(cuid())
+  id             String                 @id @default(cuid())
   tournamentId   String
   registrationId String
   userId         String
-  status         TeamInviteStatus   @default(PENDING)
-  isCaptain      Boolean            @default(false)
-  invitedAt      DateTime           @default(now())
+  status         TeamInviteStatus       @default(PENDING)
+  isCaptain      Boolean                @default(false)
+  invitedAt      DateTime               @default(now())
   respondedAt    DateTime?
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  tournament     Tournament         @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  tournament     Tournament             @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   registration   TournamentRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
-  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([tournamentId, userId])
   @@unique([registrationId, userId])
@@ -1019,40 +1019,62 @@ model MatchSchedule {
 }
 
 model MatchResultSubmission {
-  id               String            @id @default(cuid())
-  matchId          String
-  submittedById    String
-  screenshotUrl    String?
-  comment          String?           @db.Text
-  player1Score     Int
-  player2Score     Int
+  id                  String            @id @default(cuid())
+  matchId             String
+  submittedById       String
+  screenshotUrl       String?
+  comment             String?           @db.Text
+  player1Score        Int
+  player2Score        Int
   player1PenaltyScore Int?
   player2PenaltyScore Int?
-  status           MatchResultStatus @default(PENDING)
-  moderatorComment String?           @db.Text
-  createdAt        DateTime          @default(now())
-  reviewedAt       DateTime?
-  match            Match             @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  submittedBy      User              @relation(fields: [submittedById], references: [id], onDelete: Cascade)
+  status              MatchResultStatus @default(PENDING)
+  moderatorComment    String?           @db.Text
+  createdAt           DateTime          @default(now())
+  reviewedAt          DateTime?
+  match               Match             @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  submittedBy         User              @relation(fields: [submittedById], references: [id], onDelete: Cascade)
 
   @@index([matchId, status])
   @@index([status, createdAt])
 }
 
 model Notification {
-  id        String           @id @default(cuid())
+  id        String                @id @default(cuid())
   userId    String
   type      NotificationType
   title     String
-  body      String           @db.Text
+  body      String                @db.Text
   link      String?
   dedupeKey String?
-  isRead    Boolean          @default(false)
-  createdAt DateTime         @default(now())
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isRead    Boolean               @default(false)
+  createdAt DateTime              @default(now())
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  delivery  NotificationDelivery?
 
   @@unique([userId, dedupeKey])
   @@index([userId, isRead, createdAt])
+}
+
+model NotificationDelivery {
+  id                  String       @id @default(cuid())
+  notificationId      String       @unique
+  attempts            Int          @default(0)
+  availableAt         DateTime     @default(now())
+  lockedAt            DateTime?
+  lockToken           String?
+  deliveredAt         DateTime?
+  pushDeliveredAt     DateTime?
+  telegramDeliveredAt DateTime?
+  lastError           String?      @db.Text
+  skipTelegram        Boolean      @default(false)
+  telegramPayload     Json?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  notification        Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([deliveredAt, availableAt])
+  @@index([lockToken])
 }
 
 model WebPushSubscription {
@@ -1069,14 +1091,14 @@ model WebPushSubscription {
 }
 
 model UserAchievement {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   userId         String
   achievementKey String
-  achievedAt     DateTime @default(now())
+  achievedAt     DateTime  @default(now())
   notifiedAt     DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, achievementKey])
   @@index([userId, achievedAt])
@@ -1121,50 +1143,50 @@ model FaqItem {
 }
 
 model FaqAttachment {
-  id          String            @id @default(cuid())
-  faqItemId   String
-  title       String
-  url         String            @db.Text
-  kind        FaqAttachmentKind @default(LINK)
-  mimeType    String?
-  sortOrder   Int               @default(0)
-  createdAt   DateTime          @default(now())
-  faqItem     FaqItem           @relation(fields: [faqItemId], references: [id], onDelete: Cascade)
+  id        String            @id @default(cuid())
+  faqItemId String
+  title     String
+  url       String            @db.Text
+  kind      FaqAttachmentKind @default(LINK)
+  mimeType  String?
+  sortOrder Int               @default(0)
+  createdAt DateTime          @default(now())
+  faqItem   FaqItem           @relation(fields: [faqItemId], references: [id], onDelete: Cascade)
 
   @@index([faqItemId, sortOrder])
 }
 
 model SecuritySession {
-  id            String   @id @default(cuid())
-  authSessionId String   @unique
-  userId        String
-  device        String
-  platform      String?
-  location      String?
-  ipAddress     String?
-  userAgent     String?  @db.Text
+  id                String    @id @default(cuid())
+  authSessionId     String    @unique
+  userId            String
+  device            String
+  platform          String?
+  location          String?
+  ipAddress         String?
+  userAgent         String?   @db.Text
   deviceFingerprint String?
-  lastActiveAt  DateTime @default(now())
-  createdAt     DateTime @default(now())
-  revokedAt     DateTime?
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastActiveAt      DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  revokedAt         DateTime?
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, revokedAt, lastActiveAt])
 }
 
 model LoginHistory {
-  id         String             @id @default(cuid())
-  userId     String?
-  email      String?
-  status     LoginAttemptStatus
-  device     String
-  platform   String?
-  location   String?
-  ipAddress  String?
-  userAgent  String?            @db.Text
+  id                String             @id @default(cuid())
+  userId            String?
+  email             String?
+  status            LoginAttemptStatus
+  device            String
+  platform          String?
+  location          String?
+  ipAddress         String?
+  userAgent         String?            @db.Text
   deviceFingerprint String?
-  createdAt  DateTime           @default(now())
-  user       User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt         DateTime           @default(now())
+  user              User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@index([email, createdAt])
@@ -1184,15 +1206,15 @@ model TwinAccountAlert {
 }
 
 model TwoFactorChallenge {
-  id          String   @id @default(cuid())
-  token       String   @unique
-  userId      String
-  purpose     String
-  codeHash    String
-  expiresAt   DateTime
-  usedAt      DateTime?
-  createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  purpose   String
+  codeHash  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, purpose, createdAt])
   @@index([token, expiresAt])

@@ -6,6 +6,7 @@ import { requireAuth } from "@/lib/auth/session";
 import { generateVerificationCode, hashVerificationCode, sendEmailVerificationCode } from "@/lib/email";
 import { getRegistrationAge, getRegistrationConsentData, LEGAL_ACCEPTANCE_REQUIRED_MESSAGE } from "@/lib/legal-acceptance";
 import { generateUniquePublicPlayerId } from "@/lib/public-player-id";
+import { enforceRateLimit } from "@/lib/request-rate-limit";
 import { resolveRequestTimeZone } from "@/lib/time-zone";
 import { DISPLAY_NAME_TAKEN_MESSAGE, isDisplayNameTaken, isDisplayNameUniqueError, normalizeDisplayName } from "@/lib/user-names";
 import { profileSchema, registerSchema } from "@/lib/validators";
@@ -38,6 +39,8 @@ export async function POST(request: Request) {
 
   const body = parsedBody.data;
   const normalizedEmail = body.email.trim().toLowerCase();
+  const limited = enforceRateLimit(request, "register", { limit: 5, windowMs: 60 * 60 * 1_000 }, normalizedEmail);
+  if (limited) return limited;
   const normalizedName = normalizeDisplayName(body.name);
   const emailCode = String((rawBody as { emailCode?: unknown }).emailCode ?? "").trim();
   const registrationAge = getRegistrationAge(body.dateOfBirth)!;

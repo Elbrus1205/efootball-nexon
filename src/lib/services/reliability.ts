@@ -98,6 +98,7 @@ export async function syncReliabilityRestriction(userId: string) {
 
 export async function applyReliabilityEvent(input: ReliabilityEventInput) {
   const result = await db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`reliability-user:${input.userId}`}))`;
     if (input.dedupeKey) {
       const existing = await tx.reliabilityEvent.findUnique({
         where: { userId_dedupeKey: { userId: input.userId, dedupeKey: input.dedupeKey } },
@@ -289,9 +290,20 @@ export async function removeConfiguredReliabilityPenaltiesByPrefix(dedupeKeyPref
   if (!normalizedPrefix) return { removed: 0 };
 
   const result = await db.$transaction(async (tx) => {
+    const candidateUsers = await tx.reliabilityEvent.findMany({
+      where: { dedupeKey: { startsWith: normalizedPrefix } },
+      select: { userId: true },
+      distinct: ["userId"],
+    });
+    const lockedUserIds = candidateUsers.map((event) => event.userId).sort();
+    for (const userId of lockedUserIds) {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`reliability-user:${userId}`}))`;
+    }
+
     const events = await tx.reliabilityEvent.findMany({
       where: {
         dedupeKey: { startsWith: normalizedPrefix },
+        userId: { in: lockedUserIds },
       },
       orderBy: { createdAt: "asc" },
     });
@@ -389,58 +401,116 @@ export async function recordConfirmedMatchReliability({
   await Promise.all(
     uniqueUserIds.map(async (userId) => {
       const confirmationDedupeKey = `match-confirmed:${matchId}`;
-      const existingConfirmation = await db.reliabilityEvent.findUnique({
-        where: { userId_dedupeKey: { userId, dedupeKey: confirmationDedupeKey } },
-      });
-
-      if (existingConfirmation) return;
-
-      const updated = await db.user.update({
-        where: { id: userId },
-        data: {
-          reliabilityConfirmStreak: { increment: 1 },
-          reliabilityCleanMatchStreak: { increment: 1 },
-        },
-        select: {
-          reliabilityConfirmStreak: true,
-          reliabilityCleanMatchStreak: true,
-        },
-      });
-
-      await applyReliabilityEvent({
-        userId,
-        type: ReliabilityEventType.RESULT_CONFIRMATION,
-        delta: 0,
-        reason: "Матч подтвержден без нарушения.",
-        matchId,
-        tournamentId,
-        dedupeKey: confirmationDedupeKey,
-        notify: false,
-      });
-
-      if (updated.reliabilityConfirmStreak > 0 && updated.reliabilityConfirmStreak % 10 === 0) {
-        await applyReliabilityEvent({
-          userId,
-          type: ReliabilityEventType.CONFIRMATION_STREAK_BONUS,
-          delta: 3,
-          reason: "10 подтверждений результата подряд без задержек: +3 к надежности.",
-          matchId,
-          tournamentId,
-          dedupeKey: `confirm-streak-bonus:${matchId}`,
+      const result = await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`reliability-user:${userId}`}))`;
+        const existingConfirmation = await tx.reliabilityEvent.findUnique({
+          where: { userId_dedupeKey: { userId, dedupeKey: confirmationDedupeKey } },
         });
-      }
+        if (existingConfirmation) return null;
 
-      if (updated.reliabilityCleanMatchStreak > 0 && updated.reliabilityCleanMatchStreak % 10 === 0) {
-        await applyReliabilityEvent({
-          userId,
-          type: ReliabilityEventType.CLEAN_MATCH_STREAK_BONUS,
-          delta: 4,
-          reason: "10 матчей подряд без технических поражений и нарушений: +4 к надежности.",
-          matchId,
-          tournamentId,
-          dedupeKey: `clean-streak-bonus:${matchId}`,
+        const user = await tx.user.findUnique({
+          where: { id: userId },
+          select: {
+            id: true,
+            reliabilityScore: true,
+            reliabilityRestrictedUntil: true,
+            reliabilityConfirmStreak: true,
+            reliabilityCleanMatchStreak: true,
+          },
         });
-      }
+        if (!user) throw new Error("Reliability user not found");
+
+        const nextConfirmStreak = user.reliabilityConfirmStreak + 1;
+        const nextCleanStreak = user.reliabilityCleanMatchStreak + 1;
+        let score = user.reliabilityScore;
+        const bonuses: Array<{ reason: string; delta: number }> = [];
+
+        await tx.reliabilityEvent.create({
+          data: {
+            userId,
+            type: ReliabilityEventType.RESULT_CONFIRMATION,
+            delta: 0,
+            scoreBefore: score,
+            scoreAfter: score,
+            reason: "Матч подтвержден без нарушения.",
+            matchId,
+            tournamentId,
+            dedupeKey: confirmationDedupeKey,
+          },
+        });
+
+        if (nextConfirmStreak % 10 === 0) {
+          const reason = "10 подтверждений результата подряд без задержек: +3 к надежности.";
+          const nextScore = clampReliabilityScore(score + 3);
+          await tx.reliabilityEvent.create({
+            data: {
+              userId,
+              type: ReliabilityEventType.CONFIRMATION_STREAK_BONUS,
+              delta: nextScore - score,
+              scoreBefore: score,
+              scoreAfter: nextScore,
+              reason,
+              matchId,
+              tournamentId,
+              dedupeKey: `confirm-streak-bonus:${matchId}`,
+            },
+          });
+          bonuses.push({ reason, delta: nextScore - score });
+          score = nextScore;
+        }
+
+        if (nextCleanStreak % 10 === 0) {
+          const reason = "10 матчей подряд без технических поражений и нарушений: +4 к надежности.";
+          const nextScore = clampReliabilityScore(score + 4);
+          await tx.reliabilityEvent.create({
+            data: {
+              userId,
+              type: ReliabilityEventType.CLEAN_MATCH_STREAK_BONUS,
+              delta: nextScore - score,
+              scoreBefore: score,
+              scoreAfter: nextScore,
+              reason,
+              matchId,
+              tournamentId,
+              dedupeKey: `clean-streak-bonus:${matchId}`,
+            },
+          });
+          bonuses.push({ reason, delta: nextScore - score });
+          score = nextScore;
+        }
+
+        const updatedUser = await tx.user.update({
+          where: { id: userId },
+          data: {
+            reliabilityScore: score,
+            reliabilityRestrictedUntil: resolveRestrictedUntil(
+              user.reliabilityScore,
+              score,
+              user.reliabilityRestrictedUntil,
+            ),
+            reliabilityConfirmStreak: nextConfirmStreak,
+            reliabilityCleanMatchStreak: nextCleanStreak,
+          },
+          select: {
+            id: true,
+            reliabilityScore: true,
+            reliabilityRestrictedUntil: true,
+            reliabilityConfirmStreak: true,
+            reliabilityCleanMatchStreak: true,
+          },
+        });
+
+        return { user: updatedUser, bonuses };
+      });
+
+      if (!result) return;
+      await Promise.all(
+        result.bonuses.map((bonus) =>
+          sendReliabilityNotification(result.user, bonus.reason, bonus.delta).catch((error) => {
+            console.error("Failed to send reliability bonus notification", error);
+          }),
+        ),
+      );
     }),
   );
 }

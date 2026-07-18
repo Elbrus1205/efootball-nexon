@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { optimizedImageUrl } from "@/lib/image-optimization";
+import { isAllowedCoverSource, optimizedImageUrl } from "@/lib/image-optimization";
 
 const dataImagePattern = /^data:([^;,]+);base64,([\s\S]+)$/;
 export const COVER_CACHE_CONTROL = "public, max-age=31536000, immutable";
@@ -28,7 +28,7 @@ function buildBase64ImageResponse(coverImage: string) {
 }
 
 async function proxyImageResponse(url: URL) {
-  const upstream = await fetch(url, { redirect: "follow" });
+  const upstream = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(8_000) });
 
   if (!upstream.ok || !upstream.body) {
     return new NextResponse(null, { status: upstream.status || 502 });
@@ -68,6 +68,9 @@ function buildOptimizedCoverUrl(coverImage: string, request: NextRequest) {
 
 export async function buildCoverImageResponse(coverImage: string, request: NextRequest) {
   if (coverImage.startsWith("http://") || coverImage.startsWith("https://") || coverImage.startsWith("/")) {
+    if (!isAllowedCoverSource(coverImage, process.env.NEXT_PUBLIC_SUPABASE_URL)) {
+      return new NextResponse(null, { status: 400 });
+    }
     return proxyImageResponse(buildOptimizedCoverUrl(coverImage, request));
   }
 

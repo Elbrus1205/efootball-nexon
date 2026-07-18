@@ -18,6 +18,7 @@ import { db } from "@/lib/db";
 import { getAvailableClubs } from "@/lib/clubs";
 import { normalizeFormatBlueprint, type FormatBlueprint, type PlayoffSelectionRule } from "@/lib/format-blueprint";
 import { applyTournamentAbsenceRatingPenalty, getPlayerRatings } from "@/lib/ratings";
+import { invalidatePlayerRatings } from "@/lib/ratings-cache";
 import { orderParticipantsByRating } from "@/lib/tournament-participant-assignment";
 import { grantCurrentChampionProfileStatus } from "@/lib/profile-statuses";
 import { createNotification, createNotificationsForUsers } from "@/lib/services/notifications";
@@ -3689,6 +3690,7 @@ async function createPenaltyMatch(match: {
     return null;
   }
 
+  const penaltyMatchId = `penalty:${match.id}`;
   const existingPenalty = await db.match.findFirst({
     where: {
       tournamentId: match.tournamentId,
@@ -3705,8 +3707,11 @@ async function createPenaltyMatch(match: {
     return existingPenalty;
   }
 
-  return db.match.create({
-    data: {
+  return db.match.upsert({
+    where: { id: penaltyMatchId },
+    update: {},
+    create: {
+      id: penaltyMatchId,
       tournamentId: match.tournamentId,
       stageId: match.stageId,
       bracketId: match.bracketId,
@@ -3921,6 +3926,7 @@ export async function resolveConfirmedMatch(matchId: string) {
     },
   });
   if (!match) throw new Error("Match not found");
+  invalidatePlayerRatings();
 
   if (await resolveBestOfSeriesIfCompleted(match)) {
     return;

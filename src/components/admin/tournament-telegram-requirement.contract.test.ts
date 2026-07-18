@@ -19,8 +19,7 @@ test("create and update persist the permanent Telegram requirement", () => {
   assert.match(updateRoute, /requireTelegramForRegistration: true/);
 });
 
-test("runtime database compatibility makes Telegram required for existing tournaments", () => {
-  const runtime = read("scripts", "ensure-runtime-database.mjs");
-  assert.match(runtime, /ALTER COLUMN "requireTelegramForRegistration" SET DEFAULT true/);
-  assert.match(runtime, /SET "requireTelegramForRegistration" = true/);
+test("the Prisma schema makes Telegram required for tournaments", () => {
+  const schema = read("prisma", "schema.prisma");
+  assert.match(schema, /requireTelegramForRegistration\s+Boolean\s+@default\(true\)/);
 });

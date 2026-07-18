@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { getCurrentSession } from "@/lib/auth/session";
 import { IMMUTABLE_MEDIA_CACHE_CONTROL, normalizeProfileUploadImage } from "@/lib/media-processing";
+import { roleHasPermission } from "@/lib/role-permissions";
 import { isStorageConfigured, uploadToStorage, type StorageFolder } from "@/lib/storage/supabase-storage";
+import { getRequiredUploadPermission } from "@/lib/storage/upload-policy";
+import { enforceRateLimit } from "@/lib/request-rate-limit";
 
 export const runtime = "nodejs";
 
-const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"]);
+const ALLOWED_IMAGE_TYPES = new Set(["image/avif", "image/png", "image/jpeg", "image/webp"]);
 const ALLOWED_PROFILE_IMAGE_TYPES = new Set(["image/avif", "image/png", "image/jpeg", "image/webp"]);
-const ALLOWED_FAQ_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml", "application/pdf"]);
+const ALLOWED_FAQ_TYPES = new Set(["image/avif", "image/png", "image/jpeg", "image/webp", "application/pdf"]);
 
 const FOLDER_RULES: Record<StorageFolder, { maxBytes: number; allowed: Set<string> }> = {
   avatars: { maxBytes: 4 * 1024 * 1024, allowed: ALLOWED_PROFILE_IMAGE_TYPES },
@@ -28,6 +31,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Требуется авторизация." }, { status: 401 });
   }
 
+  const limited = enforceRateLimit(request, "uploads", { limit: 20, windowMs: 60 * 1_000 }, session.user.id);
+  if (limited) return limited;
+
   if (!isStorageConfigured()) {
     return NextResponse.json({ error: "Хранилище не настроено." }, { status: 500 });
   }
@@ -44,6 +50,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Некорректная папка загрузки." }, { status: 400 });
   }
 
+  const requiredPermission = getRequiredUploadPermission(folderRaw);
+  if (requiredPermission && !(await roleHasPermission(session.user.role, requiredPermission))) {
+    return NextResponse.json({ error: "Нет прав на загрузку в этот раздел." }, { status: 403 });
+  }
+
   const rules = FOLDER_RULES[folderRaw];
   const contentType = file.type || "application/octet-stream";
 
@@ -56,9 +67,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: `Максимальный размер файла: ${maxMb} MB.` }, { status: 400 });
   }
 
+  const bytes = await file.arrayBuffer();
+  if (contentType === "application/pdf" && !Buffer.from(bytes).subarray(0, 5).equals(Buffer.from("%PDF-"))) {
+    return NextResponse.json({ error: "Содержимое файла не соответствует PDF." }, { status: 400 });
+  }
+
+  let processed;
   try {
-    const bytes = await file.arrayBuffer();
-    const processed = await normalizeProfileUploadImage(folderRaw, bytes, contentType);
+    processed = await normalizeProfileUploadImage(folderRaw, bytes, contentType);
+  } catch {
+    return NextResponse.json({ error: "Файл не является корректным изображением." }, { status: 400 });
+  }
+
+  try {
     const url = await uploadToStorage({
       folder: folderRaw,
       bytes: processed?.bytes ?? bytes,

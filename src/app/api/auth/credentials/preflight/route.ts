@@ -3,6 +3,7 @@ import { LoginAttemptStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { createLoginHistory, resolveSecurityContext, withDeviceFingerprint } from "@/lib/auth/security";
 import { db } from "@/lib/db";
+import { enforceRateLimit } from "@/lib/request-rate-limit";
 import { createTelegramTwoFactorChallenge } from "@/lib/two-factor";
 
 export async function POST(request: Request) {
@@ -14,6 +15,9 @@ export async function POST(request: Request) {
   if (!email || !rawPassword) {
     return NextResponse.json({ error: "Введите email и пароль." }, { status: 400 });
   }
+
+  const limited = enforceRateLimit(request, "auth-preflight", { limit: 10, windowMs: 10 * 60 * 1_000 }, email);
+  if (limited) return limited;
 
   const context = withDeviceFingerprint(await resolveSecurityContext(request.headers), body?.fingerprint);
   const user = await db.user.findFirst({

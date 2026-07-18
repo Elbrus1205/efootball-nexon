@@ -55,6 +55,20 @@ export const metadata: Metadata = {
   },
   description:
     "Платформа для турниров по eFootball Mobile с регистрацией, профилями, турнирными сетками, модерацией результатов и realtime-уведомлениями.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    locale: "ru_RU",
+    url: "/",
+    siteName: "eFootball Nexon",
+    title: "eFootball Nexon | Турниры по eFootball Mobile",
+    description: "Турниры, рейтинги и профили игроков eFootball Mobile.",
+  },
+  twitter: {
+    card: "summary",
+    title: "eFootball Nexon",
+    description: "Турнирная платформа eFootball Mobile.",
+  },
   applicationName: "eFootball Nexon",
   manifest: "/manifest.webmanifest?v=20260717",
   appleWebApp: {
@@ -75,7 +89,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
   themeColor: "#080d16",
 };
 

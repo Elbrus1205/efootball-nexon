@@ -5,6 +5,12 @@ import { db } from "@/lib/db";
 import { createNotification } from "@/lib/services/notifications";
 import { syncTournamentLifecycleStatus, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
 
+class RosterInviteWriteError extends Error {
+  constructor(message: string, readonly status = 409) {
+    super(message);
+  }
+}
+
 export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const session = await requireAuth();
@@ -69,49 +75,73 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     return NextResponse.json({ error: "Капитан уже находится в составе." }, { status: 400 });
   }
 
-  const activeMembersCount = await db.tournamentRegistrationMember.count({
-    where: {
-      registrationId: captainMember.registrationId,
-      status: { in: [TeamInviteStatus.PENDING, TeamInviteStatus.ACCEPTED] },
-    },
-  });
+  try {
+    await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`tournament-roster:${captainMember.registrationId}`}))`;
 
-  if (activeMembersCount >= captainMember.tournament.rosterSize) {
-    return NextResponse.json({ error: "Состав уже набран." }, { status: 400 });
-  }
+      const currentCaptain = await tx.tournamentRegistrationMember.findFirst({
+        where: {
+          id: captainMember.id,
+          registrationId: captainMember.registrationId,
+          tournamentId: params.id,
+          userId: session.user.id,
+          isCaptain: true,
+          status: TeamInviteStatus.ACCEPTED,
+        },
+        include: { tournament: { select: { status: true, rosterSize: true } } },
+      });
+      if (!currentCaptain) {
+        throw new RosterInviteWriteError("Приглашать игроков может только капитан состава.", 403);
+      }
+      if (currentCaptain.tournament.status !== TournamentStatus.REGISTRATION_OPEN) {
+        throw new RosterInviteWriteError("Состав можно менять только до старта турнира.", 400);
+      }
 
-  const existingMembership = await db.tournamentRegistrationMember.findFirst({
-    where: {
-      tournamentId: params.id,
-      userId: target.id,
-    },
-    select: { id: true, status: true },
-  });
+      const activeMembersCount = await tx.tournamentRegistrationMember.count({
+        where: {
+          registrationId: captainMember.registrationId,
+          status: { in: [TeamInviteStatus.PENDING, TeamInviteStatus.ACCEPTED] },
+        },
+      });
+      if (activeMembersCount >= currentCaptain.tournament.rosterSize) {
+        throw new RosterInviteWriteError("Состав уже набран.", 400);
+      }
 
-  if (existingMembership?.status === TeamInviteStatus.PENDING || existingMembership?.status === TeamInviteStatus.ACCEPTED) {
-    return NextResponse.json({ error: "Игрок уже находится в заявке этого турнира." }, { status: 409 });
-  }
+      const existingMembership = await tx.tournamentRegistrationMember.findFirst({
+        where: { tournamentId: params.id, userId: target.id },
+        select: { id: true, status: true },
+      });
+      if (existingMembership?.status === TeamInviteStatus.PENDING || existingMembership?.status === TeamInviteStatus.ACCEPTED) {
+        throw new RosterInviteWriteError("Игрок уже находится в заявке этого турнира.");
+      }
 
-  if (existingMembership) {
-    await db.tournamentRegistrationMember.update({
-      where: { id: existingMembership.id },
-      data: {
-        registrationId: captainMember.registrationId,
-        status: TeamInviteStatus.PENDING,
-        isCaptain: false,
-        invitedAt: new Date(),
-        respondedAt: null,
-      },
+      if (existingMembership) {
+        await tx.tournamentRegistrationMember.update({
+          where: { id: existingMembership.id },
+          data: {
+            registrationId: captainMember.registrationId,
+            status: TeamInviteStatus.PENDING,
+            isCaptain: false,
+            invitedAt: new Date(),
+            respondedAt: null,
+          },
+        });
+      } else {
+        await tx.tournamentRegistrationMember.create({
+          data: {
+            tournamentId: params.id,
+            registrationId: captainMember.registrationId,
+            userId: target.id,
+            status: TeamInviteStatus.PENDING,
+          },
+        });
+      }
     });
-  } else {
-    await db.tournamentRegistrationMember.create({
-      data: {
-        tournamentId: params.id,
-        registrationId: captainMember.registrationId,
-        userId: target.id,
-        status: TeamInviteStatus.PENDING,
-      },
-    });
+  } catch (error) {
+    if (error instanceof RosterInviteWriteError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    throw error;
   }
 
   if (captainMember.tournament.notificationsEnabled) {

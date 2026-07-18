@@ -50,8 +50,8 @@ function makeWritable(dir) {
 }
 
 const serverPath = existsSync(dockerServer) ? dockerServer : standaloneServer;
-const runtimeDatabaseScript = path.join(root, "scripts", "ensure-runtime-database.mjs");
 const telegramWebhookScript = path.join(root, "scripts", "ensure-telegram-webhook.mjs");
+const warmPublicRoutesScript = path.join(root, "scripts", "warm-public-routes.mjs");
 
 if (!existsSync(serverPath)) {
   console.error("Standalone server was not found. Run `npm run build` before `npm start`.");
@@ -72,20 +72,6 @@ for (const cacheRoot of [
   path.join(standaloneDir, ".next", "cache", "fetch-cache"),
 ]) {
   makeWritable(cacheRoot);
-}
-
-if (existsSync(runtimeDatabaseScript)) {
-  const result = spawnSync(process.execPath, [runtimeDatabaseScript], {
-    stdio: "inherit",
-    env: {
-      ...process.env,
-      NODE_ENV: process.env.NODE_ENV || "production",
-    },
-  });
-
-  if (result.status !== 0) {
-    process.exit(result.status ?? 1);
-  }
 }
 
 if (existsSync(telegramWebhookScript)) {
@@ -110,6 +96,17 @@ const child = spawn(process.execPath, [serverPath], {
     HOSTNAME: process.env.NEXT_HOSTNAME || "0.0.0.0",
   },
 });
+
+if (existsSync(warmPublicRoutesScript) && process.env.DISABLE_PUBLIC_ROUTE_WARMUP !== "1") {
+  const warmup = spawn(process.execPath, [warmPublicRoutesScript], {
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      WARMUP_BASE_URL: `http://127.0.0.1:${process.env.PORT || "3000"}`,
+    },
+  });
+  warmup.on("error", (error) => console.warn(`Public route warm-up could not start: ${error.message}`));
+}
 
 let shuttingDown = false;
 

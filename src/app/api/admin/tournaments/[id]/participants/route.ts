@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { MatchStatus, NotificationType, ParticipantStatus, ReliabilityPenaltyScope, TeamInviteStatus, TournamentParticipantMode } from "@prisma/client";
+import { MatchStatus, NotificationType, ParticipantStatus, Prisma, ReliabilityPenaltyScope, TeamInviteStatus, TournamentParticipantMode } from "@prisma/client";
 import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requireAnyPermission, requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
@@ -131,6 +131,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   const body = participantManageSchema.parse(await request.json());
 
   if (body.action === "add" && body.userId) {
+    const participantUserId = body.userId;
     let clubAssignment;
     try {
       clubAssignment = resolveParticipantClub(body.clubSlug, await getAvailableClubs());
@@ -155,7 +156,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     }
 
     const user = await db.user.findUnique({
-      where: { id: body.userId },
+      where: { id: participantUserId },
       select: { isBanned: true, banReason: true, bannedUntil: true, telegramId: true, telegramUsername: true },
     });
     const banMessage = formatTournamentBanMessage(user);
@@ -164,7 +165,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       return NextResponse.json({ error: banMessage }, { status: 403 });
     }
 
-    const syncedReliability = await syncReliabilityRestriction(body.userId);
+    const syncedReliability = await syncReliabilityRestriction(participantUserId);
     const reliabilityRestriction = formatReliabilityRegistrationRestriction(syncedReliability);
     if (reliabilityRestriction) {
       return NextResponse.json({ error: reliabilityRestriction }, { status: 403 });
@@ -177,17 +178,42 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       );
     }
 
-    const registration = await db.tournamentRegistration.create({
-      data: {
-        tournamentId: params.id,
-        userId: body.userId,
-        status: ParticipantStatus.CONFIRMED,
-        groupId: body.groupId || null,
-        seed: body.seed ?? null,
-        ...clubAssignment,
-      },
-      include: { user: true, group: true },
-    });
+    let registration;
+    try {
+      registration = await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`tournament-registration:${params.id}`}))`;
+        const conflictingRegistration = await tx.tournamentRegistration.findFirst({
+          where: {
+            tournamentId: params.id,
+            status: { not: ParticipantStatus.REMOVED },
+            OR: [{ userId: participantUserId }, { clubSlug: clubAssignment.clubSlug }],
+          },
+          select: { userId: true, clubSlug: true },
+        });
+        if (conflictingRegistration?.userId === participantUserId) throw new Error("PARTICIPANT_ALREADY_EXISTS");
+        if (conflictingRegistration?.clubSlug === clubAssignment.clubSlug) throw new Error("CLUB_ALREADY_TAKEN");
+
+        return tx.tournamentRegistration.create({
+          data: {
+            tournamentId: params.id,
+            userId: participantUserId,
+            status: ParticipantStatus.CONFIRMED,
+            groupId: body.groupId || null,
+            seed: body.seed ?? null,
+            ...clubAssignment,
+          },
+          include: { user: true, group: true },
+        });
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message === "PARTICIPANT_ALREADY_EXISTS") {
+        return NextResponse.json({ error: "Этот игрок уже есть в турнире." }, { status: 409 });
+      }
+      if (error instanceof Error && error.message === "CLUB_ALREADY_TAKEN") {
+        return NextResponse.json({ error: "Этот клуб уже занят другим участником." }, { status: 409 });
+      }
+      throw error;
+    }
     await logAdminAction({
       adminId: session.user.id,
       tournamentId: params.id,
@@ -206,7 +232,20 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       return NextResponse.json({ error: "Участник турнира не найден." }, { status: 404 });
     }
 
-    await db.tournamentRegistration.delete({ where: { id: before.id } });
+    try {
+      await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`tournament-registration:${params.id}`}))`;
+        const removed = await tx.tournamentRegistration.deleteMany({
+          where: { id: before.id, tournamentId: params.id },
+        });
+        if (removed.count !== 1) throw new Error("PARTICIPANT_ALREADY_REMOVED");
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message === "PARTICIPANT_ALREADY_REMOVED") {
+        return NextResponse.json({ error: "Участник уже удалён." }, { status: 409 });
+      }
+      throw error;
+    }
     await logAdminAction({
       adminId: session.user.id,
       tournamentId: params.id,
@@ -300,11 +339,35 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       return NextResponse.json({ error: "Этот игрок уже есть в турнире." }, { status: 400 });
     }
 
-    const replacementResult = await db.$transaction(async (tx) => {
+    let replacementResult;
+    try {
+      replacementResult = await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`tournament-registration:${params.id}`}))`;
+      const lockedBefore = await tx.tournamentRegistration.findFirst({
+        where: { id: before.id, tournamentId: params.id },
+        include: { user: true, group: true, rosterMembers: true },
+      });
+      if (!lockedBefore || lockedBefore.status === ParticipantStatus.REMOVED) {
+        throw new Error("PARTICIPANT_NOT_REPLACEABLE");
+      }
+      if (lockedBefore.userId === replacementUserId) throw new Error("REPLACEMENT_IS_SAME_USER");
+
+      const lockedConflict = await tx.tournamentRegistration.findFirst({
+        where: {
+          tournamentId: params.id,
+          id: { not: lockedBefore.id },
+          status: { not: ParticipantStatus.REMOVED },
+          OR: [{ userId: replacementUserId }, { clubSlug: clubAssignment.clubSlug }],
+        },
+        select: { userId: true, clubSlug: true },
+      });
+      if (lockedConflict?.userId === replacementUserId) throw new Error("REPLACEMENT_ALREADY_REGISTERED");
+      if (lockedConflict?.clubSlug === clubAssignment.clubSlug) throw new Error("CLUB_ALREADY_TAKEN");
+
       const replaceableMatches = await tx.match.findMany({
         where: {
           tournamentId: params.id,
-          OR: [{ participant1EntryId: before.id }, { participant2EntryId: before.id }],
+          OR: [{ participant1EntryId: lockedBefore.id }, { participant2EntryId: lockedBefore.id }],
           status: { in: replaceableMatchStatuses },
           player1Score: null,
           player2Score: null,
@@ -319,14 +382,14 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
 
       const replacedAt = new Date();
       const removedNotes = [
-        before.notes?.trim(),
+        lockedBefore.notes?.trim(),
         `Заменён на ${replacementUser.name ?? replacementUser.email ?? replacementUser.id} ${replacedAt.toISOString()}.`,
       ]
         .filter(Boolean)
         .join("\n");
 
       await tx.tournamentRegistration.update({
-        where: { id: before.id },
+        where: { id: lockedBefore.id },
         data: {
           status: ParticipantStatus.REMOVED,
           seed: null,
@@ -343,18 +406,18 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
           tournamentId: params.id,
           userId: replacementUserId,
           status: ParticipantStatus.CONFIRMED,
-          groupId: before.groupId,
-          seed: before.seed,
-          stageSeed: before.stageSeed,
+          groupId: lockedBefore.groupId,
+          seed: lockedBefore.seed,
+          stageSeed: lockedBefore.stageSeed,
           ...clubAssignment,
           approvedAt: replacedAt,
-          checkedInAt: before.checkedInAt,
+          checkedInAt: lockedBefore.checkedInAt,
         },
         include: { user: true, group: true },
       });
 
       await tx.tournamentRegistration.update({
-        where: { id: before.id },
+        where: { id: lockedBefore.id },
         data: {
           notes: [removedNotes, `replacementRegistrationId:${registration.id}`].filter(Boolean).join("\n"),
         },
@@ -362,8 +425,8 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
 
       // Перенос COOP/командного состава на новую заявку, чтобы участник снова отображался.
       // Напарников (не капитана) переносим как есть, капитаном делаем нового игрока.
-      const teammateMemberIds = before.rosterMembers
-        .filter((member) => member.userId !== before.userId)
+      const teammateMemberIds = lockedBefore.rosterMembers
+        .filter((member) => member.userId !== lockedBefore.userId)
         .map((member) => member.id);
 
       if (teammateMemberIds.length) {
@@ -378,7 +441,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       await tx.tournamentRegistrationMember.deleteMany({
         where: {
           tournamentId: params.id,
-          OR: [{ registrationId: before.id }, { userId: replacementUserId }],
+          OR: [{ registrationId: lockedBefore.id }, { userId: replacementUserId }],
         },
       });
 
@@ -394,10 +457,10 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       });
 
       const playerOneMatchIds = replaceableMatches
-        .filter((match) => match.participant1EntryId === before.id)
+        .filter((match) => match.participant1EntryId === lockedBefore.id)
         .map((match) => match.id);
       const playerTwoMatchIds = replaceableMatches
-        .filter((match) => match.participant2EntryId === before.id)
+        .filter((match) => match.participant2EntryId === lockedBefore.id)
         .map((match) => match.id);
 
       if (playerOneMatchIds.length) {
@@ -433,18 +496,37 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       }
 
       return {
+        before: lockedBefore,
         registration,
         replacedMatchesCount: replaceableMatches.length,
       };
-    });
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message === "PARTICIPANT_NOT_REPLACEABLE") {
+        return NextResponse.json({ error: "Участник уже удалён или заменён." }, { status: 409 });
+      }
+      if (error instanceof Error && error.message === "REPLACEMENT_IS_SAME_USER") {
+        return NextResponse.json({ error: "Выберите другого игрока для замены." }, { status: 409 });
+      }
+      if (error instanceof Error && error.message === "REPLACEMENT_ALREADY_REGISTERED") {
+        return NextResponse.json({ error: "Этот игрок уже есть в турнире." }, { status: 409 });
+      }
+      if (error instanceof Error && error.message === "CLUB_ALREADY_TAKEN") {
+        return NextResponse.json({ error: "Этот клуб уже занят другим участником." }, { status: 409 });
+      }
+      if (error instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2025"].includes(error.code)) {
+        return NextResponse.json({ error: "Данные участника уже изменены другим запросом." }, { status: 409 });
+      }
+      throw error;
+    }
 
-    if (before.groupId) {
+    if (replacementResult.before.groupId) {
       await recalculateGroupStandings(params.id);
     }
 
     if (body.reliabilityPenaltyReasonId) {
       try {
-        const penaltyUserIds = getAcceptedRosterPenaltyUserIds(before);
+        const penaltyUserIds = getAcceptedRosterPenaltyUserIds(replacementResult.before);
 
         await applyConfiguredReliabilityPenaltyToUsers({
           reasonId: body.reliabilityPenaltyReasonId,
@@ -452,7 +534,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
           userIds: penaltyUserIds,
           actorId: session.user.id,
           tournamentId: params.id,
-          dedupeKeyForUserId: () => `replacement:${before.id}:${replacementUserId}:${body.reliabilityPenaltyReasonId}`,
+          dedupeKeyForUserId: () => `replacement:${replacementResult.before.id}:${replacementUserId}:${body.reliabilityPenaltyReasonId}`,
           comment: `Игрок заменен на ${replacementUser.name ?? replacementUser.email ?? replacementUser.id}.`,
         });
       } catch (error) {
@@ -467,9 +549,9 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       adminId: session.user.id,
       tournamentId: params.id,
       entityType: "TOURNAMENT_PARTICIPANT",
-      entityId: before.id,
+      entityId: replacementResult.before.id,
       actionType: "UPDATE",
-      beforeJson: before,
+      beforeJson: replacementResult.before,
       afterJson: {
         replacementRegistration: replacementResult.registration,
         replacedMatchesCount: replacementResult.replacedMatchesCount,

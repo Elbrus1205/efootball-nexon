@@ -6,12 +6,14 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { notifySuccessfulLogin } from "@/lib/auth/notifications";
 import { createLoginHistory, createSecuritySession, deleteSecuritySessions, resolveSecurityContext, touchSecuritySession, withDeviceFingerprint } from "@/lib/auth/security";
+import { shouldRefreshSessionActivity } from "@/lib/auth/session-activity";
 import { fetchVkUserProfile } from "@/lib/auth/vk";
 import { db } from "@/lib/db";
 import { ADULT_AGE, getRegistrationAge, getRegistrationConsentData, hasSeparateRegistrationConsents } from "@/lib/legal-acceptance";
 import { maybeCacheTelegramAvatar } from "@/lib/media-processing";
 import { generateFallbackName } from "@/lib/player-name";
 import { generateUniquePublicPlayerId } from "@/lib/public-player-id";
+import { consumeRequestRateLimit } from "@/lib/request-rate-limit";
 import { describeTelegramOidcError, verifyAndConsumeTelegramIdToken } from "@/lib/telegram-oidc-server";
 import { verifyTelegramMiniAppInitData } from "@/lib/telegram-mini-app";
 import { verifyTwoFactorChallenge } from "@/lib/two-factor";
@@ -66,6 +68,14 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.email || !credentials.password) return null;
 
         const normalizedEmail = credentials.email.trim().toLowerCase();
+        const rateLimit = consumeRequestRateLimit(
+          req,
+          "auth-authorize",
+          { limit: 10, windowMs: 10 * 60 * 1_000 },
+          normalizedEmail,
+        );
+        if (!rateLimit.allowed) return null;
+
         const rawPassword = credentials.password;
         const trimmedPassword = rawPassword.trim();
         const context = withDeviceFingerprint(await resolveSecurityContext(req?.headers), credentials.fingerprint);
@@ -557,13 +567,15 @@ export const authOptions: NextAuthOptions = {
       }
 
       if (token.sub) {
-        const dbUser = await db.user.findUnique({ where: { id: token.sub } });
-
-        if (!dbUser || dbUser.isBanned) {
-          return {} as typeof token;
-        }
+        let dbUser;
 
         if (!token.authSessionId) {
+          dbUser = await db.user.findUnique({ where: { id: token.sub } });
+
+          if (!dbUser || dbUser.isBanned) {
+            return {} as typeof token;
+          }
+
           token.authSessionId = await createSecuritySession({
             userId: token.sub,
             authSessionId: randomUUID(),
@@ -574,11 +586,21 @@ export const authOptions: NextAuthOptions = {
         if (token.authSessionId) {
           const activeSession = await db.securitySession.findUnique({
             where: { authSessionId: token.authSessionId },
+            select: {
+              userId: true,
+              revokedAt: true,
+              lastActiveAt: true,
+              user: true,
+            },
           });
 
-          if (!activeSession || activeSession.revokedAt || activeSession.userId !== token.sub) {
+          if (!activeSession || activeSession.revokedAt || activeSession.userId !== token.sub || activeSession.user.isBanned) {
             return {} as typeof token;
-          } else {
+          }
+
+          dbUser = activeSession.user;
+
+          if (shouldRefreshSessionActivity(activeSession.lastActiveAt)) {
             await touchSecuritySession(token.authSessionId);
           }
         }

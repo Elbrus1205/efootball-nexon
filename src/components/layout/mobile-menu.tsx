@@ -102,8 +102,30 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         closeMenu();
+        return;
+      }
+
+      if (event.key === "Tab" && menuRef.current) {
+        const focusable = Array.from(
+          menuRef.current.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'),
+        ).filter((element) => !element.hidden);
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (!first || !last) return;
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
       }
     };
+
+    window.requestAnimationFrame(() => {
+      menuRef.current?.querySelector<HTMLElement>('a[href], button:not([disabled])')?.focus({ preventScroll: true });
+    });
 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("resize", handleViewportChange);
@@ -165,6 +187,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
 
       <div
         ref={menuRef}
+        hidden={!open}
         className={cn("fixed inset-0 z-[999] lg:hidden", open ? "pointer-events-auto" : "pointer-events-none")}
         aria-hidden={!open}
       >
@@ -211,6 +234,7 @@ export function MobileMenu({ links }: { links: MobileMenuLink[] }) {
                   <Link
                     key={link.href}
                     href={link.href}
+                    prefetch={false}
                     className={cn(
                       "group flex min-h-[60px] items-center gap-3 overflow-hidden rounded-2xl px-3.5 py-3 text-zinc-200 transition-[background-color,transform,color,box-shadow,border-color] duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21F1A8]/60",
                       "hover:bg-white/[0.055] hover:text-white active:scale-[0.985]",

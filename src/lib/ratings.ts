@@ -14,6 +14,8 @@ import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { getSelectedProfileStatusWhere } from "@/lib/profile-status-query";
+import { selectTournamentBonusMatches } from "@/lib/rating-bonus-matches";
+import { invalidatePlayerRatings, PLAYER_RATINGS_CACHE_TAG } from "@/lib/ratings-cache";
 
 const INITIAL_RATING = 500;
 const K_FACTOR = 30;
@@ -85,7 +87,7 @@ export type PlayerRatingRow = {
 const getCachedPlayerRatings = unstable_cache(
   async (seasonId: string | null) => computePlayerRatings({ seasonId }),
   ["player-ratings"],
-  { revalidate: 60 },
+  { revalidate: 60, tags: [PLAYER_RATINGS_CACHE_TAG] },
 );
 
 function expectedScore(playerRating: number, opponentRating: number) {
@@ -204,7 +206,7 @@ async function computePlayerRatings(options: PlayerRatingOptions = {}) {
     tournamentWhere.seasonId = options.seasonId;
   }
 
-  const [players, matches, completedTournaments, ratingSettings] = await db.$transaction([
+  const [players, matches, completedTournaments, ratingSettings] = await Promise.all([
     db.user.findMany({
       where: { role: UserRole.PLAYER, isBanned: false },
       select: ratingPlayerSelect,
@@ -246,50 +248,7 @@ async function computePlayerRatings(options: PlayerRatingOptions = {}) {
     }),
     db.tournament.findMany({
       where: tournamentWhere,
-      include: {
-        matches: {
-          where: {
-            status: { in: [MatchStatus.CONFIRMED, MatchStatus.FINISHED] },
-            player1Id: { not: null },
-            player2Id: { not: null },
-            player1Score: { not: null },
-            player2Score: { not: null },
-            isPenaltyTiebreak: false,
-          },
-          include: {
-            tournament: { select: { participantMode: true } },
-            player1: { select: ratingPlayerSelect },
-            player2: { select: ratingPlayerSelect },
-            winner: { select: ratingPlayerSelect },
-            lineupPlayers: {
-              select: {
-                side: true,
-                user: { select: ratingPlayerSelect },
-              },
-              orderBy: [{ side: "asc" }, { createdAt: "asc" }],
-            },
-            participant1Entry: {
-              select: {
-                rosterMembers: {
-                  where: { status: TeamInviteStatus.ACCEPTED },
-                  select: { user: { select: ratingPlayerSelect } },
-                  orderBy: [{ isCaptain: "desc" }, { invitedAt: "asc" }],
-                },
-              },
-            },
-            participant2Entry: {
-              select: {
-                rosterMembers: {
-                  where: { status: TeamInviteStatus.ACCEPTED },
-                  select: { user: { select: ratingPlayerSelect } },
-                  orderBy: [{ isCaptain: "desc" }, { invitedAt: "asc" }],
-                },
-              },
-            },
-          },
-          orderBy: [{ round: "desc" }, { matchNumber: "asc" }],
-        },
-      },
+      select: { id: true, endsAt: true, updatedAt: true },
     }),
     db.siteContent.findMany({
       where: {
@@ -406,12 +365,18 @@ async function computePlayerRatings(options: PlayerRatingOptions = {}) {
   }
 
   for (const tournament of completedTournaments) {
-    const mainMatches = tournament.matches.filter((match) => !match.isThirdPlaceMatch);
-    const finalMatch = mainMatches[0];
-    const thirdPlaceMatch = tournament.matches.find((match) => match.isThirdPlaceMatch);
+    const tournamentMatches = matches.filter((match) => match.tournamentId === tournament.id);
+    const { finalMatch, thirdPlaceMatch } = selectTournamentBonusMatches(tournamentMatches);
     const bonusDate = tournament.endsAt ?? (finalMatch ? matchDate(finalMatch) : tournament.updatedAt);
+    const finalWinner = finalMatch
+      ? finalMatch.winnerId === finalMatch.player1Id
+        ? finalMatch.player1
+        : finalMatch.winnerId === finalMatch.player2Id
+          ? finalMatch.player2
+          : null
+      : null;
 
-    if (finalMatch?.winner) {
+    if (finalMatch && finalWinner) {
       const championSide = finalMatch.winnerId === finalMatch.player1Id ? 1 : finalMatch.winnerId === finalMatch.player2Id ? 2 : null;
       const finalistSide = championSide === 1 ? 2 : championSide === 2 ? 1 : null;
 
@@ -430,7 +395,7 @@ async function computePlayerRatings(options: PlayerRatingOptions = {}) {
           type: "bonus",
           date: bonusDate,
           order: 1,
-          player: finalMatch.winner,
+          player: finalWinner,
           bonus: TOURNAMENT_BONUSES.champion,
         });
       }
@@ -448,7 +413,15 @@ async function computePlayerRatings(options: PlayerRatingOptions = {}) {
       }
     }
 
-    if (thirdPlaceMatch?.winner) {
+    const thirdPlaceWinner = thirdPlaceMatch
+      ? thirdPlaceMatch.winnerId === thirdPlaceMatch.player1Id
+        ? thirdPlaceMatch.player1
+        : thirdPlaceMatch.winnerId === thirdPlaceMatch.player2Id
+          ? thirdPlaceMatch.player2
+          : null
+      : null;
+
+    if (thirdPlaceMatch && thirdPlaceWinner) {
       const thirdPlaceSide = thirdPlaceMatch.winnerId === thirdPlaceMatch.player1Id ? 1 : thirdPlaceMatch.winnerId === thirdPlaceMatch.player2Id ? 2 : null;
       if (thirdPlaceSide) {
         getRatingMatchSidePlayers(thirdPlaceMatch, thirdPlaceSide).forEach((player) => {
@@ -563,6 +536,8 @@ export async function applyTournamentAbsenceRatingPenalty(tournamentId: string) 
       update: { body: JSON.stringify({ appliedAt, penalized: targets.length }) },
     }),
   ]);
+
+  invalidatePlayerRatings();
 
   return { applied: true, penalized: targets.length };
 }

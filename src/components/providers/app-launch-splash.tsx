@@ -33,18 +33,13 @@ export function AppLaunchSplash() {
     let cancelled = false;
     let leaveTimer: number | undefined;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const fontReady = document.fonts?.ready ?? Promise.resolve();
-    const essentialsReady = Promise.allSettled([
-      pageLoaded(),
-      fontReady,
-      delay(reducedMotion ? 180 : 1050),
-    ]);
-    const maximumWait = delay(4500);
+    const essentialsReady = pageLoaded();
+    const maximumWait = delay(reducedMotion ? 100 : 700);
 
     Promise.race([essentialsReady, maximumWait]).then(() => {
       if (cancelled) return;
       setPhase("leaving");
-      leaveTimer = window.setTimeout(() => setPhase("hidden"), reducedMotion ? 40 : 430);
+      leaveTimer = window.setTimeout(() => setPhase("hidden"), reducedMotion ? 30 : 140);
     });
 
     return () => {
@@ -73,7 +68,6 @@ export function AppLaunchSplash() {
             alt=""
             width={112}
             height={112}
-            priority
             className={styles.icon}
           />
           <span className={styles.scan} aria-hidden="true" />

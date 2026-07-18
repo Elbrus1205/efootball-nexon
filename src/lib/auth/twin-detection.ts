@@ -1,10 +1,8 @@
 import { createHash } from "crypto";
-import { LoginAttemptStatus, UserRole } from "@prisma/client";
-import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
+import { LoginAttemptStatus, NotificationType, UserRole } from "@prisma/client";
 import type { SecurityContext } from "@/lib/auth/security";
 import { db } from "@/lib/db";
-import { isTelegramRecipientUnavailableError, sendTelegramMessage } from "@/lib/telegram-bot";
-import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
+import { createNotification } from "@/lib/services/notifications";
 import { tgEmoji } from "@/lib/telegram-emoji";
 
 const MOSCOW_TIME_ZONE = "Europe/Moscow";
@@ -93,17 +91,18 @@ export async function detectAndNotifyTwins(params: {
     return;
   }
 
-  const text = buildTwinAlertMessage({ fingerprint, accounts, context: params.context });
-  const replyMarkup = buildAdminButton(accounts[0]);
-
-  await Promise.allSettled(
-    recipients.map((chatId) =>
-      sendTelegramMessage({ chatId, text, disableWebPagePreview: true, replyMarkup }).catch((error) => {
-        if (isTelegramRecipientUnavailableError(error)) {
-          console.warn("Twin alert skipped: recipient unavailable", { chatId });
-          return;
-        }
-        console.error("Failed to send twin alert", error);
+  const accountSummary = accounts
+    .map((account) => `${account.name || account.email || `Игрок #${account.publicId}`} (ID ${account.publicId})`)
+    .join("; ");
+  await Promise.all(
+    recipients.map((userId) =>
+      createNotification({
+        userId,
+        type: NotificationType.SYSTEM,
+        title: "Обнаружены связанные аккаунты",
+        body: `С одного устройства входили в несколько аккаунтов: ${accountSummary}. IP: ${params.context.ipAddress || "не определён"}.`,
+        link: `/admin/users?highlight=${encodeURIComponent(accounts[0].id)}`,
+        dedupeKey: `twin-alert:${accountsKey}:${Math.floor(Date.now() / (RENOTIFY_AFTER_HOURS * 60 * 60 * 1000))}`,
       }),
     ),
   );
@@ -112,20 +111,15 @@ export async function detectAndNotifyTwins(params: {
 }
 
 export async function getTwinAlertRecipients(): Promise<string[]> {
-  if (!process.env.TELEGRAM_BOT_TOKEN) return [];
-
   const recipients = await db.user.findMany({
     where: {
       role: { in: TWIN_ALERT_ROLES },
-      telegramId: { not: null },
       isBanned: false,
     },
-    select: { telegramId: true },
+    select: { id: true },
   });
 
-  return recipients
-    .map((user) => user.telegramId)
-    .filter((id): id is string => Boolean(id));
+  return recipients.map((user) => user.id);
 }
 
 async function upsertAlert(params: { accountsKey: string; fingerprint: string; userIds: string[] }) {
@@ -169,14 +163,6 @@ export function buildTwinAlertMessage(params: {
   });
 
   return lines.join("\n");
-}
-
-function buildAdminButton(account: TwinAccount) {
-  const baseUrl = getConfiguredSiteBaseUrl();
-  if (!baseUrl) return undefined;
-
-  const url = new URL(`/admin/users?highlight=${encodeURIComponent(account.id)}`, baseUrl).toString();
-  return buildTelegramInlineKeyboard([{ text: "👤 Открыть в админке", url, row: 1 }]);
 }
 
 function shortFingerprint(value: string) {

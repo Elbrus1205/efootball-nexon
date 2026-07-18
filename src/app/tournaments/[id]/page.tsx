@@ -3,21 +3,23 @@ import { Clock3, Search, Send } from "lucide-react";
 import { unstable_noStore as noStore } from "next/cache";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { BracketView } from "@/components/tournaments/bracket-view";
 import { CancelTournamentRegistrationButton } from "@/components/tournaments/cancel-tournament-registration-button";
 import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
-import { MyMatchCard } from "@/components/tournaments/my-match-card";
+import {
+  LazyBracketView as BracketView,
+  LazyMyMatchCard as MyMatchCard,
+  LazyRosterManager as RosterManager,
+  LazyTournamentScheduleView as TournamentScheduleView,
+  LazyTournamentStageSwitcher as TournamentStageSwitcher,
+} from "@/components/tournaments/lazy-tournament-widgets";
 import { RegisterTournamentButton } from "@/components/tournaments/register-tournament-button";
-import { RosterManager } from "@/components/tournaments/roster-manager";
-import { TournamentScheduleView } from "@/components/tournaments/tournament-schedule-view";
 import { TournamentEmptyState } from "@/components/tournaments/tournament-empty-state";
 import { TournamentHero } from "@/components/tournaments/tournament-hero";
 import { TournamentNavigation } from "@/components/tournaments/tournament-navigation";
-import { TournamentStageSwitcher, type TournamentStageOption } from "@/components/tournaments/tournament-stage-switcher";
+import type { TournamentStageOption } from "@/components/tournaments/tournament-stage-switcher";
 import { TelegramProfileLink } from "@/components/telegram-profile-link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { TabsContent } from "@/components/ui/tabs";
 import { getCurrentSession } from "@/lib/auth/session";
 import { getAvailableClubs } from "@/lib/clubs";
 import {
@@ -29,7 +31,6 @@ import { db } from "@/lib/db";
 import { normalizeFormatBlueprint } from "@/lib/format-blueprint";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { RELIABILITY_REGISTRATION_THRESHOLD } from "@/lib/services/reliability";
-import { shouldSyncTournamentRegistrationLifecycle, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { getTelegramProfileLinks, hasPublicTelegramUsername, hasTelegramRegistrationContact } from "@/lib/social-links";
 import { formatDate } from "@/lib/utils";
 import {
@@ -67,6 +68,10 @@ type EmptyGroupSlot = {
   id: string;
   position: number;
 };
+
+function TournamentTabContent({ children }: { children: React.ReactNode }) {
+  return <div className="mt-6">{children}</div>;
+}
 
 const CUSTOM_STANDING_HIGHLIGHT_STYLES = [
   {
@@ -543,15 +548,6 @@ export async function generateMetadata(props: { params: Promise<{ id: string }> 
   return tournament ? { title: tournament.title } : { title: "Турнир не найден" };
 }
 
-function shouldSyncTournamentBeforeView(tournament: {
-  status: TournamentStatus;
-  autoOpenRegistration: boolean;
-  registrationStartsAt: Date | null;
-  startsAt: Date;
-}) {
-  return shouldSyncTournamentRegistrationLifecycle(tournament);
-}
-
 function canSeeTestTournaments(role?: string | null) {
   return role === "FOUNDER" || role === "ADMIN" || role === "ORGANIZER" || role === "JUDGE" || role === "TRAINEE";
 }
@@ -564,30 +560,26 @@ export default async function TournamentDetailsPage(
 ) {
   const searchParams = await props.searchParams;
   const params = await props.params;
+  const requestedDataTab = isPublicTournamentTabValue(searchParams?.tab) ? searchParams?.tab : "structure";
+  const loadTournamentMatches = requestedDataTab === "structure" || requestedDataTab === "matches" || requestedDataTab === "my-matches";
+  const loadParticipantRosters = requestedDataTab === "participants" || requestedDataTab === "roster";
+  const loadStructure = requestedDataTab === "structure";
   const pageStart = performance.now();
   noStore();
   const sessionStart = performance.now();
-  const lifecycleStart = performance.now();
-  const [session, lifecycleCandidate] = await Promise.all([
-    getCurrentSession().finally(() => logTiming("load-session", sessionStart)),
-    db.tournament
-      .findUnique({
-        where: { id: params.id },
-        select: {
-          status: true,
-          autoOpenRegistration: true,
-          registrationStartsAt: true,
-          startsAt: true,
-        },
-      })
-      .finally(() => logTiming("load-lifecycle", lifecycleStart)),
-  ]);
-
-  if (lifecycleCandidate && shouldSyncTournamentBeforeView(lifecycleCandidate)) {
-    const syncStart = performance.now();
-    await syncTournamentLifecycleStatus(params.id).catch(() => null);
-    logTiming("sync-tournament-lifecycle", syncStart);
-  }
+  const session = await getCurrentSession().finally(() => logTiming("load-session", sessionStart));
+  const matchFilter = !loadTournamentMatches
+    ? { id: "__not_loaded__" }
+    : requestedDataTab === "my-matches" && session?.user.id
+      ? {
+          OR: [
+            { player1Id: session.user.id },
+            { player2Id: session.user.id },
+            { participant1Entry: { rosterMembers: { some: { userId: session.user.id, status: "ACCEPTED" as const } } } },
+            { participant2Entry: { rosterMembers: { some: { userId: session.user.id, status: "ACCEPTED" as const } } } },
+          ],
+        }
+      : undefined;
 
   const tournamentStart = performance.now();
   const tournament = await db.tournament.findUnique({
@@ -644,11 +636,12 @@ export default async function TournamentDetailsPage(
           teamName: true,
           teamLogo: true,
           rosterMembers: {
+            where: loadParticipantRosters ? undefined : { id: "__not_loaded__" },
             select: {
               id: true,
               status: true,
               isCaptain: true,
-              user: { select: { id: true, name: true, email: true, telegramId: true, telegramUsername: true } },
+              user: { select: { id: true, name: true, telegramUsername: true } },
             },
             orderBy: [{ isCaptain: "desc" }, { invitedAt: "asc" }],
           },
@@ -656,8 +649,6 @@ export default async function TournamentDetailsPage(
             select: {
               id: true,
               name: true,
-              email: true,
-              telegramId: true,
               telegramUsername: true,
             },
           },
@@ -680,7 +671,7 @@ export default async function TournamentDetailsPage(
                   id: true,
                   status: true,
                   isCaptain: true,
-                  user: { select: { id: true, name: true, email: true, telegramId: true, telegramUsername: true } },
+                  user: { select: { id: true, name: true, email: true, telegramUsername: true } },
                 },
                 orderBy: [{ isCaptain: "desc" }, { invitedAt: "asc" }],
               },
@@ -689,6 +680,7 @@ export default async function TournamentDetailsPage(
         },
       },
       matches: {
+        where: matchFilter,
         select: {
           id: true,
           stageId: true,
@@ -714,8 +706,8 @@ export default async function TournamentDetailsPage(
           player2PenaltyScore: true,
           status: true,
           playoffBracket: { select: { legsCount: true } },
-          player1: { select: { id: true, name: true, email: true } },
-          player2: { select: { id: true, name: true, email: true } },
+          player1: { select: { id: true, name: true } },
+          player2: { select: { id: true, name: true } },
           participant1Entry: {
             select: {
               id: true,
@@ -725,7 +717,7 @@ export default async function TournamentDetailsPage(
               clubBadgePath: true,
               teamName: true,
               teamLogo: true,
-              user: { select: { id: true, name: true, email: true } },
+              user: { select: { id: true, name: true } },
             },
           },
           participant2Entry: {
@@ -737,7 +729,7 @@ export default async function TournamentDetailsPage(
               clubBadgePath: true,
               teamName: true,
               teamLogo: true,
-              user: { select: { id: true, name: true, email: true } },
+              user: { select: { id: true, name: true } },
             },
           },
           stage: {
@@ -776,6 +768,7 @@ export default async function TournamentDetailsPage(
           pointsForLoss: true,
           roundsCount: true,
           groups: {
+            where: loadStructure ? undefined : { id: "__not_loaded__" },
             select: {
               id: true,
               name: true,
@@ -889,14 +882,9 @@ export default async function TournamentDetailsPage(
 
     const playerName = getPlayerDisplayName(entry.user);
     const clubName = resolveClubName(entry, clubsBySlug, playerName);
-    const rosterMembers = entry.rosterMembers.flatMap((member) => [
-      getPlayerDisplayName(member.user),
-      member.user.email,
-      member.user.telegramUsername,
-    ]);
+    const rosterMembers = entry.rosterMembers.flatMap((member) => [getPlayerDisplayName(member.user), member.user.telegramUsername]);
     const searchableValues = [
       playerName,
-      entry.user.email,
       entry.user.telegramUsername,
       entry.clubName,
       entry.clubSlug,
@@ -1086,7 +1074,9 @@ export default async function TournamentDetailsPage(
   const defaultTournamentTab =
     isPublicTournamentTabValue(requestedTournamentTab) && (requestedTournamentTab !== "roster" || showRosterTab)
       ? requestedTournamentTab
-      : "structure";
+      : requestedTournamentTab === "roster"
+        ? "participants"
+        : "structure";
   const renderRosterCards = (entries: typeof activeParticipants) => (
     <div className="grid gap-4 md:grid-cols-2">
       {entries.map((entry) => {
@@ -1228,7 +1218,7 @@ export default async function TournamentDetailsPage(
 
       <TournamentNavigation tabs={tournamentTabs} initialValue={defaultTournamentTab}>
 
-        <TabsContent value="structure">
+        {defaultTournamentTab === "structure" ? <TournamentTabContent>
           {structureOptions.length ? (
             <TournamentStageSwitcher options={structureOptions}>
               {tournament.stages.map((stage) => {
@@ -1278,13 +1268,13 @@ export default async function TournamentDetailsPage(
           ) : (
             <TournamentEmptyState title="Структура ещё не опубликована" description="Этапы, группы и сетка появятся здесь после формирования турнира." />
           )}
-        </TabsContent>
+        </TournamentTabContent> : null}
 
-        <TabsContent value="matches">
+        {defaultTournamentTab === "matches" ? <TournamentTabContent>
           <TournamentScheduleView sections={scheduleViewSections} />
-        </TabsContent>
+        </TournamentTabContent> : null}
 
-        <TabsContent value="my-matches">
+        {defaultTournamentTab === "my-matches" ? <TournamentTabContent>
           <div className="grid gap-4">
             {!currentUserId ? (
               <TournamentEmptyState title="Войдите, чтобы увидеть свои матчи" description="После входа здесь будут собраны ваши ближайшие и завершённые встречи." action={<Button asChild><a href={`/login?callbackUrl=/tournaments/${tournament.id}?tab=my-matches`}>Войти</a></Button>} />
@@ -1382,10 +1372,10 @@ export default async function TournamentDetailsPage(
               <TournamentEmptyState title="Личных матчей пока нет" description="Встречи появятся после публикации расписания или формирования сетки." />
             )}
           </div>
-        </TabsContent>
+        </TournamentTabContent> : null}
 
-        {showRosterTab ? (
-          <TabsContent value="roster">
+        {showRosterTab && defaultTournamentTab === "roster" ? (
+          <TournamentTabContent>
             <div className="grid gap-4">
               <RosterManager
                 tournamentId={tournament.id}
@@ -1396,10 +1386,10 @@ export default async function TournamentDetailsPage(
               />
               {currentRosterCards}
             </div>
-          </TabsContent>
+          </TournamentTabContent>
         ) : null}
 
-        <TabsContent value="participants">
+        {defaultTournamentTab === "participants" ? <TournamentTabContent>
           <div className="space-y-4">
             <form aria-label="Поиск участников" className="grid gap-2 rounded-2xl border border-white/10 bg-black/25 p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
               <input type="hidden" name="tab" value="participants" />
@@ -1474,11 +1464,11 @@ export default async function TournamentDetailsPage(
               <TournamentEmptyState title="Участники не найдены" description="Измените запрос или сбросьте фильтр, чтобы увидеть весь список." />
             )}
           </div>
-        </TabsContent>
+        </TournamentTabContent> : null}
 
-        <TabsContent value="rules">
+        {defaultTournamentTab === "rules" ? <TournamentTabContent>
           {tournament.rules.trim() ? <Card className="p-5 sm:p-7"><h2 className="text-xl font-bold text-white">Правила турнира</h2><div className="mt-4 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-zinc-300 sm:text-base">{tournament.rules}</div></Card> : <TournamentEmptyState title="Правила ещё не опубликованы" description="Организатор добавит регламент до начала турнира." />}
-        </TabsContent>
+        </TournamentTabContent> : null}
       </TournamentNavigation>
     </div>
   );

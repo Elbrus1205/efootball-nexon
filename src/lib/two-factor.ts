@@ -7,7 +7,7 @@ import type { SecurityContext } from "@/lib/auth/security";
 export const TWO_FACTOR_CHALLENGE_TTL_MS = 10 * 60 * 1000;
 
 export function generateTwoFactorCode() {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return String(crypto.randomInt(100000, 1_000_000));
 }
 
 export function hashTwoFactorCode(code: string) {

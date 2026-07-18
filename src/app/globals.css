@@ -274,8 +274,9 @@ body input:focus,
 body textarea:focus,
 body select:focus {
   border-color: var(--classic-gold) !important;
-  box-shadow: none !important;
-  outline: none !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--classic-gold) 35%, transparent) !important;
+  outline: 2px solid var(--classic-gold) !important;
+  outline-offset: 2px !important;
 }
 
 body button,

@@ -92,7 +92,7 @@ export function SiteFooter() {
             <div className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">Навигация</div>
             <div className="flex flex-wrap gap-x-4 gap-y-2 sm:grid sm:gap-3">
               {navigationLinks.map((link) => (
-                <Link key={link.href} href={link.href} className="text-xs text-zinc-300 transition hover:text-white sm:text-sm">
+                <Link key={link.href} href={link.href} prefetch={false} className="text-xs text-zinc-300 transition hover:text-white sm:text-sm">
                   {link.label}
                 </Link>
               ))}
@@ -106,6 +106,7 @@ export function SiteFooter() {
                 <Link
                   key={link.label}
                   href={link.href}
+                  prefetch={false}
                   className="inline-flex items-start gap-1.5 text-xs leading-5 text-zinc-300 transition hover:text-white sm:gap-2 sm:text-sm sm:leading-6"
                 >
                   {index % 2 === 0 ? (

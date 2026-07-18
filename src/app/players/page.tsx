@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import { Search, Send } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
@@ -11,6 +12,75 @@ import { getPlayerDisplayName } from "@/lib/player-name";
 import { getSelectedProfileStatusWhere } from "@/lib/profile-status-query";
 import { getUserSocialLinks } from "@/lib/social-links";
 
+const PLAYER_PAGE_SIZE = 12;
+const MAX_PLAYER_PAGE = 100;
+const MAX_PLAYER_QUERY_LENGTH = 80;
+const MAX_MEMORY_PLAYER_PAGES = 128;
+const playerPageLoads = new Map<string, Promise<Awaited<ReturnType<typeof loadPlayerRows>>>>();
+const playerPageValues = new Map<string, { expiresAt: number; value: Awaited<ReturnType<typeof loadPlayerRows>> }>();
+
+async function loadPlayerRows(query: string, page: number) {
+  return db.user.findMany({
+    where: query
+      ? {
+          OR: [
+            { name: { contains: query, mode: "insensitive" as const } },
+            { publicId: { contains: query } },
+            { id: { contains: query } },
+          ],
+        }
+      : undefined,
+    select: {
+      id: true,
+      publicId: true,
+      name: true,
+      image: true,
+      role: true,
+      telegramId: true,
+      telegramUsername: true,
+      vkId: true,
+      accounts: { select: { provider: true, providerAccountId: true } },
+      profileStatuses: {
+        where: getSelectedProfileStatusWhere(),
+        orderBy: [{ selectedOrder: "asc" as const }, { createdAt: "desc" as const }],
+        take: 3,
+        select: { id: true, title: true, tone: true, type: true },
+      },
+    },
+    orderBy: [{ createdAt: "desc" as const }],
+    skip: (page - 1) * PLAYER_PAGE_SIZE,
+    take: PLAYER_PAGE_SIZE + 1,
+  });
+}
+
+const getCachedPlayerRows = unstable_cache(loadPlayerRows, ["public-player-directory"], {
+  revalidate: 60,
+  tags: ["public-player-directory"],
+});
+
+function getPlayerRows(query: string, page: number) {
+  const key = `${query.toLocaleLowerCase("ru-RU")}:${page}`;
+  const cached = playerPageValues.get(key);
+  if (cached && cached.expiresAt > Date.now()) return Promise.resolve(cached.value);
+  if (cached) playerPageValues.delete(key);
+  const existing = playerPageLoads.get(key);
+  if (existing) return existing;
+
+  const pending = getCachedPlayerRows(query, page)
+    .then((value) => {
+      playerPageValues.set(key, { expiresAt: Date.now() + 60_000, value });
+      while (playerPageValues.size > MAX_MEMORY_PLAYER_PAGES) {
+        const oldestKey = playerPageValues.keys().next().value;
+        if (!oldestKey) break;
+        playerPageValues.delete(oldestKey);
+      }
+      return value;
+    })
+    .finally(() => playerPageLoads.delete(key));
+  playerPageLoads.set(key, pending);
+  return pending;
+}
+
 function VkMark({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
@@ -21,37 +91,24 @@ function VkMark({ className }: { className?: string }) {
 
 export default async function PlayersPage(
   props: {
-    searchParams?: Promise<{ q?: string }>;
+    searchParams?: Promise<{ q?: string; page?: string }>;
   }
 ) {
   const searchParams = await props.searchParams;
-  const query = searchParams?.q?.trim() ?? "";
-  const users = await db.user.findMany({
-    where: query
-      ? {
-          OR: [
-            { name: { contains: query, mode: "insensitive" } },
-            { publicId: { contains: query } },
-            { id: { contains: query } },
-          ],
-        }
-      : undefined,
-    include: {
-      accounts: {
-        select: {
-          provider: true,
-          providerAccountId: true,
-        },
-      },
-      profileStatuses: {
-        where: getSelectedProfileStatusWhere(),
-        orderBy: [{ selectedOrder: "asc" }, { createdAt: "desc" }],
-        take: 3,
-      },
-    },
-    orderBy: [{ createdAt: "desc" }],
-    take: 80,
-  });
+  const query = (searchParams?.q?.trim() ?? "").slice(0, MAX_PLAYER_QUERY_LENGTH);
+  const requestedPage = Number.parseInt(searchParams?.page ?? "1", 10);
+  const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? Math.min(requestedPage, MAX_PLAYER_PAGE) : 1;
+  const rows = await getPlayerRows(query, page);
+  const hasNextPage = rows.length > PLAYER_PAGE_SIZE;
+  const users = rows.slice(0, PLAYER_PAGE_SIZE);
+
+  function pageHref(targetPage: number) {
+    const params = new URLSearchParams();
+    if (query) params.set("q", query);
+    if (targetPage > 1) params.set("page", String(targetPage));
+    const suffix = params.toString();
+    return suffix ? `/players?${suffix}` : "/players";
+  }
 
   return (
     <div className="page-shell space-y-6">
@@ -124,6 +181,22 @@ export default async function PlayersPage(
           );
         })}
       </div>
+
+      {page > 1 || hasNextPage ? (
+        <nav className="flex items-center justify-between gap-3" aria-label="Страницы игроков">
+          {page > 1 ? (
+            <Link href={pageHref(page - 1)} className="rounded-xl border border-white/10 px-4 py-2 text-sm text-zinc-200 transition hover:border-primary/50 hover:text-white">
+              Назад
+            </Link>
+          ) : <span />}
+          <span className="text-sm text-zinc-500">Страница {page}</span>
+          {hasNextPage ? (
+            <Link href={pageHref(page + 1)} className="rounded-xl border border-white/10 px-4 py-2 text-sm text-zinc-200 transition hover:border-primary/50 hover:text-white">
+              Дальше
+            </Link>
+          ) : <span />}
+        </nav>
+      ) : null}
 
       {!users.length ? <Card className="p-6 text-sm text-zinc-500">Пользователи не найдены.</Card> : null}
     </div>

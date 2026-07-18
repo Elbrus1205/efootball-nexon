@@ -1,11 +1,8 @@
-import { NotificationType } from "@prisma/client";
+import { NotificationType, Prisma } from "@prisma/client";
 import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
-import { isTelegramRecipientUnavailableError, sendTelegramRichMessageWithFallback } from "@/lib/telegram-bot";
-import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
-import { buildNotificationRichMessage, type TelegramRichMessageDraft } from "@/lib/telegram-rich";
+import type { TelegramRichMessageDraft } from "@/lib/telegram-rich";
 import { repairMojibake } from "@/lib/text-encoding";
-import { sendWebPushNotification } from "@/lib/services/web-push";
 
 export async function createNotification({
   userId,
@@ -50,38 +47,36 @@ export async function createNotification({
     }
   }
 
-  const notificationSelect = {
-    user: {
-      select: {
-        telegramId: true,
-      },
-    },
+  let notification = null;
+  const storedTelegramPayload = telegramRichMessage
+    ? (JSON.parse(JSON.stringify(telegramRichMessage)) as Prisma.InputJsonValue)
+    : undefined;
+  const deliveryData = {
+    skipTelegram: Boolean(skipTelegram),
+    ...(storedTelegramPayload ? { telegramPayload: storedTelegramPayload } : {}),
   };
 
-  let notification = null;
-  let shouldDeliver = true;
-
   if (dedupeKey) {
-    const created = await db.notification.createMany({
-      data: [{ userId, title: safeTitle, body: safeBody, type, link, dedupeKey }],
-      skipDuplicates: true,
+    notification = await db.$transaction(async (tx) => {
+      const created = await tx.notification.createMany({
+        data: [{ userId, title: safeTitle, body: safeBody, type, link, dedupeKey }],
+        skipDuplicates: true,
+      });
+      const stored = await tx.notification.findUnique({
+        where: { userId_dedupeKey: { userId, dedupeKey } },
+      });
+      if (created.count > 0 && stored) {
+        await tx.notificationDelivery.create({ data: { notificationId: stored.id, ...deliveryData } });
+      }
+      return stored;
     });
-
-    notification = await db.notification.findUnique({
-      where: {
-        userId_dedupeKey: {
-          userId,
-          dedupeKey,
-        },
-      },
-      include: notificationSelect,
-    });
-
-    shouldDeliver = created.count > 0;
   } else {
-    notification = await db.notification.create({
-      data: { userId, title: safeTitle, body: safeBody, type, link, dedupeKey },
-      include: notificationSelect,
+    notification = await db.$transaction(async (tx) => {
+      const stored = await tx.notification.create({
+        data: { userId, title: safeTitle, body: safeBody, type, link, dedupeKey },
+      });
+      await tx.notificationDelivery.create({ data: { notificationId: stored.id, ...deliveryData } });
+      return stored;
     });
   }
 
@@ -99,45 +94,6 @@ export async function createNotification({
     isRead: notification.isRead,
     createdAt: notification.createdAt,
   };
-
-  if (shouldDeliver) {
-    await sendWebPushNotification(userId, {
-      title: safeTitle,
-      body: safeBody,
-      link,
-      tag: dedupeKey || notification.id,
-    }).catch((error) => {
-      console.error("Failed to deliver phone push notification", error);
-    });
-  }
-
-  if (shouldDeliver && !skipTelegram && notification.user.telegramId && process.env.TELEGRAM_BOT_TOKEN) {
-    const absoluteLink = buildAbsoluteNotificationLink(link);
-    const richMessage = telegramRichMessage ?? buildNotificationRichMessage({
-        title: safeTitle,
-        body: safeBody,
-        typeLabel: getTelegramNotificationTypeLabel(notification.type),
-        url: absoluteLink,
-        buttonText: absoluteLink ? getTelegramNotificationButtonText(notification.type) : null,
-      });
-    await sendTelegramRichMessageWithFallback({
-      chatId: notification.user.telegramId,
-      message: richMessage,
-      replyMarkup: buildTelegramInlineKeyboard(richMessage.buttons ?? []),
-    }).catch((error) => {
-      if (isTelegramRecipientUnavailableError(error)) {
-        if (process.env.TELEGRAM_DEBUG === "true") {
-          console.warn("Telegram notification skipped: recipient is unavailable", {
-            userId,
-            telegramId: notification.user.telegramId,
-          });
-        }
-        return;
-      }
-
-      console.error("Failed to send Telegram notification", error);
-    });
-  }
 
   return payload;
 }
@@ -161,19 +117,16 @@ export async function createNotificationsForUsers({
 }) {
   const uniqueUserIds = Array.from(new Set(userIds.filter(Boolean)));
 
-  return Promise.all(
-    uniqueUserIds.map((userId) =>
-      createNotification({
-        userId,
-        title,
-        body,
-        type,
-        link,
-        dedupeKey,
-        dedupeWithinHours,
-      }),
-    ),
-  );
+  const results = [];
+  for (let index = 0; index < uniqueUserIds.length; index += 8) {
+    const batch = uniqueUserIds.slice(index, index + 8);
+    results.push(...await Promise.all(
+      batch.map((userId) =>
+        createNotification({ userId, title, body, type, link, dedupeKey, dedupeWithinHours }),
+      ),
+    ));
+  }
+  return results;
 }
 
 export async function createNotificationForAllUsers({
@@ -208,21 +161,21 @@ export async function createNotificationForAllUsers({
   });
 }
 
-function getTelegramNotificationTypeLabel(type: NotificationType) {
+export function getTelegramNotificationTypeLabel(type: NotificationType) {
   if (type === NotificationType.TOURNAMENT) return "Турнирное уведомление";
   if (type === NotificationType.MATCH) return "Матчевое уведомление";
   if (type === NotificationType.RESULT) return "Результат матча";
   return "Системное уведомление";
 }
 
-function getTelegramNotificationButtonText(type: NotificationType) {
+export function getTelegramNotificationButtonText(type: NotificationType) {
   if (type === NotificationType.TOURNAMENT) return "🏆 Открыть турнир";
   if (type === NotificationType.MATCH) return "🎮 Открыть матч";
   if (type === NotificationType.RESULT) return "📊 Открыть результат";
   return "🌐 Открыть на сайте";
 }
 
-function buildAbsoluteNotificationLink(link?: string | null) {
+export function buildAbsoluteNotificationLink(link?: string | null) {
   const appUrl = getConfiguredSiteBaseUrl();
   return link && appUrl ? new URL(link, appUrl).toString() : "";
 }

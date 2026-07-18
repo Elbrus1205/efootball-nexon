@@ -7,7 +7,7 @@
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#080d16",
   "theme_color": "#080d16",
   "categories": ["sports", "games", "entertainment"],

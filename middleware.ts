@@ -9,7 +9,13 @@ export default withAuth(
       authorized: ({ token, req }) => {
         if (!token?.sub || token.isBanned) return false;
         if (req.nextUrl.pathname.startsWith("/admin")) {
-          return token.role === "FOUNDER" || token.role === "ORGANIZER" || token.role === "JUDGE";
+          return (
+            token.role === "FOUNDER" ||
+            token.role === "ORGANIZER" ||
+            token.role === "ADMIN" ||
+            token.role === "JUDGE" ||
+            token.role === "TRAINEE"
+          );
         }
         return true;
       },

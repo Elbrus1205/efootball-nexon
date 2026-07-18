@@ -14,6 +14,22 @@ export function isInlineImageUrl(src?: string | null) {
   return Boolean(src?.startsWith("data:") || src?.startsWith("blob:"));
 }
 
+export function isAllowedCoverSource(src: string, supabaseUrl?: string | null) {
+  if (src.startsWith("/") && !src.startsWith("//")) return true;
+
+  try {
+    const url = new URL(src);
+    if (url.protocol !== "https:") return false;
+
+    const supabaseOrigin = supabaseUrl ? new URL(supabaseUrl).origin : null;
+    if (supabaseOrigin && url.origin === supabaseOrigin) return isSupabaseStorageUrl(url);
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 export function optimizedImageUrl(src?: string | null, options: ImageTransformOptions = {}) {
   if (!src || isInlineImageUrl(src)) return src ?? undefined;
   if (src.startsWith("/")) return src;

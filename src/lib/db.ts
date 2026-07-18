@@ -1,5 +1,6 @@
 /* eslint-disable no-var */
 import { Prisma, PrismaClient } from "@prisma/client";
+import { configureRuntimeDatabaseUrl } from "@/lib/database-url";
 
 declare global {
   var prisma: PrismaClient | undefined;
@@ -11,24 +12,10 @@ function getDatabaseUrlWithPoolDefaults() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) return undefined;
 
-  try {
-    const url = new URL(databaseUrl);
-    if (url.protocol !== "postgresql:" && url.protocol !== "postgres:") {
-      return databaseUrl;
-    }
-
-    if (!url.searchParams.has("connection_limit")) {
-      url.searchParams.set("connection_limit", process.env.PRISMA_CONNECTION_LIMIT ?? "5");
-    }
-
-    if (!url.searchParams.has("pool_timeout")) {
-      url.searchParams.set("pool_timeout", process.env.PRISMA_POOL_TIMEOUT ?? "20");
-    }
-
-    return url.toString();
-  } catch {
-    return databaseUrl;
-  }
+  return configureRuntimeDatabaseUrl(databaseUrl, {
+    connectionLimit: process.env.PRISMA_CONNECTION_LIMIT,
+    poolTimeout: process.env.PRISMA_POOL_TIMEOUT,
+  });
 }
 
 function createPrismaClient() {

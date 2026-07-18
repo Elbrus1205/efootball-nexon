@@ -7,12 +7,14 @@ import sharp from "sharp";
 const root = process.cwd();
 const read = (...parts: string[]) => readFileSync(path.join(root, ...parts), "utf8");
 
-test("installed Android app gets a branded startup screen until essential assets are ready", () => {
+test("installed Android app gets a bounded, non-blocking branded startup screen", () => {
   const provider = read("src", "components", "providers", "app-launch-splash.tsx");
   const styles = read("src", "components", "providers", "app-launch-splash.module.css");
   const appProviders = read("src", "components", "providers", "app-providers.tsx");
 
-  assert.match(provider, /document\.fonts\?\.ready/);
+  assert.match(provider, /Promise\.race\(\[essentialsReady, maximumWait\]\)/);
+  assert.match(provider, /delay\(reducedMotion \? 100 : 700\)/);
+  assert.doesNotMatch(provider, /document\.fonts|1050|4500|\bpriority\b/);
   assert.match(provider, /display-mode: standalone/);
   assert.doesNotMatch(provider, /source\) === "android"|source=android|localStorage/);
   assert.match(provider, /aria-label="Загрузка eFootball Nexon"/);
@@ -23,6 +25,7 @@ test("installed Android app gets a branded startup screen until essential assets
 test("manifest describes a stable standalone Android identity", () => {
   const manifest = JSON.parse(read("public", "manifest.webmanifest")) as {
     id?: string;
+    start_url?: string;
     display?: string;
     icons?: Array<{ src: string; purpose?: string }>;
   };

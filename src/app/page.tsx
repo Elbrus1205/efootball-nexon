@@ -17,7 +17,6 @@ import { MatchStatus, ParticipantStatus, TournamentStatus } from "@prisma/client
 import { AnimatedBrandHero } from "@/components/home/animated-brand-hero";
 import { AnimatedCounter } from "@/components/home/animated-counter";
 import { Reveal } from "@/components/shared/reveal";
-import { getCurrentSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getArchivedHomeStats, parsePrizePoolValue } from "@/lib/home-stats";
 import { formatDate } from "@/lib/utils";
@@ -96,8 +95,7 @@ const getHomeData = unstable_cache(
 );
 
 export default async function HomePage() {
-  const [data, session] = await Promise.all([getHomeData(), getCurrentSession()]);
-  const playHref = session?.user?.id ? "/tournaments" : "/register";
+  const data = await getHomeData();
   const stats = [
     { value: data.playersCount, suffix: "", label: "игроков" },
     { value: data.tournamentsCount, suffix: "", label: "турниров завершено" },
@@ -112,9 +110,7 @@ export default async function HomePage() {
         <div className={s.heroLight} aria-hidden="true" />
         <div className={s.shell}>
           <AnimatedBrandHero
-            playHref={playHref}
             telegramHref={telegramHref}
-            isSignedIn={Boolean(session?.user?.id)}
           />
 
           <div className={s.stats} aria-label="Статистика платформы">
@@ -144,7 +140,7 @@ export default async function HomePage() {
                   <Link href={`/tournaments/${tournament.id}`} className={s.tournamentCard}>
                     <div className={s.tournamentMedia}>
                       {tournament.coverImage ? (
-                        <Image src={tournament.coverImage} alt="" fill sizes="(min-width: 900px) 34vw, 100vw" className={s.tournamentImage} />
+                        <Image src={tournament.coverImage} alt="" fill unoptimized loading="lazy" sizes="(min-width: 900px) 34vw, 100vw" className={s.tournamentImage} />
                       ) : (
                         <div className={s.coverFallback} aria-hidden="true"><span /><CircleDot /></div>
                       )}

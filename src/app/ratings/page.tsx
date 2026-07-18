@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import { Archive, CalendarRange, Crown, Medal, Shield, Trophy } from "lucide-react";
 import { TournamentStatus } from "@prisma/client";
 import { Fragment } from "react";
@@ -12,6 +13,45 @@ import { optimizedImageUrl } from "@/lib/image-optimization";
 import { getPlayerRatings } from "@/lib/ratings";
 import { proxyTelegramAssetUrl } from "@/lib/telegram-assets";
 import { cn, formatDate } from "@/lib/utils";
+
+const ratingsDataLoads = new Map<string, Promise<unknown>>();
+const ratingsDataValues = new Map<string, { expiresAt: number; value: unknown }>();
+
+const getCachedRatingSeasons = unstable_cache(
+  () => db.season.findMany({ orderBy: [{ isActive: "desc" }, { startsAt: "desc" }, { createdAt: "desc" }] }),
+  ["public-rating-seasons"],
+  { revalidate: 60, tags: ["player-ratings"] },
+);
+
+const getCachedRatingPrizeTournaments = unstable_cache(
+  (seasonId: string | null) =>
+    db.tournament.findMany({
+      where: {
+        isTest: false,
+        status: TournamentStatus.COMPLETED,
+        ...(seasonId ? { seasonId } : {}),
+      },
+      select: { prizePool: true },
+    }),
+  ["public-rating-prize-tournaments"],
+  { revalidate: 60, tags: ["player-ratings"] },
+);
+
+function coalesceRatingLoad<T>(key: string, loader: () => Promise<T>) {
+  const cached = ratingsDataValues.get(key);
+  if (cached && cached.expiresAt > Date.now()) return Promise.resolve(cached.value as T);
+  if (cached) ratingsDataValues.delete(key);
+  const existing = ratingsDataLoads.get(key) as Promise<T> | undefined;
+  if (existing) return existing;
+  const pending = loader()
+    .then((value) => {
+      ratingsDataValues.set(key, { expiresAt: Date.now() + 60_000, value });
+      return value;
+    })
+    .finally(() => ratingsDataLoads.delete(key));
+  ratingsDataLoads.set(key, pending);
+  return pending;
+}
 
 function rankStyle(rank: number) {
   if (rank === 1) return "border-amber-300/40 bg-amber-300/15 text-amber-200";
@@ -77,9 +117,7 @@ export default async function RatingsPage(
   const searchParams = await props.searchParams;
   const [session, seasons] = await Promise.all([
     getCurrentSession(),
-    db.season.findMany({
-      orderBy: [{ isActive: "desc" }, { startsAt: "desc" }, { createdAt: "desc" }],
-    }),
+    coalesceRatingLoad("seasons", getCachedRatingSeasons),
   ]);
 
   const activeSeason = seasons.find((season) => season.isActive) ?? null;
@@ -92,15 +130,8 @@ export default async function RatingsPage(
   const ratingSeason = showAllTime ? null : selectedSeason ?? activeSeason;
   const archivedSeasons = seasons.filter((season) => !season.isActive);
   const [ratings, prizeTournaments] = await Promise.all([
-    getPlayerRatings({ seasonId: ratingSeason?.id ?? null }),
-    db.tournament.findMany({
-      where: {
-        isTest: false,
-        status: TournamentStatus.COMPLETED,
-        ...(ratingSeason ? { seasonId: ratingSeason.id } : {}),
-      },
-      select: { prizePool: true },
-    }),
+    coalesceRatingLoad(`ratings:${ratingSeason?.id ?? "all"}`, () => getPlayerRatings({ seasonId: ratingSeason?.id ?? null })),
+    coalesceRatingLoad(`prizes:${ratingSeason?.id ?? "all"}`, () => getCachedRatingPrizeTournaments(ratingSeason?.id ?? null)),
   ]);
   const ratingPrizePool = Math.floor(prizeTournaments.reduce((sum, tournament) => sum + parsePrizePoolValue(tournament.prizePool), 0) * 0.1);
   const topRatings = ratings.slice(0, 10);

@@ -1,40 +1,25 @@
 import { Prisma, TournamentStatus } from "@prisma/client";
+import { unstable_cache } from "next/cache";
 import { DivisionPreviewCard } from "@/components/divisions/division-preview-card";
 import { TournamentCard } from "@/components/tournaments/tournament-card";
-import { getCurrentSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { getDivisionPreviewSettings, isDivisionAdminRole } from "@/lib/services/divisions";
-import { shouldSyncTournamentRegistrationLifecycle, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 10;
 
 function logTiming(label: string, start: number) {
   if (process.env.NODE_ENV === "production") return;
   console.log(`${label}: ${(performance.now() - start).toFixed(3)}ms`);
 }
 
-function shouldSyncTournamentForList(tournament: {
-  status: TournamentStatus;
-  autoOpenRegistration: boolean;
-  registrationStartsAt: Date | null;
-  startsAt: Date;
-}) {
-  return shouldSyncTournamentRegistrationLifecycle(tournament);
-}
-
-function canSeeTestTournaments(role?: string | null) {
-  return role === "FOUNDER" || role === "ADMIN" || role === "ORGANIZER" || role === "JUDGE" || role === "TRAINEE";
-}
-
 type TournamentListRow = {
   id: string;
   title: string;
   status: TournamentStatus;
-  startsAt: Date;
+  startsAt: Date | string;
   maxParticipants: number;
   prizePool: string | null;
   hasCoverImage: boolean;
-  updatedAt: Date;
+  updatedAt: Date | string;
   isTest: boolean;
   autoOpenRegistration: boolean;
   registrationStartsAt: Date | null;
@@ -42,11 +27,7 @@ type TournamentListRow = {
 };
 
 function getTournamentCoverUrl(tournament: Pick<TournamentListRow, "id" | "hasCoverImage" | "updatedAt">) {
-  return tournament.hasCoverImage ? `/api/tournaments/${tournament.id}/cover?w=720&h=405&q=84&v=${tournament.updatedAt.getTime()}` : null;
-}
-
-function getDivisionCoverUrl(settings: { coverImage: string | null; updatedAt: Date | null }) {
-  return settings.coverImage && settings.updatedAt ? `/api/divisions/cover?w=1280&h=720&q=86&v=${settings.updatedAt.getTime()}` : null;
+  return tournament.hasCoverImage ? `/api/tournaments/${tournament.id}/cover?w=720&h=405&q=84&v=${new Date(tournament.updatedAt).getTime()}` : null;
 }
 
 function loadTournamentList(showTestTournaments: boolean) {
@@ -76,35 +57,36 @@ function loadTournamentList(showTestTournaments: boolean) {
   `);
 }
 
+const getCachedTournamentList = unstable_cache(loadTournamentList, ["public-tournament-list"], {
+  revalidate: 10,
+  tags: ["public-tournaments"],
+});
+const tournamentListLoads = new Map<string, Promise<TournamentListRow[]>>();
+const tournamentListValues = new Map<string, { expiresAt: number; value: TournamentListRow[] }>();
+
+function getTournamentList(showTestTournaments: boolean) {
+  const key = showTestTournaments ? "with-tests" : "public";
+  const cached = tournamentListValues.get(key);
+  if (cached && cached.expiresAt > Date.now()) return Promise.resolve(cached.value);
+  if (cached) tournamentListValues.delete(key);
+  const existing = tournamentListLoads.get(key);
+  if (existing) return existing;
+  const pending = getCachedTournamentList(showTestTournaments)
+    .then((value) => {
+      tournamentListValues.set(key, { expiresAt: Date.now() + 10_000, value });
+      return value;
+    })
+    .finally(() => tournamentListLoads.delete(key));
+  tournamentListLoads.set(key, pending);
+  return pending;
+}
+
 export default async function TournamentsPage() {
   const pageStart = performance.now();
-  const roleStart = performance.now();
-  const session = await getCurrentSession().finally(() => logTiming("load-session-role", roleStart));
-
-  const currentRole = session?.user.role ?? null;
-  const showTestTournaments = canSeeTestTournaments(currentRole);
-
   const tournamentsStart = performance.now();
   const tournamentListStart = performance.now();
-  const canOpenDivisions = isDivisionAdminRole(currentRole);
-  const divisionSettingsStart = performance.now();
-  const [initialTournamentList, divisionSettings] = await Promise.all([
-    loadTournamentList(showTestTournaments).finally(() => logTiming("load-tournament-list", tournamentListStart)),
-    canOpenDivisions
-      ? getDivisionPreviewSettings().finally(() => logTiming("load-division-settings", divisionSettingsStart))
-      : Promise.resolve({ coverImage: null, updatedAt: null }),
-  ]);
+  const tournamentList = await getTournamentList(false).finally(() => logTiming("load-tournament-list", tournamentListStart));
 
-  const syncStart = performance.now();
-  const syncCandidates = initialTournamentList.filter(shouldSyncTournamentForList);
-  await Promise.all(
-    syncCandidates.map((tournament) => syncTournamentLifecycleStatus(tournament.id).catch(() => null)),
-  );
-  logTiming("sync-tournaments", syncStart);
-
-  const tournamentList = syncCandidates.length
-    ? await loadTournamentList(showTestTournaments)
-    : initialTournamentList;
   logTiming("load-tournaments", tournamentsStart);
   logTiming("tournaments-page", pageStart);
 
@@ -112,13 +94,13 @@ export default async function TournamentsPage() {
     <div className="page-shell space-y-8">
       <div className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Турниры</div>
 
-      <DivisionPreviewCard canOpen={canOpenDivisions} coverImage={canOpenDivisions ? getDivisionCoverUrl(divisionSettings) : null} priorityImage />
+      <DivisionPreviewCard canOpen={false} coverImage={null} />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {tournamentList.map((tournament, index) => (
           <TournamentCard
             key={tournament.id}
-            tournament={{ ...tournament, coverImage: getTournamentCoverUrl(tournament) }}
+            tournament={{ ...tournament, startsAt: new Date(tournament.startsAt), coverImage: getTournamentCoverUrl(tournament) }}
             participantsCount={tournament.participantsCount}
             priorityImage={index === 0}
           />

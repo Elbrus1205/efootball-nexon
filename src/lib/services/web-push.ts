@@ -82,6 +82,7 @@ export async function sendWebPushNotification(userId: string, payload: PhonePush
     badge: "/icons/icon-192.png",
   });
 
+  const transientFailures: number[] = [];
   await Promise.all(
     subscriptions.map(async (subscription) => {
       try {
@@ -91,6 +92,7 @@ export async function sendWebPushNotification(userId: string, payload: PhonePush
             keys: { p256dh: subscription.p256dh, auth: subscription.auth },
           },
           message,
+          { TTL: 60, timeout: 8_000 },
         );
       } catch (error) {
         const statusCode = error && typeof error === "object" && "statusCode" in error
@@ -100,8 +102,13 @@ export async function sendWebPushNotification(userId: string, payload: PhonePush
           await db.webPushSubscription.delete({ where: { id: subscription.id } }).catch(() => null);
           return;
         }
+        transientFailures.push(statusCode);
         console.error("Failed to send phone push notification", { userId, statusCode });
       }
     }),
   );
+
+  if (transientFailures.length) {
+    throw new Error(`web-push-temporary-failure:${transientFailures.join(",")}`);
+  }
 }

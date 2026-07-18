@@ -46,6 +46,7 @@ export function TournamentCard({
               alt={tournament.title}
               width={640}
               height={360}
+              unoptimized
               sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
               priority={priorityImage}
               fetchPriority={priorityImage ? "high" : undefined}

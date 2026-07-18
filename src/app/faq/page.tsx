@@ -246,7 +246,7 @@ export default async function FaqPage() {
                           return (
                             <a key={attachment.id} href={attachment.url} target="_blank" rel="noreferrer" className="group/image overflow-hidden rounded-2xl border border-white/10 bg-black/20">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={attachment.url} alt={attachment.title} className="aspect-video w-full object-cover transition group-hover/image:scale-[1.02]" />
+                              <img src={attachment.url} alt={attachment.title} loading="lazy" decoding="async" className="aspect-video w-full object-cover transition group-hover/image:scale-[1.02]" />
                               <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white">
                                 <Icon className="h-4 w-4 text-primary" />
                                 {attachment.title}

@@ -1,4 +1,4 @@
-import { ClubSelectionMode, NotificationType, ParticipantStatus, TournamentApplicationStatus, TournamentParticipantMode, TournamentStatus } from "@prisma/client";
+import { ClubSelectionMode, NotificationType, ParticipantStatus, TeamInviteStatus, TournamentApplicationStatus, TournamentParticipantMode, TournamentStatus } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
@@ -9,10 +9,19 @@ import { db } from "@/lib/db";
 import { hasAcceptedCurrentRegulations } from "@/lib/regulations";
 import { formatReliabilityRegistrationRestriction, syncReliabilityRestriction } from "@/lib/services/reliability";
 import { createNotification } from "@/lib/services/notifications";
-import { getTournamentGroupCapacityLimit, syncTournamentLifecycleStatus, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
+import { getTournamentGroupCapacityLimit, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
 import { hasTelegramRegistrationContact } from "@/lib/social-links";
 import { isLineupPhotoStorageUrl, lineupPhotoUrlSchema } from "@/lib/tournament-applications";
 import { formatTournamentBanMessage } from "@/lib/user-ban";
+
+class RegistrationWriteError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
 
 export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -43,8 +52,6 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       { status: 428 },
     );
   }
-
-  await syncTournamentLifecycleStatus(params.id).catch(() => null);
 
   const tournament = await db.tournament.findUnique({
     where: { id: params.id },
@@ -180,7 +187,55 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
 
   if (tournament.requireLineupPhoto) {
     try {
-      await db.tournamentRegistrationApplication.upsert({
+      await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`tournament-registration:${params.id}`}))`;
+        const current = await tx.tournament.findUnique({
+          where: { id: params.id },
+          select: {
+            status: true,
+            maxParticipants: true,
+            format: true,
+            formatBlueprintJson: true,
+            groupsCount: true,
+            participantsPerGroup: true,
+            participants: {
+              where: { status: { notIn: [ParticipantStatus.REMOVED, ParticipantStatus.REJECTED] } },
+              select: { userId: true, clubSlug: true },
+            },
+            rosterMembers: {
+              where: { userId: session.user.id, status: { not: TeamInviteStatus.REMOVED } },
+              select: { id: true },
+            },
+            registrationApplications: {
+              where: { status: TournamentApplicationStatus.PENDING },
+              select: { userId: true, clubSlug: true },
+            },
+          },
+        });
+        if (!current) throw new RegistrationWriteError("Турнир не найден.", 404);
+        if (current.status !== TournamentStatus.REGISTRATION_OPEN) {
+          throw new RegistrationWriteError("Регистрация уже закрыта.", 409);
+        }
+        const currentGroupLimit = getTournamentGroupCapacityLimit(current);
+        const currentLimit = Math.min(current.maxParticipants, currentGroupLimit ?? current.maxParticipants);
+        if (current.participants.length >= currentLimit) {
+          throw new RegistrationWriteError("Лимит участников уже достигнут.", 409);
+        }
+        if (current.participants.some((entry) => entry.userId === session.user.id) || current.rosterMembers.length > 0) {
+          throw new RegistrationWriteError("Участник уже зарегистрирован в этом турнире.", 409);
+        }
+        if (current.registrationApplications.some((application) => application.userId === session.user.id)) {
+          throw new RegistrationWriteError("Ваша заявка уже находится на проверке.", 409);
+        }
+        if (
+          clubSlug &&
+          (current.participants.some((entry) => entry.clubSlug === clubSlug) ||
+            current.registrationApplications.some((application) => application.userId !== session.user.id && application.clubSlug === clubSlug))
+        ) {
+          throw new RegistrationWriteError("Этот клуб уже занят другим участником.", 409);
+        }
+
+        await tx.tournamentRegistrationApplication.upsert({
         where: {
           tournamentId_userId: {
             tournamentId: params.id,
@@ -209,8 +264,12 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
           reviewedAt: null,
           reviewedById: null,
         },
-      });
+        });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
+      if (error instanceof RegistrationWriteError) {
+        return NextResponse.json({ error: error.message }, { status: error.status });
+      }
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         return NextResponse.json({ error: "Этот клуб уже указан в другой заявке." }, { status: 409 });
       }
@@ -231,6 +290,53 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
 
   try {
     await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`tournament-registration:${params.id}`}))`;
+
+      const current = await tx.tournament.findUnique({
+        where: { id: params.id },
+        select: {
+          status: true,
+          maxParticipants: true,
+          format: true,
+          formatBlueprintJson: true,
+          groupsCount: true,
+          participantsPerGroup: true,
+          participants: {
+            where: { status: { notIn: [ParticipantStatus.REMOVED, ParticipantStatus.REJECTED] } },
+            select: { userId: true, clubSlug: true },
+          },
+          rosterMembers: {
+            where: { userId: session.user.id, status: { not: TeamInviteStatus.REMOVED } },
+            select: { id: true },
+          },
+          registrationApplications: {
+            where: { status: TournamentApplicationStatus.PENDING },
+            select: { userId: true, clubSlug: true },
+          },
+        },
+      });
+
+      if (!current) throw new RegistrationWriteError("Турнир не найден.", 404);
+      if (current.status !== TournamentStatus.REGISTRATION_OPEN) {
+        throw new RegistrationWriteError("Регистрация уже закрыта.", 409);
+      }
+
+      const currentGroupLimit = getTournamentGroupCapacityLimit(current);
+      const currentLimit = Math.min(current.maxParticipants, currentGroupLimit ?? current.maxParticipants);
+      if (current.participants.length >= currentLimit) {
+        throw new RegistrationWriteError("Лимит участников уже достигнут.", 409);
+      }
+      if (current.participants.some((entry) => entry.userId === session.user.id) || current.rosterMembers.length > 0) {
+        throw new RegistrationWriteError("Участник уже зарегистрирован в этом турнире.", 409);
+      }
+      if (
+        clubSlug &&
+        (current.participants.some((entry) => entry.clubSlug === clubSlug) ||
+          current.registrationApplications.some((application) => application.userId !== session.user.id && application.clubSlug === clubSlug))
+      ) {
+        throw new RegistrationWriteError("Этот клуб уже занят другим участником.", 409);
+      }
+
       const registration = await tx.tournamentRegistration.create({
         data: {
           tournamentId: params.id,
@@ -254,8 +360,11 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
           respondedAt: new Date(),
         },
       });
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (error) {
+    if (error instanceof RegistrationWriteError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return NextResponse.json({ error: "Этот клуб уже выбран другим участником." }, { status: 409 });
     }
@@ -275,7 +384,6 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     });
   }
 
-  await syncTournamentLifecycleStatus(params.id);
   revalidatePath(`/tournaments/${params.id}`);
   revalidatePath("/tournaments");
 
@@ -318,9 +426,41 @@ export async function DELETE(_: Request, props: { params: Promise<{ id: string }
     return NextResponse.json({ error: "Вы не зарегистрированы на этот турнир." }, { status: 404 });
   }
 
-  await db.tournamentRegistration.delete({
-    where: { id: registration.id },
-  });
+  try {
+    await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`tournament-registration:${params.id}`}))`;
+      const current = await tx.tournament.findUnique({
+        where: { id: params.id },
+        select: {
+          status: true,
+          registrationEndsAt: true,
+          participants: { where: { userId: session.user.id }, select: { id: true } },
+        },
+      });
+      if (!current) throw new RegistrationWriteError("Турнир не найден.", 404);
+      if (current.status === TournamentStatus.IN_PROGRESS || current.status === TournamentStatus.COMPLETED) {
+        throw new RegistrationWriteError("Турнир уже начался или завершён.", 409);
+      }
+      const currentRegistration = current.participants[0];
+      if (!currentRegistration) throw new RegistrationWriteError("Регистрация уже отменена.", 409);
+      await tx.tournamentRegistration.delete({ where: { id: currentRegistration.id } });
+      if (current.registrationEndsAt > new Date()) {
+        await tx.tournament.updateMany({
+          where: {
+            id: params.id,
+            status: { in: [TournamentStatus.REGISTRATION_CLOSED, TournamentStatus.AWAITING_START] },
+            registrationEndsAt: { gt: new Date() },
+          },
+          data: { status: TournamentStatus.REGISTRATION_OPEN, registrationClosedAt: null },
+        });
+      }
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  } catch (error) {
+    if (error instanceof RegistrationWriteError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    throw error;
+  }
 
   if (tournament.notificationsEnabled) {
     await createNotification({
@@ -330,16 +470,6 @@ export async function DELETE(_: Request, props: { params: Promise<{ id: string }
     type: NotificationType.TOURNAMENT,
     link: `/tournaments/${tournament.id}`,
     dedupeWithinHours: 6,
-    });
-  }
-
-  if (
-    (tournament.status === TournamentStatus.REGISTRATION_CLOSED || tournament.status === TournamentStatus.AWAITING_START) &&
-    tournament.registrationEndsAt > new Date()
-  ) {
-    await db.tournament.update({
-      where: { id: params.id },
-      data: { status: TournamentStatus.REGISTRATION_OPEN, registrationClosedAt: null },
     });
   }
 

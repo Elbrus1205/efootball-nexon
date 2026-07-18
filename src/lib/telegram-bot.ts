@@ -115,7 +115,10 @@ export function isTelegramRichMessageUnsupportedError(error: unknown) {
 
 async function callTelegramApi<T>(method: string, init?: RequestInit) {
   const botToken = getTelegramBotToken();
-  const response = await fetch(`https://api.telegram.org/bot${botToken}/${method}`, init);
+  const response = await fetch(`https://api.telegram.org/bot${botToken}/${method}`, {
+    ...init,
+    signal: init?.signal ?? AbortSignal.timeout(8_000),
+  });
   const payload = (await response.json().catch(() => null)) as { ok?: boolean; result?: T; description?: string } | null;
 
   if (!response.ok || !payload?.ok) {
@@ -255,6 +258,7 @@ export async function sendTelegramMessage(params: {
   const botToken = getTelegramBotToken();
   const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: "POST",
+    signal: AbortSignal.timeout(8_000),
     headers: {
       "Content-Type": "application/json",
     },
@@ -417,6 +421,7 @@ export async function sendTelegramMedia(params: {
 
   const res = await fetch(`https://api.telegram.org/bot${botToken}/${config.method}`, {
     method: "POST",
+    signal: AbortSignal.timeout(8_000),
     body,
   });
 

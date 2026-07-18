@@ -1,3 +1,4 @@
+import { getTrustedClientAddress } from "@/lib/client-address";
 import { db } from "@/lib/db";
 
 export const DEFAULT_REGULATIONS_TEXT =
@@ -6,23 +7,12 @@ const DEFAULT_REGULATIONS_VERSION = "default-2026-04-19";
 const REGULATIONS_ACCEPTANCE_PREFIX = "regulations_acceptance:";
 const REGULATIONS_PREVIOUS_KEY = "regulations_previous";
 
-async function ensureSiteContentTable() {
-  await db.$executeRaw`
-    CREATE TABLE IF NOT EXISTS "SiteContent" (
-      "key" TEXT PRIMARY KEY,
-      "body" TEXT NOT NULL,
-      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `;
-}
-
 export async function getRegulationsText() {
   const document = await getRegulationsDocument();
   return document.body;
 }
 
 export async function getRegulationsDocument() {
-  await ensureSiteContentTable();
 
   const rows = await db.$queryRaw<Array<{ body: string; updatedAt: Date }>>`
     SELECT "body", "updatedAt" FROM "SiteContent" WHERE "key" = 'regulations' LIMIT 1
@@ -39,7 +29,6 @@ export async function getRegulationsDocument() {
 }
 
 export async function getRegulationsChangeHighlights() {
-  await ensureSiteContentTable();
 
   const document = await getRegulationsDocument();
   const rows = await db.$queryRaw<Array<{ body: string }>>`
@@ -50,7 +39,6 @@ export async function getRegulationsChangeHighlights() {
 }
 
 export async function saveRegulationsText(body: string) {
-  await ensureSiteContentTable();
   const current = await getRegulationsDocument();
 
   if (current.body !== body) {
@@ -71,7 +59,6 @@ export async function saveRegulationsText(body: string) {
 }
 
 export async function getRegulationsAcceptance(userId: string) {
-  await ensureSiteContentTable();
 
   const document = await getRegulationsDocument();
   const key = createRegulationsAcceptanceKey(userId);
@@ -94,14 +81,13 @@ export async function hasAcceptedCurrentRegulations(userId: string) {
 }
 
 export async function acceptCurrentRegulations(userId: string, headers?: Headers) {
-  await ensureSiteContentTable();
 
   const document = await getRegulationsDocument();
   const acceptedAt = new Date().toISOString();
   const payload = JSON.stringify({
     version: document.version,
     acceptedAt,
-    ipAddress: readHeader(headers, "x-forwarded-for")?.split(",")[0]?.trim() ?? readHeader(headers, "x-real-ip")?.trim() ?? null,
+    ipAddress: getTrustedClientAddress(headers),
     userAgent: readHeader(headers, "user-agent")?.trim() ?? null,
   });
   const key = createRegulationsAcceptanceKey(userId);

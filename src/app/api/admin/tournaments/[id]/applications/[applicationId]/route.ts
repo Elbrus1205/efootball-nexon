@@ -112,17 +112,37 @@ export async function PATCH(request: Request, props: RouteContext) {
   }
 
   try {
-    await db.$transaction(
-      async (tx) => {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`tournament-registration:${params.id}`}))`;
         const lockedApplication = await tx.tournamentRegistrationApplication.findFirst({
           where: {
             id: application.id,
             tournamentId: params.id,
             status: TournamentApplicationStatus.PENDING,
           },
-          select: { id: true },
+          include: {
+            tournament: {
+              select: {
+                status: true,
+                participantMode: true,
+                maxParticipants: true,
+                format: true,
+                groupsCount: true,
+                participantsPerGroup: true,
+                formatBlueprintJson: true,
+              },
+            },
+          },
         });
         if (!lockedApplication) throw new Error("APPLICATION_ALREADY_REVIEWED");
+        if (
+          lockedApplication.tournament.status === TournamentStatus.IN_PROGRESS ||
+          lockedApplication.tournament.status === TournamentStatus.COMPLETED
+        ) {
+          throw new Error("TOURNAMENT_ALREADY_STARTED");
+        }
 
         const participantCount = await tx.tournamentRegistration.count({
           where: {
@@ -130,10 +150,10 @@ export async function PATCH(request: Request, props: RouteContext) {
             status: { notIn: [ParticipantStatus.REJECTED, ParticipantStatus.REMOVED] },
           },
         });
-        const groupLimit = getTournamentGroupCapacityLimit(application.tournament);
+        const groupLimit = getTournamentGroupCapacityLimit(lockedApplication.tournament);
         const registrationLimit = Math.min(
-          application.tournament.maxParticipants,
-          groupLimit ?? application.tournament.maxParticipants,
+          lockedApplication.tournament.maxParticipants,
+          groupLimit ?? lockedApplication.tournament.maxParticipants,
         );
         if (participantCount >= registrationLimit) throw new Error("TOURNAMENT_FULL");
 
@@ -146,7 +166,7 @@ export async function PATCH(request: Request, props: RouteContext) {
             clubBadgePath: application.clubBadgePath,
             teamName: application.teamName,
             teamLogo: application.teamLogo,
-            status: participantStatusAfterApplicationApproval(application.tournament.participantMode),
+            status: participantStatusAfterApplicationApproval(lockedApplication.tournament.participantMode),
             approvedAt: new Date(),
           },
         });
@@ -183,15 +203,24 @@ export async function PATCH(request: Request, props: RouteContext) {
             afterJson: { status: TournamentApplicationStatus.APPROVED, registrationId: registration.id },
           },
         });
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    );
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        break;
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034" && attempt < 2) {
+          continue;
+        }
+        throw error;
+      }
+    }
   } catch (error) {
     if (error instanceof Error && error.message === "APPLICATION_ALREADY_REVIEWED") {
       return NextResponse.json({ error: "Эта заявка уже обработана." }, { status: 409 });
     }
     if (error instanceof Error && error.message === "TOURNAMENT_FULL") {
       return NextResponse.json({ error: "Лимит участников уже достигнут." }, { status: 409 });
+    }
+    if (error instanceof Error && error.message === "TOURNAMENT_ALREADY_STARTED") {
+      return NextResponse.json({ error: "Нельзя принять заявку после начала турнира." }, { status: 409 });
     }
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return NextResponse.json({ error: "Игрок или выбранный клуб уже зарегистрирован." }, { status: 409 });

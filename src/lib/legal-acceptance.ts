@@ -1,3 +1,5 @@
+import { getTrustedClientAddress } from "@/lib/client-address";
+
 export const LEGAL_DOCUMENTS_VERSION = "2026-07-11";
 export const TERMS_VERSION = LEGAL_DOCUMENTS_VERSION;
 export const PERSONAL_DATA_CONSENT_VERSION = LEGAL_DOCUMENTS_VERSION;
@@ -65,14 +67,12 @@ export function hasSeparateRegistrationConsents(input: {
 }
 
 export function getLegalAcceptanceData(headers: HeaderSource) {
-  const forwardedFor = readHeader(headers, "x-forwarded-for")?.split(",")[0]?.trim();
-  const realIp = readHeader(headers, "x-real-ip")?.trim();
   const userAgent = readHeader(headers, "user-agent")?.trim();
 
   return {
     legalAcceptedAt: new Date(),
     legalAcceptedVersion: LEGAL_DOCUMENTS_VERSION,
-    legalAcceptedIp: forwardedFor || realIp || null,
+    legalAcceptedIp: getTrustedClientAddress(headers),
     legalAcceptedUserAgent: userAgent || null,
   };
 }
@@ -84,10 +84,8 @@ export function getRegistrationConsentData(
   },
 ) {
   const acceptedAt = new Date();
-  const forwardedFor = readHeader(headers, "x-forwarded-for")?.split(",")[0]?.trim();
-  const realIp = readHeader(headers, "x-real-ip")?.trim();
   const userAgent = readHeader(headers, "user-agent")?.trim();
-  const ip = forwardedFor || realIp || null;
+  const ip = getTrustedClientAddress(headers);
   const isMinor = getAge(input.dateOfBirth, acceptedAt) < ADULT_AGE;
 
   return {

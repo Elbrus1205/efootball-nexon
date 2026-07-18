@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
 import { sendPasswordResetLink } from "@/lib/email";
+import { enforceRateLimit } from "@/lib/request-rate-limit";
 
 export async function POST(request: Request) {
   const { email } = (await request.json()) as { email: string };
@@ -11,6 +12,9 @@ export async function POST(request: Request) {
   if (!normalizedEmail) {
     return NextResponse.json({ error: "Введите email." }, { status: 400 });
   }
+
+  const limited = enforceRateLimit(request, "password-reset", { limit: 5, windowMs: 15 * 60 * 1_000 }, normalizedEmail);
+  if (limited) return limited;
 
   const user = await db.user.findFirst({
     where: {

@@ -9,7 +9,7 @@ export function Avatar({ className, ...props }: React.ComponentPropsWithoutRef<t
 
 export function AvatarImage({ src, ...props }: React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>) {
   const proxiedSrc = proxyTelegramAssetUrl(src);
-  return <AvatarPrimitive.Image className="aspect-square h-full w-full object-cover" src={optimizedImageUrl(proxiedSrc, { width: 192, height: 192, quality: 84, resize: "cover", format: "webp" })} {...props} />;
+  return <AvatarPrimitive.Image loading="lazy" decoding="async" className="aspect-square h-full w-full object-cover" src={optimizedImageUrl(proxiedSrc, { width: 192, height: 192, quality: 84, resize: "cover", format: "webp" })} {...props} />;
 }
 
 export function AvatarFallback({

@@ -1,6 +1,8 @@
 import { createHash, randomUUID } from "crypto";
 import { LoginAttemptStatus } from "@prisma/client";
+import { getTrustedClientAddress } from "@/lib/client-address";
 import { db } from "@/lib/db";
+import { getSessionActivityCutoff } from "@/lib/auth/session-activity";
 
 type HeaderLike =
   | Headers
@@ -67,9 +69,7 @@ function parseDevice(userAgent: string) {
 
 export function buildSecurityContext(headers: HeaderLike): SecurityContext {
   const userAgent = getHeader(headers, "user-agent") ?? UNKNOWN_DEVICE;
-  const forwarded = getHeader(headers, "x-forwarded-for");
-  const realIp = getHeader(headers, "x-real-ip");
-  const ipAddress = (forwarded?.split(",")[0] ?? realIp ?? "").trim() || null;
+  const ipAddress = getTrustedClientAddress(headers);
 
   return {
     ipAddress,
@@ -152,14 +152,15 @@ export async function createSecuritySession(params: {
   return authSessionId;
 }
 
-export async function touchSecuritySession(authSessionId: string) {
+export async function touchSecuritySession(authSessionId: string, now = new Date()) {
   await db.securitySession.updateMany({
     where: {
       authSessionId,
       revokedAt: null,
+      lastActiveAt: { lt: getSessionActivityCutoff(now) },
     },
     data: {
-      lastActiveAt: new Date(),
+      lastActiveAt: now,
     },
   });
 }

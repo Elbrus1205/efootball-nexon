@@ -17,6 +17,7 @@ export function DivisionPreviewCard({ canOpen, coverImage, priorityImage = false
           src={coverImage}
           alt=""
           fill
+          unoptimized
           priority={priorityImage}
           fetchPriority={priorityImage ? "high" : undefined}
           quality={86}
