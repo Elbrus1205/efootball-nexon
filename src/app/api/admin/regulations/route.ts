@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
+import { NextResponse, after } from "next/server";
 import { NotificationType } from "@prisma/client";
 import { z } from "zod";
 import { requirePermission } from "@/lib/auth/session";
@@ -18,11 +19,22 @@ export async function POST(request: Request) {
   }
 
   await saveRegulationsText(parsed.data.body);
-  await createNotificationForAllUsers({
-    title: "Регламент обновлен",
-    body: "На сайте опубликована новая версия регламента. Откройте сайт: во всплывающем окне будут выделены изменения, которые нужно принять.",
-    type: NotificationType.SYSTEM,
-    link: "/regulations",
+
+  // Обновлённый регламент должен сразу появиться на публичной и админской странице.
+  revalidatePath("/regulations");
+  revalidatePath("/admin/regulations");
+
+  // Рассылка уведомления всем пользователям не должна задерживать ответ админке —
+  // выносим её в фон, чтобы сохранение отвечало мгновенно.
+  after(async () => {
+    await createNotificationForAllUsers({
+      title: "Регламент обновлен",
+      body: "На сайте опубликована новая версия регламента. Откройте сайт: во всплывающем окне будут выделены изменения, которые нужно принять.",
+      type: NotificationType.SYSTEM,
+      link: "/regulations",
+    }).catch((error) => {
+      console.error("Regulations update notification failed", error);
+    });
   });
 
   return NextResponse.json({ ok: true });
