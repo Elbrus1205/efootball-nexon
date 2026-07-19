@@ -62,6 +62,7 @@ npm start
 - `POST /api/tournaments/deadline-reminders` — по расписанию напоминаний.
 - `POST /api/security/email/reminders` — по расписанию email-напоминаний.
 - `POST /api/profile-statuses/expire` — периодическая обработка истёкших статусов.
+- `POST /api/telegram/sync-usernames` — раз в сутки; обновляет @username привязанных игроков при смене ника в Telegram.
 
 ## Проверка платформ
 
