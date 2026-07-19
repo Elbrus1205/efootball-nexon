@@ -1,7 +1,7 @@
 "use client";
 
 import { PlayoffType } from "@prisma/client";
-import { Plus, Trash2 } from "lucide-react";
+import { GitBranch, Layers3, Plus, TableProperties, Trash2, Trophy, UsersRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   createDefaultFormatBlueprint,
@@ -15,6 +15,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  TournamentBuilderChoice,
+  TournamentBuilderField,
+  TournamentBuilderNotice,
+  tournamentBuilderInputClass,
+  tournamentBuilderSelectClass,
+} from "@/components/admin/tournament-builder-ui";
 
 function createOpeningStageSelections(mode: OpeningStageMode, playoffType: PlayoffType, divisionsCount: number) {
   if (mode === "LEAGUE") {
@@ -70,12 +77,16 @@ function formatDivisionName(mode: OpeningStageMode, index: number) {
 }
 
 function NumberInput({
+  id,
+  ariaLabel,
   value,
   min,
   max,
   placeholder,
   onValueChange,
 }: {
+  id?: string;
+  ariaLabel?: string;
   value: number | null;
   min: number;
   max: number;
@@ -90,10 +101,13 @@ function NumberInput({
 
   return (
     <Input
+      id={id}
+      aria-label={ariaLabel}
       type="text"
       inputMode="numeric"
       pattern="[0-9]*"
       value={draft}
+      className={tournamentBuilderInputClass}
       placeholder={placeholder}
       onChange={(event) => {
         const nextDraft = event.target.value.replace(/\D/g, "");
@@ -144,73 +158,107 @@ export function FormatBlueprintBuilder({
     }));
   };
 
+  const updateOpeningStageMode = (openingStageMode: OpeningStageMode) => {
+    setBlueprint((current) => {
+      const divisionsCount = openingStageMode === "NONE" ? current.divisionsCount : Math.max(1, current.divisionsCount);
+      const resetSelections = current.openingStageMode !== openingStageMode && openingStageMode !== "NONE";
+      const next = {
+        ...current,
+        openingStageMode,
+        divisionsCount,
+        playoffs:
+          openingStageMode === "NONE" && !current.playoffs.length
+            ? [createDefaultPlayoffStage({ name: "Плей-офф" })]
+            : current.playoffs.map((playoff) => ({
+                ...playoff,
+                selections: resetSelections ? createOpeningStageSelections(openingStageMode, playoff.type, divisionsCount) : playoff.selections,
+              })),
+      };
+
+      return normalizeFormatBlueprint(next);
+    });
+  };
+
   if (!visible) {
     return <input type="hidden" name={name} value="" />;
   }
 
   return (
-    <div className="space-y-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5">
+    <div className="min-w-0 space-y-7">
       <input type="hidden" name={name} value={stringifyFormatBlueprint(blueprint)} />
 
-      <div className="space-y-2">
-        <div className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Гибкий конструктор</div>
-        <div className="text-sm text-zinc-400">
-          Соберите формат под турнир: группы или лига перед плей-офф, сразу single/double elimination, количество туров,
-          матчи в серии и правила выхода.
+      <div className="flex flex-col gap-4 rounded-xl border border-primary/15 bg-primary/[0.05] p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+            <Layers3 className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div>
+            <div className="text-sm font-semibold text-white">Сценарий турнира</div>
+            <div className="mt-1 max-w-2xl text-xs leading-5 text-zinc-400">
+              Настройте стартовый этап, число дивизионов и один или несколько блоков плей-офф.
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-[0.12em]">
+          <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-zinc-400">
+            {hasOpeningStage ? `${blueprint.divisionsCount} див.` : "Без групп"}
+          </span>
+          <span className="rounded-full border border-primary/20 bg-primary/[0.08] px-3 py-1.5 text-primary">
+            Плей-офф: {blueprint.playoffs.length}
+          </span>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="openingStageMode">Стартовый этап</Label>
-          <select
-            id="openingStageMode"
-            value={blueprint.openingStageMode}
-            onChange={(event) => {
-              const openingStageMode = event.target.value as OpeningStageMode;
-              setBlueprint((current) => {
-                const divisionsCount = openingStageMode === "NONE" ? current.divisionsCount : Math.max(1, current.divisionsCount);
-                const resetSelections = current.openingStageMode !== openingStageMode && openingStageMode !== "NONE";
-                const next = {
-                  ...current,
-                  openingStageMode,
-                  divisionsCount,
-                  playoffs:
-                    openingStageMode === "NONE" && !current.playoffs.length
-                      ? [createDefaultPlayoffStage({ name: "Плей-офф" })]
-                      : current.playoffs.map((playoff) => ({
-                          ...playoff,
-                          selections: resetSelections ? createOpeningStageSelections(openingStageMode, playoff.type, divisionsCount) : playoff.selections,
-                        })),
-                };
-
-                return normalizeFormatBlueprint(next);
-              });
-            }}
-            className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white"
-          >
-            <option value="GROUPS">Группы, затем плей-офф</option>
-            <option value="LEAGUE">Одна или несколько лиг, затем плей-офф</option>
-            <option value="NONE">Сразу плей-офф</option>
-          </select>
+      <TournamentBuilderField label="Стартовый этап" required description="Выбор меняет доступные параметры и автоматически подготавливает правила выхода.">
+        <div className="grid gap-3 md:grid-cols-3">
+          <TournamentBuilderChoice
+            name="openingStageModePreview"
+            value="GROUPS"
+            title="Группы"
+            description="Групповой этап, затем один или несколько плей-офф."
+            icon={UsersRound}
+            checked={blueprint.openingStageMode === "GROUPS"}
+            onChange={() => updateOpeningStageMode("GROUPS")}
+          />
+          <TournamentBuilderChoice
+            name="openingStageModePreview"
+            value="LEAGUE"
+            title="Лига"
+            description="Одна или несколько лиг перед финальной стадией."
+            icon={TableProperties}
+            checked={blueprint.openingStageMode === "LEAGUE"}
+            onChange={() => updateOpeningStageMode("LEAGUE")}
+          />
+          <TournamentBuilderChoice
+            name="openingStageModePreview"
+            value="NONE"
+            title="Сразу плей-офф"
+            description="Все подтверждённые участники сразу попадают в сетку."
+            icon={GitBranch}
+            checked={blueprint.openingStageMode === "NONE"}
+            onChange={() => updateOpeningStageMode("NONE")}
+          />
         </div>
+      </TournamentBuilderField>
+
+      <div className="grid gap-5 rounded-xl border border-white/10 bg-black/20 p-4 md:grid-cols-2 sm:p-5">
 
         {hasOpeningStage ? (
-          <div className="space-y-2">
-            <Label htmlFor="leagueStageName">Название этапа</Label>
+          <TournamentBuilderField htmlFor="leagueStageName" label="Название этапа">
             <Input
               id="leagueStageName"
               value={blueprint.leagueStageName}
               onChange={(event) => setBlueprint((current) => ({ ...current, leagueStageName: event.target.value }))}
               placeholder={blueprint.openingStageMode === "LEAGUE" ? "Лига" : "Группы"}
+              className={tournamentBuilderInputClass}
             />
-          </div>
+          </TournamentBuilderField>
         ) : null}
 
         {hasOpeningStage ? (
-          <div className="space-y-2">
-            <Label htmlFor="divisionsCount">{blueprint.openingStageMode === "LEAGUE" ? "Количество лиг" : "Количество групп"}</Label>
+          <TournamentBuilderField htmlFor="divisionsCount" label={blueprint.openingStageMode === "LEAGUE" ? "Количество лиг" : "Количество групп"}>
             <NumberInput
+              id="divisionsCount"
               value={blueprint.divisionsCount}
               min={1}
               max={16}
@@ -224,13 +272,13 @@ export function FormatBlueprintBuilder({
                 );
               }}
             />
-          </div>
+          </TournamentBuilderField>
         ) : null}
 
         {hasOpeningStage ? (
-          <div className="space-y-2">
-            <Label htmlFor="roundsCount">Матчей с одним соперником</Label>
+          <TournamentBuilderField htmlFor="roundsCount" label="Матчей с одним соперником" description="От 1 до 6 матчей. Все игры пары попадут в один тур.">
             <NumberInput
+              id="roundsCount"
               value={blueprint.roundsCount}
               min={1}
               max={6}
@@ -244,14 +292,17 @@ export function FormatBlueprintBuilder({
                 );
               }}
             />
-            <div className="text-xs leading-5 text-zinc-500">От 1 до 6 матчей с каждым соперником. Все матчи пары попадут в один тур.</div>
-          </div>
+          </TournamentBuilderField>
         ) : null}
 
         {hasOpeningStage ? (
-          <div className="space-y-2">
-            <Label htmlFor="openingRoundsCount">{blueprint.openingStageMode === "LEAGUE" ? "Туров в лиге" : "Туров в групповом этапе"}</Label>
+          <TournamentBuilderField
+            htmlFor="openingRoundsCount"
+            label={blueprint.openingStageMode === "LEAGUE" ? "Туров в лиге" : "Туров в групповом этапе"}
+            description="Оставьте пустым для автоматического расчёта по количеству участников."
+          >
             <NumberInput
+              id="openingRoundsCount"
               value={blueprint.openingRoundsCount}
               min={1}
               max={128}
@@ -265,13 +316,11 @@ export function FormatBlueprintBuilder({
                 );
               }}
             />
-            <div className="text-xs leading-5 text-zinc-500">Оставьте пустым для автоматического расчета по количеству участников.</div>
-          </div>
+          </TournamentBuilderField>
         ) : null}
 
         {hasOpeningStage ? (
-          <div className="space-y-2">
-            <Label htmlFor="participantsPerGroup">{blueprint.openingStageMode === "LEAGUE" ? "Игроков в лиге" : "Игроков в группе"}</Label>
+          <TournamentBuilderField htmlFor="participantsPerGroup" label={blueprint.openingStageMode === "LEAGUE" ? "Игроков в лиге" : "Игроков в группе"}>
             <Input
               id="participantsPerGroup"
               type="number"
@@ -287,26 +336,34 @@ export function FormatBlueprintBuilder({
               }}
               onBlur={() => setBlueprint((current) => normalizeFormatBlueprint(current))}
               placeholder="Авто"
+              inputMode="numeric"
+              className={tournamentBuilderInputClass}
             />
-          </div>
+          </TournamentBuilderField>
         ) : null}
 
         {!hasOpeningStage ? (
-          <div className="rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm leading-6 text-blue-100 md:col-span-2">
+          <TournamentBuilderNotice className="md:col-span-2">
             Группового этапа не будет: все подтвержденные участники попадут в первую сетку плей-офф напрямую.
-          </div>
+          </TournamentBuilderNotice>
         ) : null}
       </div>
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="text-sm font-semibold text-white">Плей-офф блоки</div>
-            <div className="text-sm text-zinc-400">Можно добавить несколько отдельных плей-офф с разными названиями и логикой выхода.</div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/20 text-primary">
+              <Trophy className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-white">Плей-офф блоки</div>
+              <div className="mt-1 text-xs leading-5 text-zinc-500">Добавляйте отдельные сетки с собственным форматом и логикой выхода.</div>
+            </div>
           </div>
           <Button
             type="button"
             variant="outline"
+            className="w-full sm:w-auto"
             onClick={() =>
               setBlueprint((current) => ({
                 ...current,
@@ -321,20 +378,29 @@ export function FormatBlueprintBuilder({
 
         <div className="space-y-4">
           {!blueprint.playoffs.length ? (
-            <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 px-4 py-5 text-sm text-zinc-500">
+            <div className="rounded-xl border border-dashed border-white/15 bg-black/15 px-4 py-6 text-center text-sm text-zinc-500">
               Плей-офф отключен. Турнир завершится после этапа “{blueprint.leagueStageName}”.
             </div>
           ) : null}
 
           {blueprint.playoffs.map((playoff, index) => (
-            <div key={playoff.id} className="space-y-4 rounded-[1.75rem] border border-white/10 bg-black/20 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-sm font-semibold text-white">Плей-офф #{index + 1}</div>
+            <div key={playoff.id} className="space-y-5 overflow-hidden rounded-xl border border-white/10 bg-black/20 p-4 sm:p-5">
+              <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/[0.08] text-xs font-black text-primary">
+                    {index + 1}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold text-white">{playoff.name || `Плей-офф ${index + 1}`}</div>
+                    <div className="mt-0.5 text-[11px] text-zinc-500">Настройки сетки и переходов</div>
+                  </div>
+                </div>
                 {hasOpeningStage || blueprint.playoffs.length > 1 ? (
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
+                    aria-label={`Удалить плей-офф ${index + 1}`}
                     onClick={() =>
                       setBlueprint((current) => ({
                         ...current,
@@ -347,15 +413,19 @@ export function FormatBlueprintBuilder({
                 ) : null}
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Название плей-офф</Label>
-                  <Input value={playoff.name} onChange={(event) => updatePlayoff(playoff.id, (current) => ({ ...current, name: event.target.value }))} />
-                </div>
+              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+                <TournamentBuilderField htmlFor={`playoff-name-${playoff.id}`} label="Название плей-офф" className="md:col-span-2">
+                  <Input
+                    id={`playoff-name-${playoff.id}`}
+                    value={playoff.name}
+                    onChange={(event) => updatePlayoff(playoff.id, (current) => ({ ...current, name: event.target.value }))}
+                    className={tournamentBuilderInputClass}
+                  />
+                </TournamentBuilderField>
 
-                <div className="space-y-2">
-                  <Label>Формат сетки</Label>
+                <TournamentBuilderField htmlFor={`playoff-type-${playoff.id}`} label="Формат сетки">
                   <select
+                    id={`playoff-type-${playoff.id}`}
                     value={playoff.type}
                     onChange={(event) =>
                       updatePlayoff(playoff.id, (current) => {
@@ -372,16 +442,16 @@ export function FormatBlueprintBuilder({
                         };
                       })
                     }
-                    className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white"
+                    className={tournamentBuilderSelectClass}
                   >
                     <option value={PlayoffType.SINGLE}>Single Elimination</option>
                     <option value={PlayoffType.DOUBLE}>Double Elimination</option>
                   </select>
-                </div>
+                </TournamentBuilderField>
 
-                <div className="space-y-2">
-                  <Label>Матчей в серии</Label>
+                <TournamentBuilderField htmlFor={`playoff-legs-${playoff.id}`} label="Матчей в серии" description={playoff.type === PlayoffType.DOUBLE ? "Для Double Elimination используется один матч." : undefined}>
                   <select
+                    id={`playoff-legs-${playoff.id}`}
                     value={playoff.legsCount}
                     disabled={playoff.type === PlayoffType.DOUBLE}
                     onChange={(event) =>
@@ -390,27 +460,28 @@ export function FormatBlueprintBuilder({
                         legsCount: Math.max(1, Math.min(2, Number(event.target.value || 1))),
                       }))
                     }
-                    className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white disabled:opacity-50"
+                    className={tournamentBuilderSelectClass}
                   >
                     <option value={1}>1 матч</option>
                     <option value={2}>2 матча</option>
                   </select>
-                </div>
+                </TournamentBuilderField>
               </div>
 
-              <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-300">
+              <label className="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/[0.025] px-4 py-3 text-sm text-zinc-300 transition hover:border-white/20 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50">
                 <input
                   type="checkbox"
                   checked={playoff.thirdPlaceMatch}
                   disabled={playoff.type === PlayoffType.DOUBLE}
+                  className="h-5 w-5 shrink-0 accent-primary"
                   onChange={(event) => updatePlayoff(playoff.id, (current) => ({ ...current, thirdPlaceMatch: event.target.checked }))}
                 />
                 Матч за 3-е место
               </label>
 
               {hasOpeningStage ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-3">
+                <div className="space-y-4 border-t border-white/10 pt-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <div className="text-sm font-semibold text-white">Правила выхода</div>
                       <div className="mt-1 text-xs text-zinc-500">Укажите, какие места из этапа “{blueprint.leagueStageName}” проходят дальше.</div>
@@ -418,6 +489,7 @@ export function FormatBlueprintBuilder({
                     <Button
                       type="button"
                       variant="outline"
+                      className="w-full sm:w-auto"
                       onClick={() =>
                         updatePlayoff(playoff.id, (current) => ({
                           ...current,
@@ -442,13 +514,14 @@ export function FormatBlueprintBuilder({
                     {playoff.selections.map((selection) => (
                       <div
                         key={selection.id}
-                        className={`grid gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3 ${
-                          playoff.type === PlayoffType.DOUBLE ? "md:grid-cols-[1fr_1fr_1fr_1fr_auto]" : "md:grid-cols-[1fr_1fr_1fr_auto]"
+                        className={`grid min-w-0 gap-3 rounded-xl border border-white/10 bg-white/[0.025] p-3 ${
+                          playoff.type === PlayoffType.DOUBLE ? "lg:grid-cols-[1.2fr_0.75fr_0.75fr_1fr_auto]" : "lg:grid-cols-[1.2fr_0.75fr_0.75fr_auto]"
                         }`}
                       >
                         <div className="space-y-2">
-                          <Label>{selectionSourceLabel}</Label>
+                          <Label htmlFor={`selection-source-${selection.id}`}>{selectionSourceLabel}</Label>
                           <select
+                            id={`selection-source-${selection.id}`}
                             value={selection.divisionIndex}
                             onChange={(event) =>
                               updatePlayoff(playoff.id, (current) => ({
@@ -458,7 +531,7 @@ export function FormatBlueprintBuilder({
                                 ),
                               }))
                             }
-                            className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white"
+                            className={tournamentBuilderSelectClass}
                           >
                             {Array.from({ length: blueprint.divisionsCount }, (_, index) => (
                               <option key={index + 1} value={index + 1}>
@@ -469,8 +542,9 @@ export function FormatBlueprintBuilder({
                         </div>
 
                         <div className="space-y-2">
-                          <Label>С места</Label>
+                          <Label htmlFor={`selection-from-${selection.id}`}>С места</Label>
                           <NumberInput
+                            id={`selection-from-${selection.id}`}
                             value={selection.fromRank}
                             min={1}
                             max={32}
@@ -489,8 +563,9 @@ export function FormatBlueprintBuilder({
                         </div>
 
                         <div className="space-y-2">
-                          <Label>По место</Label>
+                          <Label htmlFor={`selection-to-${selection.id}`}>По место</Label>
                           <NumberInput
+                            id={`selection-to-${selection.id}`}
                             value={selection.toRank}
                             min={selection.fromRank}
                             max={32}
@@ -508,8 +583,9 @@ export function FormatBlueprintBuilder({
 
                         {playoff.type === PlayoffType.DOUBLE ? (
                           <div className="space-y-2">
-                            <Label>Куда попадают</Label>
+                            <Label htmlFor={`selection-target-${selection.id}`}>Куда попадают</Label>
                             <select
+                              id={`selection-target-${selection.id}`}
                               value={selection.targetBracket}
                               onChange={(event) =>
                                 updatePlayoff(playoff.id, (current) => ({
@@ -519,7 +595,7 @@ export function FormatBlueprintBuilder({
                                   ),
                                 }))
                               }
-                              className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-white"
+                              className={tournamentBuilderSelectClass}
                             >
                               <option value="upper">Верхняя сетка</option>
                               <option value="lower">Нижняя сетка</option>
@@ -527,12 +603,13 @@ export function FormatBlueprintBuilder({
                           </div>
                         ) : null}
 
-                        <div className="flex items-end">
+                        <div className="flex items-end justify-end">
                           <Button
                             type="button"
                             variant="ghost"
                             size="icon"
                             disabled={playoff.selections.length === 1}
+                            aria-label="Удалить правило выхода"
                             onClick={() =>
                               updatePlayoff(playoff.id, (current) => ({
                                 ...current,
@@ -548,15 +625,15 @@ export function FormatBlueprintBuilder({
                   </div>
 
                   {playoff.type === PlayoffType.SINGLE ? (
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-400">
+                    <TournamentBuilderNotice>
                       В single elimination все участники автоматически попадают в одну основную сетку.
-                    </div>
+                    </TournamentBuilderNotice>
                   ) : null}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-400">
+                <TournamentBuilderNotice>
                   Этот плей-офф стартует напрямую: все подтвержденные участники будут посеяны по рейтингу, seed или порядку регистрации.
-                </div>
+                </TournamentBuilderNotice>
               )}
             </div>
           ))}
