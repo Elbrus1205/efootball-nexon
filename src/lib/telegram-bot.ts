@@ -48,7 +48,7 @@ function getTelegramBotToken() {
   return token;
 }
 
-function normalizeTelegramUsername(value?: string | null) {
+export function normalizeTelegramUsername(value?: string | null) {
   return value?.trim().replace(/^@/, "") || null;
 }
 
@@ -176,6 +176,35 @@ export async function getTelegramBotIdentity() {
   return {
     id: String(me.id),
     username,
+  };
+}
+
+export type TelegramChatProfile = {
+  id: number | string;
+  username: string | null;
+  firstName: string | null;
+  lastName: string | null;
+};
+
+/**
+ * Reads the current Telegram chat profile (used to detect username changes).
+ * The chat id must be the private chat id, which equals the user's telegramId.
+ */
+export async function getTelegramChat(chatId: string): Promise<TelegramChatProfile> {
+  const chat = await callTelegramApi<{
+    id: number | string;
+    username?: string;
+    first_name?: string;
+    last_name?: string;
+  }>(`getChat?chat_id=${encodeURIComponent(chatId)}`, {
+    cache: "no-store",
+  });
+
+  return {
+    id: chat.id,
+    username: normalizeTelegramUsername(chat.username),
+    firstName: chat.first_name?.trim() || null,
+    lastName: chat.last_name?.trim() || null,
   };
 }
 
