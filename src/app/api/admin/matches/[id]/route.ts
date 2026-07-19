@@ -12,7 +12,7 @@ import {
   recordConfirmedMatchReliability,
   removeConfiguredReliabilityPenaltiesByPrefix,
 } from "@/lib/services/reliability";
-import { getMatchSidePenaltyUserIds } from "@/lib/services/reliability-penalty-targets";
+import { getMatchPenaltyTargetUserIds, uniqueReliabilityPenaltyUserIds } from "@/lib/services/reliability-penalty-targets";
 import { notifyMatchReady, recalculateGroupStandings, resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { matchUpdateSchema } from "@/lib/validators";
 
@@ -101,7 +101,7 @@ async function removeMatchConfiguredReliabilityPenalties(matchId: string) {
 
 async function applyMatchConfiguredReliabilityPenalty({
   reasonId,
-  userId,
+  selectedUserIds,
   actorId,
   matchId,
   tournamentId,
@@ -110,7 +110,7 @@ async function applyMatchConfiguredReliabilityPenalty({
   player2Score,
 }: {
   reasonId: string;
-  userId: string;
+  selectedUserIds: string[];
   actorId: string;
   matchId: string;
   tournamentId: string;
@@ -131,7 +131,8 @@ async function applyMatchConfiguredReliabilityPenalty({
     throw new Error("RELIABILITY_PENALTY_REASON_NOT_FOUND");
   }
 
-  const penaltyUserIds = await getMatchSidePenaltyUserIds(matchId, userId);
+  const penaltyUserIds = await getMatchPenaltyTargetUserIds(matchId, selectedUserIds);
+  const selectionSuffix = selectedUserIds.length > 1 ? ":both" : "";
 
   await applyConfiguredReliabilityPenaltyToUsers({
     reasonId,
@@ -140,7 +141,7 @@ async function applyMatchConfiguredReliabilityPenalty({
     actorId,
     matchId,
     tournamentId,
-    dedupeKeyForUserId: (targetUserId) => `match-configured-penalty:${matchId}:${targetUserId}:${reasonId}`,
+    dedupeKeyForUserId: (targetUserId) => `match-configured-penalty:${matchId}:${targetUserId}:${reasonId}${selectionSuffix}`,
     comment:
       status === MatchStatus.FORFEIT
         ? "Штраф выбран администратором при выставлении технического поражения."
@@ -222,13 +223,19 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
   const nextPlayer1PenaltyScore = "player1PenaltyScore" in body ? body.player1PenaltyScore ?? null : before.player1PenaltyScore;
   const nextPlayer2PenaltyScore = "player2PenaltyScore" in body ? body.player2PenaltyScore ?? null : before.player2PenaltyScore;
   const nextStatus = "status" in body && body.status ? (body.status as MatchStatus) : before.status;
+  const selectedPenaltyUserIds = uniqueReliabilityPenaltyUserIds(
+    "reliabilityPenaltyUserIds" in body
+      ? body.reliabilityPenaltyUserIds ?? []
+      : body.reliabilityPenaltyUserId
+        ? [body.reliabilityPenaltyUserId]
+        : [],
+  );
   const statusExplicitlyChanged = "status" in body && Boolean(body.status);
   const multiLegPenaltyDecision = await getMultiLegPenaltyDecision(before, nextPlayer1Score, nextPlayer2Score);
 
   if (body.reliabilityPenaltyReasonId) {
-    const penaltyTargetId = body.reliabilityPenaltyUserId || "";
-    if (!penaltyTargetId || ![nextPlayer1Id, nextPlayer2Id].includes(penaltyTargetId)) {
-      return NextResponse.json({ error: "Выберите игрока, которому нужно начислить штраф надежности." }, { status: 400 });
+    if (!selectedPenaltyUserIds.length || selectedPenaltyUserIds.some((userId) => ![nextPlayer1Id, nextPlayer2Id].includes(userId))) {
+      return NextResponse.json({ error: "Выберите одного игрока или обоих игроков для штрафа надежности." }, { status: 400 });
     }
   }
 
@@ -303,14 +310,17 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
     await removeMatchConfiguredReliabilityPenalties(updated.id);
   }
 
-  if (canHaveConfiguredPenalty && ("reliabilityPenaltyReasonId" in body || "reliabilityPenaltyUserId" in body)) {
+  if (
+    canHaveConfiguredPenalty &&
+    ("reliabilityPenaltyReasonId" in body || "reliabilityPenaltyUserId" in body || "reliabilityPenaltyUserIds" in body)
+  ) {
     await removeMatchConfiguredReliabilityPenalties(updated.id);
 
-    if (body.reliabilityPenaltyReasonId && body.reliabilityPenaltyUserId) {
+    if (body.reliabilityPenaltyReasonId && selectedPenaltyUserIds.length) {
       try {
         await applyMatchConfiguredReliabilityPenalty({
           reasonId: body.reliabilityPenaltyReasonId,
-          userId: body.reliabilityPenaltyUserId,
+          selectedUserIds: selectedPenaltyUserIds,
           actorId: session.user.id,
           matchId: updated.id,
           tournamentId: updated.tournamentId,
@@ -320,7 +330,7 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
         });
       } catch (error) {
         if (error instanceof Error && error.message === "RELIABILITY_PENALTY_REASON_NOT_FOUND") {
-          return NextResponse.json({ error: "Р’С‹Р±СЂР°РЅРЅС‹Р№ С€С‚СЂР°С„ РЅР°РґРµР¶РЅРѕСЃС‚Рё Р±РѕР»СЊС€Рµ РЅРµРґРѕСЃС‚СѓРїРµРЅ." }, { status: 400 });
+          return NextResponse.json({ error: "Выбранный штраф надежности больше недоступен." }, { status: 400 });
         }
         throw error;
       }

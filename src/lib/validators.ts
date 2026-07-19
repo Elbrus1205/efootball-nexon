@@ -422,6 +422,7 @@ export const matchUpdateSchema = z.object({
   technicalLossReason: z.string().trim().max(300).optional().or(z.literal("")),
   reliabilityPenaltyReasonId: z.string().trim().optional().or(z.literal("")),
   reliabilityPenaltyUserId: z.string().trim().optional().or(z.literal("")),
+  reliabilityPenaltyUserIds: z.array(z.string().trim().min(1)).max(2).optional(),
   notes: z.string().max(1000).optional().or(z.literal("")),
 });
 

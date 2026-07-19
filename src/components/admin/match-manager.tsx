@@ -53,8 +53,10 @@ type MatchItem = {
   bracketId?: string | null;
   stage?: { name: string | null; type: StageType } | null;
   group?: { name: string } | null;
-  configuredReliabilityPenalty?: { reasonId: string; userId: string } | null;
+  configuredReliabilityPenalty?: { reasonId: string; userIds: string[] } | null;
 };
+
+const BOTH_PENALTY_TARGETS = "both";
 
 type PenaltyReasonOption = {
   id: string;
@@ -167,9 +169,23 @@ function mapConfiguredReliabilityPenalty(matches: MatchItem[]) {
 function mapConfiguredReliabilityPenaltyTargets(matches: MatchItem[]) {
   return Object.fromEntries(
     matches
-      .filter((match) => match.configuredReliabilityPenalty?.userId)
-      .map((match) => [match.id, match.configuredReliabilityPenalty?.userId ?? ""]),
+      .filter((match) => match.configuredReliabilityPenalty?.userIds.length)
+      .map((match) => {
+        const configuredUserIds = match.configuredReliabilityPenalty?.userIds ?? [];
+        const targetsBothPlayers = Boolean(
+          match.player1Id && match.player2Id && configuredUserIds.includes(match.player1Id) && configuredUserIds.includes(match.player2Id),
+        );
+        return [match.id, targetsBothPlayers ? BOTH_PENALTY_TARGETS : configuredUserIds[0] ?? ""];
+      }),
   );
+}
+
+function getPenaltyTargetUserIds(match: MatchItem, target: string) {
+  if (target === BOTH_PENALTY_TARGETS) {
+    return [match.player1Id, match.player2Id].filter((userId): userId is string => Boolean(userId));
+  }
+
+  return target ? [target] : [];
 }
 
 function FieldLabel({ children }: { children: ReactNode }) {
@@ -402,12 +418,11 @@ export function MatchManager({
     }
     if (status === MatchStatus.CONFIRMED || status === MatchStatus.FORFEIT) {
       const reliabilityPenaltyReasonId = reliabilityPenaltyByMatch[matchId] ?? "";
-      const reliabilityPenaltyUserId = reliabilityPenaltyTargetByMatch[matchId] ?? "";
+      const reliabilityPenaltyTarget = reliabilityPenaltyTargetByMatch[matchId] ?? "";
       payload.reliabilityPenaltyReasonId = reliabilityPenaltyReasonId;
-      payload.reliabilityPenaltyUserId = reliabilityPenaltyReasonId ? reliabilityPenaltyUserId : "";
-      if (reliabilityPenaltyReasonId) {
-        payload.reliabilityPenaltyUserId = reliabilityPenaltyUserId;
-      }
+      payload.reliabilityPenaltyUserIds = reliabilityPenaltyReasonId
+        ? getPenaltyTargetUserIds(orderedMatches.find((match) => match.id === matchId)!, reliabilityPenaltyTarget)
+        : [];
     }
 
     patchLocalMatch(matchId, payload);
@@ -589,7 +604,9 @@ export function MatchManager({
                                 ...(nextStatus === MatchStatus.CONFIRMED || nextStatus === MatchStatus.FORFEIT
                                   ? {
                                       reliabilityPenaltyReasonId,
-                                      reliabilityPenaltyUserId: reliabilityPenaltyReasonId ? reliabilityPenaltyTargetId : "",
+                                      reliabilityPenaltyUserIds: reliabilityPenaltyReasonId
+                                        ? getPenaltyTargetUserIds(match, reliabilityPenaltyTargetId)
+                                        : [],
                                     }
                                   : {}),
                               });
@@ -701,6 +718,7 @@ export function MatchManager({
                                   <option value="">— Игрок</option>
                                   {match.player1Id ? <option value={match.player1Id}>{participantName(selectedParticipantOne)}</option> : null}
                                   {match.player2Id ? <option value={match.player2Id}>{participantName(selectedParticipantTwo)}</option> : null}
+                                  {match.player1Id && match.player2Id ? <option value={BOTH_PENALTY_TARGETS}>Обоим игрокам</option> : null}
                                 </select>
                               </div>
                             </div>

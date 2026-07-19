@@ -9,17 +9,26 @@ import { getAdminTournamentAccessWhere } from "@/lib/admin-tournament-access";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
-function getConfiguredMatchPenalty(matchId: string, events: Array<{ userId: string; dedupeKey: string | null }>) {
+function getConfiguredMatchPenalty(
+  match: { id: string; player1Id: string | null; player2Id: string | null },
+  events: Array<{ userId: string; dedupeKey: string | null }>,
+) {
   const event = events.find(
     (item) =>
-      item.dedupeKey?.startsWith(`match-configured-penalty:${matchId}:`) ||
-      item.dedupeKey?.startsWith(`match-score-penalty:${matchId}:`) ||
-      item.dedupeKey?.startsWith(`match-forfeit-config:${matchId}:`),
+      item.dedupeKey?.startsWith(`match-configured-penalty:${match.id}:`) ||
+      item.dedupeKey?.startsWith(`match-score-penalty:${match.id}:`) ||
+      item.dedupeKey?.startsWith(`match-forfeit-config:${match.id}:`),
   );
   if (!event?.dedupeKey) return null;
 
-  const [, , , reasonId] = event.dedupeKey.split(":");
-  return reasonId ? { reasonId, userId: event.userId } : null;
+  const [, , , reasonId, selection] = event.dedupeKey.split(":");
+  if (!reasonId) return null;
+
+  if (selection === "both") {
+    return { reasonId, userIds: [match.player1Id, match.player2Id].filter((userId): userId is string => Boolean(userId)) };
+  }
+
+  return { reasonId, userIds: [event.userId] };
 }
 
 export default async function AdminTournamentMatchesPage(props: { params: Promise<{ id: string }> }) {
@@ -139,7 +148,7 @@ export default async function AdminTournamentMatchesPage(props: { params: Promis
     bracketId: match.bracketId,
     stage: match.stage ? { name: match.stage.name, type: match.stage.type } : null,
     group: match.group ? { name: match.group.name } : null,
-    configuredReliabilityPenalty: getConfiguredMatchPenalty(match.id, configuredPenaltyEvents),
+    configuredReliabilityPenalty: getConfiguredMatchPenalty(match, configuredPenaltyEvents),
   }));
 
   const participants = tournament.participants.map((participant) => ({
