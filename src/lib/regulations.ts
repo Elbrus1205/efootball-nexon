@@ -2,8 +2,8 @@ import { getTrustedClientAddress } from "@/lib/client-address";
 import { db } from "@/lib/db";
 
 export const DEFAULT_REGULATIONS_TEXT =
-  "Заполните здесь официальный регламент турниров: сроки, подтверждение матчей, правила переигровок, технические поражения и требования к скриншотам.";
-const DEFAULT_REGULATIONS_VERSION = "default-2026-04-19";
+  "Заполните здесь официальный регламент турниров: сроки, подтверждение матчей, правила переигровок, технические поражения и требования к скриншотам.\n\nШтраф за сообщения\nМат, оскорбления, унижение участников, угрозы, травля и иное непристойное поведение в личных или общих сообщениях платформы и турнира считаются нарушением. За подтвержденное нарушение снимается минус 6 баллов надежности. Штраф может быть применен к одному или обоим игрокам матча, если нарушение допущено обеими сторонами.";
+const DEFAULT_REGULATIONS_VERSION = "default-2026-07-19-message-misconduct";
 const REGULATIONS_ACCEPTANCE_PREFIX = "regulations_acceptance:";
 const REGULATIONS_PREVIOUS_KEY = "regulations_previous";
 
