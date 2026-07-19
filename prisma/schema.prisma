@@ -1131,6 +1131,7 @@ model FaqItem {
   id          String          @id @default(cuid())
   title       String
   answer      String          @db.Text
+  contentJson String?         @db.Text
   category    String          @default("Общее")
   sortOrder   Int             @default(0)
   isPublished Boolean         @default(true)
