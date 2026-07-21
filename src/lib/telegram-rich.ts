@@ -1,3 +1,5 @@
+import { tgEmoji, type TelegramPremiumEmojiKey } from "@/lib/telegram-emoji";
+
 export const TELEGRAM_RICH_TEXT_LIMIT = 32_768;
 const TELEGRAM_LEGACY_FALLBACK_TEXT_LIMIT = 3_800;
 const TELEGRAM_RULES_TEXT_LIMIT = 20_000;
@@ -179,17 +181,20 @@ export function buildTournamentAnnouncement(input: TournamentAnnouncementInput):
   return {
     blocks,
     fallbackText: [
-      `<b>${escapeTelegramHtmlWithin(safeTitle, 300)}</b>`,
+      `${tgEmoji("crown")} <b>${escapeTelegramHtmlWithin(safeTitle, 300)}</b>`,
       "",
-      "Регистрация открыта.",
-      `<b>Формат:</b> ${escapeTelegramHtmlWithin(input.formatLabel, 300)}`,
-      `<b>Старт:</b> ${escapeTelegramHtml(formatMoscowDateTime(input.startsAt))}`,
-      `<b>Свободно мест:</b> ${available}`,
-      input.prizePool ? `<b>Призовой фонд:</b> ${escapeTelegramHtmlWithin(input.prizePool, 300)}` : "",
+      `${tgEmoji("sparkles")} Регистрация уже открыта — присоединяйтесь!`,
       "",
-      `<blockquote expandable>${escapeTelegramHtmlWithin(input.rules, TELEGRAM_LEGACY_FALLBACK_TEXT_LIMIT - 1_400)}</blockquote>`,
+      `${tgEmoji("gamepad")} <b>Формат:</b> ${escapeTelegramHtmlWithin(input.formatLabel, 300)} · ${escapeTelegramHtmlWithin(input.participantModeLabel, 100)}`,
+      `${tgEmoji("calendar")} <b>Старт:</b> ${escapeTelegramHtml(formatMoscowDateTime(input.startsAt))}`,
+      `${tgEmoji("hourglass")} <b>Регистрация до:</b> ${escapeTelegramHtml(formatMoscowDateTime(input.registrationEndsAt))}`,
+      `${tgEmoji("chart")} <b>Места:</b> ${input.confirmedParticipants}/${input.maxParticipants} · свободно ${available}`,
+      input.prizePool ? `${tgEmoji("money")} <b>Призовой фонд:</b> ${escapeTelegramHtmlWithin(input.prizePool, 300)}` : "",
+      "",
+      `${tgEmoji("bookmark")} <b>Коротко о регламенте</b>`,
+      escapeTelegramHtmlWithin(input.rules, TELEGRAM_LEGACY_FALLBACK_TEXT_LIMIT - 1_700),
     ].filter(Boolean).join("\n"),
-    buttons: [{ text: "Зарегистрироваться", url: input.tournamentUrl, row: 1 }],
+    buttons: [{ text: "Принять участие", url: input.tournamentUrl, row: 1 }],
   };
 }
 
@@ -222,11 +227,16 @@ export function buildPersonalMatchMessage(input: PersonalMatchMessageInput): Tel
       { type: "footer", text: "Отправьте результат до дедлайна и убедитесь, что соперник подтвердил счёт." },
     ],
     fallbackText: [
-      "<b>Ваш матч готов</b>",
+      `${tgEmoji("gamepad")} <b>Ваш матч готов</b>`,
       "",
-      ...rows.map(([label, value]) => `<b>${escapeTelegramHtml(label)}:</b> ${escapeTelegramHtml(value)}`),
+      `${tgEmoji("crown")} <b>Турнир:</b> ${escapeTelegramHtml(input.tournamentTitle)}`,
+      `${tgEmoji("flag")} <b>Этап:</b> ${escapeTelegramHtml(input.stageName)} · тур ${input.round}`,
+      `${tgEmoji("play")} <b>Соперник:</b> ${escapeTelegramHtml(input.opponentName)}`,
+      `${tgEmoji("calendar")} <b>Время:</b> ${escapeTelegramHtml(formatMoscowDateTime(input.scheduledAt))}`,
+      `${tgEmoji("hourglass")} <b>Дедлайн:</b> ${escapeTelegramHtml(formatMoscowDateTime(input.deadlineAt))}`,
+      `${tgEmoji("info")} <b>Статус:</b> ${escapeTelegramHtml(input.statusLabel)}`,
     ].join("\n"),
-    buttons: [{ text: "Открыть мой матч", url: input.matchUrl, row: 1 }],
+    buttons: [{ text: "Перейти к матчу", url: input.matchUrl, row: 1 }],
   };
 }
 
@@ -256,12 +266,15 @@ export function buildStandingsMessage(input: {
       ...(hiddenCount ? [{ type: "footer" as const, text: `В таблице ещё ${hiddenCount} участников — откройте полную версию.` }] : []),
     ],
     fallbackText: [
-      `<b>${escapeTelegramHtml(title)}</b>`,
+      `${tgEmoji("chart")} <b>${escapeTelegramHtml(title)}</b>`,
       "",
-      ...tableRows.map((row) => `${row[0]}. ${escapeTelegramHtml(row[1])} · И ${row[2]} · +/- ${row[3]} · <b>${row[4]} очк.</b>`),
-      hiddenCount ? `\nЕщё ${hiddenCount} участников — в полной таблице.` : "",
+      ...tableRows.map((row, index) => {
+        const place = index === 0 ? tgEmoji("gold1") : index === 1 ? tgEmoji("silver2") : index === 2 ? tgEmoji("bronze3") : `<b>${row[0]}.</b>`;
+        return `${place} ${escapeTelegramHtml(row[1])} · И ${row[2]} · +/− ${row[3]} · <b>${row[4]} очк.</b>`;
+      }),
+      hiddenCount ? `\n${tgEmoji("arrowRight")} Ещё ${hiddenCount} участников — в полной таблице.` : "",
     ].filter(Boolean).join("\n"),
-    buttons: [{ text: "Полная таблица", url: input.tournamentUrl, row: 1 }],
+    buttons: [{ text: "Открыть таблицу", url: input.tournamentUrl, row: 1 }],
   };
 }
 
@@ -296,10 +309,10 @@ export function buildScheduleMessage(input: {
       ...(hiddenCount ? [{ type: "footer" as const, text: `Ещё ${hiddenCount} матчей доступны на странице турнира.` }] : []),
     ],
     fallbackText: [
-      `<b>Расписание · ${escapeTelegramHtml(title)}</b>`,
+      `${tgEmoji("calendar")} <b>Расписание · ${escapeTelegramHtml(title)}</b>`,
       "",
-      ...rows.map((row) => `<b>Тур ${row[0]}</b> · ${escapeTelegramHtml(row[1])}\n${escapeTelegramHtml(row[2])} · ${escapeTelegramHtml(row[3])}`),
-      hiddenCount ? `\nЕщё ${hiddenCount} матчей — на сайте.` : "",
+      ...rows.map((row) => `${tgEmoji("gamepad")} <b>Тур ${row[0]}</b> · ${escapeTelegramHtml(row[1])}\n${tgEmoji("calendar")} ${escapeTelegramHtml(row[2])} · ${escapeTelegramHtml(row[3])}`),
+      hiddenCount ? `\n${tgEmoji("arrowRight")} Ещё ${hiddenCount} матчей — на сайте.` : "",
     ].filter(Boolean).join("\n\n"),
     buttons: [{ text: "Открыть расписание", url: input.tournamentUrl, row: 1 }],
   };
@@ -341,14 +354,14 @@ export function buildResultMessage(input: {
   return {
     blocks,
     fallbackText: [
-      "<b>Матч завершён</b>",
-      `<b>${escapeTelegramHtml(input.tournamentTitle)}</b>`,
+      `${tgEmoji("check")} <b>Матч завершён</b>`,
+      `${tgEmoji("crown")} ${escapeTelegramHtml(input.tournamentTitle)}`,
       "",
-      `${escapeTelegramHtml(input.playerOne)} — ${escapeTelegramHtml(input.playerTwo)}`,
-      `<b>Счёт: ${escapeTelegramHtml(score)}</b>`,
-      `<b>Победитель:</b> ${escapeTelegramHtml(input.winnerName || "Ничья")}`,
+      `${tgEmoji("gamepad")} ${escapeTelegramHtml(input.playerOne)} — ${escapeTelegramHtml(input.playerTwo)}`,
+      `${tgEmoji("chart")} <b>Счёт: ${escapeTelegramHtml(score)}</b>`,
+      `${tgEmoji("gold1")} <b>Победитель:</b> ${escapeTelegramHtml(input.winnerName || "Ничья")}`,
     ].join("\n"),
-    buttons: [{ text: "Таблица и сетка", url: input.tournamentUrl, row: 1 }],
+    buttons: [{ text: "Посмотреть итоги", url: input.tournamentUrl, row: 1 }],
   };
 }
 
@@ -379,11 +392,13 @@ export function buildCompletionMessage(input: {
   return {
     blocks,
     fallbackText: [
-      `<b>${escapeTelegramHtml(input.tournamentTitle)} завершён</b>`,
+      `${tgEmoji("party")} <b>${escapeTelegramHtml(input.tournamentTitle)} завершён!</b>`,
       "",
-      `<b>Победитель:</b> ${escapeTelegramHtml(input.winnerName || "Не определён")}`,
-      `<b>Участников:</b> ${input.participantsCount}`,
-      `<b>Сыграно матчей:</b> ${input.matchesCount}`,
+      `${tgEmoji("crown")} <b>Чемпион:</b> ${escapeTelegramHtml(input.winnerName || "Не определён")}`,
+      `${tgEmoji("gamepad")} <b>Участников:</b> ${input.participantsCount}`,
+      `${tgEmoji("chart")} <b>Сыграно матчей:</b> ${input.matchesCount}`,
+      "",
+      `${tgEmoji("thumbsUp")} Спасибо всем участникам!`,
     ].join("\n"),
     buttons: [{ text: "Посмотреть итоги", url: input.tournamentUrl, row: 1 }],
   };
@@ -396,6 +411,8 @@ export function buildNotificationRichMessage(input: {
   url?: string | null;
   buttonText?: string | null;
 }): TelegramRichMessageDraft {
+  const emoji = resolveNotificationEmoji(input.title, input.typeLabel);
+
   return {
     blocks: [
       { type: "section_heading", text: input.title },
@@ -403,11 +420,27 @@ export function buildNotificationRichMessage(input: {
       { type: "footer", text: `eFootball Nexon · ${input.typeLabel}` },
     ],
     fallbackText: [
-      "<b>eFootball Nexon</b>",
-      `<b>${escapeTelegramHtml(input.title)}</b>`,
-      `<blockquote>${escapeTelegramHtml(input.body)}</blockquote>`,
-      `<i>${escapeTelegramHtml(input.typeLabel)}</i>`,
-    ].join("\n\n"),
+      `${tgEmoji(emoji)} <b>${escapeTelegramHtml(input.title)}</b>`,
+      "",
+      escapeTelegramHtml(input.body),
+    ].join("\n"),
     buttons: input.url && input.buttonText ? [{ text: input.buttonText, url: input.url, row: 1 }] : undefined,
   };
+}
+
+function resolveNotificationEmoji(title: string, typeLabel: string): TelegramPremiumEmojiKey {
+  const value = `${title} ${typeLabel}`.toLocaleLowerCase("ru-RU");
+
+  if (value.includes("регламент") || value.includes("правил")) return "pencil";
+  if (value.includes("связанн") || value.includes("твин")) return "search";
+  if (value.includes("email")) return "envelope";
+  if (value.includes("вход") || value.includes("безопас") || value.includes("парол")) return "lock";
+  if (value.includes("предупреж") || value.includes("наруш") || value.includes("блокир")) return "warning";
+  if (value.includes("достижен")) return "star";
+  if (value.includes("статус профиля")) return "diamond";
+  if (value.includes("сезон")) return "flag";
+  if (value.includes("результат") || value.includes("рейтинг")) return "chart";
+  if (value.includes("матч")) return "gamepad";
+  if (value.includes("турнир")) return "crown";
+  return "bell";
 }

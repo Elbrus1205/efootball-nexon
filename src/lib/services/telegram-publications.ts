@@ -2,11 +2,12 @@ import { MatchStatus, ParticipantStatus, TournamentFormat, TournamentParticipant
 import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
 import {
-  editTelegramRichMessageWithFallback,
-  sendTelegramRichMessageWithFallback,
+  editTelegramDraftAsText,
+  sendTelegramDraftAsText,
   type TelegramSentMessage,
 } from "@/lib/telegram-bot";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
+import { tgEmoji } from "@/lib/telegram-emoji";
 import {
   buildCompletionMessage,
   buildResultMessage,
@@ -111,7 +112,7 @@ export async function publishTournamentRichDraft(params: {
 
   if (action === "edit" && existing) {
     try {
-      const result = await editTelegramRichMessageWithFallback({
+      const result = await editTelegramDraftAsText({
         chatId: params.chatId,
         messageId: existing.messageId,
         message: params.message,
@@ -120,7 +121,7 @@ export async function publishTournamentRichDraft(params: {
       messageId = publicationMessageId(result, existing.messageId);
     } catch (error) {
       if (!shouldRecreatePublication(error)) throw error;
-      const result = await sendTelegramRichMessageWithFallback({
+      const result = await sendTelegramDraftAsText({
         chatId: params.chatId,
         message: params.message,
         replyMarkup,
@@ -128,7 +129,7 @@ export async function publishTournamentRichDraft(params: {
       messageId = publicationMessageId(result);
     }
   } else {
-    const result = await sendTelegramRichMessageWithFallback({
+    const result = await sendTelegramDraftAsText({
       chatId: params.chatId,
       message: params.message,
       replyMarkup,
@@ -261,7 +262,10 @@ export async function buildTournamentBulletin(tournamentId: string) {
     { type: "section_heading", text: `${tournament.title} · центр турнира` },
     { type: "paragraph", text: "Актуальные матчи и таблицы обновляются автоматически после подтверждения результатов." },
   ];
-  const fallbackParts = [`<b>${escapeTelegramHtml(tournament.title)} · центр турнира</b>`];
+  const fallbackParts = [
+    `${tgEmoji("crown")} <b>${escapeTelegramHtml(tournament.title)} · центр турнира</b>`,
+    `${tgEmoji("refresh")} Матчи и таблицы обновляются после подтверждения результатов.`,
+  ];
 
   const groups = tournament.stages.flatMap((stage) => stage.groups);
   for (const group of groups.slice(0, 4)) {
@@ -308,7 +312,7 @@ export async function buildTournamentBulletin(tournamentId: string) {
     blocks,
     fallbackText: fallbackParts.join("\n\n"),
     buttons: [
-      { text: "Открыть турнир", url, row: 1 },
+      { text: "Перейти к турниру", url, row: 1 },
       { text: "Мои матчи", url: `${url}?tab=my-matches`, row: 1 },
     ],
   } satisfies TelegramRichMessageDraft;

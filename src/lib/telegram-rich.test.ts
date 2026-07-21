@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   TELEGRAM_RICH_TEXT_LIMIT,
+  buildNotificationRichMessage,
   buildPersonalMatchMessage,
   buildResultMessage,
   buildScheduleMessage,
@@ -37,8 +38,9 @@ describe("Telegram rich tournament messages", () => {
     assert.deepEqual(facts.columns, ["Параметр", "Значение"]);
     assert.ok(facts.rows.some((row) => row[0] === "Свободно" && row[1] === "20"));
     assert.ok(message.blocks.some((block) => block.type === "details" && block.title === "Регламент"));
-    assert.deepEqual(message.buttons, [{ text: "Зарегистрироваться", url: "https://nexon.example/tournaments/cup", row: 1 }]);
+    assert.deepEqual(message.buttons, [{ text: "Принять участие", url: "https://nexon.example/tournaments/cup", row: 1 }]);
     assert.match(message.fallbackText, /Nexon Champions &lt;Cup&gt;/);
+    assert.match(message.fallbackText, /<tg-emoji emoji-id="\d+">/);
   });
 
   it("keeps very long rules within rich and legacy delivery limits", () => {
@@ -60,7 +62,7 @@ describe("Telegram rich tournament messages", () => {
     assert.ok(message.fallbackText.length <= 3_800);
     assert.match(message.fallbackText, /…/);
     assert.match(message.fallbackText, /&lt;турнира&gt; &amp; fair play/);
-    assert.match(message.fallbackText, /<\/blockquote>$/);
+    assert.doesNotMatch(message.fallbackText, /<blockquote/);
   });
 
   it("builds a compact personal match card with an actionable link", () => {
@@ -79,7 +81,8 @@ describe("Telegram rich tournament messages", () => {
     assert.ok(table && table.type === "table");
     assert.ok(table.rows.some((row) => row[0] === "Соперник" && row[1] === "Player 2"));
     assert.ok(table.rows.some((row) => row[0] === "Дедлайн" && row[1].includes("16 июл")));
-    assert.equal(message.buttons?.[0]?.text, "Открыть мой матч");
+    assert.equal(message.buttons?.[0]?.text, "Перейти к матчу");
+    assert.match(message.fallbackText, /<tg-emoji emoji-id="\d+">/);
   });
 
   it("caps long standings while explaining where to see the rest", () => {
@@ -101,7 +104,7 @@ describe("Telegram rich tournament messages", () => {
     assert.ok(table && table.type === "table");
     assert.equal(table.rows.length, 12);
     assert.ok(message.blocks.some((block) => block.type === "footer" && block.text.includes("ещё 6")));
-    assert.equal(message.buttons?.[0]?.text, "Полная таблица");
+    assert.equal(message.buttons?.[0]?.text, "Открыть таблицу");
   });
 
   it("maps domain blocks to the Bot API 10.2 input shape", () => {
@@ -172,5 +175,24 @@ describe("Telegram rich tournament messages", () => {
     assert.ok(resultTable && resultTable.type === "table");
     assert.ok(resultTable.rows.some((row) => row[0] === "Счёт" && row[1] === "3:2"));
     assert.match(result.fallbackText, /Победитель:<\/b> Alpha/);
+  });
+
+  it("builds a plain premium-emoji notification without a system footer", () => {
+    const message = buildNotificationRichMessage({
+      title: "Регламент обновлён",
+      body: "Посмотрите изменения и подтвердите новую версию.",
+      typeLabel: "Системное уведомление",
+      url: "https://nexon.example/regulations",
+      buttonText: "Посмотреть изменения",
+    });
+
+    assert.match(message.fallbackText, /^<tg-emoji emoji-id="\d+">/);
+    assert.match(message.fallbackText, /<b>Регламент обновлён<\/b>/);
+    assert.doesNotMatch(message.fallbackText, /blockquote|Системное уведомление|eFootball Nexon/);
+    assert.deepEqual(message.buttons, [{
+      text: "Посмотреть изменения",
+      url: "https://nexon.example/regulations",
+      row: 1,
+    }]);
   });
 });

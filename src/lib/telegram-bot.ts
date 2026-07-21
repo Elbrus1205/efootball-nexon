@@ -319,6 +319,47 @@ export async function sendTelegramMessage(params: {
   return payload.result ?? {};
 }
 
+/**
+ * Sends a prepared draft as a regular HTML message.
+ *
+ * Rich-message blocks are intentionally ignored here: ordinary Telegram
+ * messages support custom emoji, render consistently in every client and keep
+ * inline buttons available.
+ */
+export async function sendTelegramDraftAsText(params: {
+  chatId: string;
+  message: TelegramRichMessageDraft;
+  replyMarkup?: TelegramInlineKeyboardMarkup;
+}) {
+  return sendTelegramMessage({
+    chatId: params.chatId,
+    text: params.message.fallbackText,
+    replyMarkup: params.replyMarkup,
+    disableWebPagePreview: true,
+  });
+}
+
+/** Updates a previously sent regular HTML message from a prepared draft. */
+export async function editTelegramDraftAsText(params: {
+  chatId: string;
+  messageId: string;
+  message: TelegramRichMessageDraft;
+  replyMarkup?: TelegramInlineKeyboardMarkup;
+}) {
+  return callTelegramApi<TelegramSentMessage | true>("editMessageText", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: params.chatId,
+      message_id: Number(params.messageId),
+      text: params.message.fallbackText,
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+      ...(params.replyMarkup ? { reply_markup: params.replyMarkup } : {}),
+    }),
+  });
+}
+
 export async function sendTelegramRichMessage(params: {
   chatId: string;
   message: TelegramRichMessageDraft;

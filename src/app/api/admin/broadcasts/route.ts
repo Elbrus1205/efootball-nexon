@@ -13,9 +13,9 @@ import {
   validateTelegramHtmlStructure,
 } from "@/lib/telegram-format";
 import {
+  sendTelegramDraftAsText,
   sendTelegramMedia,
   sendTelegramMessage,
-  sendTelegramRichMessageWithFallback,
   type TelegramInlineKeyboardMarkup,
   type TelegramMediaType,
 } from "@/lib/telegram-bot";
@@ -101,7 +101,7 @@ async function sendBroadcastToChat(params: {
   replyMarkup?: TelegramInlineKeyboardMarkup;
 }) {
   if (params.richMessage) {
-    await sendTelegramRichMessageWithFallback({
+    await sendTelegramDraftAsText({
       chatId: params.chatId,
       message: params.richMessage,
       replyMarkup: params.replyMarkup,

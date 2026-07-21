@@ -100,7 +100,7 @@ export async function detectAndNotifyTwins(params: {
         userId,
         type: NotificationType.SYSTEM,
         title: "Обнаружены связанные аккаунты",
-        body: `С одного устройства входили в несколько аккаунтов: ${accountSummary}. IP: ${params.context.ipAddress || "не определён"}.`,
+        body: `С одного устройства выполнен вход в несколько аккаунтов: ${accountSummary}. Последний IP: ${params.context.ipAddress || "не определён"}. Проверьте пользователей и при необходимости примите меры.`,
         link: `/admin/users?highlight=${encodeURIComponent(accounts[0].id)}`,
         dedupeKey: `twin-alert:${accountsKey}:${Math.floor(Date.now() / (RENOTIFY_AFTER_HOURS * 60 * 60 * 1000))}`,
       }),

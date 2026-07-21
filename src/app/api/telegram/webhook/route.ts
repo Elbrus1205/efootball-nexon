@@ -5,9 +5,9 @@ import { db } from "@/lib/db";
 import {
   getTelegramWebhookSecret,
   isTelegramRecipientUnavailableError,
+  sendTelegramDraftAsText,
   sendTelegramMessage,
   sendTelegramRichMessage,
-  sendTelegramRichMessageWithFallback,
 } from "@/lib/telegram-bot";
 import { tgEmoji } from "@/lib/telegram-emoji";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
@@ -117,10 +117,10 @@ async function deliverWelcomeMessage(params: {
     text: lines.join("\n"),
     disableWebPagePreview: true,
     replyMarkup: platformUrl
-      ? buildTelegramInlineKeyboard([
-          { text: "🎮 Открыть платформу", url: platformUrl, row: 1 },
-          { text: "🏆 Турниры", url: siteUrl("/tournaments")!, row: 2 },
-          { text: "📊 Рейтинги", url: siteUrl("/ratings")!, row: 2 },
+        ? buildTelegramInlineKeyboard([
+          { text: "Открыть платформу", url: platformUrl, row: 1 },
+          { text: "Турниры", url: siteUrl("/tournaments")!, row: 2 },
+          { text: "Рейтинги", url: siteUrl("/ratings")!, row: 2 },
         ])
       : undefined,
   });
@@ -146,7 +146,7 @@ async function deliverCommandMessage(params: {
     return;
   }
 
-  await sendTelegramRichMessageWithFallback({ chatId, message: params.draft, replyMarkup });
+  await sendTelegramDraftAsText({ chatId, message: params.draft, replyMarkup });
 }
 
 function infoMessage(title: string, body: string, button?: { text: string; url: string }): TelegramRichMessageDraft {
@@ -156,7 +156,7 @@ function infoMessage(title: string, body: string, button?: { text: string; url: 
       { type: "blockquote", text: body },
       { type: "footer", text: "eFootball Nexon · матчевый помощник" },
     ],
-    fallbackText: `<b>${escapeTelegramHtml(title)}</b>\n\n<blockquote>${escapeTelegramHtml(body)}</blockquote>`,
+    fallbackText: `${tgEmoji("info")} <b>${escapeTelegramHtml(title)}</b>\n\n${escapeTelegramHtml(body)}`,
     buttons: button ? [{ ...button, row: 1 }] : undefined,
   };
 }
@@ -277,7 +277,7 @@ async function handleCommand(message: TelegramWebhookMessage) {
         { type: "details", title: "Открыть правила", blocks: [{ type: "paragraph", text: context.tournament.rules }] },
         { type: "footer", text: "Полная и актуальная версия всегда доступна на платформе." },
       ],
-      fallbackText: `<b>Регламент · ${escapeTelegramHtml(context.tournament.title)}</b>\n\n<blockquote expandable>${escapeTelegramHtml(context.tournament.rules)}</blockquote>`,
+      fallbackText: `${tgEmoji("bookmark")} <b>Регламент · ${escapeTelegramHtml(context.tournament.title)}</b>\n\n${escapeTelegramHtml(context.tournament.rules)}`,
       buttons: url ? [{ text: "Полный регламент", url, row: 1 }] : undefined,
     };
   } else {
