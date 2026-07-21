@@ -83,3 +83,8 @@ export function tgEmoji(key: TelegramPremiumEmojiKey) {
   const emoji = TELEGRAM_PREMIUM_EMOJI[key];
   return `<tg-emoji emoji-id="${emoji.id}">${emoji.fallback}</tg-emoji>`;
 }
+
+/** Возвращает ID премиум-эмодзи для полей Telegram Bot API. */
+export function tgEmojiId(key: TelegramPremiumEmojiKey) {
+  return TELEGRAM_PREMIUM_EMOJI[key].id;
+}
