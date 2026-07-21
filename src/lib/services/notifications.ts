@@ -168,11 +168,18 @@ export function getTelegramNotificationTypeLabel(type: NotificationType) {
   return "Системное уведомление";
 }
 
-export function getTelegramNotificationButtonText(type: NotificationType) {
-  if (type === NotificationType.TOURNAMENT) return "🏆 Открыть турнир";
-  if (type === NotificationType.MATCH) return "🎮 Открыть матч";
-  if (type === NotificationType.RESULT) return "📊 Открыть результат";
-  return "🌐 Открыть на сайте";
+export function getTelegramNotificationButtonText(type: NotificationType, link?: string | null) {
+  if (link?.startsWith("/regulations")) return "Посмотреть изменения";
+  if (link?.startsWith("/dashboard/security")) return "Проверить безопасность";
+  if (link?.startsWith("/admin/users")) return "Проверить аккаунты";
+  if (link?.startsWith("/admin/moderation")) return "Открыть спор";
+  if (link?.startsWith("/dashboard/edit")) return "Открыть профиль";
+  if (link?.startsWith("/dashboard")) return "Открыть профиль";
+  if (link?.startsWith("/ratings")) return "Открыть рейтинг";
+  if (type === NotificationType.TOURNAMENT) return "Открыть турнир";
+  if (type === NotificationType.MATCH) return "Перейти к матчу";
+  if (type === NotificationType.RESULT) return "Посмотреть результат";
+  return "Открыть на сайте";
 }
 
 export function buildAbsoluteNotificationLink(link?: string | null) {

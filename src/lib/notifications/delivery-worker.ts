@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db";
 import {
   isTelegramRecipientUnavailableError,
-  sendTelegramRichMessageWithFallback,
+  sendTelegramDraftAsText,
 } from "@/lib/telegram-bot";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
 import { buildNotificationRichMessage, type TelegramRichMessageDraft } from "@/lib/telegram-rich";
@@ -89,11 +89,11 @@ async function deliverOne(delivery: Awaited<ReturnType<typeof claimDeliveries>>[
             body: notification.body,
             typeLabel: getTelegramNotificationTypeLabel(notification.type),
             url: absoluteLink,
-            buttonText: absoluteLink ? getTelegramNotificationButtonText(notification.type) : null,
+            buttonText: absoluteLink ? getTelegramNotificationButtonText(notification.type, notification.link) : null,
           });
 
           try {
-            await sendTelegramRichMessageWithFallback({
+            await sendTelegramDraftAsText({
               chatId: notification.user.telegramId,
               message: richMessage,
               replyMarkup: buildTelegramInlineKeyboard(richMessage.buttons ?? []),
