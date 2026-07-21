@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { tgEmojiId } from "@/lib/telegram-emoji";
+import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
 import {
   TELEGRAM_RICH_TEXT_LIMIT,
   buildNotificationRichMessage,
@@ -38,7 +40,12 @@ describe("Telegram rich tournament messages", () => {
     assert.deepEqual(facts.columns, ["Параметр", "Значение"]);
     assert.ok(facts.rows.some((row) => row[0] === "Свободно" && row[1] === "20"));
     assert.ok(message.blocks.some((block) => block.type === "details" && block.title === "Регламент"));
-    assert.deepEqual(message.buttons, [{ text: "Принять участие", url: "https://nexon.example/tournaments/cup", row: 1 }]);
+    assert.deepEqual(message.buttons, [{
+      text: "Принять участие",
+      url: "https://nexon.example/tournaments/cup",
+      row: 1,
+      iconCustomEmojiId: tgEmojiId("play"),
+    }]);
     assert.match(message.fallbackText, /Nexon Champions &lt;Cup&gt;/);
     assert.match(message.fallbackText, /<tg-emoji emoji-id="\d+">/);
   });
@@ -82,6 +89,7 @@ describe("Telegram rich tournament messages", () => {
     assert.ok(table.rows.some((row) => row[0] === "Соперник" && row[1] === "Player 2"));
     assert.ok(table.rows.some((row) => row[0] === "Дедлайн" && row[1].includes("16 июл")));
     assert.equal(message.buttons?.[0]?.text, "Перейти к матчу");
+    assert.equal(message.buttons?.[0]?.iconCustomEmojiId, tgEmojiId("gamepad"));
     assert.match(message.fallbackText, /<tg-emoji emoji-id="\d+">/);
   });
 
@@ -105,6 +113,7 @@ describe("Telegram rich tournament messages", () => {
     assert.equal(table.rows.length, 12);
     assert.ok(message.blocks.some((block) => block.type === "footer" && block.text.includes("ещё 6")));
     assert.equal(message.buttons?.[0]?.text, "Открыть таблицу");
+    assert.equal(message.buttons?.[0]?.iconCustomEmojiId, tgEmojiId("chart"));
   });
 
   it("maps domain blocks to the Bot API 10.2 input shape", () => {
@@ -188,11 +197,27 @@ describe("Telegram rich tournament messages", () => {
 
     assert.match(message.fallbackText, /^<tg-emoji emoji-id="\d+">/);
     assert.match(message.fallbackText, /<b>Регламент обновлён<\/b>/);
+    assert.equal(message.fallbackText.match(/<tg-emoji emoji-id="\d+">/g)?.length, 2);
     assert.doesNotMatch(message.fallbackText, /blockquote|Системное уведомление|eFootball Nexon/);
     assert.deepEqual(message.buttons, [{
       text: "Посмотреть изменения",
       url: "https://nexon.example/regulations",
       row: 1,
+      iconCustomEmojiId: tgEmojiId("pencil"),
     }]);
+  });
+
+  it("puts premium custom emoji icons on every inline button", () => {
+    const keyboard = buildTelegramInlineKeyboard([
+      { text: "Турнир", url: "https://nexon.example/tournaments", row: 1, iconCustomEmojiId: tgEmojiId("crown") },
+      { text: "Сайт", url: "https://nexon.example", row: 2 },
+    ]);
+
+    assert.deepEqual(keyboard, {
+      inline_keyboard: [
+        [{ text: "Турнир", url: "https://nexon.example/tournaments", icon_custom_emoji_id: tgEmojiId("crown") }],
+        [{ text: "Сайт", url: "https://nexon.example", icon_custom_emoji_id: tgEmojiId("arrowRight") }],
+      ],
+    });
   });
 });

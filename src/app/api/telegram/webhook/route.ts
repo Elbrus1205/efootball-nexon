@@ -9,7 +9,7 @@ import {
   sendTelegramMessage,
   sendTelegramRichMessage,
 } from "@/lib/telegram-bot";
-import { tgEmoji } from "@/lib/telegram-emoji";
+import { tgEmoji, tgEmojiId } from "@/lib/telegram-emoji";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
 import { buildPersonalMatchMessage, type TelegramRichMessageDraft } from "@/lib/telegram-rich";
 import { buildTournamentBulletin } from "@/lib/services/telegram-publications";
@@ -118,9 +118,9 @@ async function deliverWelcomeMessage(params: {
     disableWebPagePreview: true,
     replyMarkup: platformUrl
         ? buildTelegramInlineKeyboard([
-          { text: "Открыть платформу", url: platformUrl, row: 1 },
-          { text: "Турниры", url: siteUrl("/tournaments")!, row: 2 },
-          { text: "Рейтинги", url: siteUrl("/ratings")!, row: 2 },
+          { text: "Открыть платформу", url: platformUrl, row: 1, iconCustomEmojiId: tgEmojiId("home") },
+          { text: "Турниры", url: siteUrl("/tournaments")!, row: 2, iconCustomEmojiId: tgEmojiId("crown") },
+          { text: "Рейтинги", url: siteUrl("/ratings")!, row: 2, iconCustomEmojiId: tgEmojiId("chart") },
         ])
       : undefined,
   });
@@ -157,7 +157,7 @@ function infoMessage(title: string, body: string, button?: { text: string; url: 
       { type: "footer", text: "eFootball Nexon · матчевый помощник" },
     ],
     fallbackText: `${tgEmoji("info")} <b>${escapeTelegramHtml(title)}</b>\n\n${escapeTelegramHtml(body)}`,
-    buttons: button ? [{ ...button, row: 1 }] : undefined,
+    buttons: button ? [{ ...button, row: 1, iconCustomEmojiId: tgEmojiId("arrowRight") }] : undefined,
   };
 }
 
@@ -278,7 +278,7 @@ async function handleCommand(message: TelegramWebhookMessage) {
         { type: "footer", text: "Полная и актуальная версия всегда доступна на платформе." },
       ],
       fallbackText: `${tgEmoji("bookmark")} <b>Регламент · ${escapeTelegramHtml(context.tournament.title)}</b>\n\n${escapeTelegramHtml(context.tournament.rules)}`,
-      buttons: url ? [{ text: "Полный регламент", url, row: 1 }] : undefined,
+      buttons: url ? [{ text: "Полный регламент", url, row: 1, iconCustomEmojiId: tgEmojiId("bookmark") }] : undefined,
     };
   } else {
     draft = await buildTournamentBulletin(context.tournament.id)

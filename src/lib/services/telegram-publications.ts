@@ -7,7 +7,7 @@ import {
   type TelegramSentMessage,
 } from "@/lib/telegram-bot";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
-import { tgEmoji } from "@/lib/telegram-emoji";
+import { tgEmoji, tgEmojiId } from "@/lib/telegram-emoji";
 import {
   buildCompletionMessage,
   buildResultMessage,
@@ -312,8 +312,8 @@ export async function buildTournamentBulletin(tournamentId: string) {
     blocks,
     fallbackText: fallbackParts.join("\n\n"),
     buttons: [
-      { text: "Перейти к турниру", url, row: 1 },
-      { text: "Мои матчи", url: `${url}?tab=my-matches`, row: 1 },
+      { text: "Перейти к турниру", url, row: 1, iconCustomEmojiId: tgEmojiId("crown") },
+      { text: "Мои матчи", url: `${url}?tab=my-matches`, row: 1, iconCustomEmojiId: tgEmojiId("gamepad") },
     ],
   } satisfies TelegramRichMessageDraft;
 }

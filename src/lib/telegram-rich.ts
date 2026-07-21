@@ -1,4 +1,4 @@
-import { tgEmoji, type TelegramPremiumEmojiKey } from "@/lib/telegram-emoji";
+import { tgEmoji, tgEmojiId, type TelegramPremiumEmojiKey } from "@/lib/telegram-emoji";
 
 export const TELEGRAM_RICH_TEXT_LIMIT = 32_768;
 const TELEGRAM_LEGACY_FALLBACK_TEXT_LIMIT = 3_800;
@@ -17,7 +17,7 @@ export type TelegramRichBlock =
 export type TelegramRichMessageDraft = {
   blocks: TelegramRichBlock[];
   fallbackText: string;
-  buttons?: Array<{ text: string; url: string; row: number }>;
+  buttons?: Array<{ text: string; url: string; row: number; iconCustomEmojiId?: string }>;
 };
 
 export type TelegramInputRichText =
@@ -194,7 +194,7 @@ export function buildTournamentAnnouncement(input: TournamentAnnouncementInput):
       `${tgEmoji("bookmark")} <b>Коротко о регламенте</b>`,
       escapeTelegramHtmlWithin(input.rules, TELEGRAM_LEGACY_FALLBACK_TEXT_LIMIT - 1_700),
     ].filter(Boolean).join("\n"),
-    buttons: [{ text: "Принять участие", url: input.tournamentUrl, row: 1 }],
+    buttons: [{ text: "Принять участие", url: input.tournamentUrl, row: 1, iconCustomEmojiId: tgEmojiId("play") }],
   };
 }
 
@@ -236,7 +236,7 @@ export function buildPersonalMatchMessage(input: PersonalMatchMessageInput): Tel
       `${tgEmoji("hourglass")} <b>Дедлайн:</b> ${escapeTelegramHtml(formatMoscowDateTime(input.deadlineAt))}`,
       `${tgEmoji("info")} <b>Статус:</b> ${escapeTelegramHtml(input.statusLabel)}`,
     ].join("\n"),
-    buttons: [{ text: "Перейти к матчу", url: input.matchUrl, row: 1 }],
+    buttons: [{ text: "Перейти к матчу", url: input.matchUrl, row: 1, iconCustomEmojiId: tgEmojiId("gamepad") }],
   };
 }
 
@@ -269,12 +269,18 @@ export function buildStandingsMessage(input: {
       `${tgEmoji("chart")} <b>${escapeTelegramHtml(title)}</b>`,
       "",
       ...tableRows.map((row, index) => {
-        const place = index === 0 ? tgEmoji("gold1") : index === 1 ? tgEmoji("silver2") : index === 2 ? tgEmoji("bronze3") : `<b>${row[0]}.</b>`;
+        const place = index === 0
+          ? tgEmoji("gold1")
+          : index === 1
+            ? tgEmoji("silver2")
+            : index === 2
+              ? tgEmoji("bronze3")
+              : `${tgEmoji("gamepad")} <b>${row[0]}.</b>`;
         return `${place} ${escapeTelegramHtml(row[1])} · И ${row[2]} · +/− ${row[3]} · <b>${row[4]} очк.</b>`;
       }),
       hiddenCount ? `\n${tgEmoji("arrowRight")} Ещё ${hiddenCount} участников — в полной таблице.` : "",
     ].filter(Boolean).join("\n"),
-    buttons: [{ text: "Открыть таблицу", url: input.tournamentUrl, row: 1 }],
+    buttons: [{ text: "Открыть таблицу", url: input.tournamentUrl, row: 1, iconCustomEmojiId: tgEmojiId("chart") }],
   };
 }
 
@@ -314,7 +320,7 @@ export function buildScheduleMessage(input: {
       ...rows.map((row) => `${tgEmoji("gamepad")} <b>Тур ${row[0]}</b> · ${escapeTelegramHtml(row[1])}\n${tgEmoji("calendar")} ${escapeTelegramHtml(row[2])} · ${escapeTelegramHtml(row[3])}`),
       hiddenCount ? `\n${tgEmoji("arrowRight")} Ещё ${hiddenCount} матчей — на сайте.` : "",
     ].filter(Boolean).join("\n\n"),
-    buttons: [{ text: "Открыть расписание", url: input.tournamentUrl, row: 1 }],
+    buttons: [{ text: "Открыть расписание", url: input.tournamentUrl, row: 1, iconCustomEmojiId: tgEmojiId("calendar") }],
   };
 }
 
@@ -361,7 +367,7 @@ export function buildResultMessage(input: {
       `${tgEmoji("chart")} <b>Счёт: ${escapeTelegramHtml(score)}</b>`,
       `${tgEmoji("gold1")} <b>Победитель:</b> ${escapeTelegramHtml(input.winnerName || "Ничья")}`,
     ].join("\n"),
-    buttons: [{ text: "Посмотреть итоги", url: input.tournamentUrl, row: 1 }],
+    buttons: [{ text: "Посмотреть итоги", url: input.tournamentUrl, row: 1, iconCustomEmojiId: tgEmojiId("chart") }],
   };
 }
 
@@ -400,7 +406,7 @@ export function buildCompletionMessage(input: {
       "",
       `${tgEmoji("thumbsUp")} Спасибо всем участникам!`,
     ].join("\n"),
-    buttons: [{ text: "Посмотреть итоги", url: input.tournamentUrl, row: 1 }],
+    buttons: [{ text: "Посмотреть итоги", url: input.tournamentUrl, row: 1, iconCustomEmojiId: tgEmojiId("crown") }],
   };
 }
 
@@ -412,6 +418,7 @@ export function buildNotificationRichMessage(input: {
   buttonText?: string | null;
 }): TelegramRichMessageDraft {
   const emoji = resolveNotificationEmoji(input.title, input.typeLabel);
+  const bodyEmoji = resolveNotificationBodyEmoji(emoji);
 
   return {
     blocks: [
@@ -422,10 +429,28 @@ export function buildNotificationRichMessage(input: {
     fallbackText: [
       `${tgEmoji(emoji)} <b>${escapeTelegramHtml(input.title)}</b>`,
       "",
-      escapeTelegramHtml(input.body),
+      `${tgEmoji(bodyEmoji)} ${escapeTelegramHtml(input.body)}`,
     ].join("\n"),
-    buttons: input.url && input.buttonText ? [{ text: input.buttonText, url: input.url, row: 1 }] : undefined,
+    buttons: input.url && input.buttonText
+      ? [{ text: input.buttonText, url: input.url, row: 1, iconCustomEmojiId: tgEmojiId(emoji) }]
+      : undefined,
   };
+}
+
+function resolveNotificationBodyEmoji(headingEmoji: TelegramPremiumEmojiKey): TelegramPremiumEmojiKey {
+  switch (headingEmoji) {
+    case "pencil": return "bookmark";
+    case "search": return "warning";
+    case "lock": return "shield";
+    case "warning": return "exclamation";
+    case "star": return "sparkles";
+    case "diamond": return "star";
+    case "flag": return "calendar";
+    case "chart": return "check";
+    case "gamepad": return "calendar";
+    case "crown": return "sparkles";
+    default: return "info";
+  }
 }
 
 function resolveNotificationEmoji(title: string, typeLabel: string): TelegramPremiumEmojiKey {

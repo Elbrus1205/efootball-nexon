@@ -1,3 +1,5 @@
+import { tgEmojiId } from "@/lib/telegram-emoji";
+
 export const TELEGRAM_TEXT_LIMIT = 4096;
 export const TELEGRAM_CAPTION_LIMIT = 1024;
 
@@ -5,6 +7,7 @@ export type TelegramBroadcastButtonDraft = {
   text: string;
   url: string;
   row: number;
+  iconCustomEmojiId?: string;
 };
 
 const supportedTagPatterns = [
@@ -209,11 +212,15 @@ export function parseTelegramButtonsJson(raw: string) {
 export function buildTelegramInlineKeyboard(buttons: TelegramBroadcastButtonDraft[]) {
   if (!buttons.length) return undefined;
 
-  const rows = new Map<number, { text: string; url: string }[]>();
+  const rows = new Map<number, { text: string; url: string; icon_custom_emoji_id: string }[]>();
 
   for (const button of [...buttons].sort((first, second) => first.row - second.row)) {
     const row = rows.get(button.row) ?? [];
-    row.push({ text: button.text, url: button.url });
+    row.push({
+      text: button.text,
+      url: button.url,
+      icon_custom_emoji_id: button.iconCustomEmojiId ?? tgEmojiId("arrowRight"),
+    });
     rows.set(button.row, row);
   }
 
