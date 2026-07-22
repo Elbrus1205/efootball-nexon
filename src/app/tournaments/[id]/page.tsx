@@ -1049,6 +1049,7 @@ export default async function TournamentDetailsPage(
     title: section.title,
     deadlineLabel: section.deadlineAt ? formatDate(section.deadlineAt) : null,
     deadlineAt: section.deadlineAt ? new Date(section.deadlineAt).toISOString() : null,
+    allMatchesPlayed: section.matches.length > 0 && section.matches.every(isPlayedMatch),
     matches: section.matches.map((match) => {
       const sideOne = resolveMatchSide(match, 1);
       const sideTwo = resolveMatchSide(match, 2);

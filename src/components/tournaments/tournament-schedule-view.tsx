@@ -34,6 +34,7 @@ export type TournamentScheduleSection = {
   title: string;
   deadlineLabel: string | null;
   deadlineAt: string | null;
+  allMatchesPlayed: boolean;
   matches: TournamentScheduleMatch[];
 };
 
@@ -302,7 +303,12 @@ export function TournamentScheduleView({ sections }: { sections: TournamentSched
 
                   {section.deadlineLabel ? (
                     <div className="grid gap-2 text-[10px] uppercase tracking-[0.1em] sm:flex sm:flex-wrap sm:items-center sm:text-xs sm:tracking-[0.14em]">
-                      {liveDeadline ? (
+                      {section.allMatchesPlayed ? (
+                        <div className="inline-flex w-full justify-center gap-2 rounded-lg border border-emerald-400/25 bg-emerald-400/10 px-3 py-2 font-semibold text-emerald-200 sm:w-auto sm:rounded-full sm:py-1">
+                          <Clock3 className="h-3.5 w-3.5 shrink-0" />
+                          <span>Все матчи сыграны</span>
+                        </div>
+                      ) : liveDeadline ? (
                         <div className={cn("inline-flex w-full justify-center sm:w-auto gap-2 rounded-lg border px-3 py-2 font-semibold sm:rounded-full sm:py-1", deadlineToneClass(liveDeadline.tone))}>
                           <Clock3 className="h-3.5 w-3.5 shrink-0" />
                           <span>{liveDeadline.label}</span>

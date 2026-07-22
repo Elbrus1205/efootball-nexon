@@ -13,7 +13,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
 
   if (body.role === "FOUNDER") {
     redirectUrl.searchParams.set("error", "Роль основателя нельзя выдать вручную.");
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(redirectUrl, 303);
   }
 
   const targetUser = await db.user.findUnique({
@@ -23,7 +23,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
 
   if (targetUser?.role === "FOUNDER") {
     redirectUrl.searchParams.set("error", "Роль основателя нельзя изменить.");
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(redirectUrl, 303);
   }
 
   await db.user.update({
@@ -32,5 +32,5 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   });
 
   redirectUrl.searchParams.set("updated", "Роль пользователя обновлена.");
-  return NextResponse.redirect(redirectUrl);
+  return NextResponse.redirect(redirectUrl, 303);
 }

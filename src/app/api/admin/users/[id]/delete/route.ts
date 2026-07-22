@@ -11,7 +11,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   const confirmed = formData.get("confirmDelete") === "true";
 
   if (!confirmed) {
-    return NextResponse.redirect(new URL("/admin/users", getRequestBaseUrl(request)));
+    return NextResponse.redirect(new URL("/admin/users", getRequestBaseUrl(request)), 303);
   }
 
   if (params.id === session.user.id) {
@@ -34,7 +34,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   });
 
   if (!user) {
-    return NextResponse.redirect(new URL("/admin/users", getRequestBaseUrl(request)));
+    return NextResponse.redirect(new URL("/admin/users", getRequestBaseUrl(request)), 303);
   }
 
   await db.$transaction(async (tx) => {
@@ -53,5 +53,5 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     });
   });
 
-  return NextResponse.redirect(new URL("/admin/users", getRequestBaseUrl(request)));
+  return NextResponse.redirect(new URL("/admin/users", getRequestBaseUrl(request)), 303);
 }

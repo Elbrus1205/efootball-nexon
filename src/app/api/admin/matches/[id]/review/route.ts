@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { MatchStatus, NotificationType } from "@prisma/client";
-import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { assertCanManageMatch } from "@/lib/admin-tournament-access";
 import { syncUserAchievementsForUsers } from "@/lib/achievements";
 import { db } from "@/lib/db";
@@ -45,7 +44,11 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   await assertCanManageMatch(session, params.id);
 
   const formData = await request.formData();
-  const returnTo = String(formData.get("returnTo") || `/admin/matches/${params.id}`);
+  const rawReturnTo = String(formData.get("returnTo") || `/admin/matches/${params.id}`);
+  // Only allow same-origin relative paths to avoid open redirects; anything else falls back to the match page.
+  const returnTo = rawReturnTo.startsWith("/") && !rawReturnTo.startsWith("//")
+    ? rawReturnTo
+    : `/admin/matches/${params.id}`;
   const body = reviewSchema.parse({
     action: formData.get("action"),
     moderatorComment: formData.get("moderatorComment"),
@@ -160,5 +163,10 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     },
   });
 
-  return NextResponse.redirect(new URL(returnTo, getConfiguredSiteBaseUrl()));
+  // 303 See Other forces the browser to follow the redirect with GET.
+  // Without an explicit status, NextResponse.redirect defaults to 307, which
+  // preserves the POST method and re-submits it to a GET-only page route,
+  // producing a 405/blank page. Build the URL from the current request origin
+  // so the redirect stays same-origin instead of jumping to the configured base URL.
+  return NextResponse.redirect(new URL(returnTo, request.url), 303);
 }
