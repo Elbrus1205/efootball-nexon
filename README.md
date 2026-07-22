@@ -55,15 +55,61 @@ npm start
 
 ## Периодические задачи
 
-Все endpoints требуют `Authorization: Bearer <CRON_SECRET>` (или `x-cron-secret`) и могут вызываться Timeweb cron:
+Все endpoints требуют `Authorization: Bearer <CRON_SECRET>` (или `x-cron-secret`):
 
 - `POST /api/notifications/deliver` — каждую минуту; доставляет Telegram/push из outbox с retry.
 - `POST /api/tournaments/lifecycle` — каждую минуту; открывает регистрацию и закрывает заполненные турниры.
-- `POST /api/tournaments/deadline-reminders` — по расписанию напоминаний.
+- `POST /api/tournaments/deadline-reminders` — по расписанию напоминаний; шлёт напоминания за 24 ч / 6 ч / 1 ч до дедлайна тура.
 - `POST /api/security/email/reminders` — по расписанию email-напоминаний.
 - `POST /api/profile-statuses/expire` — периодическая обработка истёкших статусов.
 - `POST /api/telegram/sync-usernames` — раз в сутки; обновляет @username привязанных игроков при смене ника в Telegram.
 - `POST /api/ops/digest` — раз в сутки (вечером); отправляет основателям и организаторам одну сводку по платформе (застрявшая доставка, недоступность Telegram-бота, открытые споры, просроченные матчи, заявки на проверке).
+
+### Как это устроено (Supabase pg_cron)
+
+Планировщик живёт в самой БД: расширения `pg_cron` (расписание) и `pg_net` (асинхронный HTTP) шлют `POST` на эти endpoints. Секрет `CRON_SECRET` хранится в **Supabase Vault** под именем `efootball_cron_secret` — задачи читают его оттуда, поэтому в SQL его писать не нужно. Часовой пояс сервера БД — **UTC**, поэтому расписание задаётся в UTC (например, 20:00 МСК = `0 17 * * *`).
+
+Посмотреть текущие задачи:
+
+```sql
+select jobid, jobname, schedule, active from cron.job order by jobid;
+```
+
+Добавить новую задачу (шаблон — подставьте свой путь, расписание и имя):
+
+```sql
+select cron.schedule(
+  'efootball-ops-digest',        -- имя задачи
+  '0 17 * * *',                  -- расписание в UTC (20:00 МСК)
+  $$
+  select net.http_post(
+    url := 'https://efootball-nexon.com/api/ops/digest',
+    body := '{}'::jsonb,
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || (
+        select decrypted_secret from vault.decrypted_secrets
+        where name = 'efootball_cron_secret' limit 1
+      )
+    ),
+    timeout_milliseconds := 120000
+  );
+  $$
+);
+```
+
+Проверить последний ответ endpoint (после ручного вызова или срабатывания задачи):
+
+```sql
+select status_code, content from net._http_response order by id desc limit 1;
+```
+
+Изменить расписание или удалить задачу:
+
+```sql
+select cron.alter_job((select jobid from cron.job where jobname='efootball-ops-digest'), schedule := '0 18 * * *');
+select cron.unschedule('efootball-ops-digest');
+```
 
 ## Проверка платформ
 
