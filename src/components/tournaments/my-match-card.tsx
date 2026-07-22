@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 type SubmissionState = {
   label: string;
-  tone: "success" | "waiting" | "retry" | "danger";
+  tone: "success" | "pending" | "waiting" | "retry" | "danger";
 };
 
 type SubmittedScore = {
@@ -52,13 +52,15 @@ type MyMatchCardProps = {
 
 function submissionToneClass(tone: SubmissionState["tone"]) {
   if (tone === "success") return "border-emerald-400/20 bg-emerald-400/10 text-emerald-300";
+  if (tone === "pending") return "border-sky-400/20 bg-sky-400/10 text-sky-300";
   if (tone === "danger") return "border-red-400/20 bg-red-400/10 text-red-300";
   if (tone === "retry") return "border-amber-400/20 bg-amber-400/10 text-amber-300";
   return "border-white/10 bg-white/[0.04] text-zinc-400";
 }
 
 function compactSubmissionLabel(state: SubmissionState) {
-  if (state.tone === "success") return state.label.includes("подтверж") ? "Подтвержден" : "Отправлен";
+  if (state.tone === "success") return "Подтвержден";
+  if (state.tone === "pending") return "Ждём соперника";
   if (state.tone === "danger") return "Спор";
   if (state.tone === "retry") return "Повторить";
   return "Ждет счет";
