@@ -15,6 +15,7 @@ import {
   type TournamentStage,
 } from "@prisma/client";
 import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
+import { tournamentFormatLabel, tournamentStatusLabel } from "@/lib/admin-display";
 import { db } from "@/lib/db";
 import { getAvailableClubs } from "@/lib/clubs";
 import { normalizeFormatBlueprint, type FormatBlueprint, type PlayoffSelectionRule } from "@/lib/format-blueprint";
@@ -832,6 +833,40 @@ function buildRoundStartBody(params: {
   ].join("\n");
 }
 
+type DeadlineReminderTier = {
+  key: string;
+  windowMs: number;
+  title: string;
+  lead: string;
+  statusLabel: string;
+};
+
+// Tiers are ordered most-urgent first. Each cron run fires the most urgent tier
+// whose window the deadline has entered but that hasn't been sent yet.
+const DEADLINE_REMINDER_TIERS: DeadlineReminderTier[] = [
+  {
+    key: "1h",
+    windowMs: 60 * 60 * 1000,
+    title: "До дедлайна остался 1 час",
+    lead: "до дедлайна остался примерно 1 час.",
+    statusLabel: "До дедлайна меньше 1 часа",
+  },
+  {
+    key: "6h",
+    windowMs: 6 * 60 * 60 * 1000,
+    title: "Дедлайн через 6 часов",
+    lead: "до дедлайна осталось меньше 6 часов.",
+    statusLabel: "До дедлайна менее 6 часов",
+  },
+  {
+    key: "24h",
+    windowMs: 24 * 60 * 60 * 1000,
+    title: "Матч нужно сыграть до завтра",
+    lead: "матч нужно сыграть до завтра — дедлайн менее чем через сутки.",
+    statusLabel: "До дедлайна менее суток",
+  },
+];
+
 function formatDeadlineReminderBody(params: {
   tournamentTitle: string;
   stageName: string;
@@ -839,12 +874,13 @@ function formatDeadlineReminderBody(params: {
   round: number;
   opponentName: string;
   deadlineAt: Date;
+  lead: string;
 }) {
   const unit = roundUnitForStage(params.stageType).toLowerCase();
   const deadline = formatScheduleDate(params.deadlineAt);
 
   return [
-    `${params.tournamentTitle}: до дедлайна осталось меньше 6 часов.`,
+    `${params.tournamentTitle}: ${params.lead}`,
     `${params.stageName}, ${unit} ${params.round}. Соперник: ${params.opponentName}.`,
     `Дедлайн: ${deadline} МСК.`,
   ].join("\n");
@@ -936,9 +972,99 @@ export async function notifyActiveTournamentRoundsStarted(tournamentId: string) 
   }
 }
 
+type TournamentChangeSnapshot = {
+  startsAt: Date | null;
+  rules: string | null;
+  prizePool: string | null;
+  format: TournamentFormat;
+  status: TournamentStatus;
+};
+
+function normalizeRulesText(value: string | null) {
+  return (value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function normalizePrizePoolText(value: string | null) {
+  return (value ?? "").trim();
+}
+
+// Diffs a tournament's before/after snapshots into human-readable change lines.
+// Returns an empty array when nothing meaningful changed so callers can skip sending.
+function buildTournamentChangeLines(before: TournamentChangeSnapshot, after: TournamentChangeSnapshot) {
+  const lines: string[] = [];
+
+  const beforeStart = before.startsAt?.getTime() ?? null;
+  const afterStart = after.startsAt?.getTime() ?? null;
+  if (beforeStart !== afterStart) {
+    const from = before.startsAt ? `${formatScheduleDate(before.startsAt)} МСК` : "не назначено";
+    const to = after.startsAt ? `${formatScheduleDate(after.startsAt)} МСК` : "не назначено";
+    lines.push(`Старт перенесён: ${from} → ${to}.`);
+  }
+
+  if (after.status !== before.status) {
+    if (after.status === TournamentStatus.COMPLETED) {
+      lines.push("Турнир завершён.");
+    } else {
+      lines.push(`Статус турнира изменён: ${tournamentStatusLabel[before.status]} → ${tournamentStatusLabel[after.status]}.`);
+    }
+  }
+
+  if (after.format !== before.format) {
+    lines.push(`Изменился формат турнира: ${tournamentFormatLabel[before.format]} → ${tournamentFormatLabel[after.format]}.`);
+  }
+
+  if (normalizePrizePoolText(before.prizePool) !== normalizePrizePoolText(after.prizePool)) {
+    lines.push(after.prizePool ? `Обновлён призовой фонд: ${after.prizePool.trim()}.` : "Призовой фонд убран.");
+  }
+
+  if (normalizeRulesText(before.rules) !== normalizeRulesText(after.rules)) {
+    lines.push("Регламент изменён — проверьте обновлённые правила.");
+  }
+
+  return lines;
+}
+
+// Sends ONE combined notification to confirmed participants summarizing all changes,
+// so several edits in a single save don't spam multiple messages.
+export async function notifyTournamentChanges(params: {
+  tournamentId: string;
+  title: string;
+  notificationsEnabled: boolean;
+  before: TournamentChangeSnapshot;
+  after: TournamentChangeSnapshot;
+}) {
+  if (!params.notificationsEnabled) return { notifiedCount: 0 };
+
+  const changeLines = buildTournamentChangeLines(params.before, params.after);
+  if (!changeLines.length) return { notifiedCount: 0 };
+
+  const participants = await db.tournamentRegistration.findMany({
+    where: { tournamentId: params.tournamentId, status: ParticipantStatus.CONFIRMED },
+    select: { userId: true },
+  });
+  const userIds = participants.map((participant) => participant.userId).filter(Boolean);
+  if (!userIds.length) return { notifiedCount: 0 };
+
+  const body = [`${params.title}:`, ...changeLines].join("\n");
+  // Dedupe on the exact change set within a short window so a double-save doesn't double-send,
+  // while genuinely new changes later still notify.
+  await createNotificationsForUsers({
+    userIds,
+    title: "Изменения в турнире",
+    body,
+    type: NotificationType.TOURNAMENT,
+    link: `/tournaments/${params.tournamentId}`,
+    dedupeWithinHours: 6,
+  });
+
+  return { notifiedCount: userIds.length };
+}
+
 export async function notifyUpcomingRoundDeadlineReminders({ userId }: { userId?: string } = {}) {
   const now = new Date();
-  const reminderWindowEnd = new Date(now.getTime() + 6 * 60 * 60 * 1000);
+  // Widen to the largest tier window (24h) so every tier can be evaluated in one pass.
+  const widestWindowMs = Math.max(...DEADLINE_REMINDER_TIERS.map((tier) => tier.windowMs));
+  const reminderWindowEnd = new Date(now.getTime() + widestWindowMs);
   const deadlines = await db.roundDeadline.findMany({
     where: {
       deadlineAt: {
@@ -993,6 +1119,11 @@ export async function notifyUpcomingRoundDeadlineReminders({ userId }: { userId?
   for (const deadline of deadlines) {
     if (!tournamentNotificationsEnabled(deadline.tournament)) continue;
 
+    // Most-urgent tier the deadline has entered (tiers are ordered urgent-first).
+    const msLeft = deadline.deadlineAt.getTime() - now.getTime();
+    const tier = DEADLINE_REMINDER_TIERS.find((candidate) => msLeft <= candidate.windowMs);
+    if (!tier) continue;
+
     const matches = deadline.stage.matches.filter((match) => match.round === deadline.round);
     for (const match of matches) {
       const sides = [
@@ -1011,7 +1142,7 @@ export async function notifyUpcomingRoundDeadlineReminders({ userId }: { userId?
         const baseUrl = getConfiguredSiteBaseUrl();
         await createNotification({
           userId: side.userId,
-          title: "Дедлайн через 6 часов",
+          title: tier.title,
           body: formatDeadlineReminderBody({
             tournamentTitle: deadline.tournament.title,
             stageName: deadline.stage.name,
@@ -1019,10 +1150,11 @@ export async function notifyUpcomingRoundDeadlineReminders({ userId }: { userId?
             round: deadline.round,
             opponentName: side.opponentName,
             deadlineAt: deadline.deadlineAt,
+            lead: tier.lead,
           }),
           type: NotificationType.MATCH,
           link: matchPath,
-          dedupeKey: `deadline-6h:${deadline.id}:${match.id}`,
+          dedupeKey: `deadline-${tier.key}:${deadline.id}:${match.id}`,
           dedupeWithinHours: 24 * 365,
           telegramRichMessage: baseUrl
             ? buildPersonalMatchMessage({
@@ -1031,7 +1163,9 @@ export async function notifyUpcomingRoundDeadlineReminders({ userId }: { userId?
                 round: deadline.round,
                 opponentName: side.opponentName,
                 deadlineAt: deadline.deadlineAt,
-                statusLabel: "До дедлайна менее 6 часов",
+                statusLabel: tier.statusLabel,
+                headline: tier.title,
+                buttonLabel: "Открыть матч",
                 matchUrl: new URL(matchPath, baseUrl).toString(),
               })
             : undefined,
