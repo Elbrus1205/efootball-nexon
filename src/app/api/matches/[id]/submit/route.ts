@@ -1,48 +1,16 @@
 import { MatchStatus, NotificationType, UserRole } from "@prisma/client";
 import { after, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
-import { syncUserAchievementsForUsers } from "@/lib/achievements";
 import { db } from "@/lib/db";
-import { ensureMatchLineupSnapshot } from "@/lib/services/match-lineups";
 import { createNotification } from "@/lib/services/notifications";
-import { recordConfirmedMatchReliability } from "@/lib/services/reliability";
-import { publishTournamentResult, syncTournamentBulletin } from "@/lib/services/telegram-publications";
-import { recalculateGroupStandings, resolveConfirmedMatch } from "@/lib/services/tournaments";
 import { resultSubmissionSchema } from "@/lib/validators";
+import { finalizeConfirmedMatch } from "@/lib/tournaments/finalize-confirmed-match";
+import { buildScoreConfirmMessage } from "@/lib/services/telegram-callbacks";
+import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { MatchSubmissionWriteError, submitMatchResultAtomically } from "@/lib/tournaments/submit-match-result";
 
 function hasPenaltyScores(body: { player1PenaltyScore?: number; player2PenaltyScore?: number }) {
   return body.player1PenaltyScore !== undefined && body.player2PenaltyScore !== undefined;
-}
-
-async function createMatchOutcomeNotifications(match: {
-  id: string;
-  tournamentId: string;
-  tournament: { title: string; notificationsEnabled?: boolean | null };
-  player1Id: string | null;
-  player2Id: string | null;
-  winnerId: string | null;
-}, player1Score: number, player2Score: number) {
-  if (match.tournament.notificationsEnabled === false) return;
-
-  const playerIds = [match.player1Id, match.player2Id].filter(Boolean) as string[];
-
-  await Promise.all(
-    playerIds.map((userId) => {
-      const isWinner = Boolean(match.winnerId) && userId === match.winnerId;
-      const isDraw = !match.winnerId;
-
-      return createNotification({
-        userId,
-        title: isDraw ? "Ничья подтверждена" : isWinner ? "Победа в матче" : "Матч завершён",
-        body: `${match.tournament.title}: счёт ${player1Score}:${player2Score} подтверждён.${isWinner ? " Вы выиграли этот матч." : isDraw ? "" : " Победил соперник."}`,
-        type: NotificationType.RESULT,
-        link: `/tournaments/${match.tournamentId}`,
-        dedupeKey: `match-result:${match.id}:${userId}`,
-        dedupeWithinHours: 12,
-      });
-    }),
-  );
 }
 
 export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
@@ -122,12 +90,30 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   if (outcome.state === "waiting") {
     const opponentId = session.user.id === match.player1Id ? match.player2Id : match.player1Id;
     if (opponentId && match.tournament.notificationsEnabled !== false) {
+      // The score as it should read from the opponent's perspective is identical:
+      // both players submit the same absolute player1:player2 score for the match.
+      const scoreConfirm = await buildScoreConfirmMessage({
+        opponentUserId: opponentId,
+        matchId: match.id,
+        tournamentId: match.tournamentId,
+        tournamentTitle: match.tournament.title,
+        player1Score: body.player1Score,
+        player2Score: body.player2Score,
+        player1PenaltyScore: body.player1PenaltyScore,
+        player2PenaltyScore: body.player2PenaltyScore,
+        matchUrl: (() => {
+          const baseUrl = getConfiguredSiteBaseUrl();
+          return baseUrl ? new URL(`/tournaments/${match.tournamentId}?tab=my-matches`, baseUrl).toString() : null;
+        })(),
+      });
+
       await createNotification({
         userId: opponentId,
         title: "Соперник отправил результат",
         body: `Для матча ${match.tournament.title} нужно подтвердить свой вариант счёта.`,
         type: NotificationType.RESULT,
         link: `/tournaments/${match.tournamentId}`,
+        telegramRichMessage: scoreConfirm,
       });
     }
 
@@ -140,26 +126,12 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   }
 
   if (outcome.state === "confirmed") {
-    await recalculateGroupStandings(match.tournamentId);
-    await ensureMatchLineupSnapshot(match.id);
-    await resolveConfirmedMatch(match.id);
-    await recordConfirmedMatchReliability({
-      userIds: [match.player1Id, match.player2Id],
-      matchId: match.id,
-      tournamentId: match.tournamentId,
-    });
-
-    await createMatchOutcomeNotifications(
-      { ...match, winnerId: outcome.winnerId },
-      outcome.player1Score,
-      outcome.player2Score,
-    );
-    await syncUserAchievementsForUsers([match.player1Id, match.player2Id]);
-    after(async () => {
-      await Promise.all([
-        publishTournamentResult(match.id).catch((error) => console.error("Failed to publish Telegram match result", error)),
-        syncTournamentBulletin(match.tournamentId).catch((error) => console.error("Failed to update Telegram bulletin", error)),
-      ]);
+    await finalizeConfirmedMatch({
+      match,
+      winnerId: outcome.winnerId,
+      player1Score: outcome.player1Score,
+      player2Score: outcome.player2Score,
+      scheduleBackground: (task) => after(task),
     });
 
     return NextResponse.json({

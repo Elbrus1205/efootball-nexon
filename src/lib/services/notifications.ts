@@ -14,6 +14,7 @@ export async function createNotification({
   dedupeWithinHours,
   skipTelegram,
   telegramRichMessage,
+  availableInMs,
 }: {
   userId: string;
   title: string;
@@ -24,6 +25,8 @@ export async function createNotification({
   dedupeWithinHours?: number;
   skipTelegram?: boolean;
   telegramRichMessage?: TelegramRichMessageDraft;
+  // Delays outbox delivery by this many ms (sets NotificationDelivery.availableAt in the future).
+  availableInMs?: number;
 }) {
   const safeTitle = repairMojibake(title);
   const safeBody = repairMojibake(body);
@@ -54,6 +57,7 @@ export async function createNotification({
   const deliveryData = {
     skipTelegram: Boolean(skipTelegram),
     ...(storedTelegramPayload ? { telegramPayload: storedTelegramPayload } : {}),
+    ...(availableInMs && availableInMs > 0 ? { availableAt: new Date(Date.now() + availableInMs) } : {}),
   };
 
   if (dedupeKey) {

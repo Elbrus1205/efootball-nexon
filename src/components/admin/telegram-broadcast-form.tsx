@@ -29,6 +29,8 @@ type TelegramBroadcastFormProps = {
 
 type DraftButton = TelegramBroadcastButtonDraft & {
   id: string;
+  // Broadcast buttons are always link buttons, so url is required in this form.
+  url: string;
 };
 
 function createButtonDraft(row = 1): DraftButton {

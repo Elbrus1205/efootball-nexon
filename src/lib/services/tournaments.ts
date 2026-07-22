@@ -30,6 +30,7 @@ import { grantCurrentChampionProfileStatus } from "@/lib/profile-statuses";
 import { createNotification, createNotificationsForUsers } from "@/lib/services/notifications";
 import { publishTournamentCompletion } from "@/lib/services/telegram-publications";
 import { buildPersonalMatchMessage } from "@/lib/telegram-rich";
+import { withRemindLaterButton } from "@/lib/services/telegram-callbacks";
 
 function createGroupSourceRef(groupId: string, rank: number) {
   return `group:${groupId}:rank:${rank}`;
@@ -1157,17 +1158,20 @@ export async function notifyUpcomingRoundDeadlineReminders({ userId }: { userId?
           dedupeKey: `deadline-${tier.key}:${deadline.id}:${match.id}`,
           dedupeWithinHours: 24 * 365,
           telegramRichMessage: baseUrl
-            ? buildPersonalMatchMessage({
-                tournamentTitle: deadline.tournament.title,
-                stageName: deadline.stage.name,
-                round: deadline.round,
-                opponentName: side.opponentName,
-                deadlineAt: deadline.deadlineAt,
-                statusLabel: tier.statusLabel,
-                headline: tier.title,
-                buttonLabel: "Открыть матч",
-                matchUrl: new URL(matchPath, baseUrl).toString(),
-              })
+            ? withRemindLaterButton(
+                buildPersonalMatchMessage({
+                  tournamentTitle: deadline.tournament.title,
+                  stageName: deadline.stage.name,
+                  round: deadline.round,
+                  opponentName: side.opponentName,
+                  deadlineAt: deadline.deadlineAt,
+                  statusLabel: tier.statusLabel,
+                  headline: tier.title,
+                  buttonLabel: "Открыть матч",
+                  matchUrl: new URL(matchPath, baseUrl).toString(),
+                }),
+                match.id,
+              )
             : undefined,
         });
         notifiedCount += 1;

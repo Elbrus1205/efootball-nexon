@@ -3,12 +3,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
 import {
+  answerTelegramCallbackQuery,
+  editTelegramMessageReplyMarkup,
   getTelegramWebhookSecret,
   isTelegramRecipientUnavailableError,
   sendTelegramDraftAsText,
   sendTelegramMessage,
   sendTelegramRichMessage,
 } from "@/lib/telegram-bot";
+import { handleTelegramCallbackAction } from "@/lib/services/telegram-callbacks";
 import { tgEmoji, tgEmojiId } from "@/lib/telegram-emoji";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
 import { buildPersonalMatchMessage, type TelegramRichMessageDraft } from "@/lib/telegram-rich";
@@ -32,7 +35,12 @@ type TelegramWebhookMessage = {
 type TelegramWebhookUpdate = {
   message?: TelegramWebhookMessage;
   edited_message?: TelegramWebhookMessage;
-  callback_query?: { id?: string; from?: TelegramWebhookUser; message?: TelegramWebhookMessage };
+  callback_query?: {
+    id?: string;
+    from?: TelegramWebhookUser;
+    message?: TelegramWebhookMessage;
+    data?: string;
+  };
 };
 
 const activeMatchStatuses = [
@@ -291,6 +299,50 @@ async function handleCommand(message: TelegramWebhookMessage) {
   });
 }
 
+async function handleCallbackQuery(callbackQuery: NonNullable<TelegramWebhookUpdate["callback_query"]>) {
+  if (!process.env.TELEGRAM_BOT_TOKEN) return;
+  const callbackQueryId = callbackQuery.id;
+  const data = callbackQuery.data?.trim();
+  if (!callbackQueryId || !data) return;
+
+  const telegramId = normalizeId(callbackQuery.from?.id);
+  const user = telegramId && !telegramId.startsWith("-")
+    ? await db.user.findUnique({ where: { telegramId }, select: { id: true } })
+    : null;
+
+  if (!user) {
+    await answerTelegramCallbackQuery({
+      callbackQueryId,
+      text: "Аккаунт не привязан. Войдите на платформе через Telegram.",
+      showAlert: true,
+    }).catch(() => null);
+    return;
+  }
+
+  let result;
+  try {
+    result = await handleTelegramCallbackAction({ userId: user.id, data });
+  } catch (error) {
+    console.error("Failed to handle Telegram callback", { data, error });
+    await answerTelegramCallbackQuery({ callbackQueryId, text: "Не удалось выполнить действие. Попробуйте на сайте." }).catch(() => null);
+    return;
+  }
+
+  await answerTelegramCallbackQuery({
+    callbackQueryId,
+    text: result.toast,
+    showAlert: result.showAlert,
+  }).catch(() => null);
+
+  if (result.clearKeyboard) {
+    const chatId = normalizeId(callbackQuery.message?.chat?.id);
+    const messageId = callbackQuery.message?.message_id;
+    if (chatId && messageId) {
+      await editTelegramMessageReplyMarkup({ chatId, messageId: String(messageId) }).catch(() => null);
+    }
+  }
+}
+
 export async function POST(request: NextRequest) {
   let webhookSecret: string;
   try {
@@ -307,6 +359,7 @@ export async function POST(request: NextRequest) {
   if (update) {
     await syncTelegramUsernameFromWebhook(update);
     if (update.message) await handleCommand(update.message);
+    if (update.callback_query) await handleCallbackQuery(update.callback_query);
   }
 
   return NextResponse.json({ ok: true });

@@ -304,6 +304,7 @@ model User {
   warningsIssued                             UserWarning[]                       @relation("warningIssuer")
   passwordResetTokens                        PasswordResetToken[]
   emailVerificationCodes                     EmailVerificationCode[]
+  telegramCallbackTokens                     TelegramCallbackToken[]
   adminActions                               AdminAction[]
   securitySessions                           SecuritySession[]
   loginHistory                               LoginHistory[]
@@ -1219,4 +1220,25 @@ model TwoFactorChallenge {
 
   @@index([userId, purpose, createdAt])
   @@index([token, expiresAt])
+}
+
+// One-time tokens backing Telegram inline-button callbacks. Telegram limits
+// callback_data to 64 bytes, so the button only carries this short token and all
+// action details live here. Single-use (usedAt) with an expiry to guard against
+// replay / double-tap on sensitive actions like score confirmation.
+model TelegramCallbackToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  action    String
+  matchId   String?
+  tournamentId String?
+  payload   Json?
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, action, createdAt])
+  @@index([expiresAt])
 }
