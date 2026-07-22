@@ -9,6 +9,7 @@ import { createNotification } from "@/lib/services/notifications";
 import { applyConfiguredReliabilityPenaltyToUsers, formatReliabilityRegistrationRestriction, syncReliabilityRestriction } from "@/lib/services/reliability";
 import { getAcceptedRosterPenaltyUserIds, uniqueReliabilityPenaltyUserIds } from "@/lib/services/reliability-penalty-targets";
 import { recalculateGroupStandings } from "@/lib/services/tournaments";
+import { invalidateTournamentAll } from "@/lib/tournament-cache";
 import { hasTelegramRegistrationContact } from "@/lib/social-links";
 import { resolveParticipantClub } from "@/lib/tournament-participant-assignment";
 import { participantManageSchema } from "@/lib/validators";
@@ -126,6 +127,17 @@ export async function GET(_: Request, props: { params: Promise<{ id: string }> }
 
 export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
+  const response = await handleParticipantMutation(request, params);
+  // Any successful participant mutation (add/remove/replace/roster/edit) can
+  // touch participants, standings and match assignments — bust everything for
+  // this tournament. Done once here so no individual success branch is missed.
+  if (response.status < 400) {
+    invalidateTournamentAll(params.id);
+  }
+  return response;
+}
+
+async function handleParticipantMutation(request: Request, params: { id: string }) {
   const session = await requirePermission("tournaments.manageParticipants");
   await assertCanManageTournament(session, params.id);
   const body = participantManageSchema.parse(await request.json());

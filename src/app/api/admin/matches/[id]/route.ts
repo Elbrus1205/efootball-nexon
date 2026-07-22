@@ -14,6 +14,7 @@ import {
 } from "@/lib/services/reliability";
 import { getMatchPenaltyTargetUserIds, uniqueReliabilityPenaltyUserIds } from "@/lib/services/reliability-penalty-targets";
 import { notifyMatchReady, recalculateGroupStandings, resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
+import { invalidateTournamentSchedule } from "@/lib/tournament-cache";
 import { matchUpdateSchema } from "@/lib/validators";
 
 function matchRequiresWinner(match: {
@@ -277,6 +278,10 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
     where: { id: params.id },
     data,
   });
+
+  // The match row (a schedule-slice field) always changed here; structure/rules
+  // get busted below via recalculateGroupStandings / resolveConfirmedMatch when relevant.
+  invalidateTournamentSchedule(updated.tournamentId);
 
   const isGroupMatch = Boolean(before.groupId || updated.groupId);
   const standingsRelevantChange =

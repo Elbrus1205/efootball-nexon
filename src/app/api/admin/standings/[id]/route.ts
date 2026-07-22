@@ -3,6 +3,7 @@ import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { syncTournamentBulletin } from "@/lib/services/telegram-publications";
+import { invalidateTournamentStructure } from "@/lib/tournament-cache";
 import { standingUpdateSchema } from "@/lib/validators";
 
 export async function PATCH(request: Request, props: { params: Promise<{ id: string }> }) {
@@ -44,6 +45,7 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
     afterJson: standing,
   });
   await syncTournamentBulletin(standing.participant.tournamentId).catch((error) => console.error("Failed to update Telegram bulletin", error));
+  invalidateTournamentStructure(standing.participant.tournamentId);
 
   return NextResponse.json({ ok: true, standing });
 }

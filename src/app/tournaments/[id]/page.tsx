@@ -1,8 +1,13 @@
 import { ClubSelectionMode, MatchStatus, ParticipantStatus, StageType, TournamentApplicationStatus, TournamentFormat, TournamentStatus } from "@prisma/client";
 import { Clock3, Search, Send } from "lucide-react";
-import { unstable_noStore as noStore } from "next/cache";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import {
+  getCachedTournamentParticipants,
+  getCachedTournamentRules,
+  getCachedTournamentSchedule,
+  getCachedTournamentStructure,
+} from "@/lib/tournament-cache";
 import { CancelTournamentRegistrationButton } from "@/components/tournaments/cancel-tournament-registration-button";
 import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
 import {
@@ -562,232 +567,66 @@ export default async function TournamentDetailsPage(
   const searchParams = await props.searchParams;
   const params = await props.params;
   const requestedDataTab = isPublicTournamentTabValue(searchParams?.tab) ? searchParams?.tab : "structure";
-  const loadTournamentMatches = requestedDataTab === "structure" || requestedDataTab === "matches" || requestedDataTab === "my-matches";
-  const loadParticipantRosters = requestedDataTab === "participants" || requestedDataTab === "roster";
-  const loadStructure = requestedDataTab === "structure";
   const pageStart = performance.now();
-  noStore();
   const sessionStart = performance.now();
   const session = await getCurrentSession().finally(() => logTiming("load-session", sessionStart));
-  const matchFilter = !loadTournamentMatches
-    ? { id: "__not_loaded__" }
-    : requestedDataTab === "my-matches" && session?.user.id
-      ? {
-          OR: [
-            { player1Id: session.user.id },
-            { player2Id: session.user.id },
-            { participant1Entry: { rosterMembers: { some: { userId: session.user.id, status: "ACCEPTED" as const } } } },
-            { participant2Entry: { rosterMembers: { some: { userId: session.user.id, status: "ACCEPTED" as const } } } },
-          ],
-        }
-      : undefined;
+  const viewerId = session?.user.id ?? "__anonymous__";
 
   const tournamentStart = performance.now();
-  const tournament = await db.tournament.findUnique({
-    where: { id: params.id },
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      coverImage: true,
-      prizePool: true,
-      rules: true,
-      status: true,
-      isTest: true,
-      startsAt: true,
-      endsAt: true,
-      registrationEndsAt: true,
-      maxParticipants: true,
-      format: true,
-      formatBlueprintJson: true,
-      playoffType: true,
-      clubSelectionMode: true,
-      participantMode: true,
-      rosterSize: true,
-      matchupFormat: true,
-      bestOfWins: true,
-      requireLineupPhoto: true,
-      lineupPhotoExampleUrl: true,
-      registrationApplications: {
-        where: {
-          OR: [
-            { status: TournamentApplicationStatus.PENDING },
-            { userId: session?.user.id ?? "__anonymous__" },
-          ],
-        },
-        select: {
-          id: true,
-          userId: true,
-          status: true,
-          clubSlug: true,
-          rejectionReason: true,
-        },
+  // Session-independent data is cached per domain (rules/participants/schedule/
+  // structure) and busted by tag on mutation; see src/lib/tournament-cache.ts.
+  // Session-dependent data (the viewer's own application + roster invite) stays
+  // live so one viewer's data never leaks into another's cache.
+  const [rules, participants, matches, stages, registrationApplications, viewerRosterMembers] = await Promise.all([
+    getCachedTournamentRules(params.id),
+    getCachedTournamentParticipants(params.id),
+    getCachedTournamentSchedule(params.id),
+    getCachedTournamentStructure(params.id),
+    db.tournamentRegistrationApplication.findMany({
+      where: {
+        tournamentId: params.id,
+        OR: [{ status: TournamentApplicationStatus.PENDING }, { userId: viewerId }],
       },
-      participants: {
-        select: {
-          id: true,
-          userId: true,
-          groupId: true,
-          status: true,
-          seed: true,
-          notes: true,
-          clubSlug: true,
-          clubName: true,
-          clubBadgePath: true,
-          teamName: true,
-          teamLogo: true,
-          rosterMembers: {
-            where: loadParticipantRosters ? undefined : { id: "__not_loaded__" },
-            select: {
-              id: true,
-              status: true,
-              isCaptain: true,
-              user: { select: { id: true, name: true, telegramUsername: true } },
-            },
-            orderBy: [{ isCaptain: "desc" }, { invitedAt: "asc" }],
-          },
-          user: {
-            select: {
-              id: true,
-              name: true,
-              telegramUsername: true,
-            },
-          },
-        },
-        orderBy: { createdAt: "asc" },
-      },
-      rosterMembers: {
-        where: { userId: session?.user.id ?? "__anonymous__" },
-        select: {
-          id: true,
-          status: true,
-          isCaptain: true,
-          registration: {
-            select: {
-              id: true,
-              teamName: true,
-              clubName: true,
-              rosterMembers: {
-                select: {
-                  id: true,
-                  status: true,
-                  isCaptain: true,
-                  user: { select: { id: true, name: true, email: true, telegramUsername: true } },
-                },
-                orderBy: [{ isCaptain: "desc" }, { invitedAt: "asc" }],
+      select: { id: true, userId: true, status: true, clubSlug: true, rejectionReason: true },
+    }),
+    db.tournamentRegistrationMember.findMany({
+      where: { tournamentId: params.id, userId: viewerId },
+      select: {
+        id: true,
+        status: true,
+        isCaptain: true,
+        registration: {
+          select: {
+            id: true,
+            teamName: true,
+            clubName: true,
+            rosterMembers: {
+              select: {
+                id: true,
+                status: true,
+                isCaptain: true,
+                user: { select: { id: true, name: true, email: true, telegramUsername: true } },
               },
+              orderBy: [{ isCaptain: "desc" }, { invitedAt: "asc" }],
             },
           },
         },
       },
-      matches: {
-        where: matchFilter,
-        select: {
-          id: true,
-          stageId: true,
-          groupId: true,
-          bracketId: true,
-          round: true,
-          matchNumber: true,
-          bracket: true,
-          seriesKey: true,
-          legNumber: true,
-          isPenaltyTiebreak: true,
-          isThirdPlaceMatch: true,
-          scheduledAt: true,
-          createdAt: true,
-          player1Id: true,
-          player2Id: true,
-          participant1EntryId: true,
-          participant2EntryId: true,
-          winnerId: true,
-          player1Score: true,
-          player2Score: true,
-          player1PenaltyScore: true,
-          player2PenaltyScore: true,
-          status: true,
-          playoffBracket: { select: { legsCount: true } },
-          player1: { select: { id: true, name: true } },
-          player2: { select: { id: true, name: true } },
-          participant1Entry: {
-            select: {
-              id: true,
-              userId: true,
-              clubSlug: true,
-              clubName: true,
-              clubBadgePath: true,
-              teamName: true,
-              teamLogo: true,
-              user: { select: { id: true, name: true } },
-            },
-          },
-          participant2Entry: {
-            select: {
-              id: true,
-              userId: true,
-              clubSlug: true,
-              clubName: true,
-              clubBadgePath: true,
-              teamName: true,
-              teamLogo: true,
-              user: { select: { id: true, name: true } },
-            },
-          },
-          stage: {
-            select: {
-              id: true,
-              name: true,
-              type: true,
-              orderIndex: true,
-              roundsCount: true,
-              deadlines: {
-                select: {
-                  round: true,
-                  deadlineAt: true,
-                },
-              },
-            },
-          },
-          group: { select: { id: true, name: true, orderIndex: true } },
-          schedules: { select: { startsAt: true } },
-        },
-        orderBy: [{ round: "asc" }, { matchNumber: "asc" }],
-      },
-      stages: {
-        select: {
-          id: true,
-          name: true,
-          type: true,
-          status: true,
-          orderIndex: true,
-          startsAt: true,
-          endsAt: true,
-          advancingPerGroup: true,
-          participantsPerGroup: true,
-          pointsForWin: true,
-          pointsForDraw: true,
-          pointsForLoss: true,
-          roundsCount: true,
-          groups: {
-            where: loadStructure ? undefined : { id: "__not_loaded__" },
-            select: {
-              id: true,
-              name: true,
-              orderIndex: true,
-              capacity: true,
-            },
-            orderBy: { orderIndex: "asc" },
-          },
-          bracket: {
-            select: {
-              id: true,
-            },
-          },
-        },
-        orderBy: { orderIndex: "asc" },
-      },
-    },
-  });
+    }),
+  ]);
+
+  // Reassemble the same shape the page consumed before the query was split, so
+  // downstream field-by-field access is unchanged.
+  const tournament = rules
+    ? {
+        ...rules,
+        registrationApplications,
+        participants,
+        rosterMembers: viewerRosterMembers,
+        matches,
+        stages,
+      }
+    : null;
   logTiming("load-tournament", tournamentStart);
 
   if (!tournament) {
@@ -945,7 +784,8 @@ export default async function TournamentDetailsPage(
     bucket.sort((a, b) => (a.seed ?? 9999) - (b.seed ?? 9999));
   }
 
-  const visibleMatches = tournament.matches.sort(
+  // Copy before sort: tournament.matches is the shared cached array (mutating it in place would corrupt the cache).
+  const visibleMatches = [...tournament.matches].sort(
     (a, b) =>
       (a.stage?.orderIndex ?? 999) - (b.stage?.orderIndex ?? 999) ||
       (a.group?.orderIndex ?? 0) - (b.group?.orderIndex ?? 0) ||

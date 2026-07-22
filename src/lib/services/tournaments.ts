@@ -22,6 +22,13 @@ import { normalizeFormatBlueprint, type FormatBlueprint, type PlayoffSelectionRu
 import { applyTournamentAbsenceRatingPenalty, getPlayerRatings } from "@/lib/ratings";
 import { invalidatePlayerRatings } from "@/lib/ratings-cache";
 import {
+  invalidateTournamentAll,
+  invalidateTournamentParticipants,
+  invalidateTournamentRules,
+  invalidateTournamentSchedule,
+  invalidateTournamentStructure,
+} from "@/lib/tournament-cache";
+import {
   assignParticipantsByGroupCapacity,
   orderParticipantsByRating,
   shuffleParticipants,
@@ -2398,6 +2405,11 @@ export async function assignParticipantsToGroups(
     );
   }
 
+  // Group assignment changes both the structure (groups/standings) and each
+  // participant's groupId.
+  invalidateTournamentStructure(tournamentId);
+  invalidateTournamentParticipants(tournamentId);
+
   return db.tournamentGroup.findMany({
     where: { stageId: groupStage.id },
     include: {
@@ -2518,6 +2530,8 @@ export async function syncTournamentPreviewGroups(tournamentId: string) {
   }
 
   await Promise.all(groupStage.groups.map((group) => ensureGroupStandings(group.id, group.members.map((member) => member.id))));
+
+  invalidateTournamentStructure(tournamentId);
 
   return db.tournamentGroup.findMany({
     where: { stageId: groupStage.id },
@@ -3007,6 +3021,8 @@ export async function recalculateGroupStandings(tournamentId: string) {
       ),
     );
   }
+
+  invalidateTournamentStructure(tournamentId);
 
   return db.tournamentGroup.findMany({
     where: { stage: { tournamentId } },
@@ -3744,7 +3760,7 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
       await applyTournamentAbsenceRatingPenalty(tournamentId);
     }
 
-    return db.tournament.update({
+    const dateStatusTournament = await db.tournament.update({
       where: { id: tournamentId },
       data: {
         status: nextDateStatus,
@@ -3756,6 +3772,8 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
               : tournament.registrationClosedAt,
       },
     });
+    invalidateTournamentRules(tournamentId);
+    return dateStatusTournament;
   }
 
   if (tournament.format === TournamentFormat.CUSTOM) {
@@ -3795,6 +3813,8 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
         data: { status: TournamentStatus.IN_PROGRESS },
       });
 
+      // Playoff was generated from groups: status, stages and matches all changed.
+      invalidateTournamentAll(tournamentId);
       await notifyActiveTournamentRoundsStarted(tournamentId);
 
       return updatedTournament;
@@ -3806,6 +3826,7 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
         data: { status: TournamentStatus.IN_PROGRESS },
       });
 
+      invalidateTournamentRules(tournamentId);
       await notifyActiveTournamentRoundsStarted(tournamentId);
 
       return updatedTournament;
@@ -3855,6 +3876,8 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
   if (nextStatus === TournamentStatus.COMPLETED) {
     await notifyTournamentCompleted(tournamentId);
   }
+
+  invalidateTournamentRules(tournamentId);
 
   return updatedTournament;
 }
@@ -4122,6 +4145,12 @@ export async function resolveConfirmedMatch(matchId: string) {
   });
   if (!match) throw new Error("Match not found");
   invalidatePlayerRatings();
+  // This resolves a confirmed match: it advances winners (schedule) and can
+  // reshape the bracket (structure). Status changes go through
+  // syncTournamentLifecycleStatus, which busts rules itself. Bust both here up
+  // front so every early-return path is covered.
+  invalidateTournamentSchedule(match.tournamentId);
+  invalidateTournamentStructure(match.tournamentId);
 
   if (await resolveBestOfSeriesIfCompleted(match)) {
     return;

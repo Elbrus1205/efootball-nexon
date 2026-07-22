@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { createNotification } from "@/lib/services/notifications";
 import { buildRosterInviteMessage } from "@/lib/services/telegram-callbacks";
 import { syncTournamentLifecycleStatus, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
+import { invalidateTournamentParticipants } from "@/lib/tournament-cache";
 
 class RosterInviteWriteError extends Error {
   constructor(message: string, readonly status = 409) {
@@ -164,6 +165,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     });
   }
 
+  invalidateTournamentParticipants(params.id);
   return NextResponse.json({ ok: true });
 }
 
@@ -251,6 +253,7 @@ export async function DELETE(request: Request, props: { params: Promise<{ id: st
     });
   });
 
+  invalidateTournamentParticipants(params.id);
   await syncTournamentPreviewGroups(params.id).catch(() => null);
   await syncTournamentLifecycleStatus(params.id).catch(() => null);
 

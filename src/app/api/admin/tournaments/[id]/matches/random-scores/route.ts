@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/auth/session";
 import { syncUserAchievementsForUsers } from "@/lib/achievements";
 import { db } from "@/lib/db";
 import { recalculateGroupStandings, resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
+import { invalidateTournamentSchedule } from "@/lib/tournament-cache";
 
 const UNPLAYED_STATUSES = new Set<MatchStatus>([
   MatchStatus.PENDING,
@@ -206,6 +207,7 @@ export async function POST(_request: Request, props: { params: Promise<{ id: str
   }
 
   await syncTournamentLifecycleStatus(params.id);
+  invalidateTournamentSchedule(params.id);
 
   await db.adminAction.create({
     data: {

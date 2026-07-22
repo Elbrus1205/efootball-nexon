@@ -4,6 +4,7 @@ import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { addArchivedTournamentStats } from "@/lib/home-stats";
+import { invalidateTournamentAll } from "@/lib/tournament-cache";
 import { MatchStatus, UserRole } from "@prisma/client";
 import {
   assignRandomClubsToTournament,
@@ -112,6 +113,10 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   } catch (error) {
     redirectUrl.searchParams.set("warning", error instanceof Error ? error.message : "Не удалось выполнить действие.");
   }
+
+  // These actions (delete/close/start/generate/reset/assign-clubs) reshape
+  // rules+participants+schedule+structure, so bust everything for this tournament.
+  invalidateTournamentAll(params.id);
 
   return NextResponse.redirect(redirectUrl, 303);
 }

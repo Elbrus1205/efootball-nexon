@@ -10,6 +10,7 @@ import { hasAcceptedCurrentRegulations } from "@/lib/regulations";
 import { formatReliabilityRegistrationRestriction, syncReliabilityRestriction } from "@/lib/services/reliability";
 import { createNotification } from "@/lib/services/notifications";
 import { getTournamentGroupCapacityLimit, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
+import { invalidateTournamentParticipants } from "@/lib/tournament-cache";
 import { hasTelegramRegistrationContact } from "@/lib/social-links";
 import { isLineupPhotoStorageUrl, lineupPhotoUrlSchema } from "@/lib/tournament-applications";
 import { formatTournamentBanMessage } from "@/lib/user-ban";
@@ -279,6 +280,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     revalidatePath(`/tournaments/${params.id}`);
     revalidatePath(`/admin/tournaments/${params.id}`);
     revalidatePath(`/admin/tournaments/${params.id}/applications`);
+    invalidateTournamentParticipants(params.id);
 
     if (contentType.includes("application/json")) {
       return NextResponse.json({ ok: true, pendingReview: true });
@@ -386,6 +388,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
 
   revalidatePath(`/tournaments/${params.id}`);
   revalidatePath("/tournaments");
+  invalidateTournamentParticipants(params.id);
 
   const origin = getRequestBaseUrl(request);
   if (contentType.includes("application/json")) {
@@ -475,6 +478,7 @@ export async function DELETE(_: Request, props: { params: Promise<{ id: string }
 
   revalidatePath(`/tournaments/${params.id}`);
   revalidatePath("/tournaments");
+  invalidateTournamentParticipants(params.id);
 
   return NextResponse.json({ ok: true });
 }

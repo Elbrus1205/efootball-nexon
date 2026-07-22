@@ -13,6 +13,7 @@ import {
   syncTournamentLifecycleStatus,
   syncTournamentPreviewGroups,
 } from "@/lib/services/tournaments";
+import { invalidateTournamentParticipants } from "@/lib/tournament-cache";
 
 class RosterWriteError extends Error {}
 
@@ -90,6 +91,7 @@ export async function POST(
       throw error;
     }
 
+    invalidateTournamentParticipants(params.id);
     return NextResponse.json({ ok: true });
   }
 
@@ -164,6 +166,7 @@ export async function POST(
     throw error;
   }
 
+  invalidateTournamentParticipants(params.id);
   await syncTournamentPreviewGroups(params.id).catch(() => null);
   await syncTournamentLifecycleStatus(params.id).catch(() => null);
 

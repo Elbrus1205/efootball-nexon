@@ -7,6 +7,7 @@ import { logAdminAction } from "@/lib/services/admin-actions";
 import { createNotificationsForUsers } from "@/lib/services/notifications";
 import { scheduleUpdateSchema } from "@/lib/validators";
 import { syncTournamentBulletin } from "@/lib/services/telegram-publications";
+import { invalidateTournamentSchedule } from "@/lib/tournament-cache";
 
 export async function PATCH(request: Request) {
   const session = await requirePermission("schedule.manage");
@@ -75,6 +76,7 @@ export async function PATCH(request: Request) {
       });
     }
     await syncTournamentBulletin(match.tournamentId).catch((error) => console.error("Failed to update Telegram bulletin", error));
+    invalidateTournamentSchedule(match.tournamentId);
   }
 
   return NextResponse.json({ ok: true, schedule });

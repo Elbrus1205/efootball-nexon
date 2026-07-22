@@ -4,6 +4,7 @@ import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
+import { invalidateTournamentSchedule } from "@/lib/tournament-cache";
 import { matchReorderSchema } from "@/lib/validators";
 
 export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
@@ -58,6 +59,8 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     beforeJson: before,
     afterJson: after,
   });
+
+  invalidateTournamentSchedule(params.id);
 
   return NextResponse.json({ ok: true, matches: after });
 }

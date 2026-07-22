@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { recalculateGroupStandings, resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
+import { invalidateTournamentSchedule } from "@/lib/tournament-cache";
 import { createNotification } from "@/lib/services/notifications";
 import { publishTournamentResult, syncTournamentBulletin } from "@/lib/services/telegram-publications";
 import { reviewSchema } from "@/lib/validators";
@@ -132,6 +133,9 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   }
 
   await syncTournamentLifecycleStatus(match.tournamentId);
+  // All three branches changed match.status (a schedule-slice field). approve
+  // also busts structure via recalculateGroupStandings/resolveConfirmedMatch above.
+  invalidateTournamentSchedule(match.tournamentId);
 
   const targets = [match.player1Id, match.player2Id].filter(Boolean) as string[];
   if (body.action !== "approve" && match.tournament.notificationsEnabled !== false) {
