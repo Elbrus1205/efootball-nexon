@@ -75,6 +75,10 @@ export async function buildScoreConfirmMessage(input: {
   matchId: string;
   tournamentId: string;
   tournamentTitle: string;
+  // Human-readable label for each side, e.g. "Реал Мадрид (Иван)". player1Score
+  // belongs to side1Label, player2Score to side2Label.
+  side1Label: string;
+  side2Label: string;
   player1Score: number;
   player2Score: number;
   player1PenaltyScore?: number;
@@ -82,6 +86,9 @@ export async function buildScoreConfirmMessage(input: {
   matchUrl: string | null;
 }): Promise<TelegramRichMessageDraft> {
   const scoreLabel = formatScore(input.player1Score, input.player2Score, input.player1PenaltyScore, input.player2PenaltyScore);
+  const hasPenalty = input.player1PenaltyScore !== undefined && input.player2PenaltyScore !== undefined;
+  const side1Score = hasPenalty ? `${input.player1Score} (пен. ${input.player1PenaltyScore})` : String(input.player1Score);
+  const side2Score = hasPenalty ? `${input.player2Score} (пен. ${input.player2PenaltyScore})` : String(input.player2Score);
   const token = await createCallbackToken({
     userId: input.opponentUserId,
     action: TOKEN_ACTIONS.confirmScore,
@@ -96,6 +103,8 @@ export async function buildScoreConfirmMessage(input: {
   });
 
   const buttons: TelegramRichMessageDraft["buttons"] = [
+    // Keep the button compact (callback_data is capped at 64 bytes and long club
+    // names would bloat it); the club-to-score mapping is spelled out in the body.
     { text: `Подтвердить счёт ${scoreLabel}`, callbackData: tokenCallback(token), row: 1 },
   ];
   if (input.matchUrl) {
@@ -105,14 +114,25 @@ export async function buildScoreConfirmMessage(input: {
   return {
     blocks: [
       { type: "section_heading", text: "Соперник отправил результат" },
-      { type: "blockquote", text: `${input.tournamentTitle}: соперник указал счёт ${scoreLabel}. Подтвердите, если согласны.` },
+      { type: "blockquote", text: `${input.tournamentTitle}: соперник указал такой счёт. Проверьте, за какой клуб он записан, и подтвердите, если согласны.` },
+      {
+        type: "table",
+        columns: ["Клуб (игрок)", "Голы"],
+        rows: [
+          [input.side1Label, side1Score],
+          [input.side2Label, side2Score],
+        ],
+      },
       { type: "footer", text: "Если счёт неверный — откройте матч и введите свой вариант." },
     ],
     fallbackText: [
       `${tgEmoji("gamepad")} <b>Соперник отправил результат</b>`,
+      `${tgEmoji("crown")} ${escapeHtml(input.tournamentTitle)}`,
       "",
-      `${tgEmoji("chart")} ${escapeHtml(input.tournamentTitle)}: соперник указал счёт <b>${escapeHtml(scoreLabel)}</b>.`,
-      `${tgEmoji("info")} Подтвердите, если согласны, или откройте матч и введите свой вариант.`,
+      `${tgEmoji("chart")} <b>${escapeHtml(input.side1Label)}</b> — ${escapeHtml(side1Score)}`,
+      `${tgEmoji("chart")} <b>${escapeHtml(input.side2Label)}</b> — ${escapeHtml(side2Score)}`,
+      "",
+      `${tgEmoji("info")} Проверьте, за какой клуб счёт, и подтвердите — или откройте матч и введите свой вариант.`,
     ].join("\n"),
     buttons,
   };
