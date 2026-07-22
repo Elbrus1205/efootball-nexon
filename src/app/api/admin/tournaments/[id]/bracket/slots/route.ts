@@ -4,6 +4,7 @@ import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { setBracketSlot } from "@/lib/services/tournaments";
+import { invalidateTournamentSchedule, invalidateTournamentStructure } from "@/lib/tournament-cache";
 import { bracketSlotSchema } from "@/lib/validators";
 
 export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
@@ -29,6 +30,9 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     actionType: "UPDATE",
     afterJson: slot,
   });
+
+  invalidateTournamentStructure(params.id);
+  invalidateTournamentSchedule(params.id);
 
   return NextResponse.json({ ok: true, slot });
 }

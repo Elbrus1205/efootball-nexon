@@ -3,6 +3,7 @@ import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { generateTournamentMatches, generateTournamentSchedule, generateTournamentStages } from "@/lib/services/tournaments";
+import { invalidateTournamentAll } from "@/lib/tournament-cache";
 import { stageGenerationSchema } from "@/lib/validators";
 
 export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
@@ -25,6 +26,8 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   if (tournament?.autoCreateSchedule) {
     await generateTournamentSchedule(params.id, { overwrite: true });
   }
+
+  invalidateTournamentAll(params.id);
 
   return NextResponse.json({ ok: true, stages });
 }

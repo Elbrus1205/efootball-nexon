@@ -8,6 +8,7 @@ import { finalizeConfirmedMatch } from "@/lib/tournaments/finalize-confirmed-mat
 import { buildScoreConfirmMessage } from "@/lib/services/telegram-callbacks";
 import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { MatchSubmissionWriteError, submitMatchResultAtomically } from "@/lib/tournaments/submit-match-result";
+import { invalidateTournamentSchedule } from "@/lib/tournament-cache";
 
 function hasPenaltyScores(body: { player1PenaltyScore?: number; player2PenaltyScore?: number }) {
   return body.player1PenaltyScore !== undefined && body.player2PenaltyScore !== undefined;
@@ -110,6 +111,10 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     }
     throw error;
   }
+
+  // Any outcome changed match.status (a schedule-slice field); the confirmed
+  // branch additionally busts structure+rules via finalizeConfirmedMatch.
+  invalidateTournamentSchedule(match.tournamentId);
 
   if (outcome.state === "waiting") {
     const opponentId = session.user.id === match.player1Id ? match.player2Id : match.player1Id;

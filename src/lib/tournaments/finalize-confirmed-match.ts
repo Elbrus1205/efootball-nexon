@@ -5,6 +5,7 @@ import { createNotification } from "@/lib/services/notifications";
 import { recordConfirmedMatchReliability } from "@/lib/services/reliability";
 import { publishTournamentResult, syncTournamentBulletin } from "@/lib/services/telegram-publications";
 import { recalculateGroupStandings, resolveConfirmedMatch } from "@/lib/services/tournaments";
+import { invalidateTournamentRules, invalidateTournamentSchedule, invalidateTournamentStructure } from "@/lib/tournament-cache";
 
 type FinalizeMatch = {
   id: string;
@@ -70,6 +71,12 @@ export async function finalizeConfirmedMatch(params: {
   });
   await createMatchOutcomeNotifications({ ...match, winnerId: params.winnerId }, params.player1Score, params.player2Score);
   await syncUserAchievementsForUsers([match.player1Id, match.player2Id]);
+
+  // A confirmed match changes the score (schedule), standings/bracket (structure)
+  // and can flip tournament status (rules) — bust all three together.
+  invalidateTournamentSchedule(match.tournamentId);
+  invalidateTournamentStructure(match.tournamentId);
+  invalidateTournamentRules(match.tournamentId);
 
   const publish = async () => {
     await Promise.all([

@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { notifyActiveTournamentRoundsStarted } from "@/lib/services/tournaments";
 import { syncTournamentBulletin } from "@/lib/services/telegram-publications";
+import { invalidateTournamentStructure } from "@/lib/tournament-cache";
 import { stageUpdateSchema } from "@/lib/validators";
 
 export async function PATCH(request: Request, props: { params: Promise<{ id: string }> }) {
@@ -42,6 +43,7 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
     await notifyActiveTournamentRoundsStarted(stage.tournamentId);
   }
   await syncTournamentBulletin(stage.tournamentId).catch((error) => console.error("Failed to update Telegram bulletin", error));
+  invalidateTournamentStructure(stage.tournamentId);
 
   return NextResponse.json({ ok: true, stage });
 }

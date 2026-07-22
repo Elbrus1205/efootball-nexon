@@ -8,6 +8,7 @@ import { parseFormatBlueprintJson } from "@/lib/format-blueprint";
 import { createNotificationForAllUsers } from "@/lib/services/notifications";
 import { publishTournamentAnnouncement, syncTournamentBulletin } from "@/lib/services/telegram-publications";
 import { notifyTournamentChanges, resolveAutoRegistrationStatus } from "@/lib/services/tournaments";
+import { invalidateTournamentRules } from "@/lib/tournament-cache";
 import { tournamentBuilderSchema } from "@/lib/validators";
 import { parseMoscowDateTimeLocal } from "@/lib/utils";
 
@@ -187,6 +188,8 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       : syncTournamentBulletin(updated.id);
     await publication.catch((error) => console.error("Failed to update Telegram tournament publication", error));
   }
+
+  invalidateTournamentRules(updated.id);
 
   const origin = getRequestBaseUrl(request);
   return NextResponse.redirect(new URL("/admin/tournaments?updated=1", origin), 303);

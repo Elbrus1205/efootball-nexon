@@ -13,6 +13,7 @@ import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { createNotification } from "@/lib/services/notifications";
 import { getTournamentGroupCapacityLimit, syncTournamentLifecycleStatus, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
+import { invalidateTournamentParticipants } from "@/lib/tournament-cache";
 import { applicationDecisionSchema, participantStatusAfterApplicationApproval } from "@/lib/tournament-applications";
 
 type RouteContext = { params: Promise<{ id: string; applicationId: string }> };
@@ -250,4 +251,7 @@ function revalidateApplicationPaths(tournamentId: string) {
   revalidatePath(`/admin/tournaments/${tournamentId}`);
   revalidatePath(`/admin/tournaments/${tournamentId}/applications`);
   revalidatePath(`/admin/tournaments/${tournamentId}/participants`);
+  // Approve creates a registration; reject removes a pending application — both
+  // change the participants domain. Called from both decision branches.
+  invalidateTournamentParticipants(tournamentId);
 }

@@ -3,6 +3,7 @@ import { NotificationType, ParticipantStatus, Prisma, TeamInviteStatus, Tourname
 import { db } from "@/lib/db";
 import { createNotification } from "@/lib/services/notifications";
 import { syncTournamentLifecycleStatus, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
+import { invalidateTournamentParticipants, invalidateTournamentSchedule } from "@/lib/tournament-cache";
 import { tgEmoji, tgEmojiId } from "@/lib/telegram-emoji";
 import type { TelegramRichMessageDraft } from "@/lib/telegram-rich";
 
@@ -233,9 +234,11 @@ async function respondToRosterInvite(userId: string, tournamentId: string, actio
       where: { id: invite.id, status: TeamInviteStatus.PENDING },
       data: { status: TeamInviteStatus.DECLINED, respondedAt: new Date() },
     });
-    return declined.count === 1
-      ? { toast: "Вы отклонили приглашение.", clearKeyboard: true }
-      : { toast: "Приглашение уже обработано.", clearKeyboard: true };
+    if (declined.count === 1) {
+      invalidateTournamentParticipants(tournamentId);
+      return { toast: "Вы отклонили приглашение.", clearKeyboard: true };
+    }
+    return { toast: "Приглашение уже обработано.", clearKeyboard: true };
   }
 
   try {
@@ -272,6 +275,7 @@ async function respondToRosterInvite(userId: string, tournamentId: string, actio
     throw error;
   }
 
+  invalidateTournamentParticipants(tournamentId);
   await syncTournamentPreviewGroups(tournamentId).catch(() => null);
   await syncTournamentLifecycleStatus(tournamentId).catch(() => null);
 
@@ -379,6 +383,11 @@ async function confirmScoreFromToken(
     if (error instanceof MatchSubmissionWriteError) return { toast: error.message, clearKeyboard: true };
     throw error;
   }
+
+  // Any outcome changed match.status (RESULT_SUBMITTED / DISPUTED / back to
+  // SCHEDULED) — a schedule-slice field. finalizeConfirmedMatch additionally
+  // busts structure+rules on confirm below.
+  invalidateTournamentSchedule(match.tournamentId);
 
   if (outcome.state === "confirmed") {
     await finalizeConfirmedMatch({
