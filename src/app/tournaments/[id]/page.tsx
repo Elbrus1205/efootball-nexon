@@ -537,8 +537,9 @@ function EmptyGroupSlots({ slots }: { slots: EmptyGroupSlot[] }) {
 }
 
 function logTiming(label: string, start: number) {
-  if (process.env.NODE_ENV === "production") return;
-  console.log(`${label}: ${(performance.now() - start).toFixed(3)}ms`);
+  // TEMP: enabled in production to diagnose slow "Мои матчи"/"Расписание" tab loads.
+  // Revert this (restore the production early-return) once the bottleneck is found.
+  console.log(`[PERF] ${label}: ${(performance.now() - start).toFixed(3)}ms`);
 }
 
 export async function generateMetadata(props: { params: Promise<{ id: string }> }) {
@@ -832,6 +833,7 @@ export default async function TournamentDetailsPage(
         .map((m) => m.id)
     : [];
 
+  const secondaryStart = performance.now();
   const [currentUser, rawSubmissions, availableClubs] = await Promise.all([
     currentUserId
       ? db.user.findUnique({
@@ -863,7 +865,9 @@ export default async function TournamentDetailsPage(
       : Promise.resolve([]),
     getAvailableClubs(),
   ]);
+  logTiming("load-secondary", secondaryStart);
 
+  const processStart = performance.now();
   const submissionsByMatchId = new Map<string, typeof rawSubmissions>();
   for (const sub of rawSubmissions) {
     const arr = submissionsByMatchId.get(sub.matchId) ?? [];
@@ -1188,7 +1192,8 @@ export default async function TournamentDetailsPage(
     <Button size="lg" asChild><a href={`/tournaments/${tournament.id}?tab=matches`}>Смотреть расписание</a></Button>
   );
 
-  logTiming("tournament-page", pageStart);
+  logTiming("load-process", processStart);
+  logTiming(`tournament-page[tab=${requestedDataTab}]`, pageStart);
 
   return (
     <div className="page-shell space-y-8">
