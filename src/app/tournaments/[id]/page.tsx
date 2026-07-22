@@ -537,9 +537,8 @@ function EmptyGroupSlots({ slots }: { slots: EmptyGroupSlot[] }) {
 }
 
 function logTiming(label: string, start: number) {
-  // TEMP: enabled in production to diagnose slow "Мои матчи"/"Расписание" tab loads.
-  // Revert this (restore the production early-return) once the bottleneck is found.
-  console.log(`[PERF] ${label}: ${(performance.now() - start).toFixed(3)}ms`);
+  if (process.env.NODE_ENV === "production") return;
+  console.log(`${label}: ${(performance.now() - start).toFixed(3)}ms`);
 }
 
 export async function generateMetadata(props: { params: Promise<{ id: string }> }) {
