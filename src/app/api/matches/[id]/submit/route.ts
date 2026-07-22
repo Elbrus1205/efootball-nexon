@@ -13,6 +13,26 @@ function hasPenaltyScores(body: { player1PenaltyScore?: number; player2PenaltySc
   return body.player1PenaltyScore !== undefined && body.player2PenaltyScore !== undefined;
 }
 
+function playerDisplayName(user?: { name?: string | null; telegramUsername?: string | null; email?: string | null } | null) {
+  return (
+    user?.name?.trim() ||
+    (user?.telegramUsername ? `@${user.telegramUsername.replace(/^@/, "")}` : "") ||
+    user?.email?.split("@")[0] ||
+    "Игрок"
+  );
+}
+
+// "Клуб (Игрок)" when a club is set, otherwise just the player name — so the
+// score is unambiguous about which side each number belongs to.
+function sideLabel(
+  club?: { clubName?: string | null } | null,
+  player?: { name?: string | null; telegramUsername?: string | null; email?: string | null } | null,
+) {
+  const clubName = club?.clubName?.trim();
+  const name = playerDisplayName(player);
+  return clubName ? `${clubName} (${name})` : name;
+}
+
 export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const session = await requireAuth();
@@ -23,6 +43,10 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     include: {
       tournament: true,
       playoffBracket: { select: { legsCount: true } },
+      player1: { select: { name: true, telegramUsername: true, email: true } },
+      player2: { select: { name: true, telegramUsername: true, email: true } },
+      participant1Entry: { select: { clubName: true } },
+      participant2Entry: { select: { clubName: true } },
     },
   });
 
@@ -97,6 +121,8 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
         matchId: match.id,
         tournamentId: match.tournamentId,
         tournamentTitle: match.tournament.title,
+        side1Label: sideLabel(match.participant1Entry, match.player1),
+        side2Label: sideLabel(match.participant2Entry, match.player2),
         player1Score: body.player1Score,
         player2Score: body.player2Score,
         player1PenaltyScore: body.player1PenaltyScore,

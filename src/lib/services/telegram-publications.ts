@@ -52,6 +52,17 @@ function playerName(user?: { name?: string | null; telegramUsername?: string | n
   return user?.name?.trim() || (user?.telegramUsername ? `@${user.telegramUsername.replace(/^@/, "")}` : "") || user?.email?.split("@")[0] || "Участник";
 }
 
+// "Клуб (Игрок)" when the side has a club, otherwise just the player — makes it
+// clear which club each score belongs to in published results.
+function sideName(
+  entry?: { clubName?: string | null } | null,
+  user?: { name?: string | null; telegramUsername?: string | null; email?: string | null } | null,
+) {
+  const club = entry?.clubName?.trim();
+  const name = playerName(user);
+  return club ? `${club} (${name})` : name;
+}
+
 function escapeTelegramHtml(value: string) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
@@ -341,6 +352,9 @@ export async function publishTournamentResult(matchId: string) {
       player1: { select: { name: true, telegramUsername: true, email: true } },
       player2: { select: { name: true, telegramUsername: true, email: true } },
       winner: { select: { name: true, telegramUsername: true, email: true } },
+      participant1Entry: { select: { clubName: true } },
+      participant2Entry: { select: { clubName: true } },
+      winningEntry: { select: { clubName: true } },
     },
   });
   const url = match ? tournamentUrl(match.tournamentId) : null;
@@ -363,12 +377,12 @@ export async function publishTournamentResult(matchId: string) {
       tournamentTitle: match.tournament.title,
       stageName: match.stage?.name,
       round: match.round,
-      playerOne: playerName(match.player1),
-      playerTwo: playerName(match.player2),
+      playerOne: sideName(match.participant1Entry, match.player1),
+      playerTwo: sideName(match.participant2Entry, match.player2),
       playerOneScore: match.player1Score,
       playerTwoScore: match.player2Score,
       penaltyScore,
-      winnerName: match.winner ? playerName(match.winner) : null,
+      winnerName: match.winner ? sideName(match.winningEntry, match.winner) : null,
       coverImage: match.tournament.coverImage,
       tournamentUrl: url,
     }),
