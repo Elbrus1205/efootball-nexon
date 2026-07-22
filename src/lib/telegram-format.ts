@@ -5,7 +5,8 @@ export const TELEGRAM_CAPTION_LIMIT = 1024;
 
 export type TelegramBroadcastButtonDraft = {
   text: string;
-  url: string;
+  url?: string;
+  callbackData?: string;
   row: number;
   iconCustomEmojiId?: string;
 };
@@ -209,20 +210,32 @@ export function parseTelegramButtonsJson(raw: string) {
   });
 }
 
+type TelegramInlineKeyboardButton = {
+  text: string;
+  url?: string;
+  callback_data?: string;
+  icon_custom_emoji_id?: string;
+};
+
 export function buildTelegramInlineKeyboard(buttons: TelegramBroadcastButtonDraft[]) {
   if (!buttons.length) return undefined;
 
-  const rows = new Map<number, { text: string; url: string; icon_custom_emoji_id: string }[]>();
+  const rows = new Map<number, TelegramInlineKeyboardButton[]>();
 
   for (const button of [...buttons].sort((first, second) => first.row - second.row)) {
+    // A button is either a link (url) or a callback action (callback_data), never both.
+    if (!button.url && !button.callbackData) continue;
     const row = rows.get(button.row) ?? [];
     row.push({
       text: button.text,
-      url: button.url,
-      icon_custom_emoji_id: button.iconCustomEmojiId ?? tgEmojiId("arrowRight"),
+      ...(button.callbackData
+        ? { callback_data: button.callbackData }
+        : { url: button.url, icon_custom_emoji_id: button.iconCustomEmojiId ?? tgEmojiId("arrowRight") }),
     });
     rows.set(button.row, row);
   }
+
+  if (!rows.size) return undefined;
 
   return {
     inline_keyboard: Array.from(rows.values()),

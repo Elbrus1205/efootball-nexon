@@ -14,10 +14,18 @@ export type TelegramRichBlock =
   | { type: "divider" }
   | { type: "footer"; text: string };
 
+export type TelegramRichMessageButton = {
+  text: string;
+  row: number;
+  url?: string;
+  callbackData?: string;
+  iconCustomEmojiId?: string;
+};
+
 export type TelegramRichMessageDraft = {
   blocks: TelegramRichBlock[];
   fallbackText: string;
-  buttons?: Array<{ text: string; url: string; row: number; iconCustomEmojiId?: string }>;
+  buttons?: TelegramRichMessageButton[];
 };
 
 export type TelegramInputRichText =

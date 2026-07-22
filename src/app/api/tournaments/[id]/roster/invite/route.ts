@@ -1,8 +1,10 @@
 import { NotificationType, ParticipantStatus, TeamInviteStatus, TournamentParticipantMode, TournamentStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { createNotification } from "@/lib/services/notifications";
+import { buildRosterInviteMessage } from "@/lib/services/telegram-callbacks";
 import { syncTournamentLifecycleStatus, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
 
 class RosterInviteWriteError extends Error {
@@ -145,13 +147,20 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   }
 
   if (captainMember.tournament.notificationsEnabled) {
+    const baseUrl = getConfiguredSiteBaseUrl();
+    const tournamentPath = `/tournaments/${captainMember.tournament.id}`;
     await createNotification({
       userId: target.id,
       title: "Приглашение в состав",
       body: `${captainMember.tournament.title}: капитан приглашает вас в состав.`,
       type: NotificationType.TOURNAMENT,
-      link: `/tournaments/${captainMember.tournament.id}`,
+      link: tournamentPath,
       dedupeWithinHours: 1,
+      telegramRichMessage: buildRosterInviteMessage({
+        tournamentId: captainMember.tournament.id,
+        tournamentTitle: captainMember.tournament.title,
+        tournamentUrl: baseUrl ? new URL(tournamentPath, baseUrl).toString() : null,
+      }),
     });
   }
 

@@ -373,6 +373,46 @@ export async function editTelegramDraftAsText(params: {
   });
 }
 
+/**
+ * Acknowledges a callback query. Telegram shows a spinner on the tapped button
+ * until this is called; `text` optionally surfaces a toast/alert to the user.
+ */
+export async function answerTelegramCallbackQuery(params: {
+  callbackQueryId: string;
+  text?: string;
+  showAlert?: boolean;
+}) {
+  return callTelegramApi<true>("answerCallbackQuery", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      callback_query_id: params.callbackQueryId,
+      ...(params.text ? { text: params.text.slice(0, 200) } : {}),
+      ...(params.showAlert ? { show_alert: true } : {}),
+    }),
+  });
+}
+
+/**
+ * Replaces (or clears) the inline keyboard on an existing message. Used after a
+ * callback action resolves so the same button can't be tapped again.
+ */
+export async function editTelegramMessageReplyMarkup(params: {
+  chatId: string;
+  messageId: string;
+  replyMarkup?: TelegramInlineKeyboardMarkup;
+}) {
+  return callTelegramApi<TelegramSentMessage | true>("editMessageReplyMarkup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: params.chatId,
+      message_id: Number(params.messageId),
+      reply_markup: params.replyMarkup ?? { inline_keyboard: [] },
+    }),
+  });
+}
+
 export async function sendTelegramRichMessage(params: {
   chatId: string;
   message: TelegramRichMessageDraft;
