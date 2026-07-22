@@ -180,6 +180,18 @@ export async function getTelegramBotIdentity() {
   };
 }
 
+// Real liveness probe: always calls getMe (bypassing cached config identity).
+// Returns false when the token is missing or the Bot API is unreachable/erroring.
+export async function checkTelegramBotOnline() {
+  if (!process.env.TELEGRAM_BOT_TOKEN?.trim()) return false;
+  try {
+    await callTelegramApi<{ id: number }>("getMe", { cache: "no-store" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export type TelegramChatProfile = {
   id: number | string;
   username: string | null;

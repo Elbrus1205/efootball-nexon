@@ -207,9 +207,13 @@ export type PersonalMatchMessageInput = {
   deadlineAt?: Date | null;
   statusLabel: string;
   matchUrl: string;
+  headline?: string;
+  buttonLabel?: string;
 };
 
 export function buildPersonalMatchMessage(input: PersonalMatchMessageInput): TelegramRichMessageDraft {
+  const headline = input.headline ?? "Ваш матч готов";
+  const buttonLabel = input.buttonLabel ?? "Перейти к матчу";
   const rows = [
     ["Турнир", input.tournamentTitle],
     ["Этап", input.stageName],
@@ -222,12 +226,12 @@ export function buildPersonalMatchMessage(input: PersonalMatchMessageInput): Tel
 
   return {
     blocks: [
-      { type: "section_heading", text: "Ваш матч готов" },
+      { type: "section_heading", text: headline },
       { type: "table", columns: ["Матч", "Данные"], rows },
       { type: "footer", text: "Отправьте результат до дедлайна и убедитесь, что соперник подтвердил счёт." },
     ],
     fallbackText: [
-      `${tgEmoji("gamepad")} <b>Ваш матч готов</b>`,
+      `${tgEmoji("gamepad")} <b>${escapeTelegramHtml(headline)}</b>`,
       "",
       `${tgEmoji("crown")} <b>Турнир:</b> ${escapeTelegramHtml(input.tournamentTitle)}`,
       `${tgEmoji("flag")} <b>Этап:</b> ${escapeTelegramHtml(input.stageName)} · тур ${input.round}`,
@@ -236,7 +240,7 @@ export function buildPersonalMatchMessage(input: PersonalMatchMessageInput): Tel
       `${tgEmoji("hourglass")} <b>Дедлайн:</b> ${escapeTelegramHtml(formatMoscowDateTime(input.deadlineAt))}`,
       `${tgEmoji("info")} <b>Статус:</b> ${escapeTelegramHtml(input.statusLabel)}`,
     ].join("\n"),
-    buttons: [{ text: "Перейти к матчу", url: input.matchUrl, row: 1, iconCustomEmojiId: tgEmojiId("gamepad") }],
+    buttons: [{ text: buttonLabel, url: input.matchUrl, row: 1, iconCustomEmojiId: tgEmojiId("gamepad") }],
   };
 }
 

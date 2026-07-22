@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { parseFormatBlueprintJson } from "@/lib/format-blueprint";
 import { createNotificationForAllUsers } from "@/lib/services/notifications";
 import { publishTournamentAnnouncement, syncTournamentBulletin } from "@/lib/services/telegram-publications";
-import { resolveAutoRegistrationStatus } from "@/lib/services/tournaments";
+import { notifyTournamentChanges, resolveAutoRegistrationStatus } from "@/lib/services/tournaments";
 import { tournamentBuilderSchema } from "@/lib/validators";
 import { parseMoscowDateTimeLocal } from "@/lib/utils";
 
@@ -78,7 +78,15 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
 
   const before = await db.tournament.findUnique({
     where: { id: params.id },
-    select: { status: true, title: true, rules: true, notificationsEnabled: true },
+    select: {
+      status: true,
+      title: true,
+      rules: true,
+      notificationsEnabled: true,
+      startsAt: true,
+      prizePool: true,
+      format: true,
+    },
   });
 
   const updated = await db.tournament.update({
@@ -136,7 +144,10 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     },
   });
 
-  if (updated.notificationsEnabled && before?.status !== TournamentStatus.REGISTRATION_OPEN && updated.status === TournamentStatus.REGISTRATION_OPEN) {
+  const isRegistrationOpenAnnouncement =
+    before?.status !== TournamentStatus.REGISTRATION_OPEN && updated.status === TournamentStatus.REGISTRATION_OPEN;
+
+  if (updated.notificationsEnabled && isRegistrationOpenAnnouncement) {
     await createNotificationForAllUsers({
       title: "Регистрация на турнир началась",
       body: `${updated.title}: регистрация открыта. Можно занимать место в турнире.`,
@@ -144,6 +155,30 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       link: `/tournaments/${updated.id}`,
       dedupeWithinHours: 24,
     });
+  }
+
+  // Notify confirmed participants about meaningful edits (start moved, rules, prize pool, status).
+  // Skipped on the registration-open announcement above, which already reaches everyone.
+  if (before && !isRegistrationOpenAnnouncement) {
+    await notifyTournamentChanges({
+      tournamentId: updated.id,
+      title: updated.title,
+      notificationsEnabled: updated.notificationsEnabled,
+      before: {
+        startsAt: before.startsAt,
+        rules: before.rules,
+        prizePool: before.prizePool,
+        format: before.format,
+        status: before.status,
+      },
+      after: {
+        startsAt: updated.startsAt,
+        rules: updated.rules,
+        prizePool: updated.prizePool,
+        format: updated.format,
+        status: updated.status,
+      },
+    }).catch((error) => console.error("Failed to notify tournament changes", error));
   }
 
   if (updated.telegramAutoPublish) {
