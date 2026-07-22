@@ -1,6 +1,6 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { tournamentTabIcons } from "@/components/tournaments/tournament-tab-icons";
+import { TournamentTabLink } from "@/components/tournaments/tournament-tab-link";
 import type { TournamentTabItem, TournamentTabValue } from "@/lib/tournament-public-view";
 import { cn } from "@/lib/utils";
 
@@ -26,12 +26,10 @@ export function TournamentNavigation({
               const Icon = tournamentTabIcons[tab.value];
               const active = tab.value === initialValue;
               return (
-                <Link
+                <TournamentTabLink
                   key={tab.value}
                   href={`?tab=${tab.value}`}
-                  prefetch={false}
-                  scroll={false}
-                  aria-current={active ? "page" : undefined}
+                  active={active}
                   className={cn(
                     "relative inline-flex h-11 shrink-0 snap-start items-center justify-center gap-2 whitespace-nowrap rounded-xl border px-3 text-sm font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 motion-reduce:transition-none sm:px-4",
                     active
@@ -41,7 +39,7 @@ export function TournamentNavigation({
                 >
                   <Icon className="h-4 w-4" />
                   {tab.label}
-                </Link>
+                </TournamentTabLink>
               );
             })}
           </div>
@@ -60,12 +58,10 @@ export function TournamentNavigation({
             const Icon = tournamentTabIcons[tab.value];
             const active = tab.value === initialValue;
             return (
-              <Link
+              <TournamentTabLink
                 key={tab.value}
                 href={`?tab=${tab.value}`}
-                prefetch={false}
-                scroll={false}
-                aria-current={active ? "page" : undefined}
+                active={active}
                 className={cn(
                   "group relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-0.5 pb-1 pt-2 text-[10px] font-semibold leading-none transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 motion-reduce:transition-none",
                   active ? "text-primary" : "text-zinc-500 active:bg-white/[0.05]",
@@ -88,7 +84,7 @@ export function TournamentNavigation({
                   <Icon className="h-[22px] w-[22px] shrink-0" />
                 </span>
                 <span className="w-full truncate text-center">{tab.label}</span>
-              </Link>
+              </TournamentTabLink>
             );
           })}
         </div>
