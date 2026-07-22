@@ -385,7 +385,7 @@ function getSubmissionState({
   if (matchStatus === "DISPUTED") return { label: "Матч в споре", tone: "danger" as const };
   if (matchStatus === "CONFIRMED" || matchStatus === "FINISHED") return { label: "Счёт подтверждён", tone: "success" as const };
   if (!latestSubmission) return { label: "Ожидается результат", tone: "waiting" as const };
-  if (latestSubmission.status === "PENDING") return { label: "Результат отправлен", tone: "success" as const };
+  if (latestSubmission.status === "PENDING") return { label: "Счёт отправлен — ждём соперника", tone: "pending" as const };
   if (latestSubmission.status === "REJECTED" && latestSubmission.moderatorComment === "AUTO_MISMATCH") {
     return { label: "Введите счёт заново", tone: "retry" as const };
   }
