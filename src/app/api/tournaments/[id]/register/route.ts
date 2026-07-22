@@ -285,7 +285,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     }
 
     const origin = getRequestBaseUrl(request);
-    return NextResponse.redirect(new URL(`/tournaments/${params.id}`, origin));
+    return NextResponse.redirect(new URL(`/tournaments/${params.id}`, origin), 303);
   }
 
   try {
@@ -392,7 +392,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     return NextResponse.json({ ok: true });
   }
 
-  return NextResponse.redirect(new URL(`/tournaments/${params.id}`, origin));
+  return NextResponse.redirect(new URL(`/tournaments/${params.id}`, origin), 303);
 }
 
 export async function DELETE(_: Request, props: { params: Promise<{ id: string }> }) {
