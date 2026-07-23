@@ -12,6 +12,10 @@ import {
   sendTelegramRichMessage,
 } from "@/lib/telegram-bot";
 import { handleTelegramCallbackAction } from "@/lib/services/telegram-callbacks";
+import {
+  handleTelegramAutoReply,
+  type TelegramAutoReplyMessage,
+} from "@/lib/services/telegram-auto-replies";
 import { tgEmoji, tgEmojiId } from "@/lib/telegram-emoji";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
 import { buildPersonalMatchMessage, type TelegramRichMessageDraft } from "@/lib/telegram-rich";
@@ -23,13 +27,11 @@ type TelegramWebhookUser = {
   id?: number | string;
   username?: string;
   first_name?: string;
+  is_bot?: boolean;
 };
 
-type TelegramWebhookMessage = {
-  message_id?: number;
+type TelegramWebhookMessage = TelegramAutoReplyMessage & {
   from?: TelegramWebhookUser;
-  chat?: { id?: number | string; type?: "private" | "group" | "supergroup" | "channel"; title?: string };
-  text?: string;
 };
 
 type TelegramWebhookUpdate = {
@@ -358,7 +360,13 @@ export async function POST(request: NextRequest) {
   const update = (await request.json().catch(() => null)) as TelegramWebhookUpdate | null;
   if (update) {
     await syncTelegramUsernameFromWebhook(update);
-    if (update.message) await handleCommand(update.message);
+    if (update.message) {
+      await handleCommand(update.message);
+      await handleTelegramAutoReply(update.message).catch((error) => {
+        if (isTelegramRecipientUnavailableError(error)) return;
+        console.error("Failed to send Telegram auto reply", error);
+      });
+    }
     if (update.callback_query) await handleCallbackQuery(update.callback_query);
   }
 

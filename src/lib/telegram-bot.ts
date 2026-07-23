@@ -290,13 +290,20 @@ export function getTelegramWebhookSecret() {
   return crypto.createHash("sha256").update(`${nextAuthSecret}:telegram-webhook`).digest("hex");
 }
 
-export async function sendTelegramMessage(params: {
+export type SendTelegramMessageParams = {
   chatId: string;
   text: string;
   parseMode?: "HTML" | "MarkdownV2" | null;
   disableWebPagePreview?: boolean;
   replyMarkup?: TelegramInlineKeyboardMarkup;
-}): Promise<TelegramSentMessage> {
+  replyParameters?: {
+    messageId: number | string;
+    allowSendingWithoutReply?: boolean;
+  };
+  messageThreadId?: number | string;
+};
+
+export async function sendTelegramMessage(params: SendTelegramMessageParams): Promise<TelegramSentMessage> {
   const botToken = getTelegramBotToken();
   const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: "POST",
@@ -310,6 +317,15 @@ export async function sendTelegramMessage(params: {
       ...(params.parseMode === null ? {} : { parse_mode: params.parseMode ?? "HTML" }),
       disable_web_page_preview: params.disableWebPagePreview ?? true,
       ...(params.replyMarkup ? { reply_markup: params.replyMarkup } : {}),
+      ...(params.replyParameters
+        ? {
+            reply_parameters: {
+              message_id: Number(params.replyParameters.messageId),
+              ...(params.replyParameters.allowSendingWithoutReply ? { allow_sending_without_reply: true } : {}),
+            },
+          }
+        : {}),
+      ...(params.messageThreadId !== undefined ? { message_thread_id: Number(params.messageThreadId) } : {}),
     }),
   });
 
