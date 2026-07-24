@@ -1,4 +1,4 @@
-﻿import { AdminActionType, MatchStatus, StageType } from "@prisma/client";
+import { AdminActionType, MatchStatus, StageType } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
@@ -165,6 +165,8 @@ export async function POST(_request: Request, props: { params: Promise<{ id: str
   const stageMatches = stageWithMatches ? playableMatches.filter((match) => match.stageId === stageWithMatches.id) : playableMatches;
   const currentRound = Math.min(...stageMatches.map((match) => match.round));
   const targetMatches = stageMatches.filter((match) => match.round === currentRound);
+
+  // Snapshot before-state for the admin log (computed before any writes)
   const beforeJson = targetMatches.map((match) => ({
     id: match.id,
     round: match.round,
@@ -173,61 +175,93 @@ export async function POST(_request: Request, props: { params: Promise<{ id: str
     player1Score: match.player1Score,
     player2Score: match.player2Score,
   }));
-  const updatedMatches = [];
 
-  for (const match of targetMatches) {
+  // Pre-generate all scores before touching the DB so the transaction only does writes
+  type MatchScoreData = {
+    id: string;
+    player1Score: number;
+    player2Score: number;
+    winnerId: string | null;
+    winnerEntryId: string | null;
+    notes: string;
+  };
+
+  const scoreData: MatchScoreData[] = targetMatches.map((match) => {
     const isPlayoff = match.stage?.type === StageType.PLAYOFF || !!match.bracketId || match.isPenaltyTiebreak;
     const { player1Score, player2Score } = randomScore({ allowDraw: !isPlayoff });
     const winnerId = player1Score > player2Score ? match.player1Id : player2Score > player1Score ? match.player2Id : null;
     const winnerEntryId = winnerId === match.player1Id ? match.participant1EntryId : winnerId === match.player2Id ? match.participant2EntryId : null;
+    return {
+      id: match.id,
+      player1Score,
+      player2Score,
+      winnerId,
+      winnerEntryId,
+      notes: match.notes ? `${match.notes}\nRandom score by admin` : "Random score by admin",
+    };
+  });
 
-    const updated = await db.match.update({
-      where: { id: match.id },
+  // Save all match updates atomically — if any write fails nothing is persisted
+  const updatedMatches = await db.$transaction(
+    scoreData.map(({ id, player1Score, player2Score, winnerId, winnerEntryId, notes }) =>
+      db.match.update({
+        where: { id },
+        data: { player1Score, player2Score, winnerId, winnerEntryId, status: MatchStatus.CONFIRMED, notes },
+      }),
+    ),
+  );
+
+  // Log the admin action right after the saves succeed (non-fatal: log failure
+  // should not roll back scores that are already committed)
+  db.adminAction
+    .create({
       data: {
-        player1Score,
-        player2Score,
-        winnerId,
-        winnerEntryId,
-        status: MatchStatus.CONFIRMED,
-        notes: match.notes ? `${match.notes}\nRandom score by admin` : "Random score by admin",
+        adminId: session.user.id,
+        tournamentId: params.id,
+        entityType: "MATCH_RANDOM_SCORES",
+        entityId: params.id,
+        actionType: AdminActionType.UPDATE,
+        beforeJson,
+        afterJson: updatedMatches.map((match) => ({
+          id: match.id,
+          round: match.round,
+          matchNumber: match.matchNumber,
+          status: match.status,
+          player1Score: match.player1Score,
+          player2Score: match.player2Score,
+          winnerId: match.winnerId,
+        })),
       },
-    });
+    })
+    .catch((err: unknown) => console.error("[random-scores] adminAction log failed:", err));
 
-    updatedMatches.push(updated);
-  }
-
+  // Post-processing: resolve winners, advance bracket, sync lifecycle.
+  // These are idempotent operations — a failure here does NOT mean scores were
+  // lost (they're already committed).  We isolate per-match errors so a single
+  // failing match doesn't block the rest, and we catch the final lifecycle sync
+  // so a transient playoff-generation error never surfaces as a client error.
   for (const match of updatedMatches) {
-    await resolveConfirmedMatch(match.id);
-    await fallbackAdvancePlayoffWinner(match.id);
+    try {
+      await resolveConfirmedMatch(match.id);
+      await fallbackAdvancePlayoffWinner(match.id);
+    } catch (err) {
+      console.error("[random-scores] resolveConfirmedMatch failed for match", match.id, err);
+    }
   }
+
   await syncUserAchievementsForUsers(updatedMatches.flatMap((match) => [match.player1Id, match.player2Id]));
 
-  if (!stageWithMatches || stageWithMatches.type === StageType.GROUP_STAGE || stageWithMatches.type === StageType.LEAGUE) {
-    await recalculateGroupStandings(params.id);
+  try {
+    if (!stageWithMatches || stageWithMatches.type === StageType.GROUP_STAGE || stageWithMatches.type === StageType.LEAGUE) {
+      await recalculateGroupStandings(params.id);
+    }
+
+    await syncTournamentLifecycleStatus(params.id);
+  } catch (err) {
+    console.error("[random-scores] lifecycle sync failed (scores are committed):", err);
   }
 
-  await syncTournamentLifecycleStatus(params.id);
   invalidateTournamentSchedule(params.id);
-
-  await db.adminAction.create({
-    data: {
-      adminId: session.user.id,
-      tournamentId: params.id,
-      entityType: "MATCH_RANDOM_SCORES",
-      entityId: params.id,
-      actionType: AdminActionType.UPDATE,
-      beforeJson,
-      afterJson: updatedMatches.map((match) => ({
-        id: match.id,
-        round: match.round,
-        matchNumber: match.matchNumber,
-        status: match.status,
-        player1Score: match.player1Score,
-        player2Score: match.player2Score,
-        winnerId: match.winnerId,
-      })),
-    },
-  });
 
   return NextResponse.json({
     message: `Рандомный счет выставлен для ${updatedMatches.length} матчей.`,

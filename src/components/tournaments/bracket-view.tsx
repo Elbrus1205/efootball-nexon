@@ -43,6 +43,7 @@ type BracketMatch = {
   player1PenaltyScore: number | null;
   player2PenaltyScore: number | null;
   status: MatchStatus;
+  notes: string | null;
   player1: BracketUser | null;
   player2: BracketUser | null;
   participant1Entry: BracketParticipantEntry | null;
@@ -54,6 +55,7 @@ type BracketSeries = {
   round: number;
   matchNumber: number;
   isThirdPlaceMatch: boolean;
+  isAutoBye: boolean;
   referenceMatch: BracketMatch;
   regularMatches: BracketMatch[];
   penaltyMatch: BracketMatch | null;
@@ -70,6 +72,7 @@ type BracketSide = {
   isWinner: boolean;
   isChampion: boolean;
   isCurrentUser: boolean;
+  isByeWinner: boolean;
 };
 
 const RESOLVED_MATCH_STATUSES: MatchStatus[] = ["CONFIRMED", "FINISHED"];
@@ -155,6 +158,7 @@ function buildSeries(matches: BracketMatch[]) {
         round: referenceMatch.round,
         matchNumber: referenceMatch.matchNumber,
         isThirdPlaceMatch: referenceMatch.isThirdPlaceMatch,
+        isAutoBye: referenceMatch.notes === "AUTO_BYE",
         referenceMatch,
         regularMatches,
         penaltyMatch: ordered.find((item) => item.isPenaltyTiebreak) ?? null,
@@ -204,6 +208,12 @@ function getSeriesWinner(series: BracketSeries) {
 }
 
 function getAggregateScore(series: BracketSeries) {
+  // AUTO_BYE matches always have 0:0 written to the DB — suppress the score
+  // so the bracket shows "–" instead of a misleading draw.
+  if (series.isAutoBye) {
+    return { player1: null, player2: null };
+  }
+
   const confirmedRegularMatches = series.regularMatches.filter(isResolvedMatch);
 
   if (!confirmedRegularMatches.length) {
@@ -326,26 +336,35 @@ function BracketTeamRow({ side }: { side: BracketSide }) {
       </div>
 
       <div className="relative z-10 flex min-w-0 flex-col items-end justify-center gap-0.5 text-right">
-        <span
-          className={cn(
-            "text-base font-black leading-none text-white",
-            side.isChampion && "text-amber-100 drop-shadow-[0_0_10px_rgba(33,241,168,0.7)]",
-            isLoser && "text-zinc-500",
-          )}
-        >
-          {side.score ?? "-"}
-        </span>
-        {side.penaltyText ? (
-          <span
-            className={cn(
-              "inline-flex max-w-full items-center rounded-full border border-amber-300/35 bg-amber-300/10 px-1.5 py-[1px] text-[9px] font-black uppercase leading-none tracking-[0.12em] text-amber-200 shadow-[0_0_12px_rgba(33,241,168,0.12)]",
-              side.isChampion && "border-amber-100/55 bg-amber-200/15 text-amber-100",
-              isLoser && "border-zinc-700/50 bg-zinc-900/60 text-zinc-500 shadow-none",
-            )}
-          >
-            пен {side.penaltyText}
+        {side.isByeWinner ? (
+          // Bye winner: show a "Проход" label instead of a numeric score
+          <span className="inline-flex items-center rounded-full border border-emerald-300/35 bg-emerald-300/10 px-1.5 py-[1px] text-[9px] font-black uppercase leading-none tracking-[0.12em] text-emerald-200">
+            Проход
           </span>
-        ) : null}
+        ) : (
+          <>
+            <span
+              className={cn(
+                "text-base font-black leading-none text-white",
+                side.isChampion && "text-amber-100 drop-shadow-[0_0_10px_rgba(33,241,168,0.7)]",
+                isLoser && "text-zinc-500",
+              )}
+            >
+              {side.score ?? "-"}
+            </span>
+            {side.penaltyText ? (
+              <span
+                className={cn(
+                  "inline-flex max-w-full items-center rounded-full border border-amber-300/35 bg-amber-300/10 px-1.5 py-[1px] text-[9px] font-black uppercase leading-none tracking-[0.12em] text-amber-200 shadow-[0_0_12px_rgba(33,241,168,0.12)]",
+                  side.isChampion && "border-amber-100/55 bg-amber-200/15 text-amber-100",
+                  isLoser && "border-zinc-700/50 bg-zinc-900/60 text-zinc-500 shadow-none",
+                )}
+              >
+                пен {side.penaltyText}
+              </span>
+            ) : null}
+          </>
+        )}
       </div>
     </div>
   );
@@ -385,6 +404,7 @@ function BracketMatchBox({
       isWinner: Boolean(seriesWinnerId && seriesWinnerId === match.player1Id),
       isChampion: Boolean(isFinal && seriesWinnerId && seriesWinnerId === match.player1Id),
       isCurrentUser: Boolean(currentUserId && sideOneUserId === currentUserId),
+      isByeWinner: series.isAutoBye && seriesWinnerId === match.player1Id,
     },
     {
       playerId: match.player2?.id,
@@ -397,6 +417,7 @@ function BracketMatchBox({
       isWinner: Boolean(seriesWinnerId && seriesWinnerId === match.player2Id),
       isChampion: Boolean(isFinal && seriesWinnerId && seriesWinnerId === match.player2Id),
       isCurrentUser: Boolean(currentUserId && sideTwoUserId === currentUserId),
+      isByeWinner: series.isAutoBye && seriesWinnerId === match.player2Id,
     },
   ];
 
