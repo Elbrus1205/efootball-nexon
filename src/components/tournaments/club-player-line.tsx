@@ -1,6 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
 
+function abbreviateClubName(name: string): string {
+  const words = name.trim().split(/\s+/);
+  if (words.length <= 1 || name.length <= 12) return name;
+  const [first, ...rest] = words;
+  return `${first} ${rest.map((w) => (w[0] ?? "").toUpperCase() + ".").join(" ")}`;
+}
+
 type ClubPlayerLineProps = {
   clubName?: string | null;
   badgePath?: string | null;
@@ -54,6 +61,10 @@ export function ClubPlayerLine({
   const directionClass = reverse ? "flex-row-reverse" : "flex-row";
   const wrapperClass = centered ? "items-center text-center" : reverse ? "items-end text-right" : "items-start text-left";
 
+  const rawName = clubName ?? "Клуб не назначен";
+  const displayName = compact ? abbreviateClubName(rawName) : rawName;
+  const clubFontClass = compact && displayName.length > 15 ? "text-xs" : "text-sm";
+
   return (
     <div className={`flex ${directionClass} ${compact ? "gap-2 sm:gap-3" : "gap-3"} ${centered ? "items-center justify-center" : "items-start"}`}>
       {badgePath ? (
@@ -64,12 +75,12 @@ export function ClubPlayerLine({
               : "flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/20"
           }
         >
-          <Image src={badgePath} alt={clubName ?? playerName} width={compact ? 32 : 40} height={compact ? 32 : 40} className="h-full w-full object-contain p-1" />
+          <Image src={badgePath} alt={rawName} width={compact ? 32 : 40} height={compact ? 32 : 40} className="h-full w-full object-contain p-1" />
         </div>
       ) : null}
 
       <div className={`min-w-0 flex-1 ${wrapperClass}`}>
-        <div className="max-w-full break-words text-sm font-medium leading-[1.25] text-white line-clamp-2">{clubName ?? "Клуб не назначен"}</div>
+        <div className={`max-w-full break-words font-medium leading-[1.25] text-white line-clamp-2 ${clubFontClass}`}>{displayName}</div>
         {playerId ? (
           <Link
             href={`/players/${playerId}`}
