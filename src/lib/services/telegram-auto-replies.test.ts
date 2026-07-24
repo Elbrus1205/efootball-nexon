@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildTelegramAutoReply, handleTelegramAutoReply } from "@/lib/services/telegram-auto-replies";
+import { tgEmoji } from "@/lib/telegram-emoji";
 
 test("a misspelled tournament registration question gets a personal answer", () => {
   const reply = buildTelegramAutoReply({
@@ -10,7 +11,7 @@ test("a misspelled tournament registration question gets a personal answer", () 
 
   assert.deepEqual(reply, {
     intent: "tournament-registration",
-    text: "<b>Илья</b>, откройте список турниров, выберите турнир с открытой регистрацией и нажмите «Участвовать в турнире». Затем заполните заявку и подтвердите её. Статус заявки появится на странице турнира.",
+    text: `${tgEmoji("gamepad")} <b>Илья</b>, всё просто: откройте раздел «Турниры», выберите подходящий с открытой регистрацией и нажмите «Участвовать». Заполните заявку и подтвердите её — статус будет виден на странице турнира.`,
     button: { text: "Открыть турниры", path: "/tournaments" },
   });
 });
@@ -131,7 +132,7 @@ test("ordinary conversation and match chatter do not trigger the bot", () => {
 
 test("a Telegram display name cannot inject HTML into a reply", () => {
   const reply = buildTelegramAutoReply({ text: "как регаться в турнир", firstName: "<Admin>" });
-  assert.match(reply?.text ?? "", /^<b>&lt;Admin&gt;<\/b>/);
+  assert.match(reply?.text ?? "", /<b>&lt;Admin&gt;<\/b>/);
 });
 
 test("a group question is answered in the same comment thread and replies to the author message", async () => {
@@ -156,7 +157,7 @@ test("a group question is answered in the same comment thread and replies to the
   assert.deepEqual(result, { handled: true, intent: "match-result" });
   assert.deepEqual(sent, {
     chatId: "-100123",
-    text: "<b>Зарина</b>, откройте встречу в разделе «Мои матчи», введите основной счёт и при необходимости пенальти. Матч подтвердится, когда оба участника отправят совпадающие данные.",
+    text: `${tgEmoji("check")} <b>Зарина</b>, откройте матч во вкладке «Мои матчи», введите счёт и при необходимости пенальти. Матч подтвердится автоматически, когда оба участника пришлют совпадающие данные.`,
     disableWebPagePreview: true,
     replyParameters: { messageId: 731, allowSendingWithoutReply: true },
     messageThreadId: 44,
