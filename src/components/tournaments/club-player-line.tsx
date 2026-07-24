@@ -1,13 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 
-function abbreviateClubName(name: string): string {
-  const words = name.trim().split(/\s+/);
-  if (words.length <= 1 || name.length <= 12) return name;
-  const [first, ...rest] = words;
-  return `${first} ${rest.map((w) => (w[0] ?? "").toUpperCase() + ".").join(" ")}`;
-}
-
 type ClubPlayerLineProps = {
   clubName?: string | null;
   badgePath?: string | null;
@@ -62,8 +55,9 @@ export function ClubPlayerLine({
   const wrapperClass = centered ? "items-center text-center" : reverse ? "items-end text-right" : "items-start text-left";
 
   const rawName = clubName ?? "Клуб не назначен";
-  const displayName = compact ? abbreviateClubName(rawName) : rawName;
-  const clubFontClass = compact && displayName.length > 15 ? "text-xs" : "text-sm";
+  const clubFontClass = compact
+    ? rawName.length > 18 ? "text-[0.7rem]" : rawName.length > 13 ? "text-xs" : "text-sm"
+    : "text-sm";
 
   return (
     <div className={`flex ${directionClass} ${compact ? "gap-2 sm:gap-3" : "gap-3"} ${centered ? "items-center justify-center" : "items-start"}`}>
@@ -80,7 +74,7 @@ export function ClubPlayerLine({
       ) : null}
 
       <div className={`min-w-0 flex-1 ${wrapperClass}`}>
-        <div className={`max-w-full break-words font-medium leading-[1.25] text-white line-clamp-2 ${clubFontClass}`}>{displayName}</div>
+        <div className={`max-w-full font-medium leading-[1.25] text-white line-clamp-2 ${clubFontClass}`}>{rawName}</div>
         {playerId ? (
           <Link
             href={`/players/${playerId}`}
