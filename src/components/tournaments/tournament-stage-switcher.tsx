@@ -44,8 +44,8 @@ export function TournamentStageSwitcher({ options, children }: { options: Tourna
           </div>
           <div className="hidden text-xs text-zinc-500 sm:block">{options.length} этапа</div>
         </div>
-        <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="flex min-w-max gap-2" role="list" aria-label="Этапы турнира">
+        <div className="px-1">
+          <div className="grid grid-cols-2 gap-2" role="list" aria-label="Этапы турнира">
             {options.map((option, index) => {
               const meta = stateMeta[option.state];
               const Icon = meta.icon;
@@ -59,18 +59,18 @@ export function TournamentStageSwitcher({ options, children }: { options: Tourna
                   aria-pressed={selected}
                   onClick={() => setActiveId(option.id)}
                   className={cn(
-                    "flex min-h-14 min-w-48 snap-start items-center gap-3 rounded-xl border px-3 py-2 text-left transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 motion-reduce:transition-none",
+                    "flex min-h-[62px] min-w-0 items-center gap-2 rounded-xl border px-2.5 py-2 text-left transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 motion-reduce:transition-none",
                     selected && "border-primary/45 bg-primary/10 shadow-[inset_0_-2px_0_rgba(33,241,168,0.85)]",
                     !selected && !locked && "border-white/10 bg-black/20 hover:border-white/20 hover:bg-white/[0.04]",
                     locked && "cursor-not-allowed border-white/5 bg-black/10 opacity-45",
                   )}
                 >
-                  <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border", selected ? "border-primary/40 bg-primary/15 text-primary" : "border-white/10 bg-white/[0.03] text-zinc-400")}>
-                    <Icon className="h-4 w-4" aria-hidden="true" />
+                  <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border", selected ? "border-primary/40 bg-primary/15 text-primary" : "border-white/10 bg-white/[0.03] text-zinc-400")}>
+                    <Icon className="h-3.5 w-3.5" aria-hidden="true" />
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-white">{index + 1}. {option.title}</span>
-                    <span className="mt-0.5 block truncate text-xs text-zinc-400">{meta.label} · {option.caption}</span>
+                    <span className="block truncate text-[13px] font-semibold leading-5 text-white">{index + 1}. {option.title}</span>
+                    <span className="mt-0.5 block truncate text-[11px] leading-4 text-zinc-400">{meta.label} · {option.caption}</span>
                   </span>
                 </button>
               );
