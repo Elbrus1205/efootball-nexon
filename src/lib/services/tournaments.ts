@@ -21,6 +21,7 @@ import { getAvailableClubs } from "@/lib/clubs";
 import { normalizeFormatBlueprint, type FormatBlueprint, type PlayoffSelectionRule } from "@/lib/format-blueprint";
 import { applyTournamentAbsenceRatingPenalty, getPlayerRatings } from "@/lib/ratings";
 import { invalidatePlayerRatings } from "@/lib/ratings-cache";
+import { prepareCaptainAssignedTeamMatchSlots } from "@/lib/tournaments/captain-team-matches";
 import {
   invalidateTournamentAll,
   invalidateTournamentParticipants,
@@ -1093,6 +1094,7 @@ export async function notifyUpcomingRoundDeadlineReminders({ userId }: { userId?
           id: true,
           title: true,
           notificationsEnabled: true,
+          captainsCreateTeamMatches: true,
         },
       },
       stage: {
@@ -1103,8 +1105,6 @@ export async function notifyUpcomingRoundDeadlineReminders({ userId }: { userId?
           matches: {
             where: {
               isPenaltyTiebreak: false,
-              player1Id: { not: null },
-              player2Id: { not: null },
               status: { notIn: Array.from(TERMINAL_MATCH_STATUSES) },
             },
             select: {
@@ -1112,8 +1112,18 @@ export async function notifyUpcomingRoundDeadlineReminders({ userId }: { userId?
               round: true,
               player1Id: true,
               player2Id: true,
+              isCaptainAssignedTeamMatch: true,
               player1: { select: { name: true, email: true } },
               player2: { select: { name: true, email: true } },
+              participant1Entry: {
+                select: {
+                  id: true,
+                  rosterMembers: {
+                    where: { isCaptain: true, status: TeamInviteStatus.ACCEPTED },
+                    select: { userId: true },
+                  },
+                },
+              },
             },
           },
         },
@@ -1127,12 +1137,47 @@ export async function notifyUpcomingRoundDeadlineReminders({ userId }: { userId?
   for (const deadline of deadlines) {
     if (!tournamentNotificationsEnabled(deadline.tournament)) continue;
 
+    if (deadline.tournament.captainsCreateTeamMatches) {
+      const reminderBucket = Math.floor(now.getTime() / (30 * 60 * 1_000));
+      const unassignedByCaptainId = new Map<string, number>();
+      for (const match of deadline.stage.matches) {
+        if (
+          match.round !== deadline.round ||
+          !match.isCaptainAssignedTeamMatch ||
+          match.player1Id ||
+          match.player2Id
+        ) {
+          continue;
+        }
+        for (const captain of match.participant1Entry?.rosterMembers ?? []) {
+          if (!userId || captain.userId === userId) {
+            unassignedByCaptainId.set(captain.userId, (unassignedByCaptainId.get(captain.userId) ?? 0) + 1);
+          }
+        }
+      }
+
+      for (const [captainId, unassignedCount] of unassignedByCaptainId) {
+        await createNotification({
+          userId: captainId,
+          title: "Нужно назначить пары игроков",
+          body: `${deadline.tournament.title}: до дедлайна осталось незаполненных пар: ${unassignedCount}.`,
+          type: NotificationType.MATCH,
+          link: `/tournaments/${deadline.tournament.id}?tab=my-matches`,
+          dedupeKey: `captain-team-assignment:${deadline.id}:${captainId}:${reminderBucket}`,
+          dedupeWithinHours: 24 * 365,
+        });
+        notifiedCount += 1;
+      }
+    }
+
     // Most-urgent tier the deadline has entered (tiers are ordered urgent-first).
     const msLeft = deadline.deadlineAt.getTime() - now.getTime();
     const tier = DEADLINE_REMINDER_TIERS.find((candidate) => msLeft <= candidate.windowMs);
     if (!tier) continue;
 
-    const matches = deadline.stage.matches.filter((match) => match.round === deadline.round);
+    const matches = deadline.stage.matches.filter(
+      (match) => match.round === deadline.round && Boolean(match.player1Id && match.player2Id),
+    );
     for (const match of matches) {
       const sides = [
         {
@@ -2640,6 +2685,8 @@ export async function generateTournamentMatches(tournamentId: string) {
       }
     }
   }
+
+  await prepareCaptainAssignedTeamMatchSlots(tournamentId);
 
   if (tournament.status === TournamentStatus.REGISTRATION_CLOSED || tournament.status === TournamentStatus.AWAITING_START) {
     await applyTournamentAbsenceRatingPenalty(tournamentId);

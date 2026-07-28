@@ -14,6 +14,7 @@ import { invalidateTournamentParticipants } from "@/lib/tournament-cache";
 import { hasTelegramRegistrationContact } from "@/lib/social-links";
 import { isLineupPhotoStorageUrl, lineupPhotoUrlSchema } from "@/lib/tournament-applications";
 import { formatTournamentBanMessage } from "@/lib/user-ban";
+import { getRankingSnapshot } from "@/lib/tournaments/top-ranking-roster";
 
 class RegistrationWriteError extends Error {
   constructor(
@@ -58,6 +59,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     where: { id: params.id },
     select: {
       id: true,
+      seasonId: true,
       title: true,
       status: true,
       isTest: true,
@@ -70,6 +72,9 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       clubSelectionMode: true,
       participantMode: true,
       rosterSize: true,
+      topRankingRestrictionEnabled: true,
+      topRankingLimit: true,
+      topRankingPlayerLimit: true,
       requireLineupPhoto: true,
       participants: {
         where: { status: { notIn: ["REMOVED", "REJECTED"] } },
@@ -157,6 +162,8 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   if (tournament.participantMode === TournamentParticipantMode.TEAM && teamName.length < 2) {
     return NextResponse.json({ error: "Укажите название команды." }, { status: 400 });
   }
+
+  const captainRankingSnapshot = await getRankingSnapshot(tournament, session.user.id);
 
   if (tournament.clubSelectionMode === ClubSelectionMode.PLAYER_PICK) {
     const selectedClubSlug = typeof payload.clubSlug === "string" ? payload.clubSlug : "";
@@ -360,6 +367,8 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
           status: "ACCEPTED",
           isCaptain: true,
           respondedAt: new Date(),
+          ratingRankAtInvite: captainRankingSnapshot.rank,
+          isTopRankAtInvite: captainRankingSnapshot.isTopRanked,
         },
       });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });

@@ -669,6 +669,10 @@ model Tournament {
   isTest                         Boolean                             @default(false)
   participantMode                TournamentParticipantMode           @default(SINGLE)
   rosterSize                     Int                                 @default(1)
+  topRankingRestrictionEnabled  Boolean                             @default(false)
+  topRankingLimit               Int                                 @default(10)
+  topRankingPlayerLimit         Int                                 @default(1)
+  captainsCreateTeamMatches     Boolean                             @default(false)
   matchupFormat                  MatchupFormat                       @default(SINGLE_MATCH)
   bestOfWins                     Int                                 @default(1)
   autoCreateMatches              Boolean                             @default(true)
@@ -856,6 +860,8 @@ model TournamentRegistrationMember {
   userId         String
   status         TeamInviteStatus       @default(PENDING)
   isCaptain      Boolean                @default(false)
+  ratingRankAtInvite Int?
+  isTopRankAtInvite Boolean?
   invitedAt      DateTime               @default(now())
   respondedAt    DateTime?
   createdAt      DateTime               @default(now())
@@ -941,6 +947,7 @@ model Match {
   seriesKey           String?
   legNumber           Int?
   isPenaltyTiebreak   Boolean                 @default(false)
+  isCaptainAssignedTeamMatch Boolean           @default(false)
   seriesWinsRequired  Int?
   seriesMatchNumber   Int?
   isThirdPlaceMatch   Boolean                 @default(false)

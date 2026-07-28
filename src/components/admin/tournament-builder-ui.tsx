@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode } from "react";
+import type { ChangeEventHandler, InputHTMLAttributes, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Check } from "lucide-react";
 import { Label } from "@/components/ui/label";
@@ -92,6 +92,8 @@ export function TournamentBuilderToggle({
   title,
   description,
   defaultChecked,
+  checked,
+  onChange,
   tone = "neutral",
   className,
 }: {
@@ -100,6 +102,8 @@ export function TournamentBuilderToggle({
   title: string;
   description?: string;
   defaultChecked?: boolean;
+  checked?: boolean;
+  onChange?: ChangeEventHandler<HTMLInputElement>;
   tone?: "neutral" | "primary" | "warning";
   className?: string;
 }) {
@@ -117,6 +121,8 @@ export function TournamentBuilderToggle({
         name={name}
         value={value}
         defaultChecked={defaultChecked}
+        checked={checked}
+        onChange={onChange}
         className="mt-0.5 h-5 w-5 shrink-0 rounded border-white/20 bg-black accent-primary focus-visible:ring-2 focus-visible:ring-primary"
       />
       <span className="min-w-0">

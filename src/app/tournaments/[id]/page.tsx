@@ -18,6 +18,7 @@ import {
   LazyTournamentStageSwitcher as TournamentStageSwitcher,
 } from "@/components/tournaments/lazy-tournament-widgets";
 import { RegisterTournamentButton } from "@/components/tournaments/register-tournament-button";
+import { TeamMatchAssignment } from "@/components/tournaments/team-match-assignment";
 import { TournamentEmptyState } from "@/components/tournaments/tournament-empty-state";
 import { TournamentHero } from "@/components/tournaments/tournament-hero";
 import { TournamentNavigation } from "@/components/tournaments/tournament-navigation";
@@ -655,14 +656,21 @@ export default async function TournamentDetailsPage(
     return (activeEntryId ? participantByEntryId.get(activeEntryId) : null) ?? rawEntry;
   };
   const resolveMatchUserId = (match: (typeof tournament.matches)[number], side: 1 | 2) =>
-    resolveMatchEntry(match, side)?.userId ?? (side === 1 ? match.player1Id : match.player2Id) ?? null;
+    (side === 1 ? match.player1Id : match.player2Id) ?? resolveMatchEntry(match, side)?.userId ?? null;
 
   const currentUserId = session?.user?.id;
+  const captainRegistrationIds = new Set(
+    tournament.rosterMembers
+      .filter((member) => member.isCaptain && member.status === "ACCEPTED")
+      .map((member) => member.registration.id),
+  );
   const isCurrentUserMatch = (match: (typeof tournament.matches)[number]) =>
     Boolean(
       currentUserId &&
         (resolveMatchUserId(match, 1) === currentUserId ||
-          resolveMatchUserId(match, 2) === currentUserId),
+          resolveMatchUserId(match, 2) === currentUserId ||
+          (tournament.captainsCreateTeamMatches &&
+            (captainRegistrationIds.has(match.participant1EntryId ?? "") || captainRegistrationIds.has(match.participant2EntryId ?? "")))),
     );
 
   const myMatchIds = currentUserId
@@ -870,14 +878,14 @@ export default async function TournamentDetailsPage(
   const resolveMatchSide = (match: (typeof visibleMatches)[number], side: 1 | 2) => {
     const player = side === 1 ? match.player1 : match.player2;
     const entry = resolveMatchEntry(match, side);
-    const playerId = entry?.userId ?? (side === 1 ? match.player1Id : match.player2Id) ?? null;
-    const playerName = entry?.user
+    const playerId = (side === 1 ? match.player1Id : match.player2Id) ?? entry?.userId ?? null;
+    const playerName = player
+      ? getPlayerDisplayName(player)
+      : entry?.user
       ? getPlayerDisplayName(entry.user)
-      : player
-        ? getPlayerDisplayName(player)
-        : side === 1
-          ? "Игрок 1"
-          : "Игрок 2";
+      : side === 1
+        ? "Игрок 1"
+        : "Игрок 2";
     const mappedClub = playerId ? participantClubMap[playerId] : null;
 
     return {
@@ -1132,11 +1140,25 @@ export default async function TournamentDetailsPage(
                 const player2LatestSubmission = match.submissions.find((submission) => submission.submittedById === sideTwo.playerId);
                 const matchDeadline = getMatchDeadline(match);
                 const waitingForOpponent = match.submissions.some((submission) => submission.submittedById === currentUserId && submission.status === "PENDING");
-                const canSubmitScore = isMatchOpenForScore(match) && !waitingForOpponent;
+                const isMatchPlayer = sideOne.playerId === currentUserId || sideTwo.playerId === currentUserId;
+                const canSubmitScore = isMatchPlayer && isMatchOpenForScore(match) && !waitingForOpponent;
+                const homeEntry = resolveMatchEntry(match, 1);
+                const awayEntry = resolveMatchEntry(match, 2);
+                const homeRosterEntry = homeEntry ? participantByEntryId.get(homeEntry.id) ?? null : null;
+                const awayRosterEntry = awayEntry ? participantByEntryId.get(awayEntry.id) ?? null : null;
+                const canAssignTeamMatch =
+                  tournament.captainsCreateTeamMatches &&
+                  match.isCaptainAssignedTeamMatch &&
+                  !match.player1Id &&
+                  !match.player2Id &&
+                  match.status === MatchStatus.PENDING &&
+                  currentRosterMembership?.isCaptain &&
+                  currentRosterMembership.status === "ACCEPTED" &&
+                  match.participant1EntryId === currentRosterMembership.registration.id;
 
                 return (
+                  <div key={match.id}>
                   <MyMatchCard
-                    key={match.id}
                     id={match.id}
                     meta={matchDeadline ? `Дедлайн: ${formatDate(matchDeadline)}` : "Дедлайн не задан"}
                     isConfirmed={match.status === MatchStatus.CONFIRMED || match.status === MatchStatus.FINISHED}
@@ -1212,6 +1234,19 @@ export default async function TournamentDetailsPage(
                     disputeHref="/contacts"
                     isDisputed={match.status === MatchStatus.DISPUTED}
                   />
+                  {canAssignTeamMatch && homeRosterEntry && awayRosterEntry ? (
+                    <TeamMatchAssignment
+                      tournamentId={tournament.id}
+                      matchId={match.id}
+                      homePlayers={homeRosterEntry.rosterMembers
+                        .filter((member) => member.status === "ACCEPTED")
+                        .map((member) => ({ id: member.user.id, name: getPlayerDisplayName(member.user) }))}
+                      awayPlayers={awayRosterEntry.rosterMembers
+                        .filter((member) => member.status === "ACCEPTED")
+                        .map((member) => ({ id: member.user.id, name: getPlayerDisplayName(member.user) }))}
+                    />
+                  ) : null}
+                  </div>
                 );
               })
             ) : (

@@ -62,6 +62,10 @@ type BuilderValues = {
   maxParticipants?: number;
   participantMode?: TournamentParticipantMode;
   rosterSize?: number;
+  topRankingRestrictionEnabled?: boolean;
+  topRankingLimit?: number;
+  topRankingPlayerLimit?: number;
+  captainsCreateTeamMatches?: boolean;
   matchupFormat?: MatchupFormat;
   bestOfWins?: number;
   isTest?: boolean;
@@ -167,6 +171,8 @@ export function TournamentBuilderForm({
   const [lineupExampleUploading, setLineupExampleUploading] = useState(false);
   const [lineupExampleUploadError, setLineupExampleUploadError] = useState("");
   const [participantMode, setParticipantMode] = useState(initialValues?.participantMode ?? TournamentParticipantMode.SINGLE);
+  const [topRankingRestrictionEnabled, setTopRankingRestrictionEnabled] = useState(initialValues?.topRankingRestrictionEnabled ?? false);
+  const [captainsCreateTeamMatches, setCaptainsCreateTeamMatches] = useState(initialValues?.captainsCreateTeamMatches ?? false);
   const [matchupFormat, setMatchupFormat] = useState(initialValues?.matchupFormat ?? MatchupFormat.SINGLE_MATCH);
   const [submitting, setSubmitting] = useState(false);
   const isEditing = Boolean(initialValues);
@@ -466,20 +472,53 @@ export function TournamentBuilderForm({
                 ) : null}
 
                 {participantMode === TournamentParticipantMode.TEAM ? (
-                  <TournamentBuilderField htmlFor="rosterSize" label="Размер команды" required>
-                    <select
-                      id="rosterSize"
-                      name="rosterSize"
-                      defaultValue={initialValues?.rosterSize && initialValues.rosterSize >= 2 ? initialValues.rosterSize : 2}
-                      className={tournamentBuilderSelectClass}
-                    >
-                      {[2, 3, 4, 5, 6, 7, 8].map((size) => (
-                        <option key={size} value={size}>
-                          {size} игроков
-                        </option>
-                      ))}
-                    </select>
-                  </TournamentBuilderField>
+                  <>
+                    <TournamentBuilderField htmlFor="rosterSize" label="Размер команды" required>
+                      <select
+                        id="rosterSize"
+                        name="rosterSize"
+                        defaultValue={initialValues?.rosterSize && initialValues.rosterSize >= 2 ? initialValues.rosterSize : 2}
+                        className={tournamentBuilderSelectClass}
+                      >
+                        {[2, 3, 4, 5, 6, 7, 8].map((size) => (
+                          <option key={size} value={size}>
+                            {size} игроков
+                          </option>
+                        ))}
+                      </select>
+                    </TournamentBuilderField>
+                    <TournamentBuilderToggle
+                      name="topRankingRestrictionEnabled"
+                      title="Ограничить игроков из топа рейтинга"
+                      description="Приглашение блокируется, если команда превысит заданный лимит игроков из топа."
+                      checked={topRankingRestrictionEnabled}
+                      onChange={(event) => setTopRankingRestrictionEnabled(event.target.checked)}
+                      tone="primary"
+                    />
+                    {topRankingRestrictionEnabled ? (
+                      <>
+                        <TournamentBuilderField htmlFor="topRankingLimit" label="Размер топа">
+                          <Input id="topRankingLimit" name="topRankingLimit" type="number" min={1} max={500} defaultValue={initialValues?.topRankingLimit ?? 10} className={tournamentBuilderInputClass} />
+                        </TournamentBuilderField>
+                        <TournamentBuilderField htmlFor="topRankingPlayerLimit" label="Игроков из топа в команде">
+                          <Input id="topRankingPlayerLimit" name="topRankingPlayerLimit" type="number" min={1} max={8} defaultValue={initialValues?.topRankingPlayerLimit ?? 1} className={tournamentBuilderInputClass} />
+                        </TournamentBuilderField>
+                      </>
+                    ) : (
+                      <>
+                        <input type="hidden" name="topRankingLimit" value={initialValues?.topRankingLimit ?? 10} />
+                        <input type="hidden" name="topRankingPlayerLimit" value={initialValues?.topRankingPlayerLimit ?? 1} />
+                      </>
+                    )}
+                    <TournamentBuilderToggle
+                      name="captainsCreateTeamMatches"
+                      title="Капитан хозяев назначает пары игроков"
+                      description="Команды в туре формируются автоматически, а соперников игроков выбирает только капитан команды слева."
+                      checked={captainsCreateTeamMatches}
+                      onChange={(event) => setCaptainsCreateTeamMatches(event.target.checked)}
+                      tone="primary"
+                    />
+                  </>
                 ) : null}
 
                 <TournamentBuilderField

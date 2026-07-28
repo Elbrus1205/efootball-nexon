@@ -15,6 +15,7 @@ import { createNotification } from "@/lib/services/notifications";
 import { getTournamentGroupCapacityLimit, syncTournamentLifecycleStatus, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
 import { invalidateTournamentParticipants } from "@/lib/tournament-cache";
 import { applicationDecisionSchema, participantStatusAfterApplicationApproval } from "@/lib/tournament-applications";
+import { getRankingSnapshot } from "@/lib/tournaments/top-ranking-roster";
 
 type RouteContext = { params: Promise<{ id: string; applicationId: string }> };
 
@@ -40,6 +41,10 @@ export async function PATCH(request: Request, props: RouteContext) {
           title: true,
           status: true,
           participantMode: true,
+          seasonId: true,
+          topRankingRestrictionEnabled: true,
+          topRankingLimit: true,
+          topRankingPlayerLimit: true,
           maxParticipants: true,
           format: true,
           groupsCount: true,
@@ -112,6 +117,8 @@ export async function PATCH(request: Request, props: RouteContext) {
     return NextResponse.json({ error: "Нельзя принять заявку после начала турнира." }, { status: 409 });
   }
 
+  const captainRankingSnapshot = await getRankingSnapshot(application.tournament, application.userId);
+
   try {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
@@ -128,6 +135,10 @@ export async function PATCH(request: Request, props: RouteContext) {
               select: {
                 status: true,
                 participantMode: true,
+                seasonId: true,
+                topRankingRestrictionEnabled: true,
+                topRankingLimit: true,
+                topRankingPlayerLimit: true,
                 maxParticipants: true,
                 format: true,
                 groupsCount: true,
@@ -180,6 +191,8 @@ export async function PATCH(request: Request, props: RouteContext) {
             status: "ACCEPTED",
             isCaptain: true,
             respondedAt: new Date(),
+            ratingRankAtInvite: captainRankingSnapshot.rank,
+            isTopRankAtInvite: captainRankingSnapshot.isTopRanked,
           },
         });
 

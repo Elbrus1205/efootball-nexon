@@ -7,6 +7,7 @@ import { createNotification } from "@/lib/services/notifications";
 import { buildRosterInviteMessage } from "@/lib/services/telegram-callbacks";
 import { syncTournamentLifecycleStatus, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
 import { invalidateTournamentParticipants } from "@/lib/tournament-cache";
+import { assertTopRankingRosterEligibility, getRankingSnapshot, TopRankingRosterError } from "@/lib/tournaments/top-ranking-roster";
 
 class RosterInviteWriteError extends Error {
   constructor(message: string, readonly status = 409) {
@@ -41,6 +42,10 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
           status: true,
           participantMode: true,
           rosterSize: true,
+          seasonId: true,
+          topRankingRestrictionEnabled: true,
+          topRankingLimit: true,
+          topRankingPlayerLimit: true,
           notificationsEnabled: true,
         },
       },
@@ -78,6 +83,8 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     return NextResponse.json({ error: "Капитан уже находится в составе." }, { status: 400 });
   }
 
+  const rankingSnapshot = await getRankingSnapshot(captainMember.tournament, target.id);
+
   try {
     await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`tournament-roster:${captainMember.registrationId}`}))`;
@@ -91,7 +98,18 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
           isCaptain: true,
           status: TeamInviteStatus.ACCEPTED,
         },
-        include: { tournament: { select: { status: true, rosterSize: true } } },
+        include: {
+          tournament: {
+            select: {
+              status: true,
+              rosterSize: true,
+              seasonId: true,
+              topRankingRestrictionEnabled: true,
+              topRankingLimit: true,
+              topRankingPlayerLimit: true,
+            },
+          },
+        },
       });
       if (!currentCaptain) {
         throw new RosterInviteWriteError("Приглашать игроков может только капитан состава.", 403);
@@ -119,6 +137,11 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       }
 
       if (existingMembership) {
+        await assertTopRankingRosterEligibility(tx, {
+          tournament: currentCaptain.tournament,
+          registrationId: captainMember.registrationId,
+          targetSnapshot: rankingSnapshot,
+        });
         await tx.tournamentRegistrationMember.update({
           where: { id: existingMembership.id },
           data: {
@@ -127,20 +150,32 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
             isCaptain: false,
             invitedAt: new Date(),
             respondedAt: null,
+            ratingRankAtInvite: rankingSnapshot.rank,
+            isTopRankAtInvite: rankingSnapshot.isTopRanked,
           },
         });
       } else {
+        await assertTopRankingRosterEligibility(tx, {
+          tournament: currentCaptain.tournament,
+          registrationId: captainMember.registrationId,
+          targetSnapshot: rankingSnapshot,
+        });
         await tx.tournamentRegistrationMember.create({
           data: {
             tournamentId: params.id,
             registrationId: captainMember.registrationId,
             userId: target.id,
             status: TeamInviteStatus.PENDING,
+            ratingRankAtInvite: rankingSnapshot.rank,
+            isTopRankAtInvite: rankingSnapshot.isTopRanked,
           },
         });
       }
     });
   } catch (error) {
+    if (error instanceof TopRankingRosterError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
     if (error instanceof RosterInviteWriteError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }

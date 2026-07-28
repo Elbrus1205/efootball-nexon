@@ -166,6 +166,10 @@ export const tournamentBuilderSchema = z.object({
   maxParticipants: z.coerce.number().min(2, "Минимум 2 участника.").max(256, "Максимум 256 участников."),
   participantMode: z.nativeEnum(TournamentParticipantMode).default(TournamentParticipantMode.SINGLE),
   rosterSize: z.coerce.number().int().min(1).max(8).default(1),
+  topRankingRestrictionEnabled: z.coerce.boolean().default(false),
+  topRankingLimit: z.coerce.number().int().min(1, "Размер топа должен быть не меньше 1.").max(500, "Размер топа не может быть больше 500.").default(10),
+  topRankingPlayerLimit: z.coerce.number().int().min(1, "Разрешите хотя бы одного игрока из топа.").max(8).default(1),
+  captainsCreateTeamMatches: z.coerce.boolean().default(false),
   matchupFormat: z.nativeEnum(MatchupFormat).default(MatchupFormat.SINGLE_MATCH),
   bestOfWins: z.coerce.number().int().min(1).max(9).default(1),
   isTest: z.coerce.boolean().default(false),
@@ -238,6 +242,22 @@ export const tournamentBuilderSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ["rosterSize"],
       message: "Размер команды должен быть от 2 до 8 игроков.",
+    });
+  }
+
+  if (data.topRankingPlayerLimit > data.rosterSize) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["topRankingPlayerLimit"],
+      message: "Лимит игроков из топа не может быть больше размера команды.",
+    });
+  }
+
+  if (data.captainsCreateTeamMatches && data.participantMode !== TournamentParticipantMode.TEAM) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["captainsCreateTeamMatches"],
+      message: "Ручное назначение матчей доступно только для командного режима.",
     });
   }
 
