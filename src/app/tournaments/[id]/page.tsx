@@ -20,7 +20,6 @@ import {
 import { RegisterTournamentButton } from "@/components/tournaments/register-tournament-button";
 import { TeamMatchAssignment } from "@/components/tournaments/team-match-assignment";
 import { TournamentEmptyState } from "@/components/tournaments/tournament-empty-state";
-import { TournamentGroupSwitcher, type TournamentGroupOption } from "@/components/tournaments/tournament-group-switcher";
 import { TournamentHero } from "@/components/tournaments/tournament-hero";
 import { TournamentNavigation } from "@/components/tournaments/tournament-navigation";
 import type { TournamentStageOption } from "@/components/tournaments/tournament-stage-switcher";
@@ -1129,51 +1128,40 @@ export default async function TournamentDetailsPage(
 
                 if (stage.groups.length) {
                   const orderedGroups = prioritizeCurrentGroup(stage.groups, currentGroupId);
-                  const groupOptions: TournamentGroupOption[] = orderedGroups.map((group) => {
+                  return orderedGroups.map((group) => {
+                    const groupMatches = tournament.matches.filter((match) => match.groupId === group.id);
                     const groupMembers = participantsByGroupId.get(group.id) ?? [];
-                    const participantCount = groupMembers.filter((member) => member.status === ParticipantStatus.CONFIRMED).length;
-
-                    return {
-                      id: group.id,
-                      title: group.name,
-                      participantCount,
-                      capacity: group.capacity ?? stage.participantsPerGroup ?? null,
-                      isCurrent: group.id === currentGroupId,
-                    };
+                    const activeMembers = groupMembers.filter((member) => member.status === ParticipantStatus.CONFIRMED);
+                    const groupRows = buildPublicLeagueTable(groupMembers, groupMatches, clubsBySlug, stage).map((row) => ({ ...row, isCurrentTeam: row.id === currentRegistrationId }));
+                    const groupCapacity = group.capacity ?? stage.participantsPerGroup ?? 0;
+                    const isCurrentGroup = group.id === currentGroupId;
+                    const emptySlots = Array.from({ length: Math.max(groupCapacity - activeMembers.length, 0) }, (_, index) => ({ id: `${group.id}-slot-${index + 1}`, position: activeMembers.length + index + 1 }));
+                    return (
+                      <Card
+                        key={group.id}
+                        className={cn(
+                          "min-w-0 overflow-hidden p-0",
+                          isCurrentGroup && "border-primary/30 bg-primary/[0.05] shadow-[0_0_0_1px_rgba(33,241,168,0.1)]",
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5 sm:py-4">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <h3 className="truncate font-semibold text-white">{group.name}</h3>
+                            {isCurrentGroup ? (
+                              <span className="shrink-0 rounded-full border border-primary/25 bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary">
+                                Моя группа
+                              </span>
+                            ) : null}
+                          </div>
+                          <span className="text-xs text-zinc-500">{groupRows.length} / {groupCapacity || "—"}</span>
+                        </div>
+                        <div className="p-3 sm:p-4">
+                          {groupRows.length ? <StandingsTable rows={groupRows} highlights={customStandingHighlights.get(group.orderIndex) ?? []} /> : <TournamentEmptyState title="Группа ещё не сформирована" description="Участники появятся после распределения по группам." />}
+                        </div>
+                        <EmptyGroupSlots slots={emptySlots} />
+                      </Card>
+                    );
                   });
-
-                  return (
-                    <TournamentGroupSwitcher key={stage.id} options={groupOptions}>
-                      {orderedGroups.map((group) => {
-                        const groupMatches = tournament.matches.filter((match) => match.groupId === group.id);
-                        const groupMembers = participantsByGroupId.get(group.id) ?? [];
-                        const activeMembers = groupMembers.filter((member) => member.status === ParticipantStatus.CONFIRMED);
-                        const groupRows = buildPublicLeagueTable(groupMembers, groupMatches, clubsBySlug, stage).map((row) => ({ ...row, isCurrentTeam: row.id === currentRegistrationId }));
-                        const groupCapacity = group.capacity ?? stage.participantsPerGroup ?? 0;
-                        const isCurrentGroup = group.id === currentGroupId;
-                        const emptySlots = Array.from({ length: Math.max(groupCapacity - activeMembers.length, 0) }, (_, index) => ({ id: `${group.id}-slot-${index + 1}`, position: activeMembers.length + index + 1 }));
-                        return (
-                          <Card key={group.id} className="min-w-0 overflow-hidden p-0">
-                            <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5 sm:py-4">
-                              <div className="flex min-w-0 items-center gap-2">
-                                <h3 className="truncate font-semibold text-white">{group.name}</h3>
-                                {isCurrentGroup ? (
-                                  <span className="shrink-0 rounded-full border border-primary/25 bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary">
-                                    Моя группа
-                                  </span>
-                                ) : null}
-                              </div>
-                              <span className="text-xs text-zinc-500">{groupRows.length} / {groupCapacity || "—"}</span>
-                            </div>
-                            <div className="p-3 sm:p-4">
-                              {groupRows.length ? <StandingsTable rows={groupRows} highlights={customStandingHighlights.get(group.orderIndex) ?? []} /> : <TournamentEmptyState title="Группа ещё не сформирована" description="Участники появятся после распределения по группам." />}
-                            </div>
-                            <EmptyGroupSlots slots={emptySlots} />
-                          </Card>
-                        );
-                      })}
-                    </TournamentGroupSwitcher>
-                  );
                 }
 
                 const stageMatches = tournament.matches.filter((match) => match.stageId === stage.id);
