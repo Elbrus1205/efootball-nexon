@@ -10,8 +10,21 @@ const schemaSource = readFileSync(new URL("../../../prisma/schema.prisma", impor
 test("renders registration dialogs at the document level with mobile-safe positioning", () => {
   assert.match(source, /createPortal/);
   assert.match(source, /role="dialog"/);
-  assert.match(source, /items-end[^\"]*sm:items-center/);
+  assert.match(source, /items-center[^\"]*justify-center/);
+  assert.doesNotMatch(source, /items-end/);
   assert.match(source, /env\(safe-area-inset-bottom\)/);
+});
+
+test("separates team creation from club selection in team tournaments", () => {
+  assert.match(source, /teamCreationModal/);
+  assert.match(source, /team-name-input/);
+  assert.match(source, /Создать команду/);
+  assert.match(source, /Выберите клуб команды/);
+
+  const teamCreationPosition = source.indexOf("Создать команду");
+  const clubSelectionPosition = source.indexOf("Выберите клуб команды");
+  assert.ok(teamCreationPosition >= 0, "team creation dialog must be rendered");
+  assert.ok(clubSelectionPosition > teamCreationPosition, "club selection must come after team creation");
 });
 
 test("uses one prominent registration action without restoring the old mobile card", () => {

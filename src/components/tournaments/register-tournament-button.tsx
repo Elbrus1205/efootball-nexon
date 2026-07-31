@@ -22,7 +22,7 @@ type RegulationsState = {
   updatedAt: string | null;
 };
 
-type AfterRegulationsAction = "register" | "choose-club";
+type AfterRegulationsAction = "register" | "choose-club" | "create-team";
 
 function normalizeClubSearch(value: string) {
   return value.trim().toLowerCase().replace(/ё/g, "е");
@@ -35,6 +35,12 @@ function ModalPortal({ children }: { children: ReactNode }) {
 
   return mounted ? createPortal(children, document.body) : null;
 }
+
+const dialogBackdropClassName =
+  "fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 px-3 py-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:p-6";
+
+const dialogPanelClassName =
+  "flex max-h-[min(92dvh,760px)] w-full flex-col overflow-hidden rounded-3xl border-primary/20 bg-[#101516] p-0 shadow-[0_24px_80px_rgba(0,0,0,0.45)]";
 
 export function RegisterTournamentButton({
   tournamentId,
@@ -60,6 +66,7 @@ export function RegisterTournamentButton({
   const [selectedClubSlug, setSelectedClubSlug] = useState("");
   const [clubSearch, setClubSearch] = useState("");
   const [teamName, setTeamName] = useState("");
+  const [teamSetupOpen, setTeamSetupOpen] = useState(false);
   const [lineupPhotoUrl, setLineupPhotoUrl] = useState("");
   const [lineupOpen, setLineupOpen] = useState(false);
   const [lineupUploading, setLineupUploading] = useState(false);
@@ -72,7 +79,7 @@ export function RegisterTournamentButton({
   const [afterRegulationsAction, setAfterRegulationsAction] = useState<AfterRegulationsAction>("register");
   const [regulationsError, setRegulationsError] = useState("");
   const [isPending, startTransition] = useTransition();
-  const modalOpen = isOpen || lineupOpen || regulationsOpen;
+  const modalOpen = isOpen || teamSetupOpen || lineupOpen || regulationsOpen;
 
   useEffect(() => {
     if (!modalOpen) return;
@@ -84,6 +91,7 @@ export function RegisterTournamentButton({
       if (event.key !== "Escape") return;
       if (lineupOpen) setLineupOpen(false);
       else if (regulationsOpen) setRegulationsOpen(false);
+      else if (teamSetupOpen) setTeamSetupOpen(false);
       else setIsOpen(false);
     };
 
@@ -92,7 +100,7 @@ export function RegisterTournamentButton({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", closeOnEscape);
     };
-  }, [lineupOpen, modalOpen, regulationsOpen]);
+  }, [lineupOpen, modalOpen, regulationsOpen, teamSetupOpen]);
 
   const availableClubs = useMemo(
     () => clubs.filter((club) => !takenClubSlugs.includes(club.slug)),
@@ -147,6 +155,7 @@ export function RegisterTournamentButton({
     if (requireLineupPhoto && !photoUrl) {
       setPendingClubSlug(clubSlug);
       setIsOpen(false);
+      setTeamSetupOpen(false);
       setLineupOpen(true);
       setMessage("");
       return;
@@ -190,6 +199,7 @@ export function RegisterTournamentButton({
     }
 
     setIsOpen(false);
+    setTeamSetupOpen(false);
     setLineupOpen(false);
     setRegulationsOpen(false);
     setPendingClubSlug(undefined);
@@ -268,7 +278,53 @@ export function RegisterTournamentButton({
     });
   };
 
+  const openTeamCreation = () => {
+    startTransition(async () => {
+      setMessage("Проверяем регламент...");
+
+      try {
+        const accepted = await loadRegulations();
+        setMessage("");
+
+        if (!accepted) {
+          await openRegulationsAcceptance(undefined, "create-team");
+          return;
+        }
+
+        setTeamSetupOpen(true);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Не удалось проверить регламент.");
+      }
+    });
+  };
+
+  const submitTeamCreation = () => {
+    if (teamName.trim().length < 2) {
+      setMessage("Укажите название команды минимум из 2 символов.");
+      return;
+    }
+
+    setMessage("");
+
+    if (clubSelectionMode === ClubSelectionMode.PLAYER_PICK) {
+      setTeamSetupOpen(false);
+      setIsOpen(true);
+      return;
+    }
+
+    startTransition(async () => {
+      await submitRegistration();
+    });
+  };
+
   const submitSelectedClub = () => {
+    if (participantMode === TournamentParticipantMode.TEAM && teamName.trim().length < 2) {
+      setMessage("Сначала укажите название команды.");
+      setIsOpen(false);
+      setTeamSetupOpen(true);
+      return;
+    }
+
     startTransition(async () => {
       await submitRegistration(selectedClubSlug);
     });
@@ -298,14 +354,20 @@ export function RegisterTournamentButton({
         return;
       }
 
+      if (afterRegulationsAction === "create-team") {
+        setMessage("");
+        setTeamSetupOpen(true);
+        return;
+      }
+
       await submitRegistration(pendingClubSlug);
     });
   };
 
   const regulationsModal = regulationsOpen ? (
     <ModalPortal>
-      <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/80 pt-4 backdrop-blur-sm sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="regulations-title">
-        <Card className="flex max-h-[calc(100dvh-1rem)] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border-primary/20 bg-[#101516] p-0 shadow-[0_-20px_70px_rgba(0,0,0,0.45)] sm:max-h-[min(88dvh,760px)] sm:rounded-3xl sm:shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+      <div className={dialogBackdropClassName} role="dialog" aria-modal="true" aria-labelledby="regulations-title">
+        <Card className={`${dialogPanelClassName} max-w-3xl`}>
           <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 bg-[radial-gradient(circle_at_10%_0%,rgba(33,241,168,0.12),transparent_45%)] p-4 sm:p-5">
             <div className="min-w-0">
               <div id="regulations-title" className="flex items-center gap-2.5 text-lg font-semibold text-white sm:text-xl">
@@ -355,8 +417,8 @@ export function RegisterTournamentButton({
 
   const lineupModal = lineupOpen ? (
     <ModalPortal>
-      <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/80 pt-4 backdrop-blur-sm sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="lineup-title">
-        <Card className="flex max-h-[calc(100dvh-1rem)] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl border-primary/20 bg-[#101516] p-0 shadow-[0_-20px_70px_rgba(0,0,0,0.45)] sm:max-h-[min(88dvh,760px)] sm:rounded-3xl sm:shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+      <div className={dialogBackdropClassName} role="dialog" aria-modal="true" aria-labelledby="lineup-title">
+        <Card className={`${dialogPanelClassName} max-w-xl`}>
           <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 bg-[radial-gradient(circle_at_10%_0%,rgba(33,241,168,0.12),transparent_45%)] p-4 sm:p-5">
             <div className="min-w-0">
               <div id="lineup-title" className="flex items-center gap-2.5 text-lg font-semibold text-white sm:text-xl">
@@ -461,6 +523,70 @@ export function RegisterTournamentButton({
     </ModalPortal>
   ) : null;
 
+  const teamCreationModal = teamSetupOpen ? (
+    <ModalPortal>
+      <div className={dialogBackdropClassName} role="dialog" aria-modal="true" aria-labelledby="team-creation-title">
+        <Card className={`${dialogPanelClassName} max-w-lg`}>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              submitTeamCreation();
+            }}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-white/10 bg-[radial-gradient(circle_at_10%_0%,rgba(33,241,168,0.14),transparent_48%)] p-4 sm:p-5">
+              <div className="min-w-0">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/10">
+                    <UserPlus className="h-5 w-5 text-primary" />
+                  </span>
+                  <h3 id="team-creation-title" className="text-lg font-semibold text-white sm:text-xl">
+                    Создать команду
+                  </h3>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-zinc-400">
+                  Задайте название команды. После регистрации вы сможете пригласить игроков в состав.
+                </p>
+              </div>
+              <Button variant="ghost" size="icon" className="shrink-0" onClick={() => setTeamSetupOpen(false)} aria-label="Закрыть создание команды">
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+
+            <div className="space-y-4 p-4 sm:p-5">
+              <label className="block space-y-2" htmlFor="team-name-input">
+                <span className="text-sm font-medium text-zinc-200">Название команды</span>
+                <input
+                  id="team-name-input"
+                  value={teamName}
+                  onChange={(event) => setTeamName(event.target.value)}
+                  className="h-12 w-full rounded-xl border border-white/10 bg-black/35 px-4 text-base text-white outline-none transition placeholder:text-zinc-600 focus:border-primary/60 focus:ring-2 focus:ring-primary/15 sm:text-sm"
+                  placeholder="Например: Nexon Elite"
+                  autoComplete="organization"
+                  autoFocus
+                  aria-describedby="team-name-help"
+                />
+                <span id="team-name-help" className="block text-xs leading-5 text-zinc-500">
+                  Размер состава: {rosterSize} игроков. Вы как капитан будете добавлены первым.
+                </span>
+              </label>
+
+              {message ? <div role="alert" aria-live="polite" className="rounded-xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">{message}</div> : null}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 border-t border-white/10 bg-black/20 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:flex sm:justify-end sm:p-5">
+              <Button type="button" variant="outline" className="h-11 px-3 sm:min-w-28" onClick={() => setTeamSetupOpen(false)}>
+                Отмена
+              </Button>
+              <Button type="submit" className="h-11 px-3 sm:min-w-44" disabled={isPending || teamName.trim().length < 2}>
+                {isPending ? "Регистрация..." : clubSelectionMode === ClubSelectionMode.PLAYER_PICK ? "Продолжить к клубу" : "Создать команду"}
+              </Button>
+            </div>
+          </form>
+        </Card>
+      </div>
+    </ModalPortal>
+  ) : null;
+
   const registrationTrigger = (onClick: () => void) => (
     <Button
       size="lg"
@@ -489,21 +615,24 @@ export function RegisterTournamentButton({
   return (
     <>
       <div className="min-w-0 space-y-2">
-        {registrationTrigger(openClubSelection)}
+        {registrationTrigger(participantMode === TournamentParticipantMode.TEAM ? openTeamCreation : openClubSelection)}
         {message ? <div role="alert" aria-live="polite" className="max-w-sm text-sm leading-5 text-rose-300">{message}</div> : null}
         {regulationsModal}
+        {teamCreationModal}
         {lineupModal}
       </div>
 
       {isOpen ? (
         <ModalPortal>
-          <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/80 pt-4 backdrop-blur-sm sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="club-selection-title">
-          <Card className="flex max-h-[calc(100dvh-1rem)] w-full max-w-3xl min-w-0 flex-col gap-0 overflow-hidden rounded-t-3xl border-primary/20 bg-[#101516] p-0 shadow-[0_-20px_70px_rgba(0,0,0,0.45)] sm:max-h-[min(88dvh,780px)] sm:rounded-3xl sm:shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+          <div className={dialogBackdropClassName} role="dialog" aria-modal="true" aria-labelledby="club-selection-title">
+          <Card className={`${dialogPanelClassName} max-w-3xl min-w-0 gap-0`}>
             <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 bg-[radial-gradient(circle_at_10%_0%,rgba(33,241,168,0.14),transparent_48%)] p-4 sm:p-5">
               <div className="min-w-0">
                 <div className="flex items-center gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/10"><Search className="h-5 w-5 text-primary" /></span>
-                  <h3 id="club-selection-title" className="text-lg font-semibold text-white sm:text-xl">Выберите клуб</h3>
+                  <h3 id="club-selection-title" className="text-lg font-semibold text-white sm:text-xl">
+                    {participantMode === TournamentParticipantMode.TEAM ? "Выберите клуб команды" : "Выберите клуб"}
+                  </h3>
                 </div>
                 <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">
                   Один клуб может быть только у одного участника. Уже занятые клубы недоступны для выбора.
@@ -515,19 +644,6 @@ export function RegisterTournamentButton({
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 sm:gap-5 sm:p-5">
-            {participantMode === TournamentParticipantMode.TEAM ? (
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-zinc-200">Название команды</span>
-                <input
-                  value={teamName}
-                  onChange={(event) => setTeamName(event.target.value)}
-                  className="h-12 w-full rounded-xl border border-white/10 bg-black/35 px-4 text-base text-white outline-none transition placeholder:text-zinc-600 focus:border-primary/60 focus:ring-2 focus:ring-primary/15 sm:text-sm"
-                  placeholder="Например: Nexon Elite"
-                />
-                <span className="block text-xs text-zinc-500">Размер состава: {rosterSize} игроков</span>
-              </label>
-            ) : null}
-
             {clubSelectionMode === ClubSelectionMode.PLAYER_PICK ? (
               <>
                 <label className="block shrink-0 space-y-2">
@@ -604,11 +720,10 @@ export function RegisterTournamentButton({
                   onClick={clubSelectionMode === ClubSelectionMode.PLAYER_PICK ? submitSelectedClub : () => submit(undefined)}
                   disabled={
                     isPending ||
-                    (clubSelectionMode === ClubSelectionMode.PLAYER_PICK && !selectedClubSlug) ||
-                    (participantMode === TournamentParticipantMode.TEAM && teamName.trim().length < 2)
+                    (clubSelectionMode === ClubSelectionMode.PLAYER_PICK && !selectedClubSlug)
                   }
                 >
-                  {isPending ? "Регистрация..." : "Подтвердить выбор"}
+                  {isPending ? "Регистрация..." : participantMode === TournamentParticipantMode.TEAM ? "Зарегистрировать команду" : "Подтвердить выбор"}
                 </Button>
               </div>
             </div>
