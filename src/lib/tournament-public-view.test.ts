@@ -6,6 +6,7 @@ import {
   getTournamentTabs,
   isTournamentTabValue,
   participantModeLabel,
+  prioritizeCurrentGroup,
   shouldShowOpenMyMatchesAction,
   stagePresentationState,
 } from "@/lib/tournament-public-view";
@@ -56,6 +57,14 @@ test("hides the open-my-matches hero action after the tournament starts", () => 
   assert.equal(shouldShowOpenMyMatchesAction(TournamentStatus.IN_PROGRESS, true), false);
   assert.equal(shouldShowOpenMyMatchesAction(TournamentStatus.COMPLETED, true), false);
   assert.equal(shouldShowOpenMyMatchesAction(TournamentStatus.IN_PROGRESS, false), false);
+});
+
+test("shows the viewer group first without mutating the official group order", () => {
+  const groups = [{ id: "a" }, { id: "b" }, { id: "c" }];
+
+  assert.deepEqual(prioritizeCurrentGroup(groups, "b").map((group) => group.id), ["b", "a", "c"]);
+  assert.deepEqual(groups.map((group) => group.id), ["a", "b", "c"]);
+  assert.deepEqual(prioritizeCurrentGroup(groups, "unknown").map((group) => group.id), ["a", "b", "c"]);
 });
 
 test("calculates standings and preserves deterministic tie ordering", () => {

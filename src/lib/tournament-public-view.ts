@@ -57,6 +57,15 @@ export type StandingHighlight = {
   badgeClass: string;
 };
 
+export function prioritizeCurrentGroup<T extends { id: string }>(groups: readonly T[], currentGroupId?: string | null) {
+  if (!currentGroupId) return [...groups];
+
+  const currentGroup = groups.find((group) => group.id === currentGroupId);
+  if (!currentGroup) return [...groups];
+
+  return [currentGroup, ...groups.filter((group) => group.id !== currentGroupId)];
+}
+
 export function isTournamentTabValue(value?: string | null): value is TournamentTabValue {
   return Boolean(value && (tournamentTabValues as readonly string[]).includes(value));
 }

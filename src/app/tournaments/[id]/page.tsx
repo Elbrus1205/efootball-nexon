@@ -20,6 +20,7 @@ import {
 import { RegisterTournamentButton } from "@/components/tournaments/register-tournament-button";
 import { TeamMatchAssignment } from "@/components/tournaments/team-match-assignment";
 import { TournamentEmptyState } from "@/components/tournaments/tournament-empty-state";
+import { TournamentGroupSwitcher, type TournamentGroupOption } from "@/components/tournaments/tournament-group-switcher";
 import { TournamentHero } from "@/components/tournaments/tournament-hero";
 import { TournamentNavigation } from "@/components/tournaments/tournament-navigation";
 import type { TournamentStageOption } from "@/components/tournaments/tournament-stage-switcher";
@@ -38,18 +39,20 @@ import { normalizeFormatBlueprint } from "@/lib/format-blueprint";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { RELIABILITY_REGISTRATION_THRESHOLD } from "@/lib/services/reliability";
 import { getTelegramProfileLinks, hasPublicTelegramUsername, hasTelegramRegistrationContact } from "@/lib/social-links";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import {
   buildLeagueTable as buildPublicLeagueTable,
   getTournamentTabs,
   isTournamentTabValue as isPublicTournamentTabValue,
   participantModeLabel as publicParticipantModeLabel,
+  prioritizeCurrentGroup,
   shouldShowOpenMyMatchesAction,
   stagePresentationState,
 } from "@/lib/tournament-public-view";
 
 type LeagueRow = {
   id: string;
+  isCurrentTeam?: boolean;
   rank?: number | null;
   clubName: string;
   clubBadgePath?: string | null;
@@ -407,12 +410,31 @@ function StickyHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
-function StandingsTable({ rows, highlights = [] }: { rows: LeagueRow[]; highlights?: StandingHighlight[] }) {
+function StandingsTable({
+  rows,
+  highlights = [],
+}: {
+  rows: LeagueRow[];
+  highlights?: StandingHighlight[];
+}) {
   const orderedHighlights = [...highlights].sort((a, b) => a.fromRank - b.fromRank || a.toRank - b.toRank);
   const eliminatedRanges = getEliminatedRanges(orderedHighlights, rows.length);
+  const currentRowIndex = rows.findIndex((row) => row.isCurrentTeam);
+  const currentRow = currentRowIndex >= 0 ? rows[currentRowIndex] : null;
 
   return (
     <div className="min-w-0 max-w-full space-y-3">
+      {currentRow ? (
+        <a
+          href={`#standing-${currentRow.id}`}
+          className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary/[0.08] px-3 py-2 text-sm transition hover:border-primary/45 hover:bg-primary/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 md:hidden"
+        >
+          <span className="font-semibold text-primary">Моя команда</span>
+          <span className="text-right text-xs tabular-nums text-zinc-300">
+            {currentRowIndex + 1} место · {currentRow.points} очков
+          </span>
+        </a>
+      ) : null}
       <div className="max-w-full overflow-hidden border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:px-0 [&_td:nth-child(1)]:text-center [&_td:nth-child(2)]:min-w-0 [&_td:nth-child(2)]:px-1.5 [&_td:nth-child(n+3)]:px-0 [&_th:nth-child(1)]:px-0 [&_th:nth-child(2)]:min-w-0 [&_th:nth-child(2)]:px-1.5 [&_th:nth-child(n+3)]:px-0 sm:[&_td:nth-child(2)]:px-3 sm:[&_td:nth-child(n+3)]:px-1 sm:[&_th:nth-child(2)]:px-3 sm:[&_th:nth-child(n+3)]:px-1">
         <table className="w-full table-fixed text-left text-[11px] sm:text-sm">
           <colgroup>
@@ -455,20 +477,36 @@ function StandingsTable({ rows, highlights = [] }: { rows: LeagueRow[]; highligh
             {rows.map((row, index) => {
               const displayRank = index + 1;
               const highlight = orderedHighlights.find((item) => displayRank >= item.fromRank && displayRank <= item.toRank);
+              const isCurrentTeam = Boolean(row.isCurrentTeam);
 
               return (
-                <tr key={row.id} className={highlight?.rowClass ?? defaultRowHighlight(index)} title={highlight?.label}>
+                <tr
+                  id={`standing-${row.id}`}
+                  key={row.id}
+                  className={cn(
+                    highlight?.rowClass ?? defaultRowHighlight(index),
+                    isCurrentTeam && "bg-primary/[0.12] font-medium shadow-[inset_3px_0_0_rgba(33,241,168,0.85)] [&>td:first-child]:border-l-2 [&>td:first-child]:border-primary",
+                  )}
+                  title={isCurrentTeam ? "Моя команда" : highlight?.label}
+                >
                   <td className="w-4 px-0 py-2 text-zinc-300 sm:w-5 sm:py-3">
                     <span className={highlight?.badgeClass ?? defaultRankBadge(index)}>{displayRank}</span>
                   </td>
                   <td className="px-2 py-2 sm:px-3 sm:py-3">
-                    <ClubPlayerLine
-                      clubName={row.clubName}
-                      badgePath={row.clubBadgePath}
-                      playerId={row.playerId}
-                      playerName={row.playerName}
-                      compact
-                    />
+                    <div className="min-w-0">
+                      <ClubPlayerLine
+                        clubName={row.clubName}
+                        badgePath={row.clubBadgePath}
+                        playerId={row.playerId}
+                        playerName={row.playerName}
+                        compact
+                      />
+                      {isCurrentTeam ? (
+                        <span className="mt-1 inline-flex rounded-full border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                          Моя команда
+                        </span>
+                      ) : null}
+                    </div>
                   </td>
                   <td className="px-0.5 py-2 text-center text-zinc-300 sm:px-1 sm:py-3">{row.played}</td>
                   <td className="px-0.5 py-2 text-center text-zinc-300 sm:px-1 sm:py-3">{row.wins}</td>
@@ -921,6 +959,13 @@ export default async function TournamentDetailsPage(
     }),
   }));
   const currentRosterMembership = tournament.rosterMembers[0] ?? null;
+  const currentRegistrationId =
+    (currentRosterMembership?.status === "ACCEPTED" ? currentRosterMembership.registration.id : null) ??
+    activeParticipants.find((entry) => entry.userId === currentUserId)?.id ??
+    null;
+  const currentGroupId = currentRegistrationId
+    ? activeParticipants.find((entry) => entry.id === currentRegistrationId)?.groupId ?? null
+    : null;
   const showRosterTab = tournament.participantMode !== "SINGLE";
   const tournamentTabs = getTournamentTabs(tournament.participantMode);
   const requestedTournamentTab = searchParams?.tab;
@@ -1083,19 +1128,41 @@ export default async function TournamentDetailsPage(
                 }
 
                 if (stage.groups.length) {
+                  const orderedGroups = prioritizeCurrentGroup(stage.groups, currentGroupId);
+                  const groupOptions: TournamentGroupOption[] = orderedGroups.map((group) => {
+                    const groupMembers = participantsByGroupId.get(group.id) ?? [];
+                    const participantCount = groupMembers.filter((member) => member.status === ParticipantStatus.CONFIRMED).length;
+
+                    return {
+                      id: group.id,
+                      title: group.name,
+                      participantCount,
+                      capacity: group.capacity ?? stage.participantsPerGroup ?? null,
+                      isCurrent: group.id === currentGroupId,
+                    };
+                  });
+
                   return (
-                    <div key={stage.id} className="grid min-w-0 gap-4 lg:grid-cols-2">
-                      {stage.groups.map((group) => {
+                    <TournamentGroupSwitcher key={stage.id} options={groupOptions}>
+                      {orderedGroups.map((group) => {
                         const groupMatches = tournament.matches.filter((match) => match.groupId === group.id);
                         const groupMembers = participantsByGroupId.get(group.id) ?? [];
                         const activeMembers = groupMembers.filter((member) => member.status === ParticipantStatus.CONFIRMED);
-                        const groupRows = buildPublicLeagueTable(groupMembers, groupMatches, clubsBySlug, stage);
+                        const groupRows = buildPublicLeagueTable(groupMembers, groupMatches, clubsBySlug, stage).map((row) => ({ ...row, isCurrentTeam: row.id === currentRegistrationId }));
                         const groupCapacity = group.capacity ?? stage.participantsPerGroup ?? 0;
+                        const isCurrentGroup = group.id === currentGroupId;
                         const emptySlots = Array.from({ length: Math.max(groupCapacity - activeMembers.length, 0) }, (_, index) => ({ id: `${group.id}-slot-${index + 1}`, position: activeMembers.length + index + 1 }));
                         return (
                           <Card key={group.id} className="min-w-0 overflow-hidden p-0">
                             <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5 sm:py-4">
-                              <h3 className="font-semibold text-white">{group.name}</h3>
+                              <div className="flex min-w-0 items-center gap-2">
+                                <h3 className="truncate font-semibold text-white">{group.name}</h3>
+                                {isCurrentGroup ? (
+                                  <span className="shrink-0 rounded-full border border-primary/25 bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary">
+                                    Моя группа
+                                  </span>
+                                ) : null}
+                              </div>
                               <span className="text-xs text-zinc-500">{groupRows.length} / {groupCapacity || "—"}</span>
                             </div>
                             <div className="p-3 sm:p-4">
@@ -1105,12 +1172,13 @@ export default async function TournamentDetailsPage(
                           </Card>
                         );
                       })}
-                    </div>
+                    </TournamentGroupSwitcher>
                   );
                 }
 
                 const stageMatches = tournament.matches.filter((match) => match.stageId === stage.id);
-                const stageTable = stage.type === StageType.LEAGUE ? buildPublicLeagueTable(tournament.participants, stageMatches, clubsBySlug, stage) : leagueTable;
+                const stageTable = (stage.type === StageType.LEAGUE ? buildPublicLeagueTable(tournament.participants, stageMatches, clubsBySlug, stage) : leagueTable)
+                  .map((row) => ({ ...row, isCurrentTeam: row.id === currentRegistrationId }));
                 return (
                   <Card key={stage.id} className="min-w-0 overflow-hidden p-0">
                     <div className="border-b border-white/10 px-5 py-4 font-semibold text-white">Таблица лиги</div>
