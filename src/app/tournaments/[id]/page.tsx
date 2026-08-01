@@ -45,7 +45,6 @@ import {
   isTournamentTabValue as isPublicTournamentTabValue,
   participantModeLabel as publicParticipantModeLabel,
   prioritizeCurrentGroup,
-  shouldShowOpenMyMatchesAction,
   stagePresentationState,
 } from "@/lib/tournament-public-view";
 
@@ -1058,13 +1057,13 @@ export default async function TournamentDetailsPage(
       clubs={availableClubs}
       takenClubSlugs={takenClubSlugs}
     />
+  ) : canCancelRegistration ? (
+    <CancelTournamentRegistrationButton tournamentId={tournament.id} />
   ) : hasPendingApplication ? (
     <Button size="lg" disabled className="gap-2 border-amber-300/30 text-amber-100">
       <Clock3 className="h-4 w-4" />
       Заявка на проверке
     </Button>
-  ) : shouldShowOpenMyMatchesAction(tournament.status, alreadyRegistered) ? (
-    <Button size="lg" asChild><a href={`/tournaments/${tournament.id}?tab=my-matches`}>Открыть мои матчи</a></Button>
   ) : alreadyRegistered ? null : isRegistrationOpen && !isLoggedIn ? (
     <Button size="lg" asChild><a href={`/login?callbackUrl=/tournaments/${tournament.id}`}>Войти и участвовать</a></Button>
   ) : isRegistrationOpen && needsTelegramConnection ? (
@@ -1103,7 +1102,7 @@ export default async function TournamentDetailsPage(
           prizePool={tournament.prizePool}
           coverUrl={tournament.coverImage ? `/api/tournaments/${tournament.id}/cover?w=1280&h=720&q=86` : null}
           primaryAction={primaryAction}
-          secondaryAction={canCancelRegistration ? <CancelTournamentRegistrationButton tournamentId={tournament.id} /> : null}
+          secondaryAction={null}
           tournamentId={tournament.id}
         />
       </div>
@@ -1128,15 +1127,17 @@ export default async function TournamentDetailsPage(
 
                 if (stage.groups.length) {
                   const orderedGroups = prioritizeCurrentGroup(stage.groups, currentGroupId);
-                  return orderedGroups.map((group) => {
+                  return (
+                    <div key={stage.id} className="space-y-4">
+                      {orderedGroups.map((group) => {
                     const groupMatches = tournament.matches.filter((match) => match.groupId === group.id);
                     const groupMembers = participantsByGroupId.get(group.id) ?? [];
                     const activeMembers = groupMembers.filter((member) => member.status === ParticipantStatus.CONFIRMED);
-                    const groupRows = buildPublicLeagueTable(groupMembers, groupMatches, clubsBySlug, stage).map((row) => ({ ...row, isCurrentTeam: row.id === currentRegistrationId }));
+                    const groupRows = buildPublicLeagueTable(groupMembers, groupMatches, clubsBySlug, stage).map((row) => ({ ...row, isCurrentTeam: row.id === currentUserId }));
                     const groupCapacity = group.capacity ?? stage.participantsPerGroup ?? 0;
                     const isCurrentGroup = group.id === currentGroupId;
                     const emptySlots = Array.from({ length: Math.max(groupCapacity - activeMembers.length, 0) }, (_, index) => ({ id: `${group.id}-slot-${index + 1}`, position: activeMembers.length + index + 1 }));
-                    return (
+                        return (
                       <Card
                         key={group.id}
                         className={cn(
@@ -1160,13 +1161,15 @@ export default async function TournamentDetailsPage(
                         </div>
                         <EmptyGroupSlots slots={emptySlots} />
                       </Card>
-                    );
-                  });
+                        );
+                      })}
+                    </div>
+                  );
                 }
 
                 const stageMatches = tournament.matches.filter((match) => match.stageId === stage.id);
                 const stageTable = (stage.type === StageType.LEAGUE ? buildPublicLeagueTable(tournament.participants, stageMatches, clubsBySlug, stage) : leagueTable)
-                  .map((row) => ({ ...row, isCurrentTeam: row.id === currentRegistrationId }));
+                  .map((row) => ({ ...row, isCurrentTeam: row.id === currentUserId }));
                 return (
                   <Card key={stage.id} className="min-w-0 overflow-hidden p-0">
                     <div className="border-b border-white/10 px-5 py-4 font-semibold text-white">Таблица лиги</div>

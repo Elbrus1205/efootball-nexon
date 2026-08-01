@@ -306,12 +306,6 @@ export function RegisterTournamentButton({
 
     setMessage("");
 
-    if (clubSelectionMode === ClubSelectionMode.PLAYER_PICK) {
-      setTeamSetupOpen(false);
-      setIsOpen(true);
-      return;
-    }
-
     startTransition(async () => {
       await submitRegistration();
     });
@@ -578,7 +572,7 @@ export function RegisterTournamentButton({
                 Отмена
               </Button>
               <Button type="submit" className="h-11 px-3 sm:min-w-44" disabled={isPending || teamName.trim().length < 2}>
-                {isPending ? "Регистрация..." : clubSelectionMode === ClubSelectionMode.PLAYER_PICK ? "Продолжить к клубу" : "Создать команду"}
+                {isPending ? "Регистрация..." : "Создать команду"}
               </Button>
             </div>
           </form>

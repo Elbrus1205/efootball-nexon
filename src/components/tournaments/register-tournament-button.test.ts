@@ -34,6 +34,12 @@ test("uses one prominent registration action without restoring the old mobile ca
   assert.doesNotMatch(tournamentPage, /md:hidden[^>]*>[\s\S]{0,180}<Card/);
 });
 
+test("matches tournament standings rows by user id while resolving groups by registration id", () => {
+  assert.match(tournamentPage, /const currentGroupId = currentRegistrationId[\s\S]{0,220}groupId/);
+  assert.equal((tournamentPage.match(/isCurrentTeam: row\.id === currentUserId/g) ?? []).length, 2);
+  assert.doesNotMatch(tournamentPage, /isCurrentTeam: row\.id === currentRegistrationId/);
+});
+
 test("keeps club selection compact and prevents content overflow", () => {
   assert.match(source, /min-w-0[^\"]*overflow-hidden/);
   assert.match(source, /overflow-y-auto[^\"]*overscroll-contain/);

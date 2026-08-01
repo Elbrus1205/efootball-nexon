@@ -165,7 +165,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
 
   const captainRankingSnapshot = await getRankingSnapshot(tournament, session.user.id);
 
-  if (tournament.clubSelectionMode === ClubSelectionMode.PLAYER_PICK) {
+  if (tournament.participantMode !== TournamentParticipantMode.TEAM && tournament.clubSelectionMode === ClubSelectionMode.PLAYER_PICK) {
     const selectedClubSlug = typeof payload.clubSlug === "string" ? payload.clubSlug : "";
     if (!selectedClubSlug) {
       return NextResponse.json({ error: "Нужно выбрать клуб перед регистрацией." }, { status: 400 });

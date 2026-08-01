@@ -95,6 +95,7 @@ test("calculates standings and preserves deterministic tie ordering", () => {
 
   assert.deepEqual(rows.map((row) => row.clubName), ["Альфа", "Вега", "Бета"]);
   assert.deepEqual(rows.map((row) => [row.points, row.goalDifference]), [[3, 2], [1, 0], [1, -2]]);
+  assert.equal(rows.find((row) => row.id === "user-a")?.playerId, "user-a");
   assert.deepEqual(rows.map((row) => [row.wins, row.draws, row.losses]), [[1, 0, 0], [0, 1, 0], [0, 1, 1]]);
 });
 
