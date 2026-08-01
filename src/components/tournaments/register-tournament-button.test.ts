@@ -40,6 +40,14 @@ test("matches tournament standings rows by user id while resolving groups by reg
   assert.doesNotMatch(tournamentPage, /isCurrentTeam: row\.id === currentRegistrationId/);
 });
 
+test("marks the current standings place without adding my team labels", () => {
+  assert.doesNotMatch(tournamentPage, /\u041c\u043e\u044f \u043a\u043e\u043c\u0430\u043d\u0434\u0430/);
+  assert.doesNotMatch(tournamentPage, /currentRowIndex/);
+  assert.doesNotMatch(tournamentPage, /standing-\$\{currentRow\.id\}/);
+  assert.doesNotMatch(tournamentPage, /isCurrentTeam && "bg-primary/);
+  assert.match(tournamentPage, /isCurrentTeam && "border border-primary\/45 bg-primary\/15 text-primary/);
+});
+
 test("keeps club selection compact and prevents content overflow", () => {
   assert.match(source, /min-w-0[^\"]*overflow-hidden/);
   assert.match(source, /overflow-y-auto[^\"]*overscroll-contain/);

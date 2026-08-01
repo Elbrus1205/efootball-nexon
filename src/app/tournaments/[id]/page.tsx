@@ -417,22 +417,8 @@ function StandingsTable({
 }) {
   const orderedHighlights = [...highlights].sort((a, b) => a.fromRank - b.fromRank || a.toRank - b.toRank);
   const eliminatedRanges = getEliminatedRanges(orderedHighlights, rows.length);
-  const currentRowIndex = rows.findIndex((row) => row.isCurrentTeam);
-  const currentRow = currentRowIndex >= 0 ? rows[currentRowIndex] : null;
-
   return (
     <div className="min-w-0 max-w-full space-y-3">
-      {currentRow ? (
-        <a
-          href={`#standing-${currentRow.id}`}
-          className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary/[0.08] px-3 py-2 text-sm transition hover:border-primary/45 hover:bg-primary/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 md:hidden"
-        >
-          <span className="font-semibold text-primary">Моя команда</span>
-          <span className="text-right text-xs tabular-nums text-zinc-300">
-            {currentRowIndex + 1} место · {currentRow.points} очков
-          </span>
-        </a>
-      ) : null}
       <div className="max-w-full overflow-hidden border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] [&_td:nth-child(1)]:px-0 [&_td:nth-child(1)]:text-center [&_td:nth-child(2)]:min-w-0 [&_td:nth-child(2)]:px-1.5 [&_td:nth-child(n+3)]:px-0 [&_th:nth-child(1)]:px-0 [&_th:nth-child(2)]:min-w-0 [&_th:nth-child(2)]:px-1.5 [&_th:nth-child(n+3)]:px-0 sm:[&_td:nth-child(2)]:px-3 sm:[&_td:nth-child(n+3)]:px-1 sm:[&_th:nth-child(2)]:px-3 sm:[&_th:nth-child(n+3)]:px-1">
         <table className="w-full table-fixed text-left text-[11px] sm:text-sm">
           <colgroup>
@@ -483,12 +469,19 @@ function StandingsTable({
                   key={row.id}
                   className={cn(
                     highlight?.rowClass ?? defaultRowHighlight(index),
-                    isCurrentTeam && "bg-primary/[0.12] font-medium shadow-[inset_3px_0_0_rgba(33,241,168,0.85)] [&>td:first-child]:border-l-2 [&>td:first-child]:border-primary",
+                    isCurrentTeam && "font-medium",
                   )}
-                  title={isCurrentTeam ? "Моя команда" : highlight?.label}
+                  title={highlight?.label}
                 >
                   <td className="w-4 px-0 py-2 text-zinc-300 sm:w-5 sm:py-3">
-                    <span className={highlight?.badgeClass ?? defaultRankBadge(index)}>{displayRank}</span>
+                    <span
+                      className={cn(
+                        highlight?.badgeClass ?? defaultRankBadge(index),
+                        isCurrentTeam && "border border-primary/45 bg-primary/15 text-primary shadow-[0_0_0_2px_rgba(33,241,168,0.12)]",
+                      )}
+                    >
+                      {displayRank}
+                    </span>
                   </td>
                   <td className="px-2 py-2 sm:px-3 sm:py-3">
                     <div className="min-w-0">
@@ -499,11 +492,6 @@ function StandingsTable({
                         playerName={row.playerName}
                         compact
                       />
-                      {isCurrentTeam ? (
-                        <span className="mt-1 inline-flex rounded-full border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                          Моя команда
-                        </span>
-                      ) : null}
                     </div>
                   </td>
                   <td className="px-0.5 py-2 text-center text-zinc-300 sm:px-1 sm:py-3">{row.played}</td>
@@ -1413,5 +1401,4 @@ export default async function TournamentDetailsPage(
     </div>
   );
 }
-
 
