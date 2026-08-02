@@ -51,6 +51,13 @@ test("only the home captain can lock one unique player pairing per round", () =>
   assert.match(assignmentRouteSource, /notifyMatchReady\(params\.matchId\)/);
 });
 
+test("captain-assigned team matches are not automatically scheduled on tournament start", () => {
+  assert.match(
+    reminderServiceSource,
+    /if \(!tournament\.captainsCreateTeamMatches\) \{\s*await generateTournamentSchedule\(tournamentId, \{ overwrite: true \}\);\s*\}/,
+  );
+});
+
 test("unfilled home pairings produce thirty-minute deadline reminders", () => {
   assert.match(reminderServiceSource, /captainsCreateTeamMatches/);
   assert.match(reminderServiceSource, /30 \* 60 \* 1_000/);

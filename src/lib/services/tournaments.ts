@@ -3600,7 +3600,9 @@ export async function startTournament(tournamentId: string) {
     throw new Error("Не удалось создать матчи. Проверьте распределение участников по лигам и настройки формата.");
   }
 
-  await generateTournamentSchedule(tournamentId, { overwrite: true });
+  if (!tournament.captainsCreateTeamMatches) {
+    await generateTournamentSchedule(tournamentId, { overwrite: true });
+  }
 
   await db.tournamentStage.updateMany({
     where: { tournamentId },
