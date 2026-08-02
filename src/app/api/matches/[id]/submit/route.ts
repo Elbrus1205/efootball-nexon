@@ -93,8 +93,13 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     !match.isPenaltyTiebreak &&
     !match.isCaptainAssignedTeamMatch &&
     (match.playoffBracket?.legsCount ?? 1) <= 1;
+  const isTeamCaptainPlayoffMatch =
+    Boolean(match.bracketId) &&
+    match.isCaptainAssignedTeamMatch &&
+    !match.isTeamCaptainTiebreak &&
+    !match.isPenaltyTiebreak;
   const isPlayoffScoreDraw =
-    (isSingleLegPlayoffMatch || match.isTeamCaptainTiebreak) &&
+    (isSingleLegPlayoffMatch || isTeamCaptainPlayoffMatch || match.isTeamCaptainTiebreak) &&
     body.player1Score === body.player2Score;
   if (!isAlreadyConfirmed && isPlayoffScoreDraw && !hasPenaltyScores(body)) {
     return NextResponse.json({ error: "Для ничьей в плей-офф укажите счёт пенальти." }, { status: 400 });

@@ -24,7 +24,7 @@ function matchRequiresWinner(match: {
   isTeamCaptainTiebreak: boolean;
   seriesWinsRequired: number | null;
 }) {
-  if (match.isCaptainAssignedTeamMatch && !match.isTeamCaptainTiebreak) return false;
+  if (match.isCaptainAssignedTeamMatch && !match.isTeamCaptainTiebreak) return Boolean(match.bracketId);
   return Boolean(match.bracketId) || match.isPenaltyTiebreak || Boolean(match.seriesWinsRequired && match.seriesWinsRequired > 1);
 }
 

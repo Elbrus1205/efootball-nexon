@@ -8,6 +8,8 @@ type CaptainTeamPlayoffMatch = {
   participant2EntryId: string | null;
   player1Score: number | null;
   player2Score: number | null;
+  player1PenaltyScore: number | null;
+  player2PenaltyScore: number | null;
 };
 
 type CaptainTeamPlayoffPending = {
@@ -81,8 +83,28 @@ export function resolveCaptainTeamPlayoffAggregate(
       return { state: "pending" };
     }
 
-    participant1Score += sameOrder ? match.player1Score! : match.player2Score!;
-    participant2Score += sameOrder ? match.player2Score! : match.player1Score!;
+    const player1Won =
+      match.player1Score! > match.player2Score! ||
+      (match.player1Score === match.player2Score &&
+        match.player1PenaltyScore !== null &&
+        match.player2PenaltyScore !== null &&
+        match.player1PenaltyScore > match.player2PenaltyScore);
+    const player2Won =
+      match.player2Score! > match.player1Score! ||
+      (match.player1Score === match.player2Score &&
+        match.player1PenaltyScore !== null &&
+        match.player2PenaltyScore !== null &&
+        match.player2PenaltyScore > match.player1PenaltyScore);
+
+    if (!player1Won && !player2Won) {
+      return { state: "pending" };
+    }
+
+    if ((sameOrder && player1Won) || (reversedOrder && player2Won)) {
+      participant1Score += 1;
+    } else {
+      participant2Score += 1;
+    }
   }
 
   if (participant1Score === participant2Score) {

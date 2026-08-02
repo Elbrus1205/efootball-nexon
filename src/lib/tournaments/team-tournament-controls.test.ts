@@ -96,8 +96,10 @@ test("a tied team playoff creates one captain-versus-captain deciding match afte
   assert.match(reminderServiceSource, /baseMatches\.every/);
   assert.match(reminderServiceSource, /isTeamCaptainTiebreak: true/);
   assert.match(captainTeamMatchesSource, /reverseHomeAndAway/);
-  assert.match(scoreSubmissionRouteSource, /!match\.isCaptainAssignedTeamMatch/);
-  assert.match(scoreSubmissionRouteSource, /isSingleLegPlayoffMatch \|\| match\.isTeamCaptainTiebreak/);
+  assert.match(scoreSubmissionRouteSource, /const isTeamCaptainPlayoffMatch/);
+  assert.match(scoreSubmissionRouteSource, /isSingleLegPlayoffMatch \|\| isTeamCaptainPlayoffMatch \|\| match\.isTeamCaptainTiebreak/);
+  assert.match(tournamentPageSource, /const isTeamCaptainPlayoffMatch/);
+  assert.match(tournamentPageSource, /match\.isTeamCaptainTiebreak \|\| isTeamCaptainPlayoffMatch \|\| isSingleLegPlayoffMatch/);
 });
 
 test("unfilled home pairings produce thirty-minute deadline reminders", () => {

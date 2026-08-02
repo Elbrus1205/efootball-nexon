@@ -77,7 +77,7 @@ function roundLabel(match: MatchItem) {
 }
 
 function matchRequiresWinner(match: MatchItem) {
-  if (match.isCaptainAssignedTeamMatch && !match.isTeamCaptainTiebreak) return false;
+  if (match.isCaptainAssignedTeamMatch && !match.isTeamCaptainTiebreak) return Boolean(match.bracketId);
   return Boolean(match.bracketId) || match.stage?.type === StageType.PLAYOFF || match.isPenaltyTiebreak || Boolean(match.seriesWinsRequired && match.seriesWinsRequired > 1);
 }
 
