@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { matchStatusLabel, matchStatusVariant } from "@/lib/admin-display";
+import { adminMatchSectionKey, buildAdminMatchSections, isAdminTourMatch } from "@/lib/admin-match-sections";
 import { cn } from "@/lib/utils";
 
 type ParticipantOption = {
@@ -51,7 +52,8 @@ type MatchItem = {
   participant1Entry?: { clubName: string | null; clubSlug?: string | null } | null;
   participant2Entry?: { clubName: string | null; clubSlug?: string | null } | null;
   bracketId?: string | null;
-  stage?: { name: string | null; type: StageType } | null;
+  stageId?: string | null;
+  stage?: { id: string; name: string | null; type: StageType; orderIndex: number } | null;
   group?: { name: string } | null;
   configuredReliabilityPenalty?: { reasonId: string; userIds: string[] } | null;
 };
@@ -65,20 +67,11 @@ type PenaltyReasonOption = {
 };
 
 function isTourMatch(match: MatchItem) {
-  return match.stage?.type === StageType.GROUP_STAGE || match.stage?.type === StageType.LEAGUE || Boolean(match.group);
+  return isAdminTourMatch(match);
 }
 
 function roundLabel(match: MatchItem) {
   return `${isTourMatch(match) ? "Тур" : "Раунд"} ${match.round}`;
-}
-
-function roundSectionLabel(matches: MatchItem[], round: number) {
-  const hasTours = matches.some(isTourMatch);
-  const hasRounds = matches.some((match) => !isTourMatch(match));
-
-  if (hasTours && !hasRounds) return `Тур ${round}`;
-  if (!hasTours && hasRounds) return `Раунд ${round}`;
-  return `Тур/раунд ${round}`;
 }
 
 function matchRequiresWinner(match: MatchItem) {
@@ -253,7 +246,7 @@ export function MatchManager({
   const [orderedMatches, setOrderedMatches] = useState(matches);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [roundFilter, setRoundFilter] = useState<string>(() => (matches[0]?.round ? String(matches[0].round) : "all"));
+  const [sectionFilter, setSectionFilter] = useState<string>(() => buildAdminMatchSections(matches)[0]?.key ?? "all");
   const [reliabilityPenaltyByMatch, setReliabilityPenaltyByMatch] = useState<Record<string, string>>(() => mapConfiguredReliabilityPenalty(matches));
   const [reliabilityPenaltyTargetByMatch, setReliabilityPenaltyTargetByMatch] = useState<Record<string, string>>(() => mapConfiguredReliabilityPenaltyTargets(matches));
 
@@ -266,7 +259,7 @@ export function MatchManager({
     setReliabilityPenaltyTargetByMatch(mapConfiguredReliabilityPenaltyTargets(matches));
   }, [matches]);
 
-  const rounds = useMemo(() => Array.from(new Set(orderedMatches.map((match) => match.round))).sort((a, b) => a - b), [orderedMatches]);
+  const sections = useMemo(() => buildAdminMatchSections(orderedMatches), [orderedMatches]);
 
   const visibleMatches = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -289,11 +282,13 @@ export function MatchManager({
         .toLowerCase();
 
       if (statusFilter !== "all" && match.status !== statusFilter) return false;
-      if (roundFilter !== "all" && String(match.round) !== roundFilter) return false;
+      if (sectionFilter !== "all" && adminMatchSectionKey(match) !== sectionFilter) return false;
       if (normalized && !haystack.includes(normalized) && !`match ${match.matchNumber}`.includes(normalized)) return false;
       return true;
     });
-  }, [orderedMatches, participantById, query, statusFilter, roundFilter]);
+  }, [orderedMatches, participantById, query, statusFilter, sectionFilter]);
+
+  const visibleSections = useMemo(() => buildAdminMatchSections(visibleMatches), [visibleMatches]);
 
   const patchLocalMatch = (matchId: string, payload: Record<string, unknown>) => {
     setOrderedMatches((current) =>
@@ -454,32 +449,29 @@ export function MatchManager({
     })();
   };
 
-  const reorderMatches = (round: number, sourceId: string, targetId: string) => {
+  const reorderMatches = (sectionKey: string, sourceId: string, targetId: string) => {
     if (sourceId === targetId) return;
 
-    const withinRound = orderedMatches.filter((match) => match.round === round).sort((a, b) => a.matchNumber - b.matchNumber);
-    const sourceIndex = withinRound.findIndex((match) => match.id === sourceId);
-    const targetIndex = withinRound.findIndex((match) => match.id === targetId);
+    const withinSection = orderedMatches
+      .filter((match) => adminMatchSectionKey(match) === sectionKey)
+      .sort((a, b) => a.matchNumber - b.matchNumber);
+    const sourceIndex = withinSection.findIndex((match) => match.id === sourceId);
+    const targetIndex = withinSection.findIndex((match) => match.id === targetId);
     if (sourceIndex < 0 || targetIndex < 0) return;
 
-    const moved = [...withinRound];
+    const moved = [...withinSection];
     const [item] = moved.splice(sourceIndex, 1);
     moved.splice(targetIndex, 0, item);
 
     const merged = orderedMatches.map((match) => {
-      if (match.round !== round) return match;
+      if (adminMatchSectionKey(match) !== sectionKey) return match;
       return {
         ...match,
         matchNumber: moved.findIndex((candidate) => candidate.id === match.id) + 1,
       };
     });
 
-    setOrderedMatches(
-      merged.sort((a, b) => {
-        if (a.round !== b.round) return a.round - b.round;
-        return a.matchNumber - b.matchNumber;
-      }),
-    );
+    setOrderedMatches(merged);
 
     startTransition(async () => {
       await fetch(`/api/admin/tournaments/${tournamentId}/matches/reorder`, {
@@ -509,33 +501,27 @@ export function MatchManager({
               </option>
             ))}
           </select>
-          <select value={roundFilter} onChange={(event) => setRoundFilter(event.target.value)} className="h-11 rounded-xl border border-white/10 bg-white/5 px-4 text-sm text-white">
-            <option value="all">Все туры/раунды</option>
-            {rounds.map((round) => (
-              <option key={round} value={round}>
-                {roundSectionLabel(
-                  orderedMatches.filter((match) => match.round === round),
-                  round,
-                )}
+          <select value={sectionFilter} onChange={(event) => setSectionFilter(event.target.value)} className="h-11 rounded-xl border border-white/10 bg-white/5 px-4 text-sm text-white">
+            <option value="all">Все туры и раунды</option>
+            {sections.map((section) => (
+              <option key={section.key} value={section.key}>
+                {section.label}
               </option>
             ))}
           </select>
         </div>
       </div>
 
-      {rounds.map((round) => {
-        const roundMatches = visibleMatches.filter((match) => match.round === round).sort((a, b) => a.matchNumber - b.matchNumber);
-        if (!roundMatches.length) return null;
-
+      {visibleSections.map((section) => {
         return (
-          <div key={round} className="space-y-4">
+          <div key={section.key} className="space-y-4">
             <div className="flex items-center justify-between gap-3">
-              <div className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">{roundSectionLabel(roundMatches, round)}</div>
-              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">{roundMatches.length} матчей</div>
+              <div className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">{section.label}</div>
+              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">{section.matches.length} матчей</div>
             </div>
 
             <div className="grid gap-4">
-              {roundMatches.map((match) => {
+              {section.matches.map((match) => {
                 const selectedParticipantOne = match.participant1EntryId ? participantById.get(match.participant1EntryId) ?? null : null;
                 const selectedParticipantTwo = match.participant2EntryId ? participantById.get(match.participant2EntryId) ?? null : null;
                 const reliabilityPenaltyReasonId = reliabilityPenaltyByMatch[match.id] ?? "";
@@ -557,7 +543,7 @@ export function MatchManager({
                     onDrop={(event) => {
                       event.preventDefault();
                       if (!draggedMatchId) return;
-                      reorderMatches(round, draggedMatchId, match.id);
+                      reorderMatches(section.key, draggedMatchId, match.id);
                       setDraggedMatchId(null);
                     }}
                     className={cn(
