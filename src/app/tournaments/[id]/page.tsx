@@ -38,6 +38,10 @@ import { normalizeFormatBlueprint } from "@/lib/format-blueprint";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { RELIABILITY_REGISTRATION_THRESHOLD } from "@/lib/services/reliability";
 import { getTelegramProfileLinks, hasPublicTelegramUsername, hasTelegramRegistrationContact } from "@/lib/social-links";
+import {
+  buildCaptainTeamMatchSlotLabels,
+  compareCaptainAssignedTeamMatches,
+} from "@/lib/tournaments/captain-team-match-presentation";
 import { cn, formatDate } from "@/lib/utils";
 import {
   buildLeagueTable as buildPublicLeagueTable,
@@ -750,6 +754,11 @@ export default async function TournamentDetailsPage(
   const activeParticipants = tournament.participants.filter(
     (entry) => entry.status !== ParticipantStatus.REMOVED && entry.status !== ParticipantStatus.REJECTED,
   );
+  const currentRosterMembership = tournament.rosterMembers[0] ?? null;
+  const currentRegistrationId =
+    (currentRosterMembership?.status === "ACCEPTED" ? currentRosterMembership.registration.id : null) ??
+    activeParticipants.find((entry) => entry.userId === currentUserId)?.id ??
+    null;
   const participantSearch = (searchParams?.participantSearch ?? "").trim();
   const normalizedParticipantSearch = normalizeSearchText(participantSearch);
   const participantSearchMatches = (entry: (typeof activeParticipants)[number]) => {
@@ -825,6 +834,7 @@ export default async function TournamentDetailsPage(
       a.matchNumber - b.matchNumber ||
       scheduleMatchTime(a) - scheduleMatchTime(b),
   );
+  const captainMatchSlotLabels = buildCaptainTeamMatchSlotLabels(visibleMatches);
   const scheduleSections = buildScheduleSections(visibleMatches);
 
   const getMatchDeadline = (match: (typeof visibleMatches)[number]) => match.stage?.deadlines.find((item) => item.round === match.round)?.deadlineAt ?? null;
@@ -855,12 +865,16 @@ export default async function TournamentDetailsPage(
       ...match,
       submissions: submissionsByMatchId.get(match.id) ?? [],
     }))
-    .sort(
-      (a, b) =>
+    .sort((a, b) => {
+      const captainMatchOrder = compareCaptainAssignedTeamMatches(a, b, currentRegistrationId);
+      if (captainMatchOrder !== null) return captainMatchOrder;
+
+      return (
         myMatchSortGroup(a) - myMatchSortGroup(b) ||
         scheduleMatchTime(a) - scheduleMatchTime(b) ||
-        a.matchNumber - b.matchNumber,
-    );
+        a.matchNumber - b.matchNumber
+      );
+    });
 
   const leagueMatches = leagueStage
     ? tournament.matches.filter((match) => match.stageId === leagueStage.id)
@@ -931,6 +945,7 @@ export default async function TournamentDetailsPage(
     matches: section.matches.map((match) => {
       const sideOne = resolveMatchSide(match, 1);
       const sideTwo = resolveMatchSide(match, 2);
+      const captainSlotLabel = captainMatchSlotLabels.get(match.id);
 
       return {
         id: match.id,
@@ -941,17 +956,13 @@ export default async function TournamentDetailsPage(
         groupId: match.group?.id ?? null,
         groupName: match.group?.name ?? null,
         groupSort: match.group?.orderIndex ?? 999,
+        matchLabel: captainSlotLabel ? `Матч ${match.matchNumber} • ${captainSlotLabel}` : `Матч ${match.matchNumber}`,
         scoreLabel: match.player1Score !== null && match.player2Score !== null ? `${match.player1Score} - ${match.player2Score}` : "VS",
         sideOne,
         sideTwo,
       };
     }),
   }));
-  const currentRosterMembership = tournament.rosterMembers[0] ?? null;
-  const currentRegistrationId =
-    (currentRosterMembership?.status === "ACCEPTED" ? currentRosterMembership.registration.id : null) ??
-    activeParticipants.find((entry) => entry.userId === currentUserId)?.id ??
-    null;
   const currentGroupId = currentRegistrationId
     ? activeParticipants.find((entry) => entry.id === currentRegistrationId)?.groupId ?? null
     : null;
@@ -1196,6 +1207,8 @@ export default async function TournamentDetailsPage(
                 const awayEntry = resolveMatchEntry(match, 2);
                 const homeRosterEntry = homeEntry ? participantByEntryId.get(homeEntry.id) ?? null : null;
                 const awayRosterEntry = awayEntry ? participantByEntryId.get(awayEntry.id) ?? null : null;
+                const captainSlotLabel = captainMatchSlotLabels.get(match.id);
+                const deadlineLabel = matchDeadline ? `Дедлайн: ${formatDate(matchDeadline)}` : "Дедлайн не задан";
                 const canAssignTeamMatch =
                   tournament.captainsCreateTeamMatches &&
                   match.isCaptainAssignedTeamMatch &&
@@ -1210,7 +1223,7 @@ export default async function TournamentDetailsPage(
                   <div key={match.id}>
                   <MyMatchCard
                     id={match.id}
-                    meta={matchDeadline ? `Дедлайн: ${formatDate(matchDeadline)}` : "Дедлайн не задан"}
+                    meta={captainSlotLabel ? `${captainSlotLabel} • ${deadlineLabel}` : deadlineLabel}
                     isConfirmed={match.status === MatchStatus.CONFIRMED || match.status === MatchStatus.FINISHED}
                     confirmedPlayer1Score={match.player1Score}
                     confirmedPlayer2Score={match.player2Score}

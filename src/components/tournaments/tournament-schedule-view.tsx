@@ -25,6 +25,7 @@ export type TournamentScheduleMatch = {
   groupId: string | null;
   groupName: string | null;
   groupSort: number;
+  matchLabel: string;
   scoreLabel: string;
   sideOne: ScheduleSide;
   sideTwo: ScheduleSide;
@@ -121,11 +122,11 @@ function deadlineToneClass(tone: NonNullable<ReturnType<typeof formatLiveDeadlin
 function ScheduleMatchCard({ match }: { match: TournamentScheduleMatch }) {
   return (
     <article
-      aria-label={`Матч ${match.matchNumber}: ${match.sideOne.clubName ?? match.sideOne.playerName} — ${match.sideTwo.clubName ?? match.sideTwo.playerName}`}
+      aria-label={`${match.matchLabel}: ${match.sideOne.clubName ?? match.sideOne.playerName} — ${match.sideTwo.clubName ?? match.sideTwo.playerName}`}
       className="relative overflow-hidden rounded-xl border border-white/10 bg-black/20 px-2.5 pb-3 pt-8 transition-colors hover:border-primary/25 hover:bg-white/[0.035] sm:px-4 sm:pb-4 sm:pt-9"
     >
       <div className="absolute inset-x-0 top-0 flex h-7 items-center justify-between border-b border-white/[0.07] bg-white/[0.025] px-3 text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-600 sm:h-8 sm:text-[10px]">
-        <span>Матч {match.matchNumber}</span>
+        <span>{match.matchLabel}</span>
         <span>{match.roundLabel}</span>
       </div>
 
