@@ -355,12 +355,12 @@ body a[role="button"]:not(:disabled):hover {
 /* Premium profile editor. Scoped classes deliberately override the restrained
    site defaults without changing the rest of the product. */
 .profile-editor-page {
-  max-width: 1440px;
-  padding-bottom: 120px;
+  max-width: none;
+  padding: 10px 14px 104px;
 }
 
 .profile-editor-page-heading {
-  margin: 18px 0 28px;
+  margin: 10px 2px 18px;
   max-width: 720px;
 }
 
@@ -391,10 +391,10 @@ body a[role="button"]:not(:disabled):hover {
 
 body .profile-editor-shell {
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.09) !important;
-  border-radius: 24px !important;
+  border: 0 !important;
+  border-radius: 18px !important;
   background: #161716 !important;
-  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.26) !important;
+  box-shadow: none !important;
 }
 
 .profile-editor-hero {
@@ -499,18 +499,19 @@ body .profile-editor-avatar {
 .profile-editor-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(330px, 0.8fr);
-  gap: 20px;
-  padding: 28px;
+  gap: 16px;
+  padding: 18px 0 0;
 }
 
 .profile-editor-main-column,
 .profile-editor-side-column { display: grid; align-content: start; gap: 20px; min-width: 0; }
 
 body .profile-editor-section {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 19px !important;
-  background: rgba(255, 255, 255, 0.025);
-  padding: 24px;
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0 !important;
+  background: transparent;
+  padding: 22px 18px;
 }
 
 .profile-editor-section-heading { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 22px; }
@@ -557,32 +558,31 @@ body .profile-editor-bio { min-height: 168px; resize: vertical; padding: 16px; f
 .profile-editor-bio-footer { display: flex; justify-content: space-between; gap: 16px; margin-top: 10px; color: #737c78; font-size: 11px; }
 .profile-editor-count-warning { color: #fbbf24; }
 
-.profile-editor-status-grid { display: grid; gap: 10px; }
+.profile-editor-status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-height: 390px; overflow-y: auto; padding-right: 4px; scrollbar-color: rgba(33, 241, 168, 0.32) transparent; }
 body .profile-editor-status-card {
   position: relative;
   width: 100%;
   cursor: pointer;
   border: 1px solid rgba(255, 255, 255, 0.09) !important;
-  border-radius: 15px !important;
+  min-height: 48px;
+  border-radius: 11px !important;
   background: #1b1d1c !important;
-  padding: 16px;
+  padding: 10px 11px;
   color: #fff;
   text-align: left;
   transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), border-color 220ms ease, background-color 220ms ease !important;
 }
-body .profile-editor-status-card:hover { transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.19) !important; background: #202220 !important; }
-body .profile-editor-status-card.is-selected { transform: scale(1.012); border-color: rgba(33, 241, 168, 0.52) !important; background: rgba(33, 241, 168, 0.075) !important; box-shadow: inset 3px 0 0 rgba(33, 241, 168, 0.9) !important; }
+body .profile-editor-status-card:hover { transform: none; border-color: rgba(255, 255, 255, 0.19) !important; background: #202220 !important; }
+body .profile-editor-status-card.is-selected { transform: none; border-color: rgba(33, 241, 168, 0.48) !important; background: rgba(33, 241, 168, 0.065) !important; box-shadow: inset 2px 0 0 rgba(33, 241, 168, 0.9) !important; }
 .profile-editor-status-card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .profile-editor-status-check { display: inline-flex; width: 23px; height: 23px; align-items: center; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 50% !important; background: rgba(255, 255, 255, 0.025); color: #0e1613; }
 .profile-editor-status-card.is-selected .profile-editor-status-check { border-color: var(--classic-gold); background: var(--classic-gold); }
 .profile-editor-status-check svg { width: 14px; height: 14px; stroke-width: 3; }
-.profile-editor-status-description { margin-top: 11px; color: #929b97; font-size: 12px; line-height: 1.55; }
-.profile-editor-status-state { display: flex; align-items: center; gap: 6px; margin-top: 12px; color: #707975; font-size: 11px; font-weight: 700; }
-.profile-editor-status-card.is-selected .profile-editor-status-state { color: var(--classic-gold); }
-.profile-editor-status-state svg { width: 13px; height: 13px; }
+.profile-editor-status-selected-label { display: flex; align-items: center; gap: 5px; margin-top: 7px; color: var(--classic-gold); font-size: 10px; font-weight: 700; }
+.profile-editor-status-selected-label svg { width: 12px; height: 12px; }
 .profile-editor-empty-status { border: 1px dashed rgba(255, 255, 255, 0.11); border-radius: 14px !important; padding: 18px; color: #7d8581; font-size: 13px; line-height: 1.6; }
 
-.profile-editor-actions { position: sticky; bottom: 14px; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 18px; margin: 0 28px 28px; border: 1px solid rgba(255, 255, 255, 0.11); border-radius: 17px !important; background: rgba(20, 22, 21, 0.91); padding: 12px 13px 12px 18px; box-shadow: 0 18px 52px rgba(0, 0, 0, 0.3) !important; backdrop-filter: blur(20px) saturate(135%) !important; -webkit-backdrop-filter: blur(20px) saturate(135%) !important; }
+.profile-editor-actions { position: sticky; bottom: 10px; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 18px; margin: 18px 0 0; border: 1px solid rgba(255, 255, 255, 0.11); border-radius: 14px !important; background: rgba(20, 22, 21, 0.93); padding: 10px 11px 10px 16px; box-shadow: 0 14px 42px rgba(0, 0, 0, 0.26) !important; backdrop-filter: blur(20px) saturate(135%) !important; -webkit-backdrop-filter: blur(20px) saturate(135%) !important; }
 .profile-editor-save-hint { display: flex; align-items: center; gap: 9px; color: #8e9793; font-size: 12px; }
 .profile-editor-save-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--classic-gold); box-shadow: 0 0 0 4px rgba(33, 241, 168, 0.09) !important; }
 .profile-editor-action-buttons { display: flex; gap: 10px; }
@@ -596,14 +596,13 @@ body .profile-editor-save-button:active { transform: translateY(0) scale(0.985);
 
 @media (max-width: 1023px) {
   .profile-editor-layout { grid-template-columns: 1fr; }
-  .profile-editor-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 639px) {
-  .profile-editor-page { padding-right: 12px; padding-bottom: 96px; padding-left: 12px; }
+  .profile-editor-page { padding: 6px 6px 92px; }
   .profile-editor-page-heading { margin: 10px 4px 20px; }
   .profile-editor-page-heading h1 { font-size: 30px; }
-  body .profile-editor-shell { border-radius: 18px !important; }
+  body .profile-editor-shell { border-radius: 14px !important; }
   .profile-editor-hero { min-height: 310px; }
   .profile-editor-banner { height: 220px; }
   .profile-editor-banner-action { right: 14px; top: 14px; }
@@ -613,11 +612,11 @@ body .profile-editor-save-button:active { transform: translateY(0) scale(0.985);
   .profile-editor-avatar-button { width: 36px; height: 36px; border-width: 3px; }
   .profile-editor-identity-copy h2 { font-size: 23px; }
   .profile-editor-preview-label { font-size: 9px; }
-  .profile-editor-layout { gap: 14px; padding: 14px; }
-  body .profile-editor-section { border-radius: 16px !important; padding: 18px; }
+  .profile-editor-layout { gap: 0; padding: 10px 0 0; }
+  body .profile-editor-section { border-radius: 0 !important; padding: 18px 12px; }
   .profile-editor-section-heading { margin-bottom: 18px; }
-  .profile-editor-fields,
-  .profile-editor-status-grid { grid-template-columns: 1fr; gap: 14px; }
+  .profile-editor-fields { grid-template-columns: 1fr; gap: 14px; }
+  .profile-editor-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; max-height: 330px; }
   .profile-editor-field-readonly { grid-column: auto; }
   .profile-editor-bio-footer { align-items: flex-end; }
   .profile-editor-actions { position: fixed; right: 10px; bottom: max(10px, env(safe-area-inset-bottom)); left: 10px; margin: 0; padding: 9px; }

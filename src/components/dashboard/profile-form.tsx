@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ChangeEvent, useState, useTransition } from "react";
-import { ArrowLeft, CalendarDays, Camera, Check, ChevronDown, ImagePlus, Loader2, Save, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowLeft, CalendarDays, Camera, Check, ChevronDown, ImagePlus, Loader2, Save, ShieldCheck } from "lucide-react";
 import type { ProfileStatusTone, ProfileStatusType } from "@prisma/client";
 import { toast } from "sonner";
 import type { ClubOption } from "@/lib/clubs";
@@ -244,7 +244,6 @@ export function ProfileForm({
           <div className="profile-editor-main-column">
             <section className="profile-editor-section" aria-labelledby="profile-basic-title">
               <div className="profile-editor-section-heading">
-                <span className="profile-editor-section-icon"><UserRound /></span>
                 <div>
                   <h2 id="profile-basic-title">Основная информация</h2>
                   <p>Имя игрока и любимый клуб отображаются в вашем профиле.</p>
@@ -354,10 +353,7 @@ export function ProfileForm({
                         <ProfileStatusBadge status={status} />
                         <span className="profile-editor-status-check" aria-hidden="true">{selected ? <Check /> : null}</span>
                       </div>
-                      <div className="profile-editor-status-description">{status.description}</div>
-                      <div className="profile-editor-status-state">
-                        {selected ? <><ShieldCheck /> Выбран</> : "Выбрать"}
-                      </div>
+                      {selected ? <span className="profile-editor-status-selected-label"><ShieldCheck /> Выбран</span> : null}
                     </button>
                   );
                 })}

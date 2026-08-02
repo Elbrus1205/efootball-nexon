@@ -200,6 +200,8 @@ function MatchSideSelect({
   placeholder,
   participants,
   selected,
+  playerName,
+  showPlayerName = true,
   onChange,
 }: {
   label: string;
@@ -207,6 +209,8 @@ function MatchSideSelect({
   placeholder: string;
   participants: ParticipantOption[];
   selected?: ParticipantOption | null;
+  playerName?: string | null;
+  showPlayerName?: boolean;
   onChange: (participantId: string) => void;
 }) {
   return (
@@ -217,7 +221,9 @@ function MatchSideSelect({
           <FieldLabel>{label}</FieldLabel>
           <div className="min-w-0 truncate text-xs font-medium text-zinc-500">{participantClubName(selected)}</div>
         </div>
-        <div className="truncate text-sm font-semibold leading-tight text-white">{participantName(selected)}</div>
+        {showPlayerName ? (
+          <div className="truncate text-sm font-semibold leading-tight text-white">{playerName?.trim() || participantName(selected)}</div>
+        ) : null}
       </div>
       <select
         value={value}
@@ -623,6 +629,8 @@ export function MatchManager({
                             placeholder="Выбрать игрока 1"
                             participants={participants}
                             selected={selectedParticipantOne}
+                            playerName={match.isCaptainAssignedTeamMatch ? match.player1?.name : selectedParticipantOne?.user.name}
+                            showPlayerName={!match.isCaptainAssignedTeamMatch || Boolean(match.player1Id)}
                             onChange={(participantId) => {
                               const participant = participantId ? participantById.get(participantId) : null;
                               saveMatch(match.id, {
@@ -637,6 +645,8 @@ export function MatchManager({
                             placeholder="Выбрать игрока 2"
                             participants={participants}
                             selected={selectedParticipantTwo}
+                            playerName={match.isCaptainAssignedTeamMatch ? match.player2?.name : selectedParticipantTwo?.user.name}
+                            showPlayerName={!match.isCaptainAssignedTeamMatch || Boolean(match.player2Id)}
                             onChange={(participantId) => {
                               const participant = participantId ? participantById.get(participantId) : null;
                               saveMatch(match.id, {
