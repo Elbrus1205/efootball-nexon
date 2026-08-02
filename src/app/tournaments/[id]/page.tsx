@@ -1227,6 +1227,16 @@ export default async function TournamentDetailsPage(
                   currentRosterMembership?.isCaptain &&
                   currentRosterMembership.status === "ACCEPTED" &&
                   match.participant1EntryId === currentRosterMembership.registration.id;
+                const isTeamCaptainPlayoffMatch =
+                  Boolean(match.bracketId) &&
+                  match.isCaptainAssignedTeamMatch &&
+                  !match.isTeamCaptainTiebreak &&
+                  !match.isPenaltyTiebreak;
+                const isSingleLegPlayoffMatch =
+                  Boolean(match.bracketId) &&
+                  !match.isPenaltyTiebreak &&
+                  !match.isCaptainAssignedTeamMatch &&
+                  (match.playoffBracket?.legsCount ?? 1) <= 1;
 
                 return (
                   <div key={match.id}>
@@ -1240,11 +1250,7 @@ export default async function TournamentDetailsPage(
                     confirmedPlayer2PenaltyScore={match.player2PenaltyScore}
                     canSubmit={canSubmitScore}
                     requiresPenaltyOnDraw={
-                      match.isTeamCaptainTiebreak ||
-                      (Boolean(match.bracketId) &&
-                        !match.isPenaltyTiebreak &&
-                        !match.isCaptainAssignedTeamMatch &&
-                        (match.playoffBracket?.legsCount ?? 1) <= 1)
+                      match.isTeamCaptainTiebreak || isTeamCaptainPlayoffMatch || isSingleLegPlayoffMatch
                     }
                     waitingForOpponent={waitingForOpponent}
                     attemptsLeft={Math.max(

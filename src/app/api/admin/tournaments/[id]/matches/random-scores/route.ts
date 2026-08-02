@@ -189,7 +189,12 @@ export async function POST(_request: Request, props: { params: Promise<{ id: str
 
   const scoreData: MatchScoreData[] = targetMatches.map((match) => {
     const isPlayoff = match.stage?.type === StageType.PLAYOFF || !!match.bracketId || match.isPenaltyTiebreak;
-    const requiresWinner = match.isTeamCaptainTiebreak || (isPlayoff && !match.isCaptainAssignedTeamMatch);
+    const isTeamCaptainPlayoffMatch =
+      Boolean(match.bracketId) &&
+      match.isCaptainAssignedTeamMatch &&
+      !match.isTeamCaptainTiebreak &&
+      !match.isPenaltyTiebreak;
+    const requiresWinner = match.isTeamCaptainTiebreak || isTeamCaptainPlayoffMatch || (isPlayoff && !match.isCaptainAssignedTeamMatch);
     const { player1Score, player2Score } = randomScore({ allowDraw: !requiresWinner });
     const winnerId = player1Score > player2Score ? match.player1Id : player2Score > player1Score ? match.player2Id : null;
     const winnerEntryId = winnerId === match.player1Id ? match.participant1EntryId : winnerId === match.player2Id ? match.participant2EntryId : null;
