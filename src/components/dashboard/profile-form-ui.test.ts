@@ -16,6 +16,8 @@ test("profile editor keeps its data and upload contracts while using the premium
   assert.match(form, /profile-editor-hero/);
   assert.match(form, /profile-editor-status-card/);
   assert.match(form, /aria-pressed=\{selected\}/);
+  assert.doesNotMatch(form, /profile-editor-status-description/);
+  assert.doesNotMatch(form, /\{status\.description\}/);
 });
 
 test("profile editor exposes clear information, biography, status and action regions", () => {
