@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ChangeEvent, useState, useTransition } from "react";
-import { ArrowLeft, Camera, ImagePlus, Save, ShieldCheck } from "lucide-react";
+import { ArrowLeft, CalendarDays, Camera, Check, ChevronDown, ImagePlus, Loader2, Save, ShieldCheck, UserRound } from "lucide-react";
 import type { ProfileStatusTone, ProfileStatusType } from "@prisma/client";
 import { toast } from "sonner";
 import type { ClubOption } from "@/lib/clubs";
@@ -184,10 +184,10 @@ export function ProfileForm({
   };
 
   return (
-    <Card className="overflow-hidden border-white/10 bg-white/[0.03]">
-      <CardContent className="space-y-6 p-0">
-        <div className="relative overflow-hidden border-b border-white/10">
-          <div className="profile-banner-surface relative h-40 sm:h-52">
+    <Card className="profile-editor-shell overflow-hidden">
+      <CardContent className="p-0">
+        <section className="profile-editor-hero" aria-label="Предпросмотр профиля">
+          <div className="profile-editor-banner profile-banner-surface">
             {bannerPreviewSrc ? (
               <Image
                 src={bannerPreviewSrc}
@@ -195,174 +195,198 @@ export function ProfileForm({
                 fill
                 priority
                 fetchPriority="high"
-                sizes="(max-width: 768px) 100vw, 1120px"
+                sizes="(max-width: 768px) 100vw, 1280px"
                 quality={82}
                 className="object-cover"
               />
             ) : null}
-            {bannerPreviewSrc ? <div className="absolute inset-0 bg-gradient-to-b from-[rgba(8,10,16,0.18)] to-[rgba(8,10,16,0.7)]" /> : null}
+            <div className="profile-editor-banner-overlay" />
+            <div className="profile-banner-grid absolute inset-0 opacity-20" />
           </div>
-          <div className="profile-banner-grid absolute inset-0 opacity-20" />
 
-          <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-white/10 bg-black/30 px-4 py-2 text-sm text-white backdrop-blur-md hover:bg-black/40 aria-disabled:cursor-not-allowed aria-disabled:opacity-60" aria-disabled={uploadingImage !== null}>
-              <ImagePlus className="h-4 w-4 text-primary" />
+          <div className="profile-editor-banner-action">
+            <label className="profile-editor-media-button" aria-disabled={uploadingImage !== null}>
+              {uploadingImage === "banner" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
               {uploadingImage === "banner" ? "Загрузка..." : "Изменить баннер"}
               <input type="file" accept="image/*" className="hidden" disabled={uploadingImage !== null} onChange={(event) => onImageSelect(event, "banner")} />
             </label>
           </div>
 
-          <div className="relative px-5 pb-5 sm:px-6">
-            <div className="-mt-10 flex items-end justify-between gap-4 sm:-mt-12">
-              <div className="flex min-w-0 items-end gap-4">
-                <div className="relative inline-flex w-fit self-start">
-                  <Avatar className="h-20 w-20 rounded-[1.75rem] border-4 border-[#1D1D1D] shadow-[0_18px_60px_rgba(0,0,0,0.45)] sm:h-24 sm:w-24">
-                    <AvatarImage src={avatarPreview || undefined} alt="Аватар игрока" />
-                    <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <label className="absolute -bottom-1 -right-1 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-primary text-white shadow-lg hover:bg-primary/90 aria-disabled:cursor-not-allowed aria-disabled:opacity-60" aria-disabled={uploadingImage !== null}>
-                    <Camera className="h-4 w-4" />
-                    <input type="file" accept="image/*" className="hidden" disabled={uploadingImage !== null} onChange={(event) => onImageSelect(event, "avatar")} />
-                  </label>
-                </div>
+          <div className="profile-editor-identity">
+            <div className="profile-editor-avatar-wrap">
+              <Avatar className="profile-editor-avatar">
+                <AvatarImage src={avatarPreview || undefined} alt="Аватар игрока" />
+                <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <label className="profile-editor-avatar-button" aria-label="Изменить фото профиля" aria-disabled={uploadingImage !== null}>
+                {uploadingImage === "avatar" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                <input type="file" accept="image/*" className="hidden" disabled={uploadingImage !== null} onChange={(event) => onImageSelect(event, "avatar")} />
+              </label>
+            </div>
 
-                <div className="min-w-0 pb-[12px] sm:pb-1">
-                  <h2 className="truncate text-[18px] font-semibold leading-none text-white sm:text-3xl">
-                    {displayName}
-                  </h2>
-                  {selectedStatuses.length ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {selectedStatuses.map((status) => (
-                        <ProfileStatusBadge key={status.id} status={status} />
-                      ))}
-                    </div>
-                  ) : null}
+            <div className="profile-editor-identity-copy">
+              <div className="profile-editor-preview-label">Предпросмотр профиля</div>
+              <h2>{displayName}</h2>
+              {selectedStatuses.length ? (
+                <div className="profile-editor-selected-statuses">
+                  {selectedStatuses.map((status) => (
+                    <ProfileStatusBadge key={status.id} status={status} />
+                  ))}
                 </div>
-              </div>
+              ) : (
+                <p className="profile-editor-no-status">Статусы пока не выбраны</p>
+              )}
             </div>
           </div>
+        </section>
+
+        <div className="profile-editor-layout">
+          <div className="profile-editor-main-column">
+            <section className="profile-editor-section" aria-labelledby="profile-basic-title">
+              <div className="profile-editor-section-heading">
+                <span className="profile-editor-section-icon"><UserRound /></span>
+                <div>
+                  <h2 id="profile-basic-title">Основная информация</h2>
+                  <p>Имя игрока и любимый клуб отображаются в вашем профиле.</p>
+                </div>
+              </div>
+
+              <div className="profile-editor-fields">
+                <div className="profile-editor-field">
+                  <Label htmlFor="profile-name">Имя</Label>
+                  <Input
+                    id="profile-name"
+                    value={draft.name}
+                    className="profile-editor-control"
+                    minLength={3}
+                    maxLength={16}
+                    pattern="(?!.*__)[A-Za-z0-9][A-Za-z0-9_]{1,14}[A-Za-z0-9]"
+                    onChange={(e) => setDraft((v) => ({ ...v, name: e.target.value }))}
+                  />
+                  <div className="profile-editor-field-help">3–16 символов: английские буквы, цифры и `_`. Без `_` в начале, конце и двойного `__`.</div>
+                </div>
+
+                <div className="profile-editor-field">
+                  <Label htmlFor="profile-favorite-team">Любимый клуб</Label>
+                  <div className="profile-editor-select-wrap">
+                    <select
+                      id="profile-favorite-team"
+                      value={draft.favoriteTeam}
+                      className="profile-editor-control profile-editor-select"
+                      onChange={(e) => setDraft((v) => ({ ...v, favoriteTeam: e.target.value }))}
+                    >
+                      <option value="" className="bg-[#1D1D1D] text-zinc-300">Не выбран</option>
+                      {clubs.map((club) => (
+                        <option key={club.slug} value={club.slug} className="bg-[#1D1D1D] text-white">{club.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown aria-hidden="true" />
+                  </div>
+                  <div className="profile-editor-field-help">Клуб появится в основной информации профиля.</div>
+                </div>
+
+                <div className="profile-editor-field profile-editor-field-readonly">
+                  <div className="profile-editor-label">На сайте с</div>
+                  <div className="profile-editor-readonly" aria-label={`Дата регистрации: ${initialValues.registeredAt}`}>
+                    <CalendarDays aria-hidden="true" />
+                    {initialValues.registeredAt}
+                  </div>
+                  <div className="profile-editor-field-help">Дата регистрации не редактируется.</div>
+                </div>
+              </div>
+            </section>
+
+            <section className="profile-editor-section" aria-labelledby="profile-bio-title">
+              <div className="profile-editor-section-heading profile-editor-section-heading-inline">
+                <div>
+                  <h2 id="profile-bio-title">Описание профиля</h2>
+                  <p>Расскажите о своём стиле игры и достижениях.</p>
+                </div>
+                <span className="profile-editor-character-count" aria-live="polite">{draft.bio.length}/{PROFILE_BIO_MAX_LENGTH}</span>
+              </div>
+              <Label htmlFor="profile-bio" className="sr-only">Описание профиля</Label>
+              <Textarea
+                id="profile-bio"
+                rows={5}
+                maxLength={PROFILE_BIO_MAX_LENGTH}
+                className="profile-editor-bio"
+                placeholder="Коротко о себе, стиле игры и достижениях..."
+                value={draft.bio}
+                onChange={(e) =>
+                  setDraft((v) => ({
+                    ...v,
+                    bio: e.target.value.slice(0, PROFILE_BIO_MAX_LENGTH),
+                  }))
+                }
+              />
+              <div className="profile-editor-bio-footer">
+                <span>Будет видно всем посетителям профиля</span>
+                <span className={bioCharactersLeft < 20 ? "profile-editor-count-warning" : undefined}>Осталось {bioCharactersLeft}</span>
+              </div>
+            </section>
+          </div>
+
+          <aside className="profile-editor-side-column">
+            <section className="profile-editor-section profile-editor-status-section" aria-labelledby="profile-status-title">
+              <div className="profile-editor-section-heading profile-editor-section-heading-inline">
+                <div>
+                  <h2 id="profile-status-title">Статусы профиля</h2>
+                  <p>Выберите до {MAX_SELECTED_PROFILE_STATUSES} статусов для показа под именем.</p>
+                </div>
+                <div className="profile-editor-status-count" aria-label={`Выбрано ${selectedStatusIds.length} из ${MAX_SELECTED_PROFILE_STATUSES}`}>
+                  {selectedStatusIds.length}/{MAX_SELECTED_PROFILE_STATUSES}
+                </div>
+              </div>
+
+              <div className="profile-editor-status-grid">
+                {statuses.map((status) => {
+                  const selected = selectedStatusIds.includes(status.id);
+
+                  return (
+                    <button
+                      key={status.id}
+                      type="button"
+                      onClick={() => toggleStatus(status.id)}
+                      aria-pressed={selected}
+                      className={`profile-editor-status-card ${selected ? "is-selected" : ""}`}
+                    >
+                      <div className="profile-editor-status-card-top">
+                        <ProfileStatusBadge status={status} />
+                        <span className="profile-editor-status-check" aria-hidden="true">{selected ? <Check /> : null}</span>
+                      </div>
+                      <div className="profile-editor-status-description">{status.description}</div>
+                      <div className="profile-editor-status-state">
+                        {selected ? <><ShieldCheck /> Выбран</> : "Выбрать"}
+                      </div>
+                    </button>
+                  );
+                })}
+
+                {!statuses.length ? (
+                  <div className="profile-editor-empty-status">
+                    Подтверждённых статусов пока нет. Они появятся здесь после завершения сезона и подтверждения администратором.
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          </aside>
         </div>
 
-        <div className="space-y-5 p-5 sm:p-6">
-          <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-2">
-                <Label className="block text-[11px] uppercase tracking-[0.24em] text-zinc-500">Имя</Label>
-                <Input
-                  value={draft.name}
-                  className="h-10 border-white/10 bg-white/[0.04]"
-                  minLength={3}
-                  maxLength={16}
-                  pattern="(?!.*__)[A-Za-z0-9][A-Za-z0-9_]{1,14}[A-Za-z0-9]"
-                  onChange={(e) => setDraft((v) => ({ ...v, name: e.target.value }))}
-                />
-                <div className="text-xs text-zinc-500">3-16 символов: английские буквы, цифры и `_`. Нельзя начинать или заканчивать `_`, а также ставить `__` подряд.</div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="block text-[11px] uppercase tracking-[0.24em] text-zinc-500">Любимый клуб</Label>
-                <select
-                  value={draft.favoriteTeam}
-                  className="h-10 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none transition focus:border-primary"
-                  onChange={(e) => setDraft((v) => ({ ...v, favoriteTeam: e.target.value }))}
-                >
-                  <option value="" className="bg-[#1D1D1D] text-zinc-300">
-                    Не выбран
-                  </option>
-                  {clubs.map((club) => (
-                    <option key={club.slug} value={club.slug} className="bg-[#1D1D1D] text-white">
-                      {club.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <div className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">На сайте с</div>
-                <div className="flex h-10 items-center rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-white">
-                  {initialValues.registeredAt}
-                </div>
-              </div>
-            </div>
+        <div className="profile-editor-actions">
+          <div className="profile-editor-save-hint">
+            <span className="profile-editor-save-dot" />
+            Изменения применятся после сохранения
           </div>
-
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-            <Label className="mb-2 block text-[11px] uppercase tracking-[0.24em] text-zinc-500">Описание профиля</Label>
-            <Textarea
-              rows={5}
-              maxLength={PROFILE_BIO_MAX_LENGTH}
-              className="border-white/10 bg-white/[0.04]"
-              placeholder="Короткое описание игрока, любимый стиль игры, достижения или любые детали о профиле."
-              value={draft.bio}
-              onChange={(e) =>
-                setDraft((v) => ({
-                  ...v,
-                  bio: e.target.value.slice(0, PROFILE_BIO_MAX_LENGTH),
-                }))
-              }
-            />
-            <div className="mt-2 flex items-center justify-between text-xs text-zinc-500">
-              <span>Максимум {PROFILE_BIO_MAX_LENGTH} символов</span>
-              <span>Осталось {bioCharactersLeft}</span>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <Label className="block text-[11px] uppercase tracking-[0.24em] text-zinc-500">Статусы профиля</Label>
-                <div className="mt-1 text-sm text-zinc-400">Выберите до {MAX_SELECTED_PROFILE_STATUSES} подтверждённых статусов для показа под именем игрока.</div>
-              </div>
-              <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-semibold text-zinc-300">
-                {selectedStatusIds.length}/{MAX_SELECTED_PROFILE_STATUSES}
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-2">
-              {statuses.map((status) => {
-                const selected = selectedStatusIds.includes(status.id);
-
-                return (
-                  <button
-                    key={status.id}
-                    type="button"
-                    onClick={() => toggleStatus(status.id)}
-                    className={`rounded-2xl border p-3 text-left transition ${
-                      selected ? "border-primary/35 bg-primary/10" : "border-white/10 bg-white/[0.03] hover:border-white/20"
-                    }`}
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <ProfileStatusBadge status={status} />
-                      {selected ? (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-1 text-xs font-semibold text-emerald-100">
-                          <ShieldCheck className="h-3.5 w-3.5" />
-                          Выбран
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="mt-2 text-sm text-zinc-400">{status.description}</div>
-                  </button>
-                );
-              })}
-
-              {!statuses.length ? (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-4 text-sm text-zinc-500">
-                  Подтверждённых статусов пока нет. Они появятся здесь после завершения сезона и подтверждения администратором.
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 border-t border-white/10 pt-2">
-            <Button asChild variant="outline" className="h-14 rounded-2xl text-base">
+          <div className="profile-editor-action-buttons">
+            <Button asChild variant="outline" className="profile-editor-back-button">
               <Link href="/dashboard" className="gap-2">
                 <ArrowLeft className="h-4 w-4" />
-                Назад к профилю
+                Назад
               </Link>
             </Button>
-            <Button onClick={saveProfile} disabled={pending} className="h-14 gap-2 rounded-2xl text-base">
-              <Save className="h-4 w-4" />
-              {pending ? "Сохранение..." : "Сохранить"}
+            <Button onClick={saveProfile} disabled={pending} className="profile-editor-save-button">
+              {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {pending ? "Сохранение..." : "Сохранить изменения"}
             </Button>
           </div>
         </div>

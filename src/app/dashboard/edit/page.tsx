@@ -1,4 +1,3 @@
-﻿import { Badge } from "@/components/ui/badge";
 import { ProfileForm } from "@/components/dashboard/profile-form";
 import { requireAuth } from "@/lib/auth/session";
 import { getAvailableClubs } from "@/lib/clubs";
@@ -29,9 +28,11 @@ export default async function DashboardEditPage() {
   }).format(user.createdAt);
 
   return (
-    <div className="page-shell space-y-8">
-      <div className="space-y-3">
-        <Badge variant="primary">Редактор профиля</Badge>
+    <div className="page-shell profile-editor-page">
+      <div className="profile-editor-page-heading">
+        <div className="profile-editor-eyebrow">Личный профиль</div>
+        <h1>Редактирование профиля</h1>
+        <p>Настройте, как вас видят другие игроки eFootball Nexon.</p>
       </div>
 
       <ProfileForm
