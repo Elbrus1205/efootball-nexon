@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 type ScheduleSide = {
   playerId: string | null;
   playerName: string;
+  showPlayerName: boolean;
   clubName: string | null;
   clubBadgePath: string | null;
 };
@@ -133,6 +134,7 @@ function ScheduleMatchCard({ match }: { match: TournamentScheduleMatch }) {
           <ClubPlayerLine
             playerId={match.sideOne.playerId}
             playerName={match.sideOne.playerName}
+            showPlayerName={match.sideOne.showPlayerName}
             clubName={match.sideOne.clubName}
             badgePath={match.sideOne.clubBadgePath}
             compact
@@ -148,6 +150,7 @@ function ScheduleMatchCard({ match }: { match: TournamentScheduleMatch }) {
           <ClubPlayerLine
             playerId={match.sideTwo.playerId}
             playerName={match.sideTwo.playerName}
+            showPlayerName={match.sideTwo.showPlayerName}
             clubName={match.sideTwo.clubName}
             badgePath={match.sideTwo.clubBadgePath}
             compact

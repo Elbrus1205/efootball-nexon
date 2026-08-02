@@ -902,7 +902,9 @@ export default async function TournamentDetailsPage(
   const resolveMatchSide = (match: (typeof visibleMatches)[number], side: 1 | 2) => {
     const player = side === 1 ? match.player1 : match.player2;
     const entry = resolveMatchEntry(match, side);
-    const playerId = (side === 1 ? match.player1Id : match.player2Id) ?? entry?.userId ?? null;
+    const explicitPlayerId = side === 1 ? match.player1Id : match.player2Id;
+    const isUnassignedCaptainMatch = match.isCaptainAssignedTeamMatch && !explicitPlayerId;
+    const playerId = isUnassignedCaptainMatch ? null : explicitPlayerId ?? entry?.userId ?? null;
     const playerName = player
       ? getPlayerDisplayName(player)
       : entry?.user
@@ -915,6 +917,7 @@ export default async function TournamentDetailsPage(
     return {
       playerId,
       playerName,
+      showPlayerName: !isUnassignedCaptainMatch,
       clubName: mappedClub?.clubName ?? (entry ? resolveClubName(entry, clubsBySlug, playerName) : null),
       clubBadgePath: mappedClub?.clubBadgePath ?? (entry ? resolveClubBadgePath(entry, clubsBySlug) : null),
     };
@@ -1236,6 +1239,8 @@ export default async function TournamentDetailsPage(
                     player2Id={sideTwo.playerId}
                     player1Name={sideOne.playerName}
                     player2Name={sideTwo.playerName}
+                    showPlayer1Name={sideOne.showPlayerName}
+                    showPlayer2Name={sideTwo.showPlayerName}
                     player1ClubName={sideOne.clubName}
                     player2ClubName={sideTwo.clubName}
                     player1ClubBadgePath={sideOne.clubBadgePath}
@@ -1401,4 +1406,3 @@ export default async function TournamentDetailsPage(
     </div>
   );
 }
-

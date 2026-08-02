@@ -10,6 +10,10 @@ const inviteRouteSource = readFileSync("src/app/api/tournaments/[id]/roster/invi
 const topRankingSource = readFileSync("src/lib/tournaments/top-ranking-roster.ts", "utf8");
 const assignmentRouteSource = readFileSync("src/app/api/tournaments/[id]/team-matches/[matchId]/route.ts", "utf8");
 const reminderServiceSource = readFileSync("src/lib/services/tournaments.ts", "utf8");
+const tournamentPageSource = readFileSync("src/app/tournaments/[id]/page.tsx", "utf8");
+const clubPlayerLineSource = readFileSync("src/components/tournaments/club-player-line.tsx", "utf8");
+const scheduleViewSource = readFileSync("src/components/tournaments/tournament-schedule-view.tsx", "utf8");
+const myMatchCardSource = readFileSync("src/components/tournaments/my-match-card.tsx", "utf8");
 
 test("top ranking snapshots use the configured inclusive top boundary", () => {
   assert.equal(isRankInsideTop(1, 10), true);
@@ -56,6 +60,19 @@ test("captain-assigned team matches are not automatically scheduled on tournamen
     reminderServiceSource,
     /if \(!tournament\.captainsCreateTeamMatches\) \{\s*await generateTournamentSchedule\(tournamentId, \{ overwrite: true \}\);\s*\}/,
   );
+});
+
+test("unassigned captain match slots show team identity without captain nicknames", () => {
+  assert.match(tournamentPageSource, /const isUnassignedCaptainMatch = match\.isCaptainAssignedTeamMatch && !explicitPlayerId/);
+  assert.match(tournamentPageSource, /const playerId = isUnassignedCaptainMatch \? null : explicitPlayerId \?\? entry\?\.userId \?\? null/);
+  assert.match(tournamentPageSource, /showPlayerName: !isUnassignedCaptainMatch/);
+  assert.match(clubPlayerLineSource, /showPlayerName \? \(/);
+  assert.match(scheduleViewSource, /showPlayerName=\{match\.sideOne\.showPlayerName\}/);
+  assert.match(scheduleViewSource, /showPlayerName=\{match\.sideTwo\.showPlayerName\}/);
+  assert.match(myMatchCardSource, /showPlayerName=\{showPlayer1Name\}/);
+  assert.match(myMatchCardSource, /showPlayerName=\{showPlayer2Name\}/);
+  assert.match(tournamentPageSource, /showPlayer1Name=\{sideOne\.showPlayerName\}/);
+  assert.match(tournamentPageSource, /showPlayer2Name=\{sideTwo\.showPlayerName\}/);
 });
 
 test("unfilled home pairings produce thirty-minute deadline reminders", () => {
