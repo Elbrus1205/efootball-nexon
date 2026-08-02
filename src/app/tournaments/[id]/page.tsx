@@ -1,6 +1,7 @@
 import { ClubSelectionMode, MatchStatus, ParticipantStatus, StageType, TournamentApplicationStatus, TournamentFormat, TournamentStatus } from "@prisma/client";
 import { Clock3, Search, Send } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   getCachedTournamentParticipants,
@@ -1014,7 +1015,12 @@ export default async function TournamentDetailsPage(
                 return (
                   <div key={member.id} className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold text-white">{memberName}</div>
+                      <Link
+                        href={`/players/${member.user.publicId}`}
+                        className="block truncate text-sm font-semibold text-white underline-offset-4 transition hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      >
+                        {memberName}
+                      </Link>
                       <div className="mt-0.5 text-xs text-zinc-500">
                         {member.isCaptain ? "Капитан · " : ""}
                         {member.status === "ACCEPTED" ? "принято" : member.status === "PENDING" ? "ожидает" : "отклонено"}
@@ -1396,7 +1402,7 @@ export default async function TournamentDetailsPage(
                 return (
                   <Card key={entry.id} className="flex min-w-0 items-center justify-between gap-3 p-4">
                     <ClubPlayerLine
-                      playerId={entry.user.id}
+                      playerId={entry.user.publicId}
                       playerName={playerName}
                       clubName={resolveClubName(entry, clubsBySlug, playerName)}
                       badgePath={resolveClubBadgePath(entry, clubsBySlug)}
