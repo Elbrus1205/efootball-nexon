@@ -7,6 +7,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { TournamentBracketToolbar } from "@/components/tournaments/tournament-bracket-toolbar";
 import { getPlayerDisplayName } from "@/lib/player-name";
+import { resolveCaptainTeamPlayoffAggregate } from "@/lib/tournaments/captain-team-playoff";
 import { cn } from "@/lib/utils";
 
 type ClubMeta = {
@@ -21,6 +22,7 @@ type BracketUser = {
 };
 
 type BracketParticipantEntry = {
+  id: string;
   userId: string;
   clubName: string | null;
   clubBadgePath: string | null;
@@ -34,6 +36,8 @@ type BracketMatch = {
   seriesKey: string | null;
   legNumber: number | null;
   isPenaltyTiebreak: boolean;
+  isCaptainAssignedTeamMatch: boolean;
+  isTeamCaptainTiebreak: boolean;
   isThirdPlaceMatch: boolean;
   player1Id: string | null;
   player2Id: string | null;
@@ -59,6 +63,7 @@ type BracketSeries = {
   referenceMatch: BracketMatch;
   regularMatches: BracketMatch[];
   penaltyMatch: BracketMatch | null;
+  captainTiebreakMatch: BracketMatch | null;
 };
 
 type BracketSide = {
@@ -126,6 +131,16 @@ function getBracketSideUserId(match: BracketMatch, slot: 1 | 2) {
   return slot === 1 ? match.participant1Entry?.userId ?? match.player1Id : match.participant2Entry?.userId ?? match.player2Id;
 }
 
+function resolveBracketCaptainTeamAggregate(matches: BracketMatch[]) {
+  return resolveCaptainTeamPlayoffAggregate(
+    matches.map((match) => ({
+      ...match,
+      participant1EntryId: match.participant1Entry?.id ?? null,
+      participant2EntryId: match.participant2Entry?.id ?? null,
+    })),
+  );
+}
+
 function buildSeries(matches: BracketMatch[]) {
   const grouped = new Map<string, BracketMatch[]>();
 
@@ -150,8 +165,9 @@ function buildSeries(matches: BracketMatch[]) {
         return a.matchNumber - b.matchNumber;
       });
 
-      const regularMatches = ordered.filter((item) => !item.isPenaltyTiebreak);
-      const referenceMatch = regularMatches[regularMatches.length - 1] ?? ordered[ordered.length - 1];
+      const regularMatches = ordered.filter((item) => !item.isPenaltyTiebreak && !item.isTeamCaptainTiebreak);
+      const captainTeamMatches = regularMatches.filter((item) => item.isCaptainAssignedTeamMatch);
+      const referenceMatch = captainTeamMatches[0] ?? regularMatches[regularMatches.length - 1] ?? ordered[ordered.length - 1];
 
       return {
         key,
@@ -162,14 +178,37 @@ function buildSeries(matches: BracketMatch[]) {
         referenceMatch,
         regularMatches,
         penaltyMatch: ordered.find((item) => item.isPenaltyTiebreak) ?? null,
+        captainTiebreakMatch: ordered.find((item) => item.isTeamCaptainTiebreak) ?? null,
       } satisfies BracketSeries;
     })
     .sort((a, b) => a.matchNumber - b.matchNumber);
 }
 
 function getSeriesWinner(series: BracketSeries) {
+  if (series.captainTiebreakMatch && isResolvedMatch(series.captainTiebreakMatch) && series.captainTiebreakMatch.winnerId) {
+    const winnerEntryId =
+      series.captainTiebreakMatch.winnerId === series.captainTiebreakMatch.player1Id
+        ? series.captainTiebreakMatch.participant1Entry?.id
+        : series.captainTiebreakMatch.winnerId === series.captainTiebreakMatch.player2Id
+          ? series.captainTiebreakMatch.participant2Entry?.id
+          : null;
+
+    return winnerEntryId === series.referenceMatch.participant1Entry?.id
+      ? getBracketSideUserId(series.referenceMatch, 1)
+      : getBracketSideUserId(series.referenceMatch, 2);
+  }
+
   if (series.penaltyMatch && isResolvedMatch(series.penaltyMatch) && series.penaltyMatch.winnerId) {
     return series.penaltyMatch.winnerId;
+  }
+
+  if (series.regularMatches.some((match) => match.isCaptainAssignedTeamMatch)) {
+    const resolution = resolveBracketCaptainTeamAggregate(series.regularMatches);
+    if (resolution.state !== "winner") return null;
+
+    return resolution.winnerEntryId === series.referenceMatch.participant1Entry?.id
+      ? getBracketSideUserId(series.referenceMatch, 1)
+      : getBracketSideUserId(series.referenceMatch, 2);
   }
 
   const thirdMatch = series.regularMatches.find((item) => item.legNumber === 3);
@@ -214,6 +253,16 @@ function getAggregateScore(series: BracketSeries) {
     return { player1: null, player2: null };
   }
 
+  if (series.regularMatches.some((match) => match.isCaptainAssignedTeamMatch)) {
+    const resolution = resolveBracketCaptainTeamAggregate(series.regularMatches);
+    if (resolution.state === "pending") return { player1: null, player2: null };
+
+    return {
+      player1: resolution.participant1Score,
+      player2: resolution.participant2Score,
+    };
+  }
+
   const confirmedRegularMatches = series.regularMatches.filter(isResolvedMatch);
 
   if (!confirmedRegularMatches.length) {
@@ -227,6 +276,20 @@ function getAggregateScore(series: BracketSeries) {
 }
 
 function getPenaltyScores(series: BracketSeries) {
+  if (series.captainTiebreakMatch && isResolvedMatch(series.captainTiebreakMatch)) {
+    if (
+      series.captainTiebreakMatch.player1PenaltyScore === null ||
+      series.captainTiebreakMatch.player2PenaltyScore === null
+    ) {
+      return null;
+    }
+
+    return {
+      player1: series.captainTiebreakMatch.player1PenaltyScore,
+      player2: series.captainTiebreakMatch.player2PenaltyScore,
+    };
+  }
+
   if (!series.penaltyMatch || !isResolvedMatch(series.penaltyMatch)) {
     const decidingMatch = [...series.regularMatches]
       .filter(isResolvedMatch)
@@ -390,6 +453,9 @@ function BracketMatchBox({
   const isSeriesResolved = Boolean(seriesWinnerId);
   const sideOneUserId = getBracketSideUserId(match, 1);
   const sideTwoUserId = getBracketSideUserId(match, 2);
+  const isCaptainTeamSeries = series.regularMatches.some((item) => item.isCaptainAssignedTeamMatch);
+  const sideOneWinnerId = isCaptainTeamSeries ? sideOneUserId : match.player1Id;
+  const sideTwoWinnerId = isCaptainTeamSeries ? sideTwoUserId : match.player2Id;
   const isCurrentUserMatch = Boolean(currentUserId && (sideOneUserId === currentUserId || sideTwoUserId === currentUserId));
 
   const sides: [BracketSide, BracketSide] = [
@@ -401,10 +467,10 @@ function BracketMatchBox({
       score: aggregateScore.player1,
       penaltyText: penaltyScores ? String(penaltyScores.player1) : null,
       isResolved: isSeriesResolved,
-      isWinner: Boolean(seriesWinnerId && seriesWinnerId === match.player1Id),
-      isChampion: Boolean(isFinal && seriesWinnerId && seriesWinnerId === match.player1Id),
+      isWinner: Boolean(seriesWinnerId && seriesWinnerId === sideOneWinnerId),
+      isChampion: Boolean(isFinal && seriesWinnerId && seriesWinnerId === sideOneWinnerId),
       isCurrentUser: Boolean(currentUserId && sideOneUserId === currentUserId),
-      isByeWinner: series.isAutoBye && seriesWinnerId === match.player1Id,
+      isByeWinner: series.isAutoBye && seriesWinnerId === sideOneWinnerId,
     },
     {
       playerId: match.player2?.id,
@@ -414,10 +480,10 @@ function BracketMatchBox({
       score: aggregateScore.player2,
       penaltyText: penaltyScores ? String(penaltyScores.player2) : null,
       isResolved: isSeriesResolved,
-      isWinner: Boolean(seriesWinnerId && seriesWinnerId === match.player2Id),
-      isChampion: Boolean(isFinal && seriesWinnerId && seriesWinnerId === match.player2Id),
+      isWinner: Boolean(seriesWinnerId && seriesWinnerId === sideTwoWinnerId),
+      isChampion: Boolean(isFinal && seriesWinnerId && seriesWinnerId === sideTwoWinnerId),
       isCurrentUser: Boolean(currentUserId && sideTwoUserId === currentUserId),
-      isByeWinner: series.isAutoBye && seriesWinnerId === match.player2Id,
+      isByeWinner: series.isAutoBye && seriesWinnerId === sideTwoWinnerId,
     },
   ];
 

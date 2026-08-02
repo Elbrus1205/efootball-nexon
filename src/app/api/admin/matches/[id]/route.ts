@@ -20,8 +20,11 @@ import { matchUpdateSchema } from "@/lib/validators";
 function matchRequiresWinner(match: {
   bracketId: string | null;
   isPenaltyTiebreak: boolean;
+  isCaptainAssignedTeamMatch: boolean;
+  isTeamCaptainTiebreak: boolean;
   seriesWinsRequired: number | null;
 }) {
+  if (match.isCaptainAssignedTeamMatch && !match.isTeamCaptainTiebreak) return false;
   return Boolean(match.bracketId) || match.isPenaltyTiebreak || Boolean(match.seriesWinsRequired && match.seriesWinsRequired > 1);
 }
 
@@ -81,7 +84,13 @@ function resolveWinner(params: {
 }
 
 function isMultiLegPlayoffCandidate(match: Match) {
-  return Boolean(match.bracketId && match.seriesKey && !match.isPenaltyTiebreak && !(match.seriesWinsRequired && match.seriesWinsRequired > 1));
+  return Boolean(
+    match.bracketId &&
+      match.seriesKey &&
+      !match.isPenaltyTiebreak &&
+      !match.isCaptainAssignedTeamMatch &&
+      !(match.seriesWinsRequired && match.seriesWinsRequired > 1),
+  );
 }
 
 function getForfeitLoserId(match: Pick<Match, "player1Id" | "player2Id" | "winnerId" | "player1Score" | "player2Score">) {
@@ -415,6 +424,10 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
           });
         }
       }
+    }
+
+    if (updated.bracketId && updated.isCaptainAssignedTeamMatch) {
+      await resolveConfirmedMatch(updated.id);
     }
   }
 

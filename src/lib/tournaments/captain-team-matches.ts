@@ -16,6 +16,7 @@ export async function prepareCaptainAssignedTeamMatchSlots(tournamentId: string)
     where: {
       tournamentId,
       isCaptainAssignedTeamMatch: false,
+      isTeamCaptainTiebreak: false,
       isPenaltyTiebreak: false,
       participant1EntryId: { not: null },
       participant2EntryId: { not: null },
@@ -49,12 +50,18 @@ export async function prepareCaptainAssignedTeamMatchSlots(tournamentId: string)
   });
 
   for (const fixture of fixtures) {
+    const reverseHomeAndAway = Boolean(fixture.bracketId) && (fixture.legNumber ?? 1) % 2 === 0;
+    const participant1EntryId = reverseHomeAndAway ? fixture.participant2EntryId : fixture.participant1EntryId;
+    const participant2EntryId = reverseHomeAndAway ? fixture.participant1EntryId : fixture.participant2EntryId;
+
     await db.$transaction(async (tx) => {
       await tx.match.update({
         where: { id: fixture.id },
         data: {
           player1Id: null,
           player2Id: null,
+          participant1EntryId,
+          participant2EntryId,
           status: MatchStatus.PENDING,
           isCaptainAssignedTeamMatch: true,
         },
@@ -77,8 +84,8 @@ export async function prepareCaptainAssignedTeamMatchSlots(tournamentId: string)
             isThirdPlaceMatch: fixture.isThirdPlaceMatch,
             scheduledAt: fixture.scheduledAt,
             startsAt: fixture.startsAt,
-            participant1EntryId: fixture.participant1EntryId,
-            participant2EntryId: fixture.participant2EntryId,
+            participant1EntryId,
+            participant2EntryId,
             nextMatchId: fixture.nextMatchId,
             nextMatchSlot: fixture.nextMatchSlot,
             loserNextMatchId: fixture.loserNextMatchId,

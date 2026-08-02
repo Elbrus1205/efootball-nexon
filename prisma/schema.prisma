@@ -948,6 +948,7 @@ model Match {
   legNumber           Int?
   isPenaltyTiebreak   Boolean                 @default(false)
   isCaptainAssignedTeamMatch Boolean           @default(false)
+  isTeamCaptainTiebreak Boolean                 @default(false)
   seriesWinsRequired  Int?
   seriesMatchNumber   Int?
   isThirdPlaceMatch   Boolean                 @default(false)
