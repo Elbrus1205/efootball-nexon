@@ -75,11 +75,11 @@ async function loadParticipantsSlice(tournamentId: string) {
           id: true,
           status: true,
           isCaptain: true,
-          user: { select: { id: true, name: true, telegramUsername: true } },
+          user: { select: { id: true, publicId: true, name: true, telegramUsername: true } },
         },
         orderBy: [{ isCaptain: "desc" }, { invitedAt: "asc" }],
       },
-      user: { select: { id: true, name: true, telegramUsername: true } },
+      user: { select: { id: true, publicId: true, name: true, telegramUsername: true } },
     },
   });
 }
