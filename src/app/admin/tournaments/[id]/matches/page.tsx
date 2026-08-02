@@ -78,9 +78,10 @@ export default async function AdminTournamentMatchesPage(props: { params: Promis
           participant1Entry: { select: { clubName: true, clubSlug: true } },
           participant2Entry: { select: { clubName: true, clubSlug: true } },
           bracketId: true,
+          stageId: true,
           player1: { select: { name: true } },
           player2: { select: { name: true } },
-          stage: { select: { name: true, type: true } },
+          stage: { select: { id: true, name: true, type: true, orderIndex: true } },
           group: { select: { name: true } },
         },
         orderBy: [{ round: "asc" }, { matchNumber: "asc" }],
@@ -146,7 +147,10 @@ export default async function AdminTournamentMatchesPage(props: { params: Promis
     player1: match.player1 ? { name: match.player1.name } : null,
     player2: match.player2 ? { name: match.player2.name } : null,
     bracketId: match.bracketId,
-    stage: match.stage ? { name: match.stage.name, type: match.stage.type } : null,
+    stageId: match.stageId,
+    stage: match.stage
+      ? { id: match.stage.id, name: match.stage.name, type: match.stage.type, orderIndex: match.stage.orderIndex }
+      : null,
     group: match.group ? { name: match.group.name } : null,
     configuredReliabilityPenalty: getConfiguredMatchPenalty(match, configuredPenaltyEvents),
   }));
