@@ -36,6 +36,8 @@ type MyMatchCardProps = {
   helperText: string;
   player1Name: string;
   player2Name: string;
+  showPlayer1Name?: boolean;
+  showPlayer2Name?: boolean;
   player1Id?: string | null;
   player2Id?: string | null;
   player1ClubName?: string | null;
@@ -110,6 +112,8 @@ export function MyMatchCard({
   helperText,
   player1Name,
   player2Name,
+  showPlayer1Name = true,
+  showPlayer2Name = true,
   player1Id,
   player2Id,
   player1ClubName,
@@ -215,6 +219,7 @@ export function MyMatchCard({
             <ClubPlayerLine
               playerId={player1Id}
               playerName={player1Name}
+              showPlayerName={showPlayer1Name}
               clubName={player1ClubName}
               badgePath={player1ClubBadgePath}
               stack
@@ -288,6 +293,7 @@ export function MyMatchCard({
             <ClubPlayerLine
               playerId={player2Id}
               playerName={player2Name}
+              showPlayerName={showPlayer2Name}
               clubName={player2ClubName}
               badgePath={player2ClubBadgePath}
               stack
