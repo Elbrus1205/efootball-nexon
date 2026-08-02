@@ -956,7 +956,11 @@ export default async function TournamentDetailsPage(
         groupId: match.group?.id ?? null,
         groupName: match.group?.name ?? null,
         groupSort: match.group?.orderIndex ?? 999,
-        matchLabel: captainSlotLabel ? `Матч ${match.matchNumber} • ${captainSlotLabel}` : `Матч ${match.matchNumber}`,
+        matchLabel: match.isTeamCaptainTiebreak
+          ? "Решающий матч капитанов"
+          : captainSlotLabel
+            ? `Матч ${match.matchNumber} • ${captainSlotLabel}`
+            : `Матч ${match.matchNumber}`,
         scoreLabel: match.player1Score !== null && match.player2Score !== null ? `${match.player1Score} - ${match.player2Score}` : "VS",
         sideOne,
         sideTwo,
@@ -1209,6 +1213,11 @@ export default async function TournamentDetailsPage(
                 const awayRosterEntry = awayEntry ? participantByEntryId.get(awayEntry.id) ?? null : null;
                 const captainSlotLabel = captainMatchSlotLabels.get(match.id);
                 const deadlineLabel = matchDeadline ? `Дедлайн: ${formatDate(matchDeadline)}` : "Дедлайн не задан";
+                const matchMeta = match.isTeamCaptainTiebreak
+                  ? `Решающий матч капитанов • ${deadlineLabel}`
+                  : captainSlotLabel
+                    ? `${captainSlotLabel} • ${deadlineLabel}`
+                    : deadlineLabel;
                 const canAssignTeamMatch =
                   tournament.captainsCreateTeamMatches &&
                   match.isCaptainAssignedTeamMatch &&
@@ -1223,14 +1232,20 @@ export default async function TournamentDetailsPage(
                   <div key={match.id}>
                   <MyMatchCard
                     id={match.id}
-                    meta={captainSlotLabel ? `${captainSlotLabel} • ${deadlineLabel}` : deadlineLabel}
+                    meta={matchMeta}
                     isConfirmed={match.status === MatchStatus.CONFIRMED || match.status === MatchStatus.FINISHED}
                     confirmedPlayer1Score={match.player1Score}
                     confirmedPlayer2Score={match.player2Score}
                     confirmedPlayer1PenaltyScore={match.player1PenaltyScore}
                     confirmedPlayer2PenaltyScore={match.player2PenaltyScore}
                     canSubmit={canSubmitScore}
-                    requiresPenaltyOnDraw={Boolean(match.bracketId) && !match.isPenaltyTiebreak && (match.playoffBracket?.legsCount ?? 1) <= 1}
+                    requiresPenaltyOnDraw={
+                      match.isTeamCaptainTiebreak ||
+                      (Boolean(match.bracketId) &&
+                        !match.isPenaltyTiebreak &&
+                        !match.isCaptainAssignedTeamMatch &&
+                        (match.playoffBracket?.legsCount ?? 1) <= 1)
+                    }
                     waitingForOpponent={waitingForOpponent}
                     attemptsLeft={Math.max(
                       0,

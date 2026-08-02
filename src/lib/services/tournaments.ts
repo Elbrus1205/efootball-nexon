@@ -22,6 +22,7 @@ import { normalizeFormatBlueprint, type FormatBlueprint, type PlayoffSelectionRu
 import { applyTournamentAbsenceRatingPenalty, getPlayerRatings } from "@/lib/ratings";
 import { invalidatePlayerRatings } from "@/lib/ratings-cache";
 import { prepareCaptainAssignedTeamMatchSlots } from "@/lib/tournaments/captain-team-matches";
+import { resolveCaptainTeamPlayoffAggregate } from "@/lib/tournaments/captain-team-playoff";
 import {
   invalidateTournamentAll,
   invalidateTournamentParticipants,
@@ -599,6 +600,8 @@ async function advanceResolvedWinnerForMatch(matchId: string, winnerId: string, 
       entryId: loserEntryId ?? null,
     });
   }
+
+  await prepareCaptainAssignedTeamMatchSlots(match.tournamentId);
 
   await syncTournamentLifecycleStatus(match.tournamentId);
 }
@@ -4004,6 +4007,262 @@ async function createPenaltyMatch(match: {
   });
 }
 
+const TEAM_CAPTAIN_TIEBREAK_NOTE = "Решающий матч капитанов";
+
+async function getTeamCaptainIds(entryIds: string[]) {
+  const registrations = await db.tournamentRegistration.findMany({
+    where: { id: { in: entryIds } },
+    select: {
+      id: true,
+      userId: true,
+      rosterMembers: {
+        where: { isCaptain: true, status: TeamInviteStatus.ACCEPTED },
+        select: { userId: true },
+        take: 1,
+      },
+    },
+  });
+
+  return new Map(
+    registrations.map((registration) => [
+      registration.id,
+      registration.rosterMembers[0]?.userId ?? registration.userId,
+    ]),
+  );
+}
+
+async function createTeamCaptainTiebreakMatch(params: {
+  sourceMatch: {
+    id: string;
+    tournamentId: string;
+    stageId: string | null;
+    bracketId: string | null;
+    round: number;
+    matchNumber: number;
+    bracket: string;
+    seriesKey: string | null;
+    isThirdPlaceMatch: boolean;
+    nextMatchId: string | null;
+    nextMatchSlot: number | null;
+    loserNextMatchId: string | null;
+    loserNextMatchSlot: number | null;
+  };
+  participant1EntryId: string;
+  participant2EntryId: string;
+  legNumber: number;
+}) {
+  if (!params.sourceMatch.seriesKey) return null;
+
+  const existing = await db.match.findFirst({
+    where: { seriesKey: params.sourceMatch.seriesKey, isTeamCaptainTiebreak: true },
+  });
+  if (existing) return existing;
+
+  const captainIds = await getTeamCaptainIds([
+    params.participant1EntryId,
+    params.participant2EntryId,
+  ]);
+  const player1Id = captainIds.get(params.participant1EntryId) ?? null;
+  const player2Id = captainIds.get(params.participant2EntryId) ?? null;
+  const id = `captain-tiebreak:${params.sourceMatch.seriesKey}`;
+
+  const tiebreak = await db.match.upsert({
+    where: { id },
+    update: {},
+    create: {
+      id,
+      tournamentId: params.sourceMatch.tournamentId,
+      stageId: params.sourceMatch.stageId,
+      bracketId: params.sourceMatch.bracketId,
+      round: params.sourceMatch.round,
+      matchNumber: params.sourceMatch.matchNumber,
+      bracket: params.sourceMatch.bracket,
+      seriesKey: params.sourceMatch.seriesKey,
+      legNumber: params.legNumber,
+      isCaptainAssignedTeamMatch: true,
+      isTeamCaptainTiebreak: true,
+      isThirdPlaceMatch: params.sourceMatch.isThirdPlaceMatch,
+      player1Id,
+      player2Id,
+      participant1EntryId: params.participant1EntryId,
+      participant2EntryId: params.participant2EntryId,
+      nextMatchId: params.sourceMatch.nextMatchId,
+      nextMatchSlot: params.sourceMatch.nextMatchSlot,
+      loserNextMatchId: params.sourceMatch.loserNextMatchId,
+      loserNextMatchSlot: params.sourceMatch.loserNextMatchSlot,
+      status: player1Id && player2Id ? MatchStatus.READY : MatchStatus.PENDING,
+      notes: TEAM_CAPTAIN_TIEBREAK_NOTE,
+    },
+  });
+
+  if (player1Id && player2Id) {
+    await notifyMatchReady(tiebreak.id);
+  }
+
+  invalidateTournamentSchedule(params.sourceMatch.tournamentId);
+  return tiebreak;
+}
+
+async function resolveCaptainTeamPlayoffSeriesIfCompleted(match: {
+  id: string;
+  tournamentId: string;
+  bracketId: string | null;
+  seriesKey: string | null;
+  isCaptainAssignedTeamMatch: boolean;
+  isTeamCaptainTiebreak: boolean;
+  status: MatchStatus;
+  winnerId: string | null;
+  winnerEntryId: string | null;
+  player1Id: string | null;
+  player2Id: string | null;
+  player1Score: number | null;
+  player2Score: number | null;
+  player1PenaltyScore: number | null;
+  player2PenaltyScore: number | null;
+  participant1EntryId: string | null;
+  participant2EntryId: string | null;
+  tournament: {
+    participantMode: TournamentParticipantMode;
+    captainsCreateTeamMatches: boolean;
+  };
+}) {
+  if (
+    !match.bracketId ||
+    !match.seriesKey ||
+    !match.isCaptainAssignedTeamMatch ||
+    match.tournament.participantMode !== TournamentParticipantMode.TEAM ||
+    !match.tournament.captainsCreateTeamMatches
+  ) {
+    return false;
+  }
+
+  if (match.isTeamCaptainTiebreak) {
+    const isCompleted =
+      match.status === MatchStatus.CONFIRMED ||
+      match.status === MatchStatus.FINISHED ||
+      match.status === MatchStatus.FORFEIT;
+    const player1Won =
+      match.player1Score !== null &&
+      match.player2Score !== null &&
+      (match.player1Score > match.player2Score ||
+        (match.player1Score === match.player2Score &&
+          match.player1PenaltyScore !== null &&
+          match.player2PenaltyScore !== null &&
+          match.player1PenaltyScore > match.player2PenaltyScore));
+    const player2Won =
+      match.player1Score !== null &&
+      match.player2Score !== null &&
+      (match.player2Score > match.player1Score ||
+        (match.player1Score === match.player2Score &&
+          match.player1PenaltyScore !== null &&
+          match.player2PenaltyScore !== null &&
+          match.player2PenaltyScore > match.player1PenaltyScore));
+    const winnerId = match.winnerId ?? (player1Won ? match.player1Id : player2Won ? match.player2Id : null);
+    const winnerEntryId =
+      match.winnerEntryId ??
+      (winnerId === match.player1Id
+        ? match.participant1EntryId
+        : winnerId === match.player2Id
+          ? match.participant2EntryId
+          : null);
+
+    if (
+      isCompleted &&
+      winnerId &&
+      winnerEntryId
+    ) {
+      if (winnerId !== match.winnerId || winnerEntryId !== match.winnerEntryId) {
+        await db.match.update({
+          where: { id: match.id },
+          data: { winnerId, winnerEntryId },
+        });
+      }
+
+      const loserId = winnerId === match.player1Id ? match.player2Id : match.player1Id;
+      const loserEntryId =
+        winnerEntryId === match.participant1EntryId
+          ? match.participant2EntryId
+          : match.participant1EntryId;
+      await advanceResolvedWinnerForMatch(
+        match.id,
+        winnerId,
+        loserId,
+        winnerEntryId,
+        loserEntryId,
+      );
+    }
+    return true;
+  }
+
+  const seriesMatches = await db.match.findMany({
+    where: { seriesKey: match.seriesKey },
+    orderBy: [{ legNumber: "asc" }, { createdAt: "asc" }],
+  });
+  const baseMatches = seriesMatches.filter(
+    (item) => item.isCaptainAssignedTeamMatch && !item.isTeamCaptainTiebreak && !item.isPenaltyTiebreak,
+  );
+
+  if (
+    !baseMatches.length ||
+    !baseMatches.every(
+      (item) =>
+        (item.status === MatchStatus.CONFIRMED ||
+          item.status === MatchStatus.FINISHED ||
+          item.status === MatchStatus.FORFEIT) &&
+        item.player1Score !== null &&
+        item.player2Score !== null,
+    )
+  ) {
+    return true;
+  }
+
+  const resolution = resolveCaptainTeamPlayoffAggregate(baseMatches);
+  if (resolution.state === "pending") return true;
+
+  const sourceMatch =
+    baseMatches.find((item) => item.nextMatchId && item.nextMatchSlot) ?? baseMatches[0];
+  const existingTiebreak = seriesMatches.find((item) => item.isTeamCaptainTiebreak);
+
+  if (resolution.state === "tied") {
+    if (!existingTiebreak) {
+      const lastLegNumber = Math.max(...baseMatches.map((item) => item.legNumber ?? 1));
+      await createTeamCaptainTiebreakMatch({
+        sourceMatch,
+        participant1EntryId: resolution.participant1EntryId,
+        participant2EntryId: resolution.participant2EntryId,
+        legNumber: lastLegNumber + 1,
+      });
+    }
+    return true;
+  }
+
+  if (existingTiebreak && existingTiebreak.status !== MatchStatus.CANCELLED) {
+    await db.match.update({
+      where: { id: existingTiebreak.id },
+      data: { status: MatchStatus.CANCELLED },
+    });
+  }
+
+  const captainIds = await getTeamCaptainIds([
+    resolution.participant1EntryId,
+    resolution.participant2EntryId,
+  ]);
+  const winnerId = captainIds.get(resolution.winnerEntryId) ?? null;
+  const loserId = captainIds.get(resolution.loserEntryId) ?? null;
+
+  if (winnerId) {
+    await advanceResolvedWinnerForMatch(
+      sourceMatch.id,
+      winnerId,
+      loserId,
+      resolution.winnerEntryId,
+      resolution.loserEntryId,
+    );
+  }
+
+  return true;
+}
+
 async function resolveBestOfSeriesIfCompleted(match: {
   id: string;
   tournamentId: string;
@@ -4190,6 +4449,12 @@ export async function resolveConfirmedMatch(matchId: string) {
     where: { id: matchId },
     include: {
       playoffBracket: true,
+      tournament: {
+        select: {
+          participantMode: true,
+          captainsCreateTeamMatches: true,
+        },
+      },
     },
   });
   if (!match) throw new Error("Match not found");
@@ -4200,6 +4465,10 @@ export async function resolveConfirmedMatch(matchId: string) {
   // front so every early-return path is covered.
   invalidateTournamentSchedule(match.tournamentId);
   invalidateTournamentStructure(match.tournamentId);
+
+  if (await resolveCaptainTeamPlayoffSeriesIfCompleted(match)) {
+    return;
+  }
 
   if (await resolveBestOfSeriesIfCompleted(match)) {
     return;

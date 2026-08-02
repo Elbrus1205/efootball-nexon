@@ -100,6 +100,7 @@ async function loadScheduleSlice(tournamentId: string) {
       legNumber: true,
       isPenaltyTiebreak: true,
       isCaptainAssignedTeamMatch: true,
+      isTeamCaptainTiebreak: true,
       isThirdPlaceMatch: true,
       scheduledAt: true,
       createdAt: true,

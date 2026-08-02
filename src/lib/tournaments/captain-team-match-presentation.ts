@@ -1,6 +1,7 @@
 type CaptainTeamMatch = {
   id: string;
   isCaptainAssignedTeamMatch: boolean;
+  isTeamCaptainTiebreak?: boolean;
   stageId?: string | null;
   groupId?: string | null;
   bracketId?: string | null;
@@ -33,7 +34,7 @@ export function buildCaptainTeamMatchSlotLabels(matches: readonly CaptainTeamMat
   const fixtures = new Map<string, CaptainTeamMatch[]>();
 
   for (const match of matches) {
-    if (!match.isCaptainAssignedTeamMatch) continue;
+    if (!match.isCaptainAssignedTeamMatch || match.isTeamCaptainTiebreak) continue;
     const key = fixtureKey(match);
     fixtures.set(key, [...(fixtures.get(key) ?? []), match]);
   }
@@ -55,6 +56,9 @@ export function compareCaptainAssignedTeamMatches(
   currentRegistrationId?: string | null,
 ) {
   if (!a.isCaptainAssignedTeamMatch || !b.isCaptainAssignedTeamMatch) return null;
+
+  const tiebreakOrder = Number(a.isTeamCaptainTiebreak) - Number(b.isTeamCaptainTiebreak);
+  if (tiebreakOrder) return tiebreakOrder;
 
   const stageOrder = (a.stage?.orderIndex ?? 999) - (b.stage?.orderIndex ?? 999);
   if (stageOrder) return stageOrder;

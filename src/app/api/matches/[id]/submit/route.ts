@@ -88,8 +88,14 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     return NextResponse.json({ error: "В серии пенальти не может быть ничьей." }, { status: 400 });
   }
 
-  const isSingleLegPlayoffMatch = Boolean(match.bracketId) && !match.isPenaltyTiebreak && (match.playoffBracket?.legsCount ?? 1) <= 1;
-  const isPlayoffScoreDraw = isSingleLegPlayoffMatch && body.player1Score === body.player2Score;
+  const isSingleLegPlayoffMatch =
+    Boolean(match.bracketId) &&
+    !match.isPenaltyTiebreak &&
+    !match.isCaptainAssignedTeamMatch &&
+    (match.playoffBracket?.legsCount ?? 1) <= 1;
+  const isPlayoffScoreDraw =
+    (isSingleLegPlayoffMatch || match.isTeamCaptainTiebreak) &&
+    body.player1Score === body.player2Score;
   if (!isAlreadyConfirmed && isPlayoffScoreDraw && !hasPenaltyScores(body)) {
     return NextResponse.json({ error: "Для ничьей в плей-офф укажите счёт пенальти." }, { status: 400 });
   }

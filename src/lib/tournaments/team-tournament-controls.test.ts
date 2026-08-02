@@ -5,11 +5,14 @@ import { isRankInsideTop } from "./top-ranking-roster";
 
 const schemaSource = readFileSync("prisma/schema.prisma", "utf8");
 const migrationSource = readFileSync("prisma/migrations/20260728120000_add_team_tournament_controls/migration.sql", "utf8");
+const captainTiebreakMigrationSource = readFileSync("prisma/migrations/20260802133000_add_team_captain_tiebreak/migration.sql", "utf8");
 const builderSource = readFileSync("src/components/admin/tournament-builder-form.tsx", "utf8");
 const inviteRouteSource = readFileSync("src/app/api/tournaments/[id]/roster/invite/route.ts", "utf8");
 const topRankingSource = readFileSync("src/lib/tournaments/top-ranking-roster.ts", "utf8");
 const assignmentRouteSource = readFileSync("src/app/api/tournaments/[id]/team-matches/[matchId]/route.ts", "utf8");
+const scoreSubmissionRouteSource = readFileSync("src/app/api/matches/[id]/submit/route.ts", "utf8");
 const reminderServiceSource = readFileSync("src/lib/services/tournaments.ts", "utf8");
+const captainTeamMatchesSource = readFileSync("src/lib/tournaments/captain-team-matches.ts", "utf8");
 const tournamentPageSource = readFileSync("src/app/tournaments/[id]/page.tsx", "utf8");
 const clubPlayerLineSource = readFileSync("src/components/tournaments/club-player-line.tsx", "utf8");
 const scheduleViewSource = readFileSync("src/components/tournaments/tournament-schedule-view.tsx", "utf8");
@@ -37,6 +40,8 @@ test("team tournament controls are persisted and exposed to the administrator", 
   assert.match(schemaSource, /ratingRankAtInvite\s+Int\?/);
   assert.match(schemaSource, /isTopRankAtInvite\s+Boolean\?/);
   assert.match(schemaSource, /isCaptainAssignedTeamMatch\s+Boolean/);
+  assert.match(captainTiebreakMigrationSource, /"isTeamCaptainTiebreak"/);
+  assert.match(captainTiebreakMigrationSource, /MOD\(COALESCE\("legNumber", 1\), 2\) = 0/);
 });
 
 test("roster invitations enforce and preserve the top-player decision", () => {
@@ -47,11 +52,12 @@ test("roster invitations enforce and preserve the top-player decision", () => {
   assert.match(topRankingSource, /Нельзя пригласить этого игрока/);
 });
 
-test("only the home captain can lock one unique player pairing per round", () => {
+test("only the home captain can lock one unique player pairing per leg", () => {
   assert.match(assignmentRouteSource, /Назначать пары может только капитан команды-хозяина/);
   assert.match(assignmentRouteSource, /Эта пара уже подтверждена и больше не редактируется/);
   assert.match(assignmentRouteSource, /Этот игрок уже назначен на матч в данном туре/);
   assert.match(assignmentRouteSource, /player1Id, player2Id, status: MatchStatus\.READY/);
+  assert.match(assignmentRouteSource, /legNumber: match\.legNumber/);
   assert.match(assignmentRouteSource, /notifyMatchReady\(params\.matchId\)/);
 });
 
@@ -78,9 +84,20 @@ test("unassigned captain match slots show team identity without captain nickname
 test("captain match slots are labeled and keep home fixtures together before away fixtures", () => {
   assert.match(tournamentPageSource, /buildCaptainTeamMatchSlotLabels\(visibleMatches\)/);
   assert.match(tournamentPageSource, /compareCaptainAssignedTeamMatches\(a, b, currentRegistrationId\)/);
-  assert.match(tournamentPageSource, /captainSlotLabel \? `\$\{captainSlotLabel\}[^$]+\$\{deadlineLabel\}` : deadlineLabel/);
-  assert.match(tournamentPageSource, /matchLabel: captainSlotLabel \? `[^`]*\$\{match\.matchNumber\}[^$]+\$\{captainSlotLabel\}`/);
+  assert.match(tournamentPageSource, /const matchMeta = match\.isTeamCaptainTiebreak[\s\S]+captainSlotLabel[\s\S]+deadlineLabel/);
+  assert.match(tournamentPageSource, /matchLabel: match\.isTeamCaptainTiebreak[\s\S]+captainSlotLabel[\s\S]+\$\{match\.matchNumber\}/);
   assert.match(scheduleViewSource, /\{match\.matchLabel\}/);
+});
+
+test("a tied team playoff creates one captain-versus-captain deciding match after every slot finishes", () => {
+  assert.match(schemaSource, /isTeamCaptainTiebreak\s+Boolean/);
+  assert.match(reminderServiceSource, /resolveCaptainTeamPlayoffSeriesIfCompleted/);
+  assert.match(reminderServiceSource, /createTeamCaptainTiebreakMatch/);
+  assert.match(reminderServiceSource, /baseMatches\.every/);
+  assert.match(reminderServiceSource, /isTeamCaptainTiebreak: true/);
+  assert.match(captainTeamMatchesSource, /reverseHomeAndAway/);
+  assert.match(scoreSubmissionRouteSource, /!match\.isCaptainAssignedTeamMatch/);
+  assert.match(scoreSubmissionRouteSource, /isSingleLegPlayoffMatch \|\| match\.isTeamCaptainTiebreak/);
 });
 
 test("unfilled home pairings produce thirty-minute deadline reminders", () => {

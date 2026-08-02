@@ -46,6 +46,8 @@ type MatchItem = {
   participant1EntryId: string | null;
   participant2EntryId: string | null;
   isPenaltyTiebreak: boolean;
+  isCaptainAssignedTeamMatch: boolean;
+  isTeamCaptainTiebreak: boolean;
   seriesWinsRequired: number | null;
   player1: { name: string | null } | null;
   player2: { name: string | null } | null;
@@ -75,6 +77,7 @@ function roundLabel(match: MatchItem) {
 }
 
 function matchRequiresWinner(match: MatchItem) {
+  if (match.isCaptainAssignedTeamMatch && !match.isTeamCaptainTiebreak) return false;
   return Boolean(match.bracketId) || match.stage?.type === StageType.PLAYOFF || match.isPenaltyTiebreak || Boolean(match.seriesWinsRequired && match.seriesWinsRequired > 1);
 }
 
@@ -99,7 +102,13 @@ function getRegularSeriesMatches(match: MatchItem, matches: MatchItem[]) {
 }
 
 function isMultiLegPlayoffSeries(match: MatchItem, matches: MatchItem[]) {
-  if (!match.bracketId || !match.seriesKey || match.isPenaltyTiebreak || (match.seriesWinsRequired && match.seriesWinsRequired > 1)) {
+  if (
+    !match.bracketId ||
+    !match.seriesKey ||
+    match.isPenaltyTiebreak ||
+    match.isCaptainAssignedTeamMatch ||
+    (match.seriesWinsRequired && match.seriesWinsRequired > 1)
+  ) {
     return false;
   }
 

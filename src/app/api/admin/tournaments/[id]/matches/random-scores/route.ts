@@ -45,6 +45,7 @@ async function fallbackAdvancePlayoffWinner(matchId: string) {
       bracket: true,
       seriesKey: true,
       isPenaltyTiebreak: true,
+      isCaptainAssignedTeamMatch: true,
       round: true,
       matchNumber: true,
       nextMatchId: true,
@@ -60,7 +61,7 @@ async function fallbackAdvancePlayoffWinner(matchId: string) {
     },
   });
 
-  if (!match?.bracketId || !match.winnerId) return;
+  if (!match?.bracketId || !match.winnerId || match.isCaptainAssignedTeamMatch) return;
   if (match.seriesKey && !match.isPenaltyTiebreak && (match.playoffBracket?.legsCount ?? 1) > 1) return;
 
   const winnerEntryId = match.winnerId === match.player1Id ? match.participant1EntryId : match.winnerId === match.player2Id ? match.participant2EntryId : null;
@@ -188,7 +189,8 @@ export async function POST(_request: Request, props: { params: Promise<{ id: str
 
   const scoreData: MatchScoreData[] = targetMatches.map((match) => {
     const isPlayoff = match.stage?.type === StageType.PLAYOFF || !!match.bracketId || match.isPenaltyTiebreak;
-    const { player1Score, player2Score } = randomScore({ allowDraw: !isPlayoff });
+    const requiresWinner = match.isTeamCaptainTiebreak || (isPlayoff && !match.isCaptainAssignedTeamMatch);
+    const { player1Score, player2Score } = randomScore({ allowDraw: !requiresWinner });
     const winnerId = player1Score > player2Score ? match.player1Id : player2Score > player1Score ? match.player2Id : null;
     const winnerEntryId = winnerId === match.player1Id ? match.participant1EntryId : winnerId === match.player2Id ? match.participant2EntryId : null;
     return {

@@ -89,6 +89,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
           groupId: match.groupId,
           bracketId: match.bracketId,
           round: match.round,
+          legNumber: match.legNumber,
           id: { not: match.id },
           OR: [{ player1Id }, { player2Id }],
         },
