@@ -75,6 +75,14 @@ test("unassigned captain match slots show team identity without captain nickname
   assert.match(tournamentPageSource, /showPlayer2Name=\{sideTwo\.showPlayerName\}/);
 });
 
+test("captain match slots are labeled and keep home fixtures together before away fixtures", () => {
+  assert.match(tournamentPageSource, /buildCaptainTeamMatchSlotLabels\(visibleMatches\)/);
+  assert.match(tournamentPageSource, /compareCaptainAssignedTeamMatches\(a, b, currentRegistrationId\)/);
+  assert.match(tournamentPageSource, /captainSlotLabel \? `\$\{captainSlotLabel\}[^$]+\$\{deadlineLabel\}` : deadlineLabel/);
+  assert.match(tournamentPageSource, /matchLabel: captainSlotLabel \? `[^`]*\$\{match\.matchNumber\}[^$]+\$\{captainSlotLabel\}`/);
+  assert.match(scheduleViewSource, /\{match\.matchLabel\}/);
+});
+
 test("unfilled home pairings produce thirty-minute deadline reminders", () => {
   assert.match(reminderServiceSource, /captainsCreateTeamMatches/);
   assert.match(reminderServiceSource, /30 \* 60 \* 1_000/);
