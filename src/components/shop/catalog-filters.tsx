@@ -2,36 +2,39 @@
 
 import { SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import styles from "./shop.module.css";
+
+export const SHOP_CATALOG_FORM_ID = "shop-catalog-form";
 
 type Props = {
   categories: Array<{ slug: string; name: string }>;
   values: Record<string, string | undefined>;
 };
 
-function FilterFields({ categories, values }: Props) {
+function FilterFields({ categories, values, formId }: Props & { formId?: string }) {
   return (
     <>
       <label className={styles.filterLabel}>Категория
-        <select className={styles.select} name="category" defaultValue={values.category ?? ""}>
+        <select className={styles.select} name="category" form={formId} defaultValue={values.category ?? ""}>
           <option value="">Все категории</option>
           {categories.map((category) => <option key={category.slug} value={category.slug}>{category.name}</option>)}
         </select>
       </label>
       <label className={styles.filterLabel}>Тип
-        <select className={styles.select} name="type" defaultValue={values.type ?? ""}>
+        <select className={styles.select} name="type" form={formId} defaultValue={values.type ?? ""}>
           <option value="">Все</option><option value="IN_GAME">Внутриигровой</option><option value="PROMOTIONAL">Акционный</option>
         </select>
       </label>
       <label className={styles.filterLabel}>Цена от
-        <input className={styles.input} name="min" inputMode="decimal" defaultValue={values.min} placeholder="0 ₽" />
+        <input className={styles.input} name="min" form={formId} inputMode="decimal" defaultValue={values.min} placeholder="0 ₽" />
       </label>
       <label className={styles.filterLabel}>Цена до
-        <input className={styles.input} name="max" inputMode="decimal" defaultValue={values.max} placeholder="Без лимита" />
+        <input className={styles.input} name="max" form={formId} inputMode="decimal" defaultValue={values.max} placeholder="Без лимита" />
       </label>
       <div style={{ display: "grid", gap: ".4rem" }}>
-        <label className={styles.checkLabel}><input type="checkbox" name="available" value="1" defaultChecked={values.available === "1"} /> В наличии</label>
-        <label className={styles.checkLabel}><input type="checkbox" name="discounted" value="1" defaultChecked={values.discounted === "1"} /> Со скидкой</label>
+        <label className={styles.checkLabel}><input type="checkbox" name="available" form={formId} value="1" defaultChecked={values.available === "1"} /> В наличии</label>
+        <label className={styles.checkLabel}><input type="checkbox" name="discounted" form={formId} value="1" defaultChecked={values.discounted === "1"} /> Со скидкой</label>
       </div>
     </>
   );
@@ -44,7 +47,10 @@ export function CatalogFilters(props: Props) {
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 720px)");
-    const update = () => setMobile(media.matches);
+    const update = () => {
+      setMobile(media.matches);
+      if (!media.matches) setOpen(false);
+    };
     update();
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
@@ -61,18 +67,21 @@ export function CatalogFilters(props: Props) {
 
   if (!mobile) return <div className={styles.filters}><FilterFields {...props} /></div>;
 
+  const sheet = open ? createPortal(
+    <>
+      <button type="button" className={styles.sheetOverlay} aria-label="Закрыть фильтры" onClick={() => setOpen(false)} />
+      <div className={`${styles.sheet} ${styles.filterSheet}`} role="dialog" aria-modal="true" aria-label="Фильтры каталога">
+        <div className={styles.sheetHead}><div><p className={styles.eyebrow}>Каталог</p><h2>Фильтры</h2></div><button type="button" className={styles.iconButton} aria-label="Закрыть" onClick={() => setOpen(false)}><X /></button></div>
+        <div className={styles.form}><FilterFields {...props} formId={SHOP_CATALOG_FORM_ID} /><button className={styles.button} type="submit" form={SHOP_CATALOG_FORM_ID}>Показать товары</button></div>
+      </div>
+    </>,
+    document.body,
+  ) : null;
+
   return (
     <>
       <button type="button" className={`${styles.buttonSecondary} ${styles.mobileFilterButton}`} aria-label="Открыть фильтры" onClick={() => setOpen(true)}><SlidersHorizontal aria-hidden="true" /><span>Фильтры</span>{activeCount ? <b>{activeCount}</b> : null}</button>
-      {open ? (
-        <>
-          <button type="button" className={styles.sheetOverlay} aria-label="Закрыть фильтры" onClick={() => setOpen(false)} />
-          <div className={`${styles.sheet} ${styles.filterSheet}`} role="dialog" aria-modal="true" aria-label="Фильтры каталога">
-            <div className={styles.sheetHead}><div><p className={styles.eyebrow}>Каталог</p><h2>Фильтры</h2></div><button type="button" className={styles.iconButton} aria-label="Закрыть" onClick={() => setOpen(false)}><X /></button></div>
-            <div className={styles.form}><FilterFields {...props} /><button className={styles.button} type="submit">Показать товары</button></div>
-          </div>
-        </>
-      ) : null}
+      {sheet}
     </>
   );
 }

@@ -8,6 +8,8 @@ import { ProductCard } from "@/components/shop/product-card";
 import { CatalogFilters } from "@/components/shop/catalog-filters";
 import styles from "@/components/shop/shop.module.css";
 
+const SHOP_CATALOG_FORM_ID = "shop-catalog-form";
+
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
@@ -61,7 +63,7 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
 
       {!availability.available ? <div className={styles.warning}><ShoppingBag /><div><strong>Магазин сейчас недоступен</strong><br />{availability.reason}</div></div> : null}
 
-      <form method="get">
+      <form id={SHOP_CATALOG_FORM_ID} method="get">
         <div className={styles.toolbar}>
           <div className={styles.searchWrap}><Search aria-hidden="true" /><input className={styles.input} type="search" name="q" defaultValue={values.q} placeholder="Найти монеты или донат" aria-label="Поиск товаров" /></div>
           <select className={styles.select} name="sort" defaultValue={values.sort ?? "popular"} aria-label="Сортировка">

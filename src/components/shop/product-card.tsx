@@ -34,10 +34,11 @@ export function ProductCard({ product, currency = "RUB" }: ProductCardProps) {
 
   return (
     <article className={styles.productCard}>
+      {image ? <><Image className={styles.productCardBackdrop} src={image.url} alt="" fill sizes="(max-width: 420px) 100vw, (max-width: 720px) 50vw, (max-width: 980px) 33vw, 25vw" /><span className={styles.productCardScrim} aria-hidden="true" /></> : null}
       <Link href={`/shop/${product.slug}`} className={styles.productImage} aria-label={`Открыть товар ${product.title}`}>
-        {image ? <Image src={image.url} alt={image.alt} fill sizes="(max-width: 420px) 118px, (max-width: 720px) 50vw, (max-width: 980px) 33vw, 25vw" /> : (
+        {!image ? (
           <span className={styles.productPlaceholder}><ShoppingBag aria-hidden="true" /></span>
-        )}
+        ) : null}
         <span className={styles.badgeRow}>
           <span className={styles.badge}>{product.type === "PROMOTIONAL" ? "Акционный" : "В игре"}</span>
           {percent > 0 ? <span className={styles.saleBadge}>−{percent}%</span> : null}
