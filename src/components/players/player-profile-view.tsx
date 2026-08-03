@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { AlertTriangle, ArrowRight, Clock3, PencilLine, ShieldCheck, Trophy } from "lucide-react";
+import { AlertTriangle, ArrowRight, Clock3, History, PencilLine, ShieldCheck, ShoppingBag, Trophy } from "lucide-react";
 import { ProfileStatusType, type ProfileStatusTone, type Season, type UserRole } from "@prisma/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -323,6 +323,21 @@ export function PlayerProfileView({
       </Card>
 
       <AchievementShortcut achievements={achievements} href={`${basePath}/achievements`} />
+
+      {editHref ? <Card className="overflow-hidden rounded-lg p-0">
+        <div className="grid sm:grid-cols-2">
+          <Link href="/shop" className="group flex min-h-20 items-center gap-3 border-b border-white/10 p-4 transition hover:bg-white/[0.035] sm:border-b-0 sm:border-r">
+            <ShoppingBag className="h-5 w-5 text-primary" />
+            <span className="min-w-0 flex-1"><strong className="block text-white">Магазин</strong><small className="text-zinc-500">Каталог игровых товаров</small></span>
+            <ArrowRight className="h-4 w-4 text-zinc-500 transition group-hover:translate-x-0.5" />
+          </Link>
+          <Link href="/shop/orders" className="group flex min-h-20 items-center gap-3 p-4 transition hover:bg-white/[0.035]">
+            <History className="h-5 w-5 text-primary" />
+            <span className="min-w-0 flex-1"><strong className="block text-white">Мои заказы</strong><small className="text-zinc-500">Статусы, история и отзывы</small></span>
+            <ArrowRight className="h-4 w-4 text-zinc-500 transition group-hover:translate-x-0.5" />
+          </Link>
+        </div>
+      </Card> : null}
 
       <PlayerCareerStatsPanel
         stats={careerStats}

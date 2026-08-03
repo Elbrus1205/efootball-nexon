@@ -41,6 +41,8 @@ export const rolePermissions = [
   { id: "content.manage", label: "Управлять FAQ и регламентами" },
   { id: "divisions.manage", label: "Управлять режимом Дивизион" },
   { id: "reliability.manage", label: "Настраивать штрафы надежности" },
+  { id: "shop.support", label: "Сопровождать заказы и разрешать споры магазина" },
+  { id: "shop.manage", label: "Управлять каталогом, продавцами, оплатами и настройками магазина" },
 ] as const satisfies readonly RolePermission[];
 
 export type RolePermissionId = (typeof rolePermissions)[number]["id"];
@@ -105,6 +107,8 @@ export const defaultRolePermissions: Record<ManagedRole, RolePermissionId[]> = {
     "content.manage",
     "divisions.manage",
     "reliability.manage",
+    "shop.support",
+    "shop.manage",
   ],
 };
 
@@ -129,4 +133,5 @@ export const adminNavPermissions: Record<string, RolePermissionId[]> = {
   "/admin/broadcasts": ["broadcasts.manage"],
   "/admin/divisions": ["divisions.manage"],
   "/admin/reliability": ["reliability.manage"],
+  "/admin/shop": ["shop.support", "shop.manage"],
 };

@@ -24,6 +24,8 @@ export default async function AdminLayout({
     "divisions.manage",
     "schedule.manage",
     "reliability.manage",
+    "shop.support",
+    "shop.manage",
   ]);
   const allowedHrefs = await getAllowedAdminNavHrefs(session.user.role);
 

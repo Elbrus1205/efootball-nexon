@@ -11,6 +11,7 @@ export const runtime = "nodejs";
 const ALLOWED_IMAGE_TYPES = new Set(["image/avif", "image/png", "image/jpeg", "image/webp"]);
 const ALLOWED_PROFILE_IMAGE_TYPES = new Set(["image/avif", "image/png", "image/jpeg", "image/webp"]);
 const ALLOWED_FAQ_TYPES = new Set(["image/avif", "image/png", "image/jpeg", "image/webp", "application/pdf"]);
+const ALLOWED_SHOP_EVIDENCE_TYPES = new Set(["image/avif", "image/png", "image/jpeg", "image/webp", "application/pdf", "video/mp4", "video/webm"]);
 
 const FOLDER_RULES: Record<StorageFolder, { maxBytes: number; allowed: Set<string> }> = {
   avatars: { maxBytes: 4 * 1024 * 1024, allowed: ALLOWED_PROFILE_IMAGE_TYPES },
@@ -19,6 +20,8 @@ const FOLDER_RULES: Record<StorageFolder, { maxBytes: number; allowed: Set<strin
   divisions: { maxBytes: 16 * 1024 * 1024, allowed: ALLOWED_IMAGE_TYPES },
   faq: { maxBytes: 16 * 1024 * 1024, allowed: ALLOWED_FAQ_TYPES },
   lineups: { maxBytes: 10 * 1024 * 1024, allowed: ALLOWED_PROFILE_IMAGE_TYPES },
+  "shop-products": { maxBytes: 12 * 1024 * 1024, allowed: ALLOWED_IMAGE_TYPES },
+  "shop-evidence": { maxBytes: 24 * 1024 * 1024, allowed: ALLOWED_SHOP_EVIDENCE_TYPES },
 };
 
 function isStorageFolder(value: string): value is StorageFolder {

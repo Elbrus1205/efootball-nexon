@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { LogIn, LogOut, Shield, ShieldCheck, User2 } from "lucide-react";
+import { History, LogIn, LogOut, Shield, ShieldCheck, ShoppingBag, User2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -84,6 +84,20 @@ export function AuthNav() {
             <Link href="/dashboard/security" className="flex items-center gap-2">
               <ShieldCheck className="h-4 w-4" />
               Безопасность
+            </Link>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem asChild>
+            <Link href="/shop" className="flex items-center gap-2">
+              <ShoppingBag className="h-4 w-4" />
+              Магазин
+            </Link>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem asChild>
+            <Link href="/shop/orders" className="flex items-center gap-2">
+              <History className="h-4 w-4" />
+              Мои заказы
             </Link>
           </DropdownMenuItem>
 

@@ -234,6 +234,130 @@ enum DivisionSeasonStatus {
   FINISHED
 }
 
+enum ShopProductType {
+  IN_GAME
+  PROMOTIONAL
+}
+
+enum ShopStockMode {
+  FINITE
+  UNLIMITED
+}
+
+enum ShopProductFieldType {
+  TEXT
+  TEXTAREA
+  NUMBER
+  SELECT
+  PLATFORM
+  REGION
+  LOGIN_METHOD
+  TIME
+}
+
+enum ShopDiscountType {
+  PERCENT
+  FIXED
+}
+
+enum ShopOrderStatus {
+  PENDING_PAYMENT
+  PAID
+  WAITING_SELLER
+  ACCEPTED
+  IN_PROGRESS
+  SELLER_COMPLETED
+  WAITING_BUYER_CONFIRMATION
+  COMPLETED
+  DISPUTE
+  CANCELLED
+  REFUND_PENDING
+  REFUNDED
+  EXPIRED
+}
+
+enum ShopOrderActorType {
+  BUYER
+  SELLER
+  SUPPORT
+  ADMIN
+  SYSTEM
+}
+
+enum ShopOrderMessageVisibility {
+  PARTICIPANTS
+  SUPPORT
+  INTERNAL
+}
+
+enum ShopPaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  PARTIALLY_REFUNDED
+  REFUNDED
+}
+
+enum ShopRefundStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum ShopPayoutStatus {
+  HELD
+  AVAILABLE
+  PROCESSING
+  PAID
+  CANCELLED
+}
+
+enum ShopReviewStatus {
+  PENDING
+  PUBLISHED
+  REJECTED
+}
+
+enum ShopDisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  CLOSED
+}
+
+enum ShopNotificationChannel {
+  IN_APP
+  TELEGRAM
+  EMAIL
+  PUSH
+}
+
+enum ShopNotificationStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+enum ShopSellerDistributionMode {
+  MANUAL
+  ROUND_ROBIN
+  LOWEST_LOAD
+  BEST_RATING
+  FASTEST
+}
+
+enum ShopJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
 model User {
   id                                         String                              @id @default(cuid())
   publicId                                   String                              @unique
@@ -319,6 +443,16 @@ model User {
   divisionSeasonArchives                     DivisionSeasonArchive[]
   reliabilityEvents                          ReliabilityEvent[]                  @relation("reliabilityTarget")
   reliabilityEventsIssued                    ReliabilityEvent[]                  @relation("reliabilityActor")
+  shopOrders                                 ShopOrder[]                         @relation("shopOrderBuyer")
+  shopSeller                                 ShopSeller?
+  shopOrderStatusChanges                     ShopOrderStatusHistory[]            @relation("shopStatusActor")
+  shopOrderMessages                          ShopOrderMessage[]                  @relation("shopOrderMessageSender")
+  shopReviews                                ShopReview[]                        @relation("shopReviewBuyer")
+  shopDisputesOpened                         ShopDispute[]                       @relation("shopDisputeOpener")
+  shopDisputeMessages                        ShopDisputeMessage[]                @relation("shopDisputeMessageSender")
+  shopPromoCodeUsages                        ShopPromoCodeUsage[]
+  shopNotifications                          ShopNotification[]
+  shopAuditLogs                              ShopAuditLog[]                      @relation("shopAuditActor")
 
   @@index([role, isBanned, createdAt])
 }
@@ -669,10 +803,10 @@ model Tournament {
   isTest                         Boolean                             @default(false)
   participantMode                TournamentParticipantMode           @default(SINGLE)
   rosterSize                     Int                                 @default(1)
-  topRankingRestrictionEnabled  Boolean                             @default(false)
-  topRankingLimit               Int                                 @default(10)
-  topRankingPlayerLimit         Int                                 @default(1)
-  captainsCreateTeamMatches     Boolean                             @default(false)
+  topRankingRestrictionEnabled   Boolean                             @default(false)
+  topRankingLimit                Int                                 @default(10)
+  topRankingPlayerLimit          Int                                 @default(1)
+  captainsCreateTeamMatches      Boolean                             @default(false)
   matchupFormat                  MatchupFormat                       @default(SINGLE_MATCH)
   bestOfWins                     Int                                 @default(1)
   autoCreateMatches              Boolean                             @default(true)
@@ -854,21 +988,21 @@ model TournamentRegistration {
 }
 
 model TournamentRegistrationMember {
-  id             String                 @id @default(cuid())
-  tournamentId   String
-  registrationId String
-  userId         String
-  status         TeamInviteStatus       @default(PENDING)
-  isCaptain      Boolean                @default(false)
+  id                 String                 @id @default(cuid())
+  tournamentId       String
+  registrationId     String
+  userId             String
+  status             TeamInviteStatus       @default(PENDING)
+  isCaptain          Boolean                @default(false)
   ratingRankAtInvite Int?
-  isTopRankAtInvite Boolean?
-  invitedAt      DateTime               @default(now())
-  respondedAt    DateTime?
-  createdAt      DateTime               @default(now())
-  updatedAt      DateTime               @updatedAt
-  tournament     Tournament             @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  registration   TournamentRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
-  user           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isTopRankAtInvite  Boolean?
+  invitedAt          DateTime               @default(now())
+  respondedAt        DateTime?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  tournament         Tournament             @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  registration       TournamentRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  user               User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([tournamentId, userId])
   @@unique([registrationId, userId])
@@ -936,57 +1070,57 @@ model BracketSlot {
 }
 
 model Match {
-  id                  String                  @id @default(cuid())
-  tournamentId        String
-  stageId             String?
-  groupId             String?
-  bracketId           String?
-  round               Int
-  matchNumber         Int
-  bracket             String                  @default("upper")
-  seriesKey           String?
-  legNumber           Int?
-  isPenaltyTiebreak   Boolean                 @default(false)
-  isCaptainAssignedTeamMatch Boolean           @default(false)
-  isTeamCaptainTiebreak Boolean                 @default(false)
-  seriesWinsRequired  Int?
-  seriesMatchNumber   Int?
-  isThirdPlaceMatch   Boolean                 @default(false)
-  scheduledAt         DateTime?
-  startsAt            DateTime?
-  finishedAt          DateTime?
-  player1Id           String?
-  player2Id           String?
-  participant1EntryId String?
-  participant2EntryId String?
-  winnerId            String?
-  winnerEntryId       String?
-  player1Score        Int?
-  player2Score        Int?
-  player1PenaltyScore Int?
-  player2PenaltyScore Int?
-  status              MatchStatus             @default(PENDING)
-  notes               String?                 @db.Text
-  locationLabel       String?
-  nextMatchId         String?
-  nextMatchSlot       Int?
-  loserNextMatchId    String?
-  loserNextMatchSlot  Int?
-  createdAt           DateTime                @default(now())
-  updatedAt           DateTime                @updatedAt
-  tournament          Tournament              @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  stage               TournamentStage?        @relation(fields: [stageId], references: [id], onDelete: SetNull)
-  group               TournamentGroup?        @relation(fields: [groupId], references: [id], onDelete: SetNull)
-  playoffBracket      PlayoffBracket?         @relation(fields: [bracketId], references: [id], onDelete: SetNull)
-  player1             User?                   @relation("playerOne", fields: [player1Id], references: [id], onDelete: SetNull)
-  player2             User?                   @relation("playerTwo", fields: [player2Id], references: [id], onDelete: SetNull)
-  winner              User?                   @relation("winner", fields: [winnerId], references: [id], onDelete: SetNull)
-  participant1Entry   TournamentRegistration? @relation("participantOneRegistration", fields: [participant1EntryId], references: [id], onDelete: SetNull)
-  participant2Entry   TournamentRegistration? @relation("participantTwoRegistration", fields: [participant2EntryId], references: [id], onDelete: SetNull)
-  winningEntry        TournamentRegistration? @relation("winningRegistration", fields: [winnerEntryId], references: [id], onDelete: SetNull)
-  lineupPlayers       MatchLineupPlayer[]
-  submissions         MatchResultSubmission[]
-  schedules           MatchSchedule[]
+  id                         String                  @id @default(cuid())
+  tournamentId               String
+  stageId                    String?
+  groupId                    String?
+  bracketId                  String?
+  round                      Int
+  matchNumber                Int
+  bracket                    String                  @default("upper")
+  seriesKey                  String?
+  legNumber                  Int?
+  isPenaltyTiebreak          Boolean                 @default(false)
+  isCaptainAssignedTeamMatch Boolean                 @default(false)
+  isTeamCaptainTiebreak      Boolean                 @default(false)
+  seriesWinsRequired         Int?
+  seriesMatchNumber          Int?
+  isThirdPlaceMatch          Boolean                 @default(false)
+  scheduledAt                DateTime?
+  startsAt                   DateTime?
+  finishedAt                 DateTime?
+  player1Id                  String?
+  player2Id                  String?
+  participant1EntryId        String?
+  participant2EntryId        String?
+  winnerId                   String?
+  winnerEntryId              String?
+  player1Score               Int?
+  player2Score               Int?
+  player1PenaltyScore        Int?
+  player2PenaltyScore        Int?
+  status                     MatchStatus             @default(PENDING)
+  notes                      String?                 @db.Text
+  locationLabel              String?
+  nextMatchId                String?
+  nextMatchSlot              Int?
+  loserNextMatchId           String?
+  loserNextMatchSlot         Int?
+  createdAt                  DateTime                @default(now())
+  updatedAt                  DateTime                @updatedAt
+  tournament                 Tournament              @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  stage                      TournamentStage?        @relation(fields: [stageId], references: [id], onDelete: SetNull)
+  group                      TournamentGroup?        @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  playoffBracket             PlayoffBracket?         @relation(fields: [bracketId], references: [id], onDelete: SetNull)
+  player1                    User?                   @relation("playerOne", fields: [player1Id], references: [id], onDelete: SetNull)
+  player2                    User?                   @relation("playerTwo", fields: [player2Id], references: [id], onDelete: SetNull)
+  winner                     User?                   @relation("winner", fields: [winnerId], references: [id], onDelete: SetNull)
+  participant1Entry          TournamentRegistration? @relation("participantOneRegistration", fields: [participant1EntryId], references: [id], onDelete: SetNull)
+  participant2Entry          TournamentRegistration? @relation("participantTwoRegistration", fields: [participant2EntryId], references: [id], onDelete: SetNull)
+  winningEntry               TournamentRegistration? @relation("winningRegistration", fields: [winnerEntryId], references: [id], onDelete: SetNull)
+  lineupPlayers              MatchLineupPlayer[]
+  submissions                MatchResultSubmission[]
+  schedules                  MatchSchedule[]
 
   @@index([tournamentId, round, matchNumber])
   @@index([tournamentId, seriesKey])
@@ -1235,18 +1369,670 @@ model TwoFactorChallenge {
 // action details live here. Single-use (usedAt) with an expiry to guard against
 // replay / double-tap on sensitive actions like score confirmation.
 model TelegramCallbackToken {
-  id        String    @id @default(cuid())
-  token     String    @unique
-  userId    String
-  action    String
-  matchId   String?
+  id           String     @id @default(cuid())
+  token        String     @unique
+  userId       String
+  action       String
+  matchId      String?
   tournamentId String?
-  payload   Json?
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shopOrderId  String?
+  payload      Json?
+  expiresAt    DateTime
+  usedAt       DateTime?
+  createdAt    DateTime   @default(now())
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shopOrder    ShopOrder? @relation(fields: [shopOrderId], references: [id], onDelete: Cascade)
 
   @@index([userId, action, createdAt])
   @@index([expiresAt])
+  @@index([shopOrderId, action])
+}
+
+model ShopCategory {
+  id          String                  @id @default(cuid())
+  slug        String                  @unique
+  name        String
+  description String?                 @db.Text
+  sortOrder   Int                     @default(0)
+  isActive    Boolean                 @default(true)
+  createdById String?
+  updatedById String?
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  deletedAt   DateTime?
+  products    ShopProduct[]
+  promoCodes  ShopPromoCodeCategory[]
+
+  @@index([isActive, sortOrder])
+  @@index([deletedAt])
+}
+
+model ShopProduct {
+  id               String                 @id @default(cuid())
+  categoryId       String
+  slug             String                 @unique
+  type             ShopProductType        @default(IN_GAME)
+  title            String
+  shortDescription String
+  description      String                 @db.Text
+  fulfillmentTerms String                 @db.Text
+  faqJson          Json?
+  isActive         Boolean                @default(false)
+  isFeatured       Boolean                @default(false)
+  isPopular        Boolean                @default(false)
+  sortOrder        Int                    @default(0)
+  estimatedMinutes Int                    @default(30)
+  purchaseCount    Int                    @default(0)
+  ratingAverage    Decimal                @default(0) @db.Decimal(3, 2)
+  ratingCount      Int                    @default(0)
+  createdById      String?
+  updatedById      String?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  deletedAt        DateTime?
+  category         ShopCategory           @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  variants         ShopProductVariant[]
+  images           ShopProductImage[]
+  fields           ShopProductField[]
+  promotions       ShopPromotionProduct[]
+  sellers          ShopSellerProduct[]
+  orderItems       ShopOrderItem[]
+  reviews          ShopReview[]
+  promoCodes       ShopPromoCodeProduct[]
+
+  @@index([categoryId, isActive, sortOrder])
+  @@index([isFeatured, isActive, sortOrder])
+  @@index([isPopular, purchaseCount])
+  @@index([deletedAt])
+}
+
+model ShopProductVariant {
+  id               String          @id @default(cuid())
+  productId        String
+  sku              String          @unique
+  name             String
+  description      String?         @db.Text
+  priceMinor       Int
+  stockMode        ShopStockMode   @default(FINITE)
+  stockQuantity    Int             @default(0)
+  reservedQuantity Int             @default(0)
+  maxPerOrder      Int             @default(10)
+  estimatedMinutes Int?
+  isDefault        Boolean         @default(false)
+  isActive         Boolean         @default(true)
+  sortOrder        Int             @default(0)
+  createdById      String?
+  updatedById      String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  deletedAt        DateTime?
+  product          ShopProduct     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItems       ShopOrderItem[]
+
+  @@index([productId, isActive, sortOrder])
+  @@index([stockMode, stockQuantity])
+  @@index([deletedAt])
+}
+
+model ShopProductImage {
+  id        String      @id @default(cuid())
+  productId String
+  url       String      @db.Text
+  alt       String
+  sortOrder Int         @default(0)
+  createdAt DateTime    @default(now())
+  product   ShopProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder])
+}
+
+model ShopProductField {
+  id             String                @id @default(cuid())
+  productId      String
+  key            String
+  label          String
+  description    String?
+  type           ShopProductFieldType  @default(TEXT)
+  placeholder    String?
+  optionsJson    Json?
+  validationJson Json?
+  isRequired     Boolean               @default(true)
+  isSensitive    Boolean               @default(false)
+  sortOrder      Int                   @default(0)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  product        ShopProduct           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  values         ShopOrderFieldValue[]
+
+  @@unique([productId, key])
+  @@index([productId, sortOrder])
+}
+
+model ShopPromotion {
+  id                   String                 @id @default(cuid())
+  name                 String
+  description          String?                @db.Text
+  discountType         ShopDiscountType
+  discountValue        Int
+  maximumDiscountMinor Int?
+  startsAt             DateTime
+  endsAt               DateTime
+  showCountdown        Boolean                @default(false)
+  isActive             Boolean                @default(true)
+  createdById          String?
+  updatedById          String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  deletedAt            DateTime?
+  products             ShopPromotionProduct[]
+
+  @@index([isActive, startsAt, endsAt])
+  @@index([deletedAt])
+}
+
+model ShopPromotionProduct {
+  promotionId String
+  productId   String
+  variantId   String?
+  promotion   ShopPromotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  product     ShopProduct   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([promotionId, productId])
+  @@index([productId])
+  @@index([variantId])
+}
+
+model ShopOrder {
+  id                         String                   @id @default(cuid())
+  orderNumber                String                   @unique
+  buyerId                    String
+  sellerId                   String?
+  promoCodeId                String?
+  status                     ShopOrderStatus          @default(PENDING_PAYMENT)
+  currency                   String                   @default("RUB")
+  subtotalMinor              Int
+  promotionDiscountMinor     Int                      @default(0)
+  promoCodeDiscountMinor     Int                      @default(0)
+  totalMinor                 Int
+  commissionMinor            Int                      @default(0)
+  sellerEarningMinor         Int                      @default(0)
+  termsVersion               String
+  termsAcceptedAt            DateTime
+  paymentExpiresAt           DateTime?
+  sellerAcceptExpiresAt      DateTime?
+  fulfillmentExpiresAt       DateTime?
+  buyerConfirmationExpiresAt DateTime?
+  paidAt                     DateTime?
+  acceptedAt                 DateTime?
+  startedAt                  DateTime?
+  sellerCompletedAt          DateTime?
+  completedAt                DateTime?
+  cancelledAt                DateTime?
+  expiredAt                  DateTime?
+  createdAt                  DateTime                 @default(now())
+  updatedAt                  DateTime                 @updatedAt
+  buyer                      User                     @relation("shopOrderBuyer", fields: [buyerId], references: [id], onDelete: Restrict)
+  seller                     ShopSeller?              @relation(fields: [sellerId], references: [id], onDelete: SetNull)
+  promoCode                  ShopPromoCode?           @relation(fields: [promoCodeId], references: [id], onDelete: SetNull)
+  items                      ShopOrderItem[]
+  fieldValues                ShopOrderFieldValue[]
+  statusHistory              ShopOrderStatusHistory[]
+  messages                   ShopOrderMessage[]
+  payments                   ShopPayment[]
+  refunds                    ShopRefund[]
+  payout                     ShopPayout?
+  review                     ShopReview?
+  disputes                   ShopDispute[]
+  notifications              ShopNotification[]
+  auditLogs                  ShopAuditLog[]
+  promoCodeUsage             ShopPromoCodeUsage?
+  callbackTokens             TelegramCallbackToken[]
+
+  @@index([buyerId, createdAt])
+  @@index([sellerId, status, createdAt])
+  @@index([status, createdAt])
+  @@index([paymentExpiresAt, status])
+  @@index([buyerConfirmationExpiresAt, status])
+}
+
+model ShopOrderItem {
+  id                     String             @id @default(cuid())
+  orderId                String
+  productId              String
+  variantId              String
+  productTitle           String
+  productSlug            String
+  variantName            String
+  sku                    String
+  quantity               Int
+  baseUnitPriceMinor     Int
+  unitPriceMinor         Int
+  promotionDiscountMinor Int                @default(0)
+  totalMinor             Int
+  estimatedMinutes       Int
+  createdAt              DateTime           @default(now())
+  order                  ShopOrder          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product                ShopProduct        @relation(fields: [productId], references: [id], onDelete: Restrict)
+  variant                ShopProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId, createdAt])
+  @@index([variantId])
+}
+
+model ShopOrderFieldValue {
+  id             String           @id @default(cuid())
+  orderId        String
+  productFieldId String
+  labelSnapshot  String
+  encryptedValue String           @db.Text
+  maskedValue    String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  order          ShopOrder        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productField   ShopProductField @relation(fields: [productFieldId], references: [id], onDelete: Restrict)
+
+  @@unique([orderId, productFieldId])
+  @@index([orderId])
+}
+
+model ShopOrderStatusHistory {
+  id                String             @id @default(cuid())
+  orderId           String
+  actorUserId       String?
+  actorType         ShopOrderActorType
+  previousStatus    ShopOrderStatus
+  newStatus         ShopOrderStatus
+  comment           String?            @db.Text
+  reason            String?
+  technicalInfoJson Json?
+  createdAt         DateTime           @default(now())
+  order             ShopOrder          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  actor             User?              @relation("shopStatusActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([orderId, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
+model ShopOrderMessage {
+  id             String                     @id @default(cuid())
+  orderId        String
+  senderId       String
+  body           String                     @db.Text
+  visibility     ShopOrderMessageVisibility @default(PARTICIPANTS)
+  attachmentUrl  String?                    @db.Text
+  attachmentType String?
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+  deletedAt      DateTime?
+  order          ShopOrder                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sender         User                       @relation("shopOrderMessageSender", fields: [senderId], references: [id], onDelete: Restrict)
+
+  @@index([orderId, visibility, createdAt])
+  @@index([senderId, createdAt])
+}
+
+model ShopSeller {
+  id                        String                     @id @default(cuid())
+  userId                    String                     @unique
+  isActive                  Boolean                    @default(true)
+  isOnline                  Boolean                    @default(false)
+  distributionMode          ShopSellerDistributionMode @default(LOWEST_LOAD)
+  maxActiveOrders           Int                        @default(3)
+  commissionBps             Int                        @default(3000)
+  ratingAverage             Decimal                    @default(0) @db.Decimal(3, 2)
+  ratingCount               Int                        @default(0)
+  completedOrders           Int                        @default(0)
+  averageFulfillmentMinutes Int                        @default(0)
+  lastAssignedAt            DateTime?
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  deletedAt                 DateTime?
+  user                      User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products                  ShopSellerProduct[]
+  schedules                 ShopSellerSchedule[]
+  orders                    ShopOrder[]
+  reviews                   ShopReview[]
+  payouts                   ShopPayout[]
+
+  @@index([isActive, isOnline, lastAssignedAt])
+  @@index([deletedAt])
+}
+
+model ShopSellerProduct {
+  sellerId  String
+  productId String
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  seller    ShopSeller  @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  product   ShopProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([sellerId, productId])
+  @@index([productId, isActive])
+}
+
+model ShopSellerSchedule {
+  id           String     @id @default(cuid())
+  sellerId     String
+  dayOfWeek    Int
+  startsMinute Int
+  endsMinute   Int
+  timeZone     String     @default("Europe/Moscow")
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  seller       ShopSeller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@index([sellerId, dayOfWeek, isActive])
+}
+
+model ShopPayment {
+  id                String            @id @default(cuid())
+  orderId           String
+  provider          String
+  externalPaymentId String?           @unique
+  idempotencyKey    String            @unique
+  status            ShopPaymentStatus @default(PENDING)
+  amountMinor       Int
+  currency          String            @default("RUB")
+  checkoutUrl       String?           @db.Text
+  expiresAt         DateTime?
+  paidAt            DateTime?
+  failedAt          DateTime?
+  providerPayload   Json?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  order             ShopOrder         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  refunds           ShopRefund[]
+
+  @@index([orderId, status])
+  @@index([provider, status, createdAt])
+}
+
+model ShopPaymentWebhookEvent {
+  id          String    @id @default(cuid())
+  provider    String
+  eventId     String
+  payloadHash String
+  status      String    @default("PROCESSING")
+  error       String?   @db.Text
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@unique([provider, eventId])
+  @@index([status, createdAt])
+}
+
+model ShopRefund {
+  id               String           @id @default(cuid())
+  orderId          String
+  paymentId        String
+  externalRefundId String?          @unique
+  idempotencyKey   String           @unique
+  status           ShopRefundStatus @default(PENDING)
+  amountMinor      Int
+  currency         String           @default("RUB")
+  reason           String           @db.Text
+  requestedById    String
+  processedAt      DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  order            ShopOrder        @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  payment          ShopPayment      @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@index([orderId, status])
+  @@index([paymentId, status])
+}
+
+model ShopPayout {
+  id          String           @id @default(cuid())
+  orderId     String           @unique
+  sellerId    String
+  status      ShopPayoutStatus @default(HELD)
+  amountMinor Int
+  currency    String           @default("RUB")
+  availableAt DateTime?
+  paidAt      DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  order       ShopOrder        @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  seller      ShopSeller       @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+
+  @@index([sellerId, status, availableAt])
+}
+
+model ShopReview {
+  id            String            @id @default(cuid())
+  orderId       String            @unique
+  productId     String
+  sellerId      String?
+  buyerId       String
+  rating        Int
+  body          String            @db.Text
+  tags          String[]          @default([])
+  status        ShopReviewStatus  @default(PENDING)
+  buyerName     String
+  publishedAt   DateTime?
+  editableUntil DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  deletedAt     DateTime?
+  order         ShopOrder         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  product       ShopProduct       @relation(fields: [productId], references: [id], onDelete: Restrict)
+  seller        ShopSeller?       @relation(fields: [sellerId], references: [id], onDelete: SetNull)
+  buyer         User              @relation("shopReviewBuyer", fields: [buyerId], references: [id], onDelete: Restrict)
+  media         ShopReviewMedia[]
+
+  @@index([productId, status, createdAt])
+  @@index([sellerId, status, createdAt])
+  @@index([buyerId, createdAt])
+}
+
+model ShopReviewMedia {
+  id        String     @id @default(cuid())
+  reviewId  String
+  url       String     @db.Text
+  mimeType  String
+  sortOrder Int        @default(0)
+  createdAt DateTime   @default(now())
+  review    ShopReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId, sortOrder])
+}
+
+model ShopDispute {
+  id                    String               @id @default(cuid())
+  orderId               String
+  openedById            String
+  status                ShopDisputeStatus    @default(OPEN)
+  reason                String
+  description           String               @db.Text
+  desiredResolution     String?
+  resolution            String?              @db.Text
+  resolutionAmountMinor Int?
+  resolvedById          String?
+  resolvedAt            DateTime?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  order                 ShopOrder            @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  openedBy              User                 @relation("shopDisputeOpener", fields: [openedById], references: [id], onDelete: Restrict)
+  messages              ShopDisputeMessage[]
+
+  @@index([orderId, status, createdAt])
+  @@index([status, createdAt])
+}
+
+model ShopDisputeMessage {
+  id             String      @id @default(cuid())
+  disputeId      String
+  senderId       String
+  body           String      @db.Text
+  attachmentUrl  String?     @db.Text
+  attachmentType String?
+  isInternal     Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+  dispute        ShopDispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  sender         User        @relation("shopDisputeMessageSender", fields: [senderId], references: [id], onDelete: Restrict)
+
+  @@index([disputeId, createdAt])
+  @@index([senderId, createdAt])
+}
+
+model ShopPromoCode {
+  id                   String                  @id @default(cuid())
+  code                 String                  @unique
+  description          String?
+  discountType         ShopDiscountType
+  discountValue        Int
+  minimumSubtotalMinor Int                     @default(0)
+  maximumDiscountMinor Int?
+  startsAt             DateTime
+  endsAt               DateTime
+  totalUsageLimit      Int?
+  perUserUsageLimit    Int                     @default(1)
+  newUsersOnly         Boolean                 @default(false)
+  isActive             Boolean                 @default(true)
+  createdById          String?
+  updatedById          String?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  deletedAt            DateTime?
+  orders               ShopOrder[]
+  products             ShopPromoCodeProduct[]
+  categories           ShopPromoCodeCategory[]
+  usages               ShopPromoCodeUsage[]
+
+  @@index([isActive, startsAt, endsAt])
+  @@index([deletedAt])
+}
+
+model ShopPromoCodeProduct {
+  promoCodeId String
+  productId   String
+  promoCode   ShopPromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  product     ShopProduct   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([promoCodeId, productId])
+  @@index([productId])
+}
+
+model ShopPromoCodeCategory {
+  promoCodeId String
+  categoryId  String
+  promoCode   ShopPromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  category    ShopCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([promoCodeId, categoryId])
+  @@index([categoryId])
+}
+
+model ShopPromoCodeUsage {
+  id          String        @id @default(cuid())
+  promoCodeId String
+  userId      String
+  orderId     String        @unique
+  amountMinor Int
+  createdAt   DateTime      @default(now())
+  promoCode   ShopPromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Restrict)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  order       ShopOrder     @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@index([promoCodeId, createdAt])
+  @@index([promoCodeId, userId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model ShopNotification {
+  id          String                  @id @default(cuid())
+  orderId     String?
+  userId      String
+  channel     ShopNotificationChannel
+  event       String
+  status      ShopNotificationStatus  @default(PENDING)
+  templateKey String
+  payload     Json
+  dedupeKey   String                  @unique
+  attempts    Int                     @default(0)
+  availableAt DateTime                @default(now())
+  lockedAt    DateTime?
+  lockToken   String?
+  sentAt      DateTime?
+  lastError   String?                 @db.Text
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  order       ShopOrder?              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, availableAt])
+  @@index([userId, createdAt])
+  @@index([orderId, event])
+}
+
+model ShopAuditLog {
+  id          String     @id @default(cuid())
+  actorUserId String?
+  orderId     String?
+  entityType  String
+  entityId    String
+  action      String
+  beforeJson  Json?
+  afterJson   Json?
+  reason      String?
+  ipAddress   String?
+  userAgent   String?    @db.Text
+  createdAt   DateTime   @default(now())
+  actor       User?      @relation("shopAuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  order       ShopOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([orderId, createdAt])
+}
+
+model ShopSettings {
+  id                         String   @id @default("default")
+  isEnabled                  Boolean  @default(false)
+  maintenanceMode            Boolean  @default(false)
+  showHomeBlock              Boolean  @default(true)
+  currency                   String   @default("RUB")
+  minimumOrderMinor          Int      @default(1000)
+  maximumOrderMinor          Int      @default(100000000)
+  paymentTimeoutMinutes      Int      @default(15)
+  sellerAcceptTimeoutMinutes Int      @default(10)
+  fulfillmentTimeoutMinutes  Int      @default(60)
+  buyerConfirmTimeoutMinutes Int      @default(1440)
+  autoCompleteEnabled        Boolean  @default(false)
+  reviewEditWindowHours      Int      @default(24)
+  reviewModerationEnabled    Boolean  @default(true)
+  reviewImagesEnabled        Boolean  @default(true)
+  cancellationEnabled        Boolean  @default(true)
+  showSellerToBuyer          Boolean  @default(false)
+  defaultCommissionBps       Int      @default(3000)
+  supportTelegramChatId      String?
+  reviewsTelegramChatId      String?
+  supportContact             String?
+  termsVersion               String   @default("shop-draft-1")
+  legalTextsJson             Json?
+  updatedById                String?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+}
+
+model ShopJob {
+  id          String        @id @default(cuid())
+  type        String
+  dedupeKey   String        @unique
+  payload     Json
+  status      ShopJobStatus @default(PENDING)
+  attempts    Int           @default(0)
+  availableAt DateTime      @default(now())
+  lockedAt    DateTime?
+  lockToken   String?
+  completedAt DateTime?
+  lastError   String?       @db.Text
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status, availableAt])
+  @@index([type, status])
 }

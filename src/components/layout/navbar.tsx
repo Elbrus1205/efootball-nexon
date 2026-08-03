@@ -7,6 +7,7 @@ const links = [
   { href: "/", label: "Главная" },
   { href: "/regulations", label: "Регламент" },
   { href: "/tournaments", label: "Турниры" },
+  { href: "/shop", label: "Магазин" },
   { href: "/players", label: "Пользователи" },
   { href: "/ratings", label: "Рейтинги" },
   { href: "/faq", label: "FAQ" },

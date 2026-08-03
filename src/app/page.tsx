@@ -16,10 +16,14 @@ import {
 import { MatchStatus, ParticipantStatus, TournamentStatus } from "@prisma/client";
 import { AnimatedBrandHero } from "@/components/home/animated-brand-hero";
 import { AnimatedCounter } from "@/components/home/animated-counter";
+import { ProductCard } from "@/components/shop/product-card";
 import { Reveal } from "@/components/shared/reveal";
 import { db } from "@/lib/db";
 import { getArchivedHomeStats, parsePrizePoolValue } from "@/lib/home-stats";
 import { formatDate } from "@/lib/utils";
+import { listShopProducts } from "@/lib/shop/catalog";
+import { getShopSettings } from "@/lib/shop/config";
+import shopStyles from "@/components/shop/shop.module.css";
 import s from "./home.module.css";
 
 const telegramHref = process.env.NEXT_PUBLIC_SUPPORT_TELEGRAM_URL ?? "https://t.me/efootball_nexon";
@@ -94,8 +98,25 @@ const getHomeData = unstable_cache(
   { revalidate: 300 },
 );
 
+const getHomeShopData = unstable_cache(
+  async () => {
+    try {
+      const settings = await getShopSettings();
+      if (!settings.isEnabled || !settings.showHomeBlock) return null;
+      const products = await listShopProducts({ popularOnly: true, sort: "popular", pageSize: 3 });
+      return products.items.length ? { items: products.items, currency: settings.currency } : null;
+    } catch (error) {
+      // Allows a zero-downtime deploy where application code starts before the shop migration is applied.
+      console.warn("Home shop block is unavailable until the shop migration is applied.", error);
+      return null;
+    }
+  },
+  ["home-shop-data-v1"],
+  { revalidate: 120 },
+);
+
 export default async function HomePage() {
-  const data = await getHomeData();
+  const [data, shop] = await Promise.all([getHomeData(), getHomeShopData()]);
   const stats = [
     { value: data.playersCount, suffix: "", label: "игроков" },
     { value: data.tournamentsCount, suffix: "", label: "турниров завершено" },
@@ -171,6 +192,18 @@ export default async function HomePage() {
           )}
         </div>
       </section>
+
+      {shop ? <section className={`${s.section} ${s.how}`} aria-labelledby="shop-title">
+        <div className={s.shell}>
+          <Reveal>
+            <div className={s.sectionHead}>
+              <div><p className={s.kicker}><span /> Магазин</p><h2 id="shop-title">Популярные товары</h2></div>
+              <Link href="/shop" className={s.textButton}>Перейти в магазин <ArrowUpRight aria-hidden="true" /></Link>
+            </div>
+          </Reveal>
+          <div className={shopStyles.grid}>{shop.items.map((product) => <ProductCard key={product.id} product={product} currency={shop.currency} />)}</div>
+        </div>
+      </section> : null}
 
       <section className={`${s.section} ${s.how}`} aria-labelledby="how-title">
         <div className={s.shell}>

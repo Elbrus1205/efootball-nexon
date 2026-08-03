@@ -5,6 +5,7 @@ const MANAGED_FOLDER_PERMISSIONS: Partial<Record<StorageFolder, RolePermissionId
   tournaments: "tournaments.createEdit",
   divisions: "divisions.manage",
   faq: "content.manage",
+  "shop-products": "shop.manage",
 };
 
 export function getRequiredUploadPermission(folder: StorageFolder) {
