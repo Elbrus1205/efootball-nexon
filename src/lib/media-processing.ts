@@ -61,6 +61,17 @@ export async function normalizeBannerImage(bytes: ArrayBuffer | Buffer | Uint8Ar
   return { bytes: output, contentType: "image/webp", ext: "webp" };
 }
 
+export async function normalizeShopProductImage(bytes: ArrayBuffer | Buffer | Uint8Array, contentType?: string | null): Promise<ProcessedMedia> {
+  if (!isProcessableImageType(contentType)) throw new Error("Unsupported product image type.");
+  const input = bytes instanceof ArrayBuffer ? Buffer.from(bytes) : Buffer.from(bytes);
+  const output = await sharp(input, { animated: false, limitInputPixels: 60_000_000 })
+    .rotate()
+    .resize({ width: 1600, height: 1000, fit: "cover", position: "center", withoutEnlargement: true })
+    .webp({ quality: 84, effort: 4 })
+    .toBuffer();
+  return { bytes: output, contentType: "image/webp", ext: "webp" };
+}
+
 export async function normalizeProfileUploadImage(folder: StorageFolder, bytes: ArrayBuffer | Buffer | Uint8Array, contentType?: string | null) {
   if (folder === "avatars") return normalizeAvatarImage(bytes, contentType);
   if (folder === "banners") return normalizeBannerImage(bytes, contentType);
@@ -68,6 +79,7 @@ export async function normalizeProfileUploadImage(folder: StorageFolder, bytes: 
   if (folder === "tournaments") return normalizeBannerImage(bytes, contentType);
   if (folder === "divisions") return normalizeBannerImage(bytes, contentType);
   if (folder === "faq" && contentType !== "application/pdf") return normalizeBannerImage(bytes, contentType);
+  if (folder === "shop-products") return normalizeShopProductImage(bytes, contentType);
   return null;
 }
 

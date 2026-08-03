@@ -1,6 +1,6 @@
 "use client";
 
-export type UploadFolder = "avatars" | "banners" | "tournaments" | "divisions" | "faq" | "lineups";
+export type UploadFolder = "avatars" | "banners" | "tournaments" | "divisions" | "faq" | "lineups" | "shop-products" | "shop-evidence";
 
 /**
  * Загружает файл на сервер (/api/uploads), который кладёт его в Supabase Storage

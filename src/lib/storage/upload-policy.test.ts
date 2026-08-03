@@ -13,4 +13,5 @@ test("managed content folders require their matching server-side permission", ()
   assert.equal(getRequiredUploadPermission("tournaments"), "tournaments.createEdit");
   assert.equal(getRequiredUploadPermission("divisions"), "divisions.manage");
   assert.equal(getRequiredUploadPermission("faq"), "content.manage");
+  assert.equal(getRequiredUploadPermission("shop-products"), "shop.manage");
 });
