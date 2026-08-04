@@ -11,6 +11,7 @@ test("главная выводит настоящие отзывы и ведё�
   assert.match(page, /shopReview\.findMany/);
   assert.match(page, /className=\{s\.reviewBoard\}/);
   assert.match(page, /target="_blank"/);
+  assert.match(page, /Наши отзывы в Telegram/);
   assert.match(css, /\.reviewBoard\s*\{/);
   assert.match(css, /\.reviewStream\s*\{/);
 });

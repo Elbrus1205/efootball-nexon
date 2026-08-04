@@ -238,7 +238,7 @@ export default async function HomePage() {
                   <div className={s.reviewEmpty}><MessageCircleMore aria-hidden="true" /><div><strong>Отзывы живут в Telegram</strong><p>Откройте чат, чтобы посмотреть сообщения покупателей и задать свой вопрос.</p></div></div>
                 )}
               </div>
-              <span className={s.reviewCta}><span><TelegramGlyph /></span> Читать отзывы в Telegram <ArrowUpRight aria-hidden="true" /></span>
+              <span className={s.reviewCta}><span><TelegramGlyph /></span> Наши отзывы в Telegram <ArrowUpRight aria-hidden="true" /></span>
             </Link>
           </Reveal>
         </div>
