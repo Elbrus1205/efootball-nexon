@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { matchStatusLabel, matchStatusVariant } from "@/lib/admin-display";
+import { pickAdminMatchSaveResult } from "@/lib/admin-match-editor-state";
 import { adminMatchSectionKey, buildAdminMatchSections, isAdminTourMatch } from "@/lib/admin-match-sections";
 import { cn } from "@/lib/utils";
 
@@ -386,14 +387,10 @@ export function MatchManager({
 
         const result = await response.json().catch(() => null);
         if (response.ok && result?.match && typeof result.match === "object") {
-          const serverMatch = { ...(result.match as Record<string, unknown>) };
-          // Это сохранение не меняло статус (счёт/участники). Ответ мог быть
-          // прочитан сервером до параллельного подтверждения (ОК/Спор), поэтому
-          // не затираем статус устаревшим значением из этого ответа.
-          if (!("status" in payload)) {
-            delete serverMatch.status;
-          }
-          patchLocalMatch(matchId, serverMatch);
+          // Ответ содержит всю строку Match. Применяем только поля этого запроса:
+          // так параллельные сохранения двух полей счёта не затирают друг друга,
+          // а голая запись без relations не заменяет назначенных игроков капитанами.
+          patchLocalMatch(matchId, pickAdminMatchSaveResult(payload, result.match as Record<string, unknown>));
           return;
         }
 
@@ -447,7 +444,7 @@ export function MatchManager({
 
         const result = await response.json().catch(() => null);
         if (response.ok && result?.match && typeof result.match === "object") {
-          patchLocalMatch(matchId, result.match as Record<string, unknown>);
+          patchLocalMatch(matchId, pickAdminMatchSaveResult(payload, result.match as Record<string, unknown>));
         } else {
           if (result?.error) window.alert(result.error);
           router.refresh();
