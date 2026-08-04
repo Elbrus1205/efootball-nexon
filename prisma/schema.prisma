@@ -2010,6 +2010,7 @@ model ShopSettings {
   defaultCommissionBps       Int      @default(3000)
   supportTelegramChatId      String?
   reviewsTelegramChatId      String?
+  reviewsTelegramUrl         String?
   supportContact             String?
   termsVersion               String   @default("shop-draft-1")
   legalTextsJson             Json?

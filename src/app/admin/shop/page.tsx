@@ -76,7 +76,10 @@ export default async function AdminShopPage(props: { searchParams: Promise<Recor
               <label className={styles.fieldLabel}>Выполнение, мин<input className={styles.input} name="fulfillmentTimeoutMinutes" type="number" min="1" defaultValue={settings.fulfillmentTimeoutMinutes} /><Hint>Резервный срок выполнения, если у товара не задан свой.</Hint></label>
               <label className={styles.fieldLabel}>Проверка, мин<input className={styles.input} name="buyerConfirmTimeoutMinutes" type="number" min="1" defaultValue={settings.buyerConfirmTimeoutMinutes} /><Hint>Сколько покупатель может подтвердить получение или открыть спор.</Hint></label>
             </div>
-            <label className={styles.fieldLabel}>Контакты поддержки<input className={styles.input} name="supportContact" defaultValue={settings.supportContact ?? ""} placeholder="Например: @efootball_nexon" /><Hint>Показываются покупателю при вопросах по заказу.</Hint></label>
+            <div className={styles.formRow}>
+              <label className={styles.fieldLabel}>Контакты поддержки<input className={styles.input} name="supportContact" defaultValue={settings.supportContact ?? ""} placeholder="Например: @efootball_nexon" /><Hint>Показываются покупателю при вопросах по заказу.</Hint></label>
+              <label className={styles.fieldLabel}>Ссылка на чат с отзывами<input className={styles.input} name="reviewsTelegramUrl" type="url" defaultValue={settings.reviewsTelegramUrl ?? ""} placeholder="https://t.me/nexon_reviews" /><Hint>Открывается из блока «Наши отзывы» на главной. Если поле пустое, используется основная Telegram-ссылка сайта.</Hint></label>
+            </div>
             <input type="hidden" name="cancellationEnabled" value="true" /><input type="hidden" name="reviewModerationEnabled" value="true" />
             <button className={styles.button}><Settings2 /> Сохранить настройки</button>
           </form>

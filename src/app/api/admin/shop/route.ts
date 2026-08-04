@@ -9,6 +9,7 @@ import { parseShopMoneyToMinor } from "@/lib/shop/format";
 import { isForbiddenShopCredentialField } from "@/lib/shop/validators";
 import { resolveShopDispute } from "@/lib/shop/order-workflow-service";
 import { parseCommissionPercent, parseShopStockInput } from "@/lib/shop/admin-input";
+import { parseTelegramChatUrl } from "@/lib/shop/telegram-url";
 import { parseMoscowDateTimeLocal } from "@/lib/utils";
 
 function text(form: FormData, key: string) {
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
   const session = await requirePermission(manageActions.has(action) ? "shop.manage" : "shop.support");
   try {
     if (action === "saveSettings") {
+      const reviewsTelegramUrl = parseTelegramChatUrl(text(form, "reviewsTelegramUrl"));
       await db.shopSettings.upsert({
         where: { id: "default" },
         create: {
@@ -56,6 +58,7 @@ export async function POST(request: Request) {
           cancellationEnabled: form.get("cancellationEnabled") === "true",
           reviewModerationEnabled: form.get("reviewModerationEnabled") === "true",
           supportContact: text(form, "supportContact") || null,
+          reviewsTelegramUrl,
           termsVersion: text(form, "termsVersion") || "shop-draft-1",
           updatedById: session.user.id,
         },
@@ -74,6 +77,7 @@ export async function POST(request: Request) {
           cancellationEnabled: form.get("cancellationEnabled") === "true",
           reviewModerationEnabled: form.get("reviewModerationEnabled") === "true",
           supportContact: text(form, "supportContact") || null,
+          reviewsTelegramUrl,
           termsVersion: text(form, "termsVersion") || "shop-draft-1",
           updatedById: session.user.id,
         },
@@ -222,6 +226,7 @@ export async function POST(request: Request) {
       throw new Error("Неизвестное действие магазина.");
     }
     revalidatePath("/shop");
+    revalidatePath("/");
     revalidatePath("/admin/shop");
     return redirectToAdmin(request, { saved: "1" });
   } catch (error) {

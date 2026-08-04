@@ -21,6 +21,7 @@ export const defaultShopSettings = {
   defaultCommissionBps: 3_000,
   supportTelegramChatId: null,
   reviewsTelegramChatId: null,
+  reviewsTelegramUrl: null,
   supportContact: null,
   termsVersion: "shop-draft-1",
   legalTextsJson: null,

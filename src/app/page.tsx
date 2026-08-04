@@ -7,8 +7,10 @@ import {
   ChevronRight,
   CircleDot,
   Gamepad2,
+  MessageCircleMore,
   ShieldCheck,
   ShoppingBag,
+  Star,
   Swords,
   Trophy,
   Users,
@@ -102,21 +104,31 @@ const getHomeShopData = unstable_cache(
   async () => {
     try {
       const settings = await getShopSettings();
-      if (!settings.isEnabled || !settings.showHomeBlock) return null;
-      const products = await listShopProducts({ popularOnly: true, sort: "popular", pageSize: 3 });
-      return products.items.length ? { items: products.items, currency: settings.currency } : null;
+      const [products, reviews] = await Promise.all([
+        settings.isEnabled && settings.showHomeBlock
+          ? listShopProducts({ popularOnly: true, sort: "popular", pageSize: 3 })
+          : Promise.resolve({ items: [] }),
+        db.shopReview.findMany({
+          where: { status: "PUBLISHED", deletedAt: null },
+          orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+          take: 3,
+          select: { id: true, rating: true, body: true, buyerName: true, product: { select: { title: true } } },
+        }),
+      ]);
+      return { items: products.items, currency: settings.currency, reviewsTelegramUrl: settings.reviewsTelegramUrl, reviews };
     } catch (error) {
       // Allows a zero-downtime deploy where application code starts before the shop migration is applied.
       console.warn("Home shop block is unavailable until the shop migration is applied.", error);
       return null;
     }
   },
-  ["home-shop-data-v1"],
+  ["home-shop-data-v2"],
   { revalidate: 120 },
 );
 
 export default async function HomePage() {
   const [data, shop] = await Promise.all([getHomeData(), getHomeShopData()]);
+  const reviewsChatHref = shop?.reviewsTelegramUrl ?? telegramHref;
   const stats = [
     { value: data.playersCount, suffix: "", label: "игроков" },
     { value: data.tournamentsCount, suffix: "", label: "турниров завершено" },
@@ -193,7 +205,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {shop ? <section className={`${s.section} ${s.how}`} aria-labelledby="shop-title">
+      {shop?.items.length ? <section className={`${s.section} ${s.how}`} aria-labelledby="shop-title">
         <div className={s.shell}>
           <Reveal>
             <div className={s.sectionHead}>
@@ -204,6 +216,33 @@ export default async function HomePage() {
           <div className={shopStyles.grid}>{shop.items.map((product) => <ProductCard key={product.id} product={product} currency={shop.currency} />)}</div>
         </div>
       </section> : null}
+
+      <section className={`${s.section} ${s.reviews}`} aria-labelledby="reviews-title">
+        <div className={s.shell}>
+          <Reveal>
+            <Link href={reviewsChatHref} target="_blank" rel="noreferrer" className={s.reviewBoard} aria-label="Открыть отзывы покупателей в Telegram">
+              <div className={s.reviewIntro}>
+                <span className={s.reviewTelegramIcon}><TelegramGlyph /></span>
+                <p className={s.kicker}><span /> Голоса покупателей</p>
+                <h2 id="reviews-title">Наши<br />отзывы</h2>
+                <p>Читайте впечатления после реальных заказов, смотрите обсуждение и задавайте вопросы напрямую в Telegram-чате.</p>
+              </div>
+              <div className={s.reviewStream} aria-label="Последние опубликованные отзывы">
+                {shop?.reviews.length ? shop.reviews.map((review) => (
+                  <article className={s.reviewBubble} key={review.id}>
+                    <header><strong>{review.buyerName}</strong><span><Star aria-hidden="true" /> {review.rating}/5</span></header>
+                    <p>{review.body}</p>
+                    <small>{review.product.title}</small>
+                  </article>
+                )) : (
+                  <div className={s.reviewEmpty}><MessageCircleMore aria-hidden="true" /><div><strong>Отзывы живут в Telegram</strong><p>Откройте чат, чтобы посмотреть сообщения покупателей и задать свой вопрос.</p></div></div>
+                )}
+              </div>
+              <span className={s.reviewCta}><span><TelegramGlyph /></span> Читать отзывы в Telegram <ArrowUpRight aria-hidden="true" /></span>
+            </Link>
+          </Reveal>
+        </div>
+      </section>
 
       <section className={`${s.section} ${s.how}`} aria-labelledby="how-title">
         <div className={s.shell}>
