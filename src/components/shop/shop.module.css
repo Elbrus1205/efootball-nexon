@@ -264,6 +264,8 @@
 .badgeRow { position: absolute; inset: .55rem .55rem auto; display: flex; justify-content: space-between; gap: .4rem; }
 .badge,
 .saleBadge {
+  max-width: calc(50% - .2rem);
+  overflow: hidden;
   padding: .32rem .48rem;
   border: 1px solid rgba(244, 250, 247, .14);
   border-radius: 8px;
@@ -271,6 +273,8 @@
   color: #e8efec;
   font-size: .65rem;
   font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   backdrop-filter: blur(8px);
 }
 .saleBadge { border-color: rgba(33, 241, 168, .35); color: #77f8cb; }
@@ -531,8 +535,8 @@
 @media (max-width: 720px) {
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
   .productCard { border-radius: 16px; }
-  .productImage { display: block; height: 66px; min-height: 0; aspect-ratio: auto; }
-  .badgeRow { inset: .45rem .45rem auto; }
+  .productImage { display: block; height: 34px; min-height: 0; aspect-ratio: auto; }
+  .badgeRow { inset: .35rem .45rem auto; }
   .badge, .saleBadge { padding: .25rem .38rem; font-size: .56rem; }
   .productBody { display: flex; min-height: 154px; flex-direction: column; padding: .58rem .65rem .65rem; }
   .productCategory { display: block; overflow: hidden; font-size: .56rem; text-overflow: ellipsis; white-space: nowrap; }
