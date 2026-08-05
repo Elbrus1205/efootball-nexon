@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, Clock3, PackageCheck, ShieldCheck, Star, UserRoundCheck } from "lucide-react";
@@ -29,16 +28,12 @@ export default async function ShopProductPage(props: { params: Promise<{ slug: s
   const payment = getPaymentReadiness();
   const variant = product.defaultVariant;
   const currentPrice = variant?.activePromotion?.salePriceMinor ?? variant?.priceMinor;
-  const faq = Array.isArray(product.faqJson) ? product.faqJson.filter((item): item is { question: string; answer: string } => Boolean(item && typeof item === "object" && "question" in item && "answer" in item)) : [];
-
   return <div className={styles.shell}>
     <Link href="/shop" className={styles.cardLink}><ChevronLeft /> Вернуться в магазин</Link>
     <div className={styles.detailGrid}>
       <div>
-        <div className={styles.gallery}>{product.images.length ? product.images.map((image, index) => <div className={styles.galleryMain} key={image.id}><Image src={image.url} alt={image.alt} fill priority={index === 0} sizes="(max-width: 720px) 100vw, 60vw" /></div>) : <div className={styles.galleryMain} />}</div>
         <section className={styles.section}><h2 className={styles.sectionTitle}>Описание и получение</h2><p className={styles.detailDescription}>{product.description}</p><div className={styles.notice}><ShieldCheck /><div><strong>Условия получения</strong><br />{product.fulfillmentTerms}</div></div></section>
         <section className={styles.section}><h2 className={styles.sectionTitle}>Отзывы</h2>{product.reviews.length ? <div className={styles.adminGrid}>{product.reviews.map((review) => <article key={review.id} className={styles.trustCard}><div className={styles.productFacts}><span><Star />{review.rating}/5</span><span>{review.buyerName}</span></div><p>{review.body}</p></article>)}</div> : <div className={styles.empty}><div><Star /><h3>Отзывов пока нет</h3><p>Первый отзыв появится после подтверждённого заказа.</p></div></div>}</section>
-        <section className={styles.section}><h2 className={styles.sectionTitle}>Частые вопросы</h2>{faq.length ? faq.map((item) => <details key={item.question} className={styles.trustCard} style={{ marginBottom: ".5rem" }}><summary>{item.question}</summary><p>{item.answer}</p></details>) : <p className={styles.sectionText}>Для этого товара пока нет отдельных вопросов. Общие правила доступны в разделе условий магазина.</p>}</section>
       </div>
       <aside className={styles.detailPanel}>
         <p className={styles.eyebrow}>{product.category.name}</p><h1 className={styles.detailTitle}>{product.title}</h1><p className={styles.detailDescription}>{product.shortDescription}</p>

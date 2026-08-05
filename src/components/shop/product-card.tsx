@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Clock3, PackageCheck, ShoppingBag, Star } from "lucide-react";
+import { Clock3, PackageCheck, ShoppingBag, Star } from "lucide-react";
 import { formatFulfillmentTime, formatShopMoney } from "@/lib/shop/format";
 import styles from "./shop.module.css";
 
@@ -58,7 +58,7 @@ export function ProductCard({ product, currency = "RUB" }: ProductCardProps) {
             {variant?.activePromotion ? <span className={styles.oldPrice}>{formatShopMoney(variant.priceMinor, currency)}</span> : null}
             <strong className={styles.price}>{price === undefined ? "Цена уточняется" : formatShopMoney(price, currency)}</strong>
           </div>
-          <Link href={`/shop/${product.slug}`} className={styles.cardLink}>Подробнее <ArrowRight aria-hidden="true" /></Link>
+          <Link href={`/shop/${product.slug}`} className={styles.cardLink}>Купить</Link>
         </div>
       </div>
     </article>

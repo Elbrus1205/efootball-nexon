@@ -31,8 +31,19 @@ html {
 
 body {
   min-height: 100vh;
+  overflow-x: clip;
   background: var(--classic-black);
   color: var(--classic-white);
+}
+
+/* iOS zooms focused controls rendered below 16px. Preserve normal page zoom
+   and keep form controls readable instead of locking viewport scaling. */
+@media (max-width: 767px) {
+  body input,
+  body select,
+  body textarea {
+    font-size: 16px !important;
+  }
 }
 
 a,

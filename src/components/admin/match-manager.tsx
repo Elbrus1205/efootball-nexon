@@ -498,10 +498,10 @@ export function MatchManager({
   };
 
   return (
-    <div className="space-y-5">
-      <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-4">
-        <div className="grid gap-3 lg:grid-cols-[1fr_220px_180px]">
-          <div className="relative">
+    <div className="min-w-0 max-w-full space-y-5 overflow-x-clip">
+      <div className="min-w-0 max-w-full rounded-[2rem] border border-white/10 bg-white/[0.04] p-4">
+        <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,220px)_minmax(0,180px)]">
+          <div className="relative min-w-0">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
             <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по игроку, клубу, группе или стадии" className="pl-10" />
           </div>
@@ -559,7 +559,7 @@ export function MatchManager({
                       setDraggedMatchId(null);
                     }}
                     className={cn(
-                      "rounded-2xl border border-white/10 bg-[#101010]/95 p-3 transition hover:border-white/15 sm:p-4",
+                      "min-w-0 max-w-full rounded-2xl border border-white/10 bg-[#101010]/95 p-3 transition hover:border-white/15 sm:p-4",
                       draggedMatchId === match.id && "border-primary/40 bg-primary/10",
                     )}
                   >

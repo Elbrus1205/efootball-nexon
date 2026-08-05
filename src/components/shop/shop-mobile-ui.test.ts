@@ -16,11 +16,17 @@ test("shop catalog has no search or filter controls and reviews open Telegram", 
   assert.match(css, /@keyframes shop-action-sheen/);
 });
 
-test("product photos cover catalog cards and remain visible on the product page", () => {
+test("product photos cover catalog cards but are omitted from the product details", () => {
   assert.match(card, /productCardBackdrop/);
   assert.match(css, /\.productCardBackdrop\s*\{/);
   assert.match(css, /\.productCardScrim\s*\{/);
-  assert.match(productPage, /product\.images\.map/);
+  assert.doesNotMatch(productPage, /product\.images\.map|galleryMain/);
+});
+
+test("catalog product action says buy and product details omit FAQ", () => {
+  assert.match(card, />Купить</);
+  assert.doesNotMatch(card, /Подробнее/);
+  assert.doesNotMatch(productPage, /Частые вопросы|faqJson/);
 });
 
 test("legacy Postimg product photos are accepted by the Next image loader", () => {
