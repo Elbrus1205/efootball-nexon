@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock3, PackageCheck, ShoppingBag, Star } from "lucide-react";
+import { Clock3, PackageCheck, Star } from "lucide-react";
 import { formatFulfillmentTime, formatShopMoney } from "@/lib/shop/format";
 import styles from "./shop.module.css";
 
@@ -35,7 +35,6 @@ export function ProductCard({ product, currency = "RUB" }: ProductCardProps) {
       <span className={styles.productCardBackdrop} aria-hidden="true" />
       <span className={styles.productCardScrim} aria-hidden="true" />
       <Link href={`/shop/${product.slug}`} className={styles.productImage} aria-label={`Открыть товар ${product.title}`}>
-        <span className={styles.productPlaceholder}><ShoppingBag aria-hidden="true" /></span>
         <span className={styles.badgeRow}>
           <span className={styles.badge}>{product.type === "PROMOTIONAL" ? "Акционный" : "В игре"}</span>
           {percent > 0 ? <span className={styles.saleBadge}>−{percent}%</span> : null}
