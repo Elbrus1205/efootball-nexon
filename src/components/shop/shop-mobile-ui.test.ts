@@ -30,6 +30,11 @@ test("catalog product action says buy and product details omit FAQ", () => {
   assert.doesNotMatch(productPage, /Частые вопросы|faqJson/);
 });
 
+test("mobile catalog keeps two compact products in each row", () => {
+  assert.match(css, /@media \(max-width: 420px\)[\s\S]*?\.grid \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.productImage \{ height: 66px; min-height: 0;/);
+});
+
 test("legacy Postimg product photos are accepted by the Next image loader", () => {
   assert.match(nextConfig, /hostname:\s*["']i\.postimg\.cc["']/);
 });
