@@ -16,8 +16,9 @@ test("shop catalog has no search or filter controls and reviews open Telegram", 
   assert.match(css, /@keyframes shop-action-sheen/);
 });
 
-test("product photos cover catalog cards but are omitted from the product details", () => {
+test("product cards use a generated background and product details omit photos", () => {
   assert.match(card, /productCardBackdrop/);
+  assert.doesNotMatch(card, /next\/image|<Image/);
   assert.match(css, /\.productCardBackdrop\s*\{/);
   assert.match(css, /\.productCardScrim\s*\{/);
   assert.doesNotMatch(productPage, /product\.images\.map|galleryMain/);

@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Clock3, PackageCheck, ShoppingBag, Star } from "lucide-react";
 import { formatFulfillmentTime, formatShopMoney } from "@/lib/shop/format";
@@ -25,7 +24,6 @@ type ProductCardProps = {
 };
 
 export function ProductCard({ product, currency = "RUB" }: ProductCardProps) {
-  const image = product.images[0];
   const variant = product.defaultVariant;
   const price = variant?.activePromotion?.salePriceMinor ?? variant?.priceMinor;
   const percent = variant?.activePromotion && variant.priceMinor > 0
@@ -34,11 +32,10 @@ export function ProductCard({ product, currency = "RUB" }: ProductCardProps) {
 
   return (
     <article className={styles.productCard}>
-      {image ? <><Image className={styles.productCardBackdrop} src={image.url} alt="" fill sizes="(max-width: 420px) 100vw, (max-width: 720px) 50vw, (max-width: 980px) 33vw, 25vw" /><span className={styles.productCardScrim} aria-hidden="true" /></> : null}
+      <span className={styles.productCardBackdrop} aria-hidden="true" />
+      <span className={styles.productCardScrim} aria-hidden="true" />
       <Link href={`/shop/${product.slug}`} className={styles.productImage} aria-label={`Открыть товар ${product.title}`}>
-        {!image ? (
-          <span className={styles.productPlaceholder}><ShoppingBag aria-hidden="true" /></span>
-        ) : null}
+        <span className={styles.productPlaceholder}><ShoppingBag aria-hidden="true" /></span>
         <span className={styles.badgeRow}>
           <span className={styles.badge}>{product.type === "PROMOTIONAL" ? "Акционный" : "В игре"}</span>
           {percent > 0 ? <span className={styles.saleBadge}>−{percent}%</span> : null}

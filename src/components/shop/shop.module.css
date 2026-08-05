@@ -248,9 +248,9 @@
   transition: border-color 190ms ease, transform 190ms ease, background-color 190ms ease;
 }
 .productCard:hover { border-color: rgba(119, 248, 203, .48); transform: translateY(-4px); background: #202020; box-shadow: 0 24px 55px rgba(0, 0, 0, .32), 0 0 28px rgba(33, 241, 168, .07); }
-.productCardBackdrop { z-index: 0; object-fit: cover; transition: transform 300ms ease; }
-.productCardScrim { position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(180deg, rgba(14, 16, 15, .08) 0%, rgba(20, 22, 21, .45) 42%, rgba(29, 29, 29, .97) 63%, #1d1d1d 100%); }
-.productCard:hover .productCardBackdrop { transform: scale(1.025); }
+.productCardBackdrop { position: absolute; inset: 0; z-index: 0; background: radial-gradient(circle at 78% 12%, rgba(119, 248, 203, .25), transparent 28%), radial-gradient(circle at 8% 32%, rgba(84, 126, 255, .18), transparent 34%), linear-gradient(145deg, #303835 0%, #202624 45%, #171918 100%); transition: transform 300ms ease; }
+.productCardBackdrop::after { content: ""; position: absolute; width: 145px; height: 145px; right: -42px; top: -48px; border: 1px solid rgba(255,255,255,.12); border-radius: 42px; background: linear-gradient(145deg, rgba(255,255,255,.1), rgba(255,255,255,.01)); transform: rotate(24deg); box-shadow: inset 0 1px rgba(255,255,255,.12); }`r`n.productCardScrim { position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(180deg, transparent 0%, rgba(19, 22, 21, .3) 42%, rgba(24, 25, 25, .98) 67%, #181919 100%); }
+.productCard:hover .productCardBackdrop { position: absolute; inset: 0; z-index: 0; background: radial-gradient(circle at 78% 12%, rgba(119, 248, 203, .25), transparent 28%), radial-gradient(circle at 8% 32%, rgba(84, 126, 255, .18), transparent 34%), linear-gradient(145deg, #303835 0%, #202624 45%, #171918 100%); transition: transform 300ms ease; }
 .productImage {
   position: relative;
   z-index: 2;
@@ -258,8 +258,8 @@
   overflow: hidden;
   background: transparent;
 }
-.productPlaceholder { width: 100%; height: 100%; display: grid; place-items: center; color: rgba(119, 248, 203, .55); }
-.productPlaceholder svg { width: 2rem; height: 2rem; }
+.productPlaceholder { width: 100%; height: 100%; display: grid; place-items: center; color: rgba(232, 255, 247, .9); }
+.productPlaceholder svg { width: 2.25rem; height: 2.25rem; padding: .55rem; box-sizing: content-box; border: 1px solid rgba(255,255,255,.18); border-radius: 18px; background: rgba(255,255,255,.08); box-shadow: 0 16px 35px rgba(0,0,0,.2), inset 0 1px rgba(255,255,255,.12); backdrop-filter: blur(12px); }
 .badgeRow { position: absolute; inset: .55rem .55rem auto; display: flex; justify-content: space-between; gap: .4rem; }
 .badge,
 .saleBadge {

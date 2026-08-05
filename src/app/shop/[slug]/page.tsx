@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Clock3, PackageCheck, ShieldCheck, Star, UserRoundCheck } from "lucide-react";
+import { Clock3, PackageCheck, ShieldCheck, Star, UserRoundCheck } from "lucide-react";
 import { getCurrentSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { getShopProductBySlug } from "@/lib/shop/catalog";
@@ -29,7 +28,6 @@ export default async function ShopProductPage(props: { params: Promise<{ slug: s
   const variant = product.defaultVariant;
   const currentPrice = variant?.activePromotion?.salePriceMinor ?? variant?.priceMinor;
   return <div className={styles.shell}>
-    <Link href="/shop" className={styles.cardLink}><ChevronLeft /> Вернуться в магазин</Link>
     <div className={styles.detailGrid}>
       <div>
         <section className={styles.section}><h2 className={styles.sectionTitle}>Описание и получение</h2><p className={styles.detailDescription}>{product.description}</p><div className={styles.notice}><ShieldCheck /><div><strong>Условия получения</strong><br />{product.fulfillmentTerms}</div></div></section>
