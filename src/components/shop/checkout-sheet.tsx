@@ -63,6 +63,7 @@ export function CheckoutSheet(props: {
   const [promoCode, setPromoCode] = useState("");
   const [values, setValues] = useState<Record<string, string>>({});
   const [accepted, setAccepted] = useState(false);
+  const [ageAccepted, setAgeAccepted] = useState(false);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [loading, setLoading] = useState(false);
   const selected = props.variants.find((variant) => variant.id === variantId) ?? defaultVariant;
@@ -143,9 +144,10 @@ export function CheckoutSheet(props: {
             ) : (
               <input className={styles.input} type={field.type === "NUMBER" ? "number" : field.type === "TIME" ? "time" : "text"} required={field.isRequired} value={values[field.key] ?? ""} placeholder={field.placeholder ?? undefined} onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))} />
             )}<span className={styles.helper}>{field.description}{field.isSensitive ? " Данные будут зашифрованы." : ""}</span></label>)}
-            <label className={styles.checkLabel}><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} /> Я проверил данные и принимаю <Link href="/shop/legal/terms" target="_blank">условия магазина</Link></label>
+            <label className={styles.checkLabel}><input type="checkbox" checked={ageAccepted} onChange={(event) => setAgeAccepted(event.target.checked)} /> Мне исполнилось 16 лет либо мне от 12 до 15 лет и родитель или законный представитель предварительно разрешил эту покупку. Лицам младше 12 лет покупать запрещено.</label>
+            <label className={styles.checkLabel}><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} /> Я проверил товар, данные, итоговую сумму и комиссию платёжного сервиса, принимаю <Link href="/shop/legal/terms" target="_blank">условия покупки</Link>, <Link href="/shop/legal/refunds" target="_blank">правила возврата</Link> и <Link href="/shop/legal/data" target="_blank">обработку данных</Link>.</label>
             {preview ? <div className={styles.summary} aria-live="polite"><div className={styles.summaryRow}><span>Товар</span><strong>{props.productTitle}</strong></div><div className={styles.summaryRow}><span>Цена за единицу</span><strong>{formatShopMoney(preview.quote.unitPriceMinor, preview.currency)}</strong></div><div className={styles.summaryRow}><span>Количество</span><strong>{preview.quantity}</strong></div>{preview.quote.promotionDiscountMinor > 0 ? <div className={styles.summaryRow}><span>Акционная скидка</span><strong>−{formatShopMoney(preview.quote.promotionDiscountMinor, preview.currency)}</strong></div> : null}{preview.quote.promoCodeDiscountMinor > 0 ? <div className={styles.summaryRow}><span>Промокод</span><strong>−{formatShopMoney(preview.quote.promoCodeDiscountMinor, preview.currency)}</strong></div> : null}<div className={styles.summaryRow}><span>Итого</span><strong>{formatShopMoney(preview.quote.totalMinor, preview.currency)}</strong></div><div className={styles.summaryRow}><span>Выполнение</span><strong>{formatFulfillmentTime(preview.estimatedMinutes)}</strong></div></div> : null}
-            {!preview ? <button className={styles.button} type="button" disabled={loading || !accepted || !props.telegramLinked} onClick={requestPreview}>{loading ? "Проверяем…" : "Проверить заказ"}</button> : <button className={styles.button} type="button" disabled={loading || !props.payment.configured} onClick={createOrder}><Check size={17} />{loading ? "Создаём…" : "Перейти к оплате"}</button>}
+            {!preview ? <button className={styles.button} type="button" disabled={loading || !accepted || !ageAccepted || !props.telegramLinked} onClick={requestPreview}>{loading ? "Проверяем…" : "Проверить заказ"}</button> : <button className={styles.button} type="button" disabled={loading || !props.payment.configured} onClick={createOrder}><Check size={17} />{loading ? "Создаём…" : "Перейти к оплате"}</button>}
           </div>
         </Dialog.Content>
       </Dialog.Portal>

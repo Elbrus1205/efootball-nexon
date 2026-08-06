@@ -59,7 +59,7 @@ export async function POST(request: Request) {
           reviewModerationEnabled: form.get("reviewModerationEnabled") === "true",
           supportContact: text(form, "supportContact") || null,
           reviewsTelegramUrl,
-          termsVersion: text(form, "termsVersion") || "shop-draft-1",
+          termsVersion: text(form, "termsVersion") || "shop-2026-08-09",
           updatedById: session.user.id,
         },
         update: {
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
           reviewModerationEnabled: form.get("reviewModerationEnabled") === "true",
           supportContact: text(form, "supportContact") || null,
           reviewsTelegramUrl,
-          termsVersion: text(form, "termsVersion") || "shop-draft-1",
+          termsVersion: text(form, "termsVersion") || "shop-2026-08-09",
           updatedById: session.user.id,
         },
       });

@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertTriangle, ChevronLeft, ExternalLink, FileCheck2 } from "lucide-react";
+import { ChevronLeft, FileCheck2, ShieldCheck } from "lucide-react";
 import { notFound } from "next/navigation";
-import { getShopLegalDocument, shopLegalDocuments } from "@/lib/shop/legal";
+import { getShopLegalDocument, SHOP_LEGAL_VERSION, SHOP_SUPPORT_EMAIL, SHOP_SUPPORT_TELEGRAM, shopLegalDocuments } from "@/lib/shop/legal";
 import styles from "@/components/shop/shop.module.css";
 
 export function generateStaticParams() {
@@ -24,15 +24,15 @@ export default async function ShopLegalPage(props: { params: Promise<{ slug: str
     <Link href="/shop" className={styles.cardLink}><ChevronLeft /> Вернуться в магазин</Link>
     <header className={styles.hero}>
       <div>
-        <p className={styles.eyebrow}>Документы магазина · версия shop-draft-1</p>
+        <p className={styles.eyebrow}>Документы магазина · версия {SHOP_LEGAL_VERSION}</p>
         <h1 className={styles.title}>{document.title}</h1>
         <p className={styles.lead}>{document.summary}</p>
       </div>
     </header>
 
-    <div className={styles.warning}>
-      <AlertTriangle />
-      <div><strong>Требуется ручная юридическая проверка</strong><br />Это рабочая структура, а не опубликованная оферта или юридическая консультация. Магазин и оплата по умолчанию выключены.</div>
+    <div className={styles.notice}>
+      <ShieldCheck />
+      <div><strong>Контакты магазина</strong><br />Email: <a href={`mailto:${SHOP_SUPPORT_EMAIL}`}>{SHOP_SUPPORT_EMAIL}</a> · Telegram: <a href={`https://t.me/${SHOP_SUPPORT_TELEGRAM.slice(1)}`} target="_blank" rel="noreferrer">{SHOP_SUPPORT_TELEGRAM}</a></div>
     </div>
 
     <nav className={styles.categoryRail} aria-label="Документы магазина">
@@ -48,14 +48,5 @@ export default async function ShopLegalPage(props: { params: Promise<{ slug: str
       </section>)}
     </article>
 
-    <section className={styles.notice}>
-      <ExternalLink />
-      <div>
-        <strong>Материалы для обязательной проверки перед запуском</strong><br />
-        <a href="https://legal.konami.com/games/efootball/terms/tou/en-gb.html" target="_blank" rel="noreferrer">Условия использования eFootball™ от KONAMI</a>
-        {" · "}
-        <a href="https://www.konami.com/efootball/en/topic/news/4749" target="_blank" rel="noreferrer">предупреждение KONAMI о сторонних сайтах и передаче данных</a>
-      </div>
-    </section>
   </div>;
 }

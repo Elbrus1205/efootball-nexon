@@ -45,7 +45,7 @@ async function main() {
       id: "default",
       isEnabled: false,
       showHomeBlock: true,
-      termsVersion: "shop-draft-1",
+      termsVersion: "shop-2026-08-09",
       updatedById: admin.id,
     },
   });
