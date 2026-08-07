@@ -1,7 +1,7 @@
 import { ParticipantStatus, TournamentStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
+import { autoAssignExpiredCaptainTeamMatchSlots, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +16,7 @@ async function handleLifecycleCron(request: Request) {
   }
 
   const now = new Date();
+  const autoAssignment = await autoAssignExpiredCaptainTeamMatchSlots(now);
   const candidates = await db.tournament.findMany({
     where: {
       OR: [
@@ -57,7 +58,7 @@ async function handleLifecycleCron(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, processed: results.length, results });
+  return NextResponse.json({ ok: true, processed: results.length, results, autoAssignment });
 }
 
 export async function GET(request: Request) {

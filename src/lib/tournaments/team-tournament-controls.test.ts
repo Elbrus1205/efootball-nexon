@@ -12,6 +12,7 @@ const topRankingSource = readFileSync("src/lib/tournaments/top-ranking-roster.ts
 const assignmentRouteSource = readFileSync("src/app/api/tournaments/[id]/team-matches/[matchId]/route.ts", "utf8");
 const scoreSubmissionRouteSource = readFileSync("src/app/api/matches/[id]/submit/route.ts", "utf8");
 const reminderServiceSource = readFileSync("src/lib/services/tournaments.ts", "utf8");
+const lifecycleRouteSource = readFileSync("src/app/api/tournaments/lifecycle/route.ts", "utf8");
 const captainTeamMatchesSource = readFileSync("src/lib/tournaments/captain-team-matches.ts", "utf8");
 const tournamentPageSource = readFileSync("src/app/tournaments/[id]/page.tsx", "utf8");
 const clubPlayerLineSource = readFileSync("src/components/tournaments/club-player-line.tsx", "utf8");
@@ -107,4 +108,11 @@ test("unfilled home pairings produce thirty-minute deadline reminders", () => {
   assert.match(reminderServiceSource, /30 \* 60 \* 1_000/);
   assert.match(reminderServiceSource, /captain-team-assignment:/);
   assert.match(reminderServiceSource, /Нужно назначить пары игроков/);
+});
+
+test("unfilled captain pairings are assigned randomly eight hours after the active round starts", () => {
+  assert.match(reminderServiceSource, /CAPTAIN_TEAM_AUTO_ASSIGNMENT_DELAY_MS\s*=\s*8 \* 60 \* 60 \* 1_000/);
+  assert.match(lifecycleRouteSource, /autoAssignExpiredCaptainTeamMatchSlots\(now\)/);
+  assert.match(reminderServiceSource, /Пары назначены автоматически/);
+  assert.match(reminderServiceSource, /срок ручного назначения в 8 часов истёк/i);
 });

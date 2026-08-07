@@ -24,7 +24,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
 
   try {
     await db.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`captain-team-match:${params.matchId}`}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`captain-team-assignment:${params.id}`}))`;
 
       const match = await tx.match.findFirst({
         where: { id: params.matchId, tournamentId: params.id },

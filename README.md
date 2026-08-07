@@ -58,7 +58,7 @@ npm start
 Все endpoints требуют `Authorization: Bearer <CRON_SECRET>` (или `x-cron-secret`):
 
 - `POST /api/notifications/deliver` — каждую минуту; доставляет Telegram/push из outbox с retry.
-- `POST /api/tournaments/lifecycle` — каждую минуту; открывает регистрацию и закрывает заполненные турниры.
+- `POST /api/tournaments/lifecycle` — каждую минуту; открывает регистрацию, закрывает заполненные турниры и случайно назначает незаполненные капитанами пары через 8 часов после начала активного тура/раунда.
 - `POST /api/tournaments/deadline-reminders` — по расписанию напоминаний; шлёт напоминания за 24 ч / 6 ч / 1 ч до дедлайна тура.
 - `POST /api/security/email/reminders` — по расписанию email-напоминаний.
 - `POST /api/profile-statuses/expire` — периодическая обработка истёкших статусов.

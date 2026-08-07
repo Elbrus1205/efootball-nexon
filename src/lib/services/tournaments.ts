@@ -22,6 +22,10 @@ import { normalizeFormatBlueprint, type FormatBlueprint, type PlayoffSelectionRu
 import { applyTournamentAbsenceRatingPenalty, getPlayerRatings } from "@/lib/ratings";
 import { invalidatePlayerRatings } from "@/lib/ratings-cache";
 import { prepareCaptainAssignedTeamMatchSlots } from "@/lib/tournaments/captain-team-matches";
+import {
+  buildRandomCaptainTeamAssignments,
+  resolveActiveCaptainTeamRound,
+} from "@/lib/tournaments/captain-team-auto-assignment";
 import { resolveCaptainTeamPlayoffAggregate } from "@/lib/tournaments/captain-team-playoff";
 import {
   invalidateTournamentAll,
@@ -106,6 +110,7 @@ const TERMINAL_MATCH_STATUSES = new Set<MatchStatus>([
   MatchStatus.CANCELLED,
 ]);
 const AUTO_BYE_NOTE = "AUTO_BYE";
+const CAPTAIN_TEAM_AUTO_ASSIGNMENT_DELAY_MS = 8 * 60 * 60 * 1_000;
 
 function tournamentNotificationsEnabled(tournament: { notificationsEnabled?: boolean | null }) {
   return tournament.notificationsEnabled !== false;
@@ -1070,6 +1075,193 @@ export async function notifyTournamentChanges(params: {
   });
 
   return { notifiedCount: userIds.length };
+}
+
+export async function autoAssignExpiredCaptainTeamMatchSlots(now = new Date()) {
+  const tournaments = await db.tournament.findMany({
+    where: {
+      status: TournamentStatus.IN_PROGRESS,
+      participantMode: TournamentParticipantMode.TEAM,
+      captainsCreateTeamMatches: true,
+    },
+    select: {
+      id: true,
+      title: true,
+      startsAt: true,
+      notificationsEnabled: true,
+      stages: {
+        where: { status: StageStatus.ACTIVE },
+        select: {
+          id: true,
+          startsAt: true,
+          matches: {
+            where: { isPenaltyTiebreak: false },
+            select: {
+              id: true,
+              round: true,
+              matchNumber: true,
+              status: true,
+              startsAt: true,
+              scheduledAt: true,
+              finishedAt: true,
+              updatedAt: true,
+              player1Id: true,
+              player2Id: true,
+              participant1EntryId: true,
+              participant2EntryId: true,
+              isCaptainAssignedTeamMatch: true,
+              isTeamCaptainTiebreak: true,
+              groupId: true,
+              bracketId: true,
+              legNumber: true,
+              seriesKey: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  let assignedCount = 0;
+  let notifiedCount = 0;
+
+  for (const tournament of tournaments) {
+    let tournamentChanged = false;
+
+    for (const stage of tournament.stages) {
+      const activeRound = resolveActiveCaptainTeamRound({
+        matches: stage.matches,
+        tournamentStartsAt: tournament.startsAt,
+        stageStartsAt: stage.startsAt,
+      });
+      if (!activeRound || now.getTime() - activeRound.startedAt.getTime() < CAPTAIN_TEAM_AUTO_ASSIGNMENT_DELAY_MS) {
+        continue;
+      }
+
+      const roundMatches = stage.matches.filter((match) => match.round === activeRound.round);
+      const fixtureGroups = new Map<string, typeof roundMatches>();
+
+      for (const match of roundMatches) {
+        if (
+          !match.isCaptainAssignedTeamMatch ||
+          match.isTeamCaptainTiebreak ||
+          !match.participant1EntryId ||
+          !match.participant2EntryId
+        ) {
+          continue;
+        }
+
+        const key = JSON.stringify([
+          match.groupId,
+          match.bracketId,
+          match.round,
+          match.matchNumber,
+          match.legNumber,
+          match.seriesKey,
+          match.participant1EntryId,
+          match.participant2EntryId,
+        ]);
+        fixtureGroups.set(key, [...(fixtureGroups.get(key) ?? []), match]);
+      }
+
+      for (const fixtureMatches of fixtureGroups.values()) {
+        if (!fixtureMatches.some((match) => !match.player1Id && !match.player2Id && match.status === MatchStatus.PENDING)) {
+          continue;
+        }
+
+        const fixture = fixtureMatches[0];
+        const result = await db.$transaction(async (tx) => {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`captain-team-assignment:${tournament.id}`}))`;
+
+          const freshSlots = await tx.match.findMany({
+            where: { id: { in: fixtureMatches.map((match) => match.id) } },
+            select: { id: true, player1Id: true, player2Id: true, status: true },
+            orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          });
+          const occupiedMatches = await tx.match.findMany({
+            where: {
+              tournamentId: tournament.id,
+              stageId: stage.id,
+              groupId: fixture.groupId,
+              bracketId: fixture.bracketId,
+              round: activeRound.round,
+              legNumber: fixture.legNumber,
+              OR: [{ player1Id: { not: null } }, { player2Id: { not: null } }],
+            },
+            select: { player1Id: true, player2Id: true },
+          });
+          const registrations = await tx.tournamentRegistration.findMany({
+            where: { id: { in: [fixture.participant1EntryId!, fixture.participant2EntryId!] } },
+            select: {
+              id: true,
+              rosterMembers: {
+                where: { status: TeamInviteStatus.ACCEPTED },
+                select: { userId: true, isCaptain: true },
+              },
+            },
+          });
+          const home = registrations.find((registration) => registration.id === fixture.participant1EntryId);
+          const away = registrations.find((registration) => registration.id === fixture.participant2EntryId);
+          if (!home || !away) return { matchIds: [] as string[], captainIds: [] as string[] };
+
+          const assignments = buildRandomCaptainTeamAssignments({
+            slots: freshSlots,
+            homeUserIds: home.rosterMembers.map((member) => member.userId),
+            awayUserIds: away.rosterMembers.map((member) => member.userId),
+            occupiedUserIds: occupiedMatches.flatMap((match) => [match.player1Id, match.player2Id]).filter(Boolean) as string[],
+          });
+          const matchIds: string[] = [];
+
+          for (const assignment of assignments) {
+            const update = await tx.match.updateMany({
+              where: {
+                id: assignment.matchId,
+                status: MatchStatus.PENDING,
+                player1Id: null,
+                player2Id: null,
+              },
+              data: {
+                player1Id: assignment.player1Id,
+                player2Id: assignment.player2Id,
+                status: MatchStatus.READY,
+              },
+            });
+            if (update.count === 1) matchIds.push(assignment.matchId);
+          }
+
+          return {
+            matchIds,
+            captainIds: [...home.rosterMembers, ...away.rosterMembers]
+              .filter((member) => member.isCaptain)
+              .map((member) => member.userId),
+          };
+        });
+
+        if (!result.matchIds.length) continue;
+        assignedCount += result.matchIds.length;
+        tournamentChanged = true;
+        await Promise.all(result.matchIds.map((matchId) => notifyMatchReady(matchId)));
+
+        if (tournamentNotificationsEnabled(tournament) && result.captainIds.length) {
+          const captainIds = Array.from(new Set(result.captainIds));
+          await createNotificationsForUsers({
+            userIds: captainIds,
+            title: "Пары назначены автоматически",
+            body: `${tournament.title}: срок ручного назначения в 8 часов истёк, оставшиеся пары тура/раунда ${activeRound.round} распределены случайно.`,
+            type: NotificationType.MATCH,
+            link: `/tournaments/${tournament.id}?tab=my-matches`,
+            dedupeKey: `captain-team-auto-assignment:${fixture.id}`,
+            dedupeWithinHours: 24 * 365,
+          });
+          notifiedCount += captainIds.length;
+        }
+      }
+    }
+
+    if (tournamentChanged) invalidateTournamentSchedule(tournament.id);
+  }
+
+  return { assignedCount, notifiedCount };
 }
 
 export async function notifyUpcomingRoundDeadlineReminders({ userId }: { userId?: string } = {}) {

@@ -718,8 +718,8 @@ export function MatchManager({
                                   className="h-9 w-full rounded-lg border border-white/10 bg-[#1D1D1D] px-3 text-xs text-white outline-none transition focus:border-primary/60 disabled:opacity-50"
                                 >
                                   <option value="">— Игрок</option>
-                                  {match.player1Id ? <option value={match.player1Id}>{participantName(selectedParticipantOne)}</option> : null}
-                                  {match.player2Id ? <option value={match.player2Id}>{participantName(selectedParticipantTwo)}</option> : null}
+                                  {match.player1Id ? <option value={match.player1Id}>{match.isCaptainAssignedTeamMatch ? match.player1?.name ?? "Игрок не выбран" : participantName(selectedParticipantOne)}</option> : null}
+                                  {match.player2Id ? <option value={match.player2Id}>{match.isCaptainAssignedTeamMatch ? match.player2?.name ?? "Игрок не выбран" : participantName(selectedParticipantTwo)}</option> : null}
                                   {match.player1Id && match.player2Id ? <option value={BOTH_PENALTY_TARGETS}>Обоим игрокам</option> : null}
                                 </select>
                               </div>
