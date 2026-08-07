@@ -1,4 +1,4 @@
-﻿import { ReliabilityPenaltyScope } from "@prisma/client";
+﻿import { ReliabilityPenaltyScope, TeamInviteStatus } from "@prisma/client";
 import Link from "next/link";
 import { ArrowLeft, Swords } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -49,6 +49,14 @@ export default async function AdminTournamentMatchesPage(props: { params: Promis
           clubSlug: true,
           clubBadgePath: true,
           user: { select: { name: true } },
+          rosterMembers: {
+            where: { status: TeamInviteStatus.ACCEPTED },
+            select: {
+              userId: true,
+              user: { select: { name: true } },
+            },
+            orderBy: [{ isCaptain: "desc" }, { invitedAt: "asc" }],
+          },
         },
         orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
       },
@@ -168,6 +176,10 @@ export default async function AdminTournamentMatchesPage(props: { params: Promis
     user: {
       name: participant.user.name,
     },
+    rosterMembers: participant.rosterMembers.map((member) => ({
+      userId: member.userId,
+      user: { name: member.user.name },
+    })),
   }));
 
   return (

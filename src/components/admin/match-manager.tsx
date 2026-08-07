@@ -15,6 +15,13 @@ import { pickAdminMatchSaveResult } from "@/lib/admin-match-editor-state";
 import { adminMatchSectionKey, buildAdminMatchSections, isAdminTourMatch } from "@/lib/admin-match-sections";
 import { cn } from "@/lib/utils";
 
+type RosterPlayerOption = {
+  userId: string;
+  user: {
+    name: string | null;
+  };
+};
+
 type ParticipantOption = {
   id: string;
   userId: string;
@@ -24,6 +31,7 @@ type ParticipantOption = {
   user: {
     name: string | null;
   };
+  rosterMembers: RosterPlayerOption[];
 };
 
 type MatchItem = {
@@ -203,7 +211,10 @@ function MatchSideSelect({
   selected,
   playerName,
   showPlayerName = true,
+  playerOptions,
+  playerValue,
   onChange,
+  onPlayerChange,
 }: {
   label: string;
   value: string;
@@ -212,8 +223,16 @@ function MatchSideSelect({
   selected?: ParticipantOption | null;
   playerName?: string | null;
   showPlayerName?: boolean;
+  playerOptions?: RosterPlayerOption[] | null;
+  playerValue?: string;
   onChange: (participantId: string) => void;
+  onPlayerChange?: (playerId: string) => void;
 }) {
+  const selectsRosterPlayer = playerOptions !== null && playerOptions !== undefined;
+  const currentPlayerOutsideRoster = Boolean(
+    selectsRosterPlayer && playerValue && !playerOptions.some((player) => player.userId === playerValue),
+  );
+
   return (
     <div className="flex min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-black/20 p-2 transition hover:border-primary/25">
       <TeamBadge participant={selected} />
@@ -226,19 +245,36 @@ function MatchSideSelect({
           <div className="truncate text-sm font-semibold leading-tight text-white">{playerName?.trim() || participantName(selected)}</div>
         ) : null}
       </div>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        aria-label={`Сменить ${label.toLowerCase()}`}
-        className="h-9 w-[118px] shrink-0 rounded-lg border border-white/10 bg-[#1D1D1D] px-2 text-xs text-white outline-none transition focus:border-primary/60 sm:w-44 sm:px-3 sm:text-sm"
-      >
-        <option value="">{placeholder}</option>
-        {participants.map((participant) => (
-          <option key={participant.id} value={participant.id}>
-            {participantClubName(participant)} · {participant.user.name ?? participant.id}
-          </option>
-        ))}
-      </select>
+      {selectsRosterPlayer ? (
+        <select
+          value={playerValue ?? ""}
+          onChange={(event) => onPlayerChange?.(event.target.value)}
+          aria-label={`Сменить ${label.toLowerCase()}`}
+          className="h-9 w-[118px] shrink-0 rounded-lg border border-white/10 bg-[#1D1D1D] px-2 text-xs text-white outline-none transition focus:border-primary/60 sm:w-44 sm:px-3 sm:text-sm"
+        >
+          <option value="">{placeholder}</option>
+          {currentPlayerOutsideRoster ? <option value={playerValue}>{playerName?.trim() || "Текущий игрок"} · вне состава</option> : null}
+          {playerOptions.map((player) => (
+            <option key={player.userId} value={player.userId}>
+              {player.user.name?.trim() || player.userId}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          aria-label={`Сменить ${label.toLowerCase()}`}
+          className="h-9 w-[118px] shrink-0 rounded-lg border border-white/10 bg-[#1D1D1D] px-2 text-xs text-white outline-none transition focus:border-primary/60 sm:w-44 sm:px-3 sm:text-sm"
+        >
+          <option value="">{placeholder}</option>
+          {participants.map((participant) => (
+            <option key={participant.id} value={participant.id}>
+              {participantClubName(participant)} · {participant.user.name ?? participant.id}
+            </option>
+          ))}
+        </select>
+      )}
     </div>
   );
 }
@@ -267,7 +303,12 @@ export function MatchManager({
   const [reliabilityPenaltyTargetByMatch, setReliabilityPenaltyTargetByMatch] = useState<Record<string, string>>(() => mapConfiguredReliabilityPenaltyTargets(matches));
 
   const participantById = useMemo(() => new Map(participants.map((participant) => [participant.id, participant])), [participants]);
-  const participantSearchTokens = (participant?: ParticipantOption | null) => [participant?.clubName, participant?.clubSlug, participant?.user.name].filter(Boolean);
+  const rosterPlayerById = useMemo(
+    () => new Map(participants.flatMap((participant) => participant.rosterMembers.map((player) => [player.userId, player]))),
+    [participants],
+  );
+  const participantSearchTokens = (participant?: ParticipantOption | null) =>
+    [participant?.clubName, participant?.clubSlug, participant?.user.name, ...(participant?.rosterMembers.map((player) => player.user.name) ?? [])].filter(Boolean);
 
   useEffect(() => {
     setOrderedMatches(matches);
@@ -327,6 +368,18 @@ export function MatchManager({
           next.participant2EntryId = participantId || null;
           next.player2Id = participant?.userId ?? null;
           next.player2 = participant ? { name: participant.user.name } : null;
+        }
+
+        if ("player1Id" in payload) {
+          const playerId = typeof payload.player1Id === "string" ? payload.player1Id : "";
+          next.player1Id = playerId || null;
+          next.player1 = playerId ? { name: rosterPlayerById.get(playerId)?.user.name ?? next.player1?.name ?? null } : null;
+        }
+
+        if ("player2Id" in payload) {
+          const playerId = typeof payload.player2Id === "string" ? payload.player2Id : "";
+          next.player2Id = playerId || null;
+          next.player2 = playerId ? { name: rosterPlayerById.get(playerId)?.user.name ?? next.player2?.name ?? null } : null;
         }
 
         if ("status" in payload && Object.values(MatchStatus).includes(payload.status as MatchStatus)) {
@@ -628,6 +681,8 @@ export function MatchManager({
                             selected={selectedParticipantOne}
                             playerName={match.isCaptainAssignedTeamMatch ? match.player1?.name : selectedParticipantOne?.user.name}
                             showPlayerName={!match.isCaptainAssignedTeamMatch || Boolean(match.player1Id)}
+                            playerOptions={match.isCaptainAssignedTeamMatch ? selectedParticipantOne?.rosterMembers ?? [] : null}
+                            playerValue={match.isCaptainAssignedTeamMatch ? match.player1Id ?? "" : ""}
                             onChange={(participantId) => {
                               const participant = participantId ? participantById.get(participantId) : null;
                               saveMatch(match.id, {
@@ -635,6 +690,7 @@ export function MatchManager({
                                 player1Id: participant?.userId ?? null,
                               });
                             }}
+                            onPlayerChange={(playerId) => saveMatch(match.id, { player1Id: playerId })}
                           />
                           <MatchSideSelect
                             label="Игрок 2"
@@ -644,6 +700,8 @@ export function MatchManager({
                             selected={selectedParticipantTwo}
                             playerName={match.isCaptainAssignedTeamMatch ? match.player2?.name : selectedParticipantTwo?.user.name}
                             showPlayerName={!match.isCaptainAssignedTeamMatch || Boolean(match.player2Id)}
+                            playerOptions={match.isCaptainAssignedTeamMatch ? selectedParticipantTwo?.rosterMembers ?? [] : null}
+                            playerValue={match.isCaptainAssignedTeamMatch ? match.player2Id ?? "" : ""}
                             onChange={(participantId) => {
                               const participant = participantId ? participantById.get(participantId) : null;
                               saveMatch(match.id, {
@@ -651,6 +709,7 @@ export function MatchManager({
                                 player2Id: participant?.userId ?? null,
                               });
                             }}
+                            onPlayerChange={(playerId) => saveMatch(match.id, { player2Id: playerId })}
                           />
                         </div>
 
