@@ -783,6 +783,7 @@ export default async function TournamentDetailsPage(
   const filteredParticipants = activeParticipants.filter(participantSearchMatches);
   const hasFreeSlots = activeParticipants.length < tournament.maxParticipants;
   const isRegistrationOpen = tournament.status === TournamentStatus.REGISTRATION_OPEN;
+  const showEmptyStructureSlots = tournament.status !== TournamentStatus.IN_PROGRESS && tournament.status !== TournamentStatus.COMPLETED;
   const isLoggedIn = Boolean(currentUserId);
   const alreadyRegistered = !!currentUserId && activeParticipants.some((entry) => entry.userId === currentUserId);
   const currentApplication = currentUserId
@@ -1148,7 +1149,9 @@ export default async function TournamentDetailsPage(
                     const groupRows = buildPublicLeagueTable(groupMembers, groupMatches, clubsBySlug, stage).map((row) => ({ ...row, isCurrentTeam: row.id === currentUserId }));
                     const groupCapacity = group.capacity ?? stage.participantsPerGroup ?? 0;
                     const isCurrentGroup = group.id === currentGroupId;
-                    const emptySlots = Array.from({ length: Math.max(groupCapacity - activeMembers.length, 0) }, (_, index) => ({ id: `${group.id}-slot-${index + 1}`, position: activeMembers.length + index + 1 }));
+                    const emptySlots = showEmptyStructureSlots
+                      ? Array.from({ length: Math.max(groupCapacity - activeMembers.length, 0) }, (_, index) => ({ id: `${group.id}-slot-${index + 1}`, position: activeMembers.length + index + 1 }))
+                      : [];
                         return (
                       <Card
                         key={group.id}

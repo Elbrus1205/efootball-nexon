@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { createNotification } from "@/lib/services/notifications";
+import { hasTelegramRegistrationContact } from "@/lib/social-links";
 import {
   syncTournamentLifecycleStatus,
   syncTournamentPreviewGroups,
@@ -55,6 +56,7 @@ export async function POST(
         },
       },
       registration: { include: { user: { select: { id: true } } } },
+      user: { select: { telegramId: true, telegramUsername: true } },
     },
   });
 
@@ -93,6 +95,13 @@ export async function POST(
 
     invalidateTournamentParticipants(params.id);
     return NextResponse.json({ ok: true });
+  }
+
+  if (!hasTelegramRegistrationContact(invite.user)) {
+    return NextResponse.json(
+      { error: "Чтобы принять приглашение, привяжите Telegram с публичным @username." },
+      { status: 400 },
+    );
   }
 
   const activeMembersCount = await db.tournamentRegistrationMember.count({

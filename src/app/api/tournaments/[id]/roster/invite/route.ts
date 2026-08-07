@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { createNotification } from "@/lib/services/notifications";
 import { buildRosterInviteMessage } from "@/lib/services/telegram-callbacks";
 import { syncTournamentLifecycleStatus, syncTournamentPreviewGroups } from "@/lib/services/tournaments";
+import { hasTelegramRegistrationContact } from "@/lib/social-links";
 import { invalidateTournamentParticipants } from "@/lib/tournament-cache";
 import { assertTopRankingRosterEligibility, getRankingSnapshot, TopRankingRosterError } from "@/lib/tournaments/top-ranking-roster";
 
@@ -72,7 +73,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
         { telegramUsername: { equals: nickname, mode: "insensitive" } },
       ],
     },
-    select: { id: true, name: true },
+    select: { id: true, name: true, telegramId: true, telegramUsername: true },
   });
 
   if (!target) {
@@ -81,6 +82,13 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
 
   if (target.id === session.user.id) {
     return NextResponse.json({ error: "Капитан уже находится в составе." }, { status: 400 });
+  }
+
+  if (!hasTelegramRegistrationContact(target)) {
+    return NextResponse.json(
+      { error: "У игрока должен быть привязан Telegram с публичным @username." },
+      { status: 400 },
+    );
   }
 
   const rankingSnapshot = await getRankingSnapshot(captainMember.tournament, target.id);

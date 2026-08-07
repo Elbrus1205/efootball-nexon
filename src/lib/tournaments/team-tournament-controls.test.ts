@@ -8,6 +8,7 @@ const migrationSource = readFileSync("prisma/migrations/20260728120000_add_team_
 const captainTiebreakMigrationSource = readFileSync("prisma/migrations/20260802133000_add_team_captain_tiebreak/migration.sql", "utf8");
 const builderSource = readFileSync("src/components/admin/tournament-builder-form.tsx", "utf8");
 const inviteRouteSource = readFileSync("src/app/api/tournaments/[id]/roster/invite/route.ts", "utf8");
+const respondRouteSource = readFileSync("src/app/api/tournaments/[id]/roster/respond/route.ts", "utf8");
 const topRankingSource = readFileSync("src/lib/tournaments/top-ranking-roster.ts", "utf8");
 const assignmentRouteSource = readFileSync("src/app/api/tournaments/[id]/team-matches/[matchId]/route.ts", "utf8");
 const scoreSubmissionRouteSource = readFileSync("src/app/api/matches/[id]/submit/route.ts", "utf8");
@@ -51,6 +52,14 @@ test("roster invitations enforce and preserve the top-player decision", () => {
   assert.match(inviteRouteSource, /ratingRankAtInvite: rankingSnapshot\.rank/);
   assert.match(inviteRouteSource, /isTopRankAtInvite: rankingSnapshot\.isTopRanked/);
   assert.match(topRankingSource, /Нельзя пригласить этого игрока/);
+});
+
+test("team and coop roster invitations require a linked public Telegram username", () => {
+  assert.match(inviteRouteSource, /select: \{ id: true, name: true, telegramId: true, telegramUsername: true \}/);
+  assert.match(inviteRouteSource, /hasTelegramRegistrationContact\(target\)/);
+  assert.match(inviteRouteSource, /должен быть привязан Telegram с публичным @username/);
+  assert.match(respondRouteSource, /hasTelegramRegistrationContact\(invite\.user\)/);
+  assert.match(respondRouteSource, /привяжите Telegram с публичным @username/);
 });
 
 test("only the home captain can lock one unique player pairing per leg", () => {
@@ -108,6 +117,14 @@ test("unfilled home pairings produce thirty-minute deadline reminders", () => {
   assert.match(reminderServiceSource, /30 \* 60 \* 1_000/);
   assert.match(reminderServiceSource, /captain-team-assignment:/);
   assert.match(reminderServiceSource, /Нужно назначить пары игроков/);
+});
+
+test("started league and group structures hide unfilled participant places", () => {
+  assert.match(
+    tournamentPageSource,
+    /const showEmptyStructureSlots = tournament\.status !== TournamentStatus\.IN_PROGRESS && tournament\.status !== TournamentStatus\.COMPLETED/,
+  );
+  assert.match(tournamentPageSource, /const emptySlots = showEmptyStructureSlots\s*\? Array\.from/);
 });
 
 test("unfilled captain pairings are assigned randomly eight hours after the active round starts", () => {
