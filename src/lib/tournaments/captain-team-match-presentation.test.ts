@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   buildCaptainTeamMatchSlotLabels,
   compareCaptainAssignedTeamMatches,
+  isCaptainTeamMatchVisibleToUser,
 } from "./captain-team-match-presentation";
 
 function teamMatch(params: {
@@ -54,5 +55,39 @@ test("shows the current team's three home fixtures before its three away fixture
   assert.deepEqual(
     ordered.map((match) => match.id),
     ["home-1", "home-2", "home-3", "away-1", "away-2", "away-3"],
+  );
+});
+
+test("a captain sees every match of their own team but no matches of other teams", () => {
+  const ownAwayMatch = {
+    player1Id: "home-player",
+    player2Id: "away-player",
+    participant1EntryId: "team-home",
+    participant2EntryId: "team-current",
+  };
+  const unrelatedMatch = {
+    player1Id: "other-player-1",
+    player2Id: "other-player-2",
+    participant1EntryId: "team-other-1",
+    participant2EntryId: "team-other-2",
+  };
+
+  assert.equal(
+    isCaptainTeamMatchVisibleToUser({
+      match: ownAwayMatch,
+      currentUserId: "current-captain",
+      currentCaptainRegistrationId: "team-current",
+      captainsCreateTeamMatches: true,
+    }),
+    true,
+  );
+  assert.equal(
+    isCaptainTeamMatchVisibleToUser({
+      match: unrelatedMatch,
+      currentUserId: "current-captain",
+      currentCaptainRegistrationId: "team-current",
+      captainsCreateTeamMatches: true,
+    }),
+    false,
   );
 });

@@ -9,10 +9,32 @@ type CaptainTeamMatch = {
   matchNumber: number;
   participant1EntryId?: string | null;
   participant2EntryId?: string | null;
+  player1Id?: string | null;
+  player2Id?: string | null;
   createdAt: Date | string;
   stage?: { orderIndex: number } | null;
   group?: { orderIndex: number } | null;
 };
+
+export function isCaptainTeamMatchVisibleToUser(params: {
+  match: Pick<CaptainTeamMatch, "participant1EntryId" | "participant2EntryId" | "player1Id" | "player2Id">;
+  currentUserId: string;
+  currentCaptainRegistrationId?: string | null;
+  captainsCreateTeamMatches: boolean;
+}) {
+  if (!params.captainsCreateTeamMatches) return false;
+  if (
+    params.match.player1Id === params.currentUserId ||
+    params.match.player2Id === params.currentUserId
+  ) {
+    return true;
+  }
+  return Boolean(
+    params.currentCaptainRegistrationId &&
+      (params.match.participant1EntryId === params.currentCaptainRegistrationId ||
+        params.match.participant2EntryId === params.currentCaptainRegistrationId),
+  );
+}
 
 function fixtureKey(match: CaptainTeamMatch) {
   return [
