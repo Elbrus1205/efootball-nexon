@@ -3,16 +3,16 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 const VERSION = "v1";
 
 function getEncryptionKey() {
-  const configured = process.env.SHOP_DATA_ENCRYPTION_KEY?.trim();
+  const configured = process.env.SHOP_ENC_KEY?.trim();
   if (!configured) {
-    throw new Error("SHOP_DATA_ENCRYPTION_KEY не настроен.");
+    throw new Error("SHOP_ENC_KEY не настроен.");
   }
 
   const decoded = /^[a-f\d]{64}$/i.test(configured)
     ? Buffer.from(configured, "hex")
     : Buffer.from(configured, "base64");
   if (decoded.length !== 32) {
-    throw new Error("SHOP_DATA_ENCRYPTION_KEY должен содержать 32 байта в base64 или 64 hex-символа.");
+    throw new Error("SHOP_ENC_KEY должен содержать 32 байта в base64 или 64 hex-символа.");
   }
   return decoded;
 }
