@@ -38,9 +38,10 @@ export function createPlategaProvider(): PaymentProvider {
     name: "platega",
     async createPayment(input) {
       const config = readConfig();
-      const response = await plategaFetch(config, "v2/transaction/process", {
+      const response = await plategaFetch(config, "transaction/process", {
         method: "POST",
         body: JSON.stringify({
+          paymentMethod: 2,
           paymentDetails: {
             amount: minorToMajor(input.amountMinor),
             currency: input.currency,
