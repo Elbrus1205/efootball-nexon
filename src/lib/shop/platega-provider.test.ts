@@ -27,7 +27,7 @@ test("reports missing Platega credentials", () => {
   assert.deepEqual(readiness.missing, ["PLATEGA_MERCHANT_ID", "PLATEGA_SECRET"]);
 });
 
-test("creates a Platega checkout payment", async () => {
+test("creates a Platega SBP checkout payment", async () => {
   configurePlatega();
   let requestUrl = "";
   let requestInit: RequestInit | undefined;
@@ -55,7 +55,7 @@ test("creates a Platega checkout payment", async () => {
     idempotencyKey: "pay-1",
   });
 
-  assert.equal(requestUrl, "https://app.platega.io/v2/transaction/process");
+  assert.equal(requestUrl, "https://app.platega.io/transaction/process");
   assert.equal(requestInit?.method, "POST");
 
   const headers = new Headers(requestInit?.headers);
@@ -63,6 +63,7 @@ test("creates a Platega checkout payment", async () => {
   assert.equal(headers.get("X-Secret"), "secret-1");
 
   const body = JSON.parse(String(requestInit?.body)) as Record<string, unknown>;
+  assert.equal(body.paymentMethod, 2);
   assert.deepEqual(body.paymentDetails, { amount: 1490.5, currency: "RUB" });
   assert.equal(body.return, "https://shop.example/orders/order-1");
   assert.equal(body.failedUrl, "https://shop.example/orders/order-1?payment=failed");
