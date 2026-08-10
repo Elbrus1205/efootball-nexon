@@ -730,38 +730,43 @@ async function handleParticipantMutation(request: Request, params: { id: string 
 
       let replacedMatchesCount = 0;
 
-      // Капитан кооп-заявки одновременно является владельцем заявки и игроком матчей,
-      // поэтому при замене капитана переносим владельца заявки и игроков в незавершённых матчах.
+      // Капитан кооп-заявки одновременно является владельцем заявки.
       if (isCaptain) {
         await tx.tournamentRegistration.update({
           where: { id: registrationId },
           data: { userId: replacementUserId },
         });
-
-        const replaceableMatches = await tx.match.findMany({
-          where: {
-            tournamentId: params.id,
-            OR: [{ participant1EntryId: registrationId }, { participant2EntryId: registrationId }],
-            status: { in: replaceableMatchStatuses },
-            player1Score: null,
-            player2Score: null,
-            winnerId: null,
-          },
-          select: { id: true, participant1EntryId: true, participant2EntryId: true },
-        });
-
-        const playerOneIds = replaceableMatches.filter((m) => m.participant1EntryId === registrationId).map((m) => m.id);
-        const playerTwoIds = replaceableMatches.filter((m) => m.participant2EntryId === registrationId).map((m) => m.id);
-
-        if (playerOneIds.length) {
-          await tx.match.updateMany({ where: { id: { in: playerOneIds } }, data: { player1Id: replacementUserId } });
-        }
-        if (playerTwoIds.length) {
-          await tx.match.updateMany({ where: { id: { in: playerTwoIds } }, data: { player2Id: replacementUserId } });
-        }
-
-        replacedMatchesCount = replaceableMatches.length;
       }
+
+      // Переносим только те открытые матчи, где заменяемый участник был реально назначен.
+      // Иначе пустой слот капитана становится наполовину заполненным и его пропускают
+      // как ручное назначение, так и автоматический подбор.
+      const replaceableMatches = await tx.match.findMany({
+        where: {
+          tournamentId: params.id,
+          OR: [
+            { participant1EntryId: registrationId, player1Id: member.userId },
+            { participant2EntryId: registrationId, player2Id: member.userId },
+          ],
+          status: { in: replaceableMatchStatuses },
+          player1Score: null,
+          player2Score: null,
+          winnerId: null,
+        },
+        select: { id: true, participant1EntryId: true, participant2EntryId: true },
+      });
+
+      const playerOneIds = replaceableMatches.filter((match) => match.participant1EntryId === registrationId).map((match) => match.id);
+      const playerTwoIds = replaceableMatches.filter((match) => match.participant2EntryId === registrationId).map((match) => match.id);
+
+      if (playerOneIds.length) {
+        await tx.match.updateMany({ where: { id: { in: playerOneIds } }, data: { player1Id: replacementUserId } });
+      }
+      if (playerTwoIds.length) {
+        await tx.match.updateMany({ where: { id: { in: playerTwoIds } }, data: { player2Id: replacementUserId } });
+      }
+
+      replacedMatchesCount = replaceableMatches.length;
 
       await tx.tournamentRegistration.update({
         where: { id: registrationId },

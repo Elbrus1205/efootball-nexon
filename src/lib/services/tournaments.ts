@@ -1240,6 +1240,7 @@ export async function autoAssignExpiredCaptainTeamMatchSlots(now = new Date()) {
         if (!result.matchIds.length) continue;
         assignedCount += result.matchIds.length;
         tournamentChanged = true;
+        invalidateTournamentSchedule(tournament.id);
         await Promise.all(result.matchIds.map((matchId) => notifyMatchReady(matchId)));
 
         if (tournamentNotificationsEnabled(tournament) && result.captainIds.length) {

@@ -42,6 +42,7 @@ import { getTelegramProfileLinks, hasPublicTelegramUsername, hasTelegramRegistra
 import {
   buildCaptainTeamMatchSlotLabels,
   compareCaptainAssignedTeamMatches,
+  isCaptainTeamMatchVisibleToUser,
 } from "@/lib/tournaments/captain-team-match-presentation";
 import { cn, formatDate } from "@/lib/utils";
 import {
@@ -688,18 +689,19 @@ export default async function TournamentDetailsPage(
     (side === 1 ? match.player1Id : match.player2Id) ?? resolveMatchEntry(match, side)?.userId ?? null;
 
   const currentUserId = session?.user?.id;
-  const captainRegistrationIds = new Set(
-    tournament.rosterMembers
-      .filter((member) => member.isCaptain && member.status === "ACCEPTED")
-      .map((member) => member.registration.id),
-  );
+  const currentCaptainRegistrationId =
+    tournament.rosterMembers.find((member) => member.isCaptain && member.status === "ACCEPTED")?.registration.id ?? null;
   const isCurrentUserMatch = (match: (typeof tournament.matches)[number]) =>
     Boolean(
       currentUserId &&
         (resolveMatchUserId(match, 1) === currentUserId ||
           resolveMatchUserId(match, 2) === currentUserId ||
-          (tournament.captainsCreateTeamMatches &&
-            (captainRegistrationIds.has(match.participant1EntryId ?? "") || captainRegistrationIds.has(match.participant2EntryId ?? "")))),
+          isCaptainTeamMatchVisibleToUser({
+            match,
+            currentUserId,
+            currentCaptainRegistrationId,
+            captainsCreateTeamMatches: tournament.captainsCreateTeamMatches,
+          })),
     );
 
   const myMatchIds = currentUserId

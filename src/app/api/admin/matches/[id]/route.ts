@@ -16,6 +16,7 @@ import { getMatchPenaltyTargetUserIds, uniqueReliabilityPenaltyUserIds } from "@
 import { notifyMatchReady, recalculateGroupStandings, resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { invalidateTournamentSchedule } from "@/lib/tournament-cache";
 import { matchUpdateSchema } from "@/lib/validators";
+import { canEditMatchParticipants } from "@/lib/admin-match-participant-policy";
 
 function matchRequiresWinner(match: {
   bracketId: string | null;
@@ -209,6 +210,18 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
 
   if (!before) {
     return NextResponse.json({ error: "Match not found" }, { status: 404 });
+  }
+
+  const participantFieldsChanged =
+    "player1Id" in body ||
+    "player2Id" in body ||
+    "participant1EntryId" in body ||
+    "participant2EntryId" in body;
+  if (participantFieldsChanged && !canEditMatchParticipants(before)) {
+    return NextResponse.json(
+      { error: "Нельзя менять игроков или команды в матче с подтверждённым результатом." },
+      { status: 409 },
+    );
   }
 
   const data: Prisma.MatchUpdateInput = {};
