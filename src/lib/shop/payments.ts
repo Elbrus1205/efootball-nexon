@@ -15,6 +15,7 @@ export type PaymentProvider = {
   createPayment(input: {
     orderId: string;
     orderNumber: string;
+    userId: string;
     amountMinor: number;
     currency: string;
     returnUrl: string;

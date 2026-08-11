@@ -38,10 +38,9 @@ export function createPlategaProvider(): PaymentProvider {
     name: "platega",
     async createPayment(input) {
       const config = readConfig();
-      const response = await plategaFetch(config, "transaction/process", {
+      const response = await plategaFetch(config, "v2/transaction/process", {
         method: "POST",
         body: JSON.stringify({
-          paymentMethod: 2,
           paymentDetails: {
             amount: minorToMajor(input.amountMinor),
             currency: input.currency,
@@ -51,7 +50,7 @@ export function createPlategaProvider(): PaymentProvider {
           failedUrl: appendSearchParam(input.returnUrl, "payment", "failed"),
           payload: input.orderId,
           metadata: {
-            userId: input.orderId,
+            userId: input.userId,
             orderNumber: input.orderNumber,
           },
         }),

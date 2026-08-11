@@ -26,6 +26,7 @@ export async function beginShopPayment(input: { orderId: string; buyerId: string
   const external = await input.provider.createPayment({
     orderId: order.id,
     orderNumber: order.orderNumber,
+    userId: input.buyerId,
     amountMinor: order.totalMinor,
     currency: order.currency,
     returnUrl: input.returnUrl,
