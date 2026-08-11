@@ -41,6 +41,10 @@ export async function createShopReview(input: {
     if (status === ShopReviewStatus.PUBLISHED) {
       const aggregate = await tx.shopReview.aggregate({ where: { productId: item.productId, status: ShopReviewStatus.PUBLISHED, deletedAt: null }, _avg: { rating: true }, _count: true });
       await tx.shopProduct.update({ where: { id: item.productId }, data: { ratingAverage: aggregate._avg.rating ?? 0, ratingCount: aggregate._count } });
+      if (order.sellerId) {
+        const sellerAggregate = await tx.shopReview.aggregate({ where: { sellerId: order.sellerId, status: ShopReviewStatus.PUBLISHED, deletedAt: null }, _avg: { rating: true }, _count: true });
+        await tx.shopSeller.update({ where: { id: order.sellerId }, data: { ratingAverage: sellerAggregate._avg.rating ?? 0, ratingCount: sellerAggregate._count } });
+      }
     }
     return review;
   });

@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowUpRight, History, MessageSquareText, ShieldCheck, ShoppingBag, Sparkles } from "lucide-react";
+import { History, MessageSquareText, ShieldCheck, ShoppingBag, Sparkles } from "lucide-react";
 import { getCurrentSession } from "@/lib/auth/session";
 import { listShopCategories, listShopProducts } from "@/lib/shop/catalog";
 import { getShopAvailability, getShopSettings } from "@/lib/shop/config";
 import { ProductCard } from "@/components/shop/product-card";
 import styles from "@/components/shop/shop.module.css";
-
-const fallbackReviewsTelegramUrl = process.env.NEXT_PUBLIC_SUPPORT_TELEGRAM_URL ?? "https://t.me/efootball_nexon";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +33,6 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
     getCurrentSession(),
   ]);
   const availability = getShopAvailability(settings);
-  const reviewsTelegramUrl = settings.reviewsTelegramUrl ?? fallbackReviewsTelegramUrl;
   const pageHref = (targetPage: number) => category
     ? `/shop?category=${encodeURIComponent(category)}&page=${targetPage}`
     : `/shop?page=${targetPage}`;
@@ -48,8 +45,8 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
           <Link className={`${styles.shopHeaderAction} ${styles.ordersAction}`} href={session?.user ? "/shop/orders" : "/login?callbackUrl=/shop/orders"}>
             <span className={styles.shopActionIcon}><History aria-hidden="true" /></span><span className={styles.shopActionCopy}><strong>Мои заказы</strong><small>Статусы и история</small></span><span className={styles.shopActionSignal} aria-hidden="true" />
           </Link>
-          <Link className={`${styles.shopHeaderAction} ${styles.reviewsAction}`} href={reviewsTelegramUrl} target="_blank" rel="noreferrer">
-            <span className={styles.shopActionIcon}><MessageSquareText aria-hidden="true" /></span><span className={styles.shopActionCopy}><strong>Наши отзывы</strong><small>Открыть в Telegram</small></span><ArrowUpRight aria-hidden="true" />
+          <Link className={`${styles.shopHeaderAction} ${styles.reviewsAction}`} href="/shop/reviews">
+            <span className={styles.shopActionIcon}><MessageSquareText aria-hidden="true" /></span><span className={styles.shopActionCopy}><strong>Отзывы игроков</strong><small>Проверенные покупки</small></span><span className={styles.shopActionSignal} aria-hidden="true" />
           </Link>
         </div>
       </header>

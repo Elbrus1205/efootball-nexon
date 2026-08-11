@@ -39,10 +39,10 @@ export async function handleShopTelegramCallback(input: {
       return { message: "Выполнение заказа начато.", clearKeyboard: true };
     case "SHOP_SELLER_COMPLETE":
       await input.orders.sellerComplete(action.orderId, input.userId);
-      return { message: "Заказ отмечен выполненным.", clearKeyboard: true };
+      return { message: "Монеты куплены. Покупателю отправлено уведомление для проверки и подтверждения.", clearKeyboard: true };
     case "SHOP_BUYER_CONFIRM":
       await input.orders.buyerConfirm(action.orderId, input.userId);
-      return { message: "Получение подтверждено.", clearKeyboard: true };
+      return { message: "Получение подтверждено. Заказ успешно завершён — теперь можно оставить отзыв на сайте.", clearKeyboard: true };
     case "SHOP_OPEN_DISPUTE":
       await input.orders.openDispute(action.orderId, input.userId);
       return { message: "Спор открыт. Поддержка получила уведомление.", clearKeyboard: true };

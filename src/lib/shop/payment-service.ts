@@ -136,6 +136,46 @@ function createPrismaWebhookStore(providerName: string): PaymentWebhookStore {
         });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 15_000 });
     },
+    async cancelPayment(input) {
+      await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`shop-order:${input.orderId}`}))`;
+        const payment = await tx.shopPayment.findUnique({ where: { id: input.paymentId } });
+        const order = await tx.shopOrder.findUnique({ where: { id: input.orderId }, include: { items: true } });
+        if (!payment || !order) throw new ShopError("PAYMENT_ORDER_NOT_FOUND", "????? ??????? ?? ??????.", 404);
+        if (payment.status === ShopPaymentStatus.SUCCEEDED) return;
+
+        await tx.shopPayment.update({
+          where: { id: payment.id },
+          data: { status: ShopPaymentStatus[input.status], failedAt: input.occurredAt },
+        });
+        if (order.status === ShopOrderStatus.PENDING_PAYMENT) {
+          await tx.shopOrder.update({
+            where: { id: order.id },
+            data: { status: ShopOrderStatus.CANCELLED, cancelledAt: input.occurredAt },
+          });
+          await tx.shopOrderStatusHistory.create({
+            data: {
+              orderId: order.id,
+              actorType: ShopOrderActorType.SYSTEM,
+              previousStatus: ShopOrderStatus.PENDING_PAYMENT,
+              newStatus: ShopOrderStatus.CANCELLED,
+              reason: input.status === "CANCELLED" ? "PAYMENT_CANCELLED" : "PAYMENT_FAILED",
+              technicalInfoJson: { eventId: input.eventId, paymentId: payment.id },
+            },
+          });
+          for (const item of order.items) {
+            const variant = await tx.shopProductVariant.findUnique({ where: { id: item.variantId }, select: { stockMode: true } });
+            if (variant?.stockMode === ShopStockMode.FINITE) {
+              await tx.shopProductVariant.update({ where: { id: item.variantId }, data: { reservedQuantity: { decrement: item.quantity } } });
+            }
+          }
+        }
+        await tx.shopPaymentWebhookEvent.update({
+          where: { provider_eventId: { provider: providerName, eventId: input.eventId } },
+          data: { status: "PROCESSED", processedAt: new Date() },
+        });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 15_000 });
+    },
     async failEvent(eventId, reason) {
       await db.shopPaymentWebhookEvent.updateMany({
         where: { provider: providerName, eventId },
@@ -156,6 +196,7 @@ export async function assignShopOrderSeller(orderId: string) {
         isActive: true,
         deletedAt: null,
         products: { some: { productId: { in: productIds }, isActive: true } },
+        user: { telegramUsername: { not: null } },
       },
       include: { _count: { select: { orders: { where: { status: { in: [ShopOrderStatus.ACCEPTED, ShopOrderStatus.IN_PROGRESS, ShopOrderStatus.SELLER_COMPLETED, ShopOrderStatus.WAITING_BUYER_CONFIRMATION, ShopOrderStatus.DISPUTE] } } } } } },
       orderBy: [{ isOnline: "desc" }, { lastAssignedAt: "asc" }],
@@ -175,7 +216,7 @@ export async function processShopPaymentWebhook(input: { provider: PaymentProvid
     headers: input.headers,
     body: input.body,
   });
-  if (!result.duplicate && result.orderId) {
+  if (!result.duplicate && result.orderId && result.status === "SUCCEEDED") {
     await assignShopOrderSeller(result.orderId);
     await notifyShopOrderStatus(result.orderId).catch((error) => console.error("Failed to notify paid shop order", error));
   }

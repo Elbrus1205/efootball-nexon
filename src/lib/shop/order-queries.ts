@@ -1,4 +1,4 @@
-import { ShopOrderMessageVisibility, ShopOrderStatus } from "@prisma/client";
+import { ShopOrderStatus, ShopPaymentStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { canPerformShopAction } from "@/lib/shop/access";
 import { decryptShopField } from "@/lib/shop/encryption";
@@ -8,10 +8,14 @@ import { getShopPermissionIds } from "@/lib/shop/permissions";
 export async function listBuyerShopOrders(userId: string, page = 1, pageSize = 20) {
   const safePage = Math.max(1, page);
   const safeSize = Math.min(50, Math.max(1, pageSize));
+  const buyerOrderHistoryWhere = {
+    buyerId: userId,
+    payments: { some: { status: ShopPaymentStatus.SUCCEEDED } },
+  };
   const [total, items] = await db.$transaction([
-    db.shopOrder.count({ where: { buyerId: userId } }),
+    db.shopOrder.count({ where: buyerOrderHistoryWhere }),
     db.shopOrder.findMany({
-      where: { buyerId: userId },
+      where: buyerOrderHistoryWhere,
       orderBy: { createdAt: "desc" },
       skip: (safePage - 1) * safeSize,
       take: safeSize,
@@ -46,7 +50,6 @@ export async function getShopOrderForUser(orderId: string, userId: string) {
       items: true,
       fieldValues: { include: { productField: { select: { key: true, type: true, isSensitive: true } } } },
       statusHistory: { orderBy: { createdAt: "asc" }, include: { actor: { select: { name: true } } } },
-      messages: { where: { deletedAt: null }, orderBy: { createdAt: "asc" }, include: { sender: { select: { name: true, image: true } } } },
       buyer: { select: { id: true, name: true, image: true, telegramUsername: true } },
       seller: { include: { user: { select: { id: true, name: true, image: true, telegramUsername: true } } } },
       payments: { select: { id: true, provider: true, status: true, amountMinor: true, currency: true, checkoutUrl: true, expiresAt: true, paidAt: true } },
@@ -75,16 +78,8 @@ export async function getShopOrderForUser(orderId: string, userId: string) {
   ];
   const sellerCanSeeFull = isSeller && !hiddenFromSeller.includes(order.status);
   const showFullFields = isBuyer || sellerCanSeeFull || isStaff;
-  const messages = order.messages.filter((message) => {
-    if (isStaff) return true;
-    if (message.visibility === ShopOrderMessageVisibility.INTERNAL) return false;
-    if (isBuyer) return message.visibility === ShopOrderMessageVisibility.PARTICIPANTS;
-    return true;
-  });
-
   return {
     ...order,
-    messages,
     fieldValues: order.fieldValues.map((field) => ({
       id: field.id,
       label: field.labelSnapshot,

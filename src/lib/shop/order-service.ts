@@ -1,6 +1,5 @@
 import { randomBytes } from "node:crypto";
 import {
-  NotificationType,
   Prisma,
   ShopDiscountType,
   ShopOrderActorType,
@@ -65,7 +64,7 @@ function getActivePromotion(
 async function loadCheckoutData(tx: Prisma.TransactionClient, input: CheckoutInput, now: Date) {
   const [settings, buyer, variant] = await Promise.all([
     tx.shopSettings.findUnique({ where: { id: "default" } }),
-    tx.user.findUnique({ where: { id: input.buyerId }, select: { id: true, telegramId: true, isBanned: true, createdAt: true } }),
+    tx.user.findUnique({ where: { id: input.buyerId }, select: { id: true, telegramId: true, telegramUsername: true, isBanned: true, createdAt: true } }),
     tx.shopProductVariant.findFirst({
       where: { id: input.variantId, isActive: true, deletedAt: null, product: { isActive: true, deletedAt: null, category: { isActive: true, deletedAt: null } } },
       include: {
@@ -189,27 +188,6 @@ async function resolvePromoCode(tx: Prisma.TransactionClient, input: {
   return promo;
 }
 
-async function queueInAppOrderNotification(tx: Prisma.TransactionClient, input: {
-  userId: string;
-  orderId: string;
-  orderNumber: string;
-  title: string;
-  body: string;
-  dedupeKey: string;
-}) {
-  const notification = await tx.notification.create({
-    data: {
-      userId: input.userId,
-      type: NotificationType.SYSTEM,
-      title: input.title,
-      body: input.body,
-      link: `/shop/orders/${input.orderId}`,
-      dedupeKey: input.dedupeKey,
-    },
-  });
-  await tx.notificationDelivery.create({ data: { notificationId: notification.id, skipTelegram: true } });
-}
-
 export async function previewShopOrder(input: CheckoutInput) {
   return db.$transaction(async (tx) => {
     const data = await loadCheckoutData(tx, input, new Date());
@@ -299,14 +277,6 @@ export async function createShopOrder(input: CheckoutInput) {
         },
       });
     }
-    await queueInAppOrderNotification(tx, {
-      userId: input.buyerId,
-      orderId: created.id,
-      orderNumber: created.orderNumber,
-      title: "Заказ создан",
-      body: `${created.orderNumber}: завершите оплату до истечения времени.`,
-      dedupeKey: `shop-order-created:${created.id}`,
-    });
     await tx.shopJob.create({
       data: {
         type: "EXPIRE_UNPAID_ORDER",

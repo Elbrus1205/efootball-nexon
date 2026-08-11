@@ -159,7 +159,10 @@ export async function getShopProductBySlug(slug: string) {
         where: { status: "PUBLISHED", deletedAt: null },
         orderBy: { createdAt: "desc" },
         take: 20,
-        include: { media: { orderBy: { sortOrder: "asc" } } },
+        include: {
+          media: { orderBy: { sortOrder: "asc" } },
+          buyer: { select: { publicId: true, name: true, image: true } },
+        },
       },
       sellers: { where: { isActive: true }, include: { seller: { include: { user: { select: { name: true, image: true } } } } } },
     },

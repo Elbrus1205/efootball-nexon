@@ -48,6 +48,13 @@ export type PaymentWebhookStore = {
     eventId: string;
     occurredAt: Date;
   }): Promise<void>;
+  cancelPayment(input: {
+    paymentId: string;
+    orderId: string;
+    eventId: string;
+    status: "FAILED" | "CANCELLED";
+    occurredAt: Date;
+  }): Promise<void>;
   failEvent(eventId: string, reason: string): Promise<void>;
 };
 
@@ -79,7 +86,15 @@ export async function handlePaymentWebhook(input: {
       eventId: event.eventId,
       occurredAt: event.occurredAt,
     });
+  } else if (event.status === "FAILED" || event.status === "CANCELLED") {
+    await input.store.cancelPayment({
+      paymentId: payment.id,
+      orderId: payment.orderId,
+      eventId: event.eventId,
+      status: event.status,
+      occurredAt: event.occurredAt,
+    });
   }
 
-  return { accepted: true as const, duplicate: false as const, orderId: payment.orderId };
+  return { accepted: true as const, duplicate: false as const, orderId: payment.orderId, status: event.status };
 }

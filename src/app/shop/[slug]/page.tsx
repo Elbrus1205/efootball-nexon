@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Clock3, PackageCheck, ShieldCheck, Star, UserRoundCheck } from "lucide-react";
 import { getCurrentSession } from "@/lib/auth/session";
@@ -22,7 +23,7 @@ export default async function ShopProductPage(props: { params: Promise<{ slug: s
   const { slug } = await props.params;
   const [product, settings, session] = await Promise.all([getShopProductBySlug(slug), getShopSettings(), getCurrentSession()]);
   if (!product) notFound();
-  const user = session?.user?.id ? await db.user.findUnique({ where: { id: session.user.id }, select: { telegramId: true } }) : null;
+  const user = session?.user?.id ? await db.user.findUnique({ where: { id: session.user.id }, select: { telegramId: true, telegramUsername: true } }) : null;
   const availability = getShopAvailability(settings);
   const payment = getPaymentReadiness();
   const variant = product.defaultVariant;
@@ -31,14 +32,14 @@ export default async function ShopProductPage(props: { params: Promise<{ slug: s
     <div className={styles.detailGrid}>
       <div>
         <section className={styles.section}><h2 className={styles.sectionTitle}>Описание и получение</h2><p className={styles.detailDescription}>{product.description}</p><div className={styles.notice}><ShieldCheck /><div><strong>Условия получения</strong><br />{product.fulfillmentTerms}</div></div></section>
-        <section className={styles.section}><h2 className={styles.sectionTitle}>Отзывы</h2>{product.reviews.length ? <div className={styles.adminGrid}>{product.reviews.map((review) => <article key={review.id} className={styles.trustCard}><div className={styles.productFacts}><span><Star />{review.rating}/5</span><span>{review.buyerName}</span></div><p>{review.body}</p></article>)}</div> : <div className={styles.empty}><div><Star /><h3>Отзывов пока нет</h3><p>Первый отзыв появится после подтверждённого заказа.</p></div></div>}</section>
+        <section className={styles.section}><div className={styles.sectionHead}><div><p className={styles.eyebrow}>Проверенные покупки</p><h2 className={styles.sectionTitle}>Отзывы игроков</h2></div></div>{product.reviews.length ? <div className={styles.reviewGrid}>{product.reviews.map((review) => <article key={review.id} className={styles.reviewCard}><div className={styles.reviewStars}>{[1,2,3,4,5].map((star) => <Star key={star} fill={star <= review.rating ? "currentColor" : "none"} />)}</div><Link href={`/players/${review.buyer.publicId}`} className={styles.reviewPlayer}>{review.buyer.name ?? review.buyerName}</Link><p>{review.body}</p></article>)}</div> : <div className={styles.empty}><div><Star /><h3>Отзывов пока нет</h3><p>Первый отзыв появится после подтверждённого заказа.</p></div></div>}</section>
       </div>
       <aside className={styles.detailPanel}>
         <p className={styles.eyebrow}>{product.category.name}</p><h1 className={styles.detailTitle}>{product.title}</h1><p className={styles.detailDescription}>{product.shortDescription}</p>
         <div className={styles.productFacts}><span><Clock3 />{formatFulfillmentTime(variant?.estimatedMinutes ?? product.estimatedMinutes)}</span><span><PackageCheck />{product.available ? "В наличии" : "Закончился"}</span><span><Star />{product.ratingAverage > 0 ? product.ratingAverage.toFixed(1) : "Новый товар"}</span></div>
         <div className={styles.detailPrice}>{currentPrice === undefined ? "Цена уточняется" : formatShopMoney(currentPrice, settings.currency)}</div>
         {variant?.activePromotion ? <div className={styles.success}><ShieldCheck /><div>Акционная цена действует до {variant.activePromotion.promotion.endsAt.toLocaleString("ru-RU")}. Таймер показывается только по реальной дате акции.</div></div> : null}
-        <CheckoutSheet productId={product.id} productTitle={product.title} variants={product.variants.map((item) => ({ id: item.id, name: item.name, sku: item.sku, priceMinor: item.priceMinor, available: item.available, availableQuantity: item.availableQuantity, estimatedMinutes: item.estimatedMinutes, activePromotion: item.activePromotion ? { salePriceMinor: item.activePromotion.salePriceMinor, discountMinor: item.activePromotion.discountMinor } : null }))} fields={product.fields.map((field) => ({ key: field.key, label: field.label, description: field.description, placeholder: field.placeholder, type: field.type, isRequired: field.isRequired, isSensitive: field.isSensitive, options: Array.isArray(field.optionsJson) ? field.optionsJson.filter((option): option is string => typeof option === "string") : [] }))} termsVersion={settings.termsVersion} currency={settings.currency} authenticated={Boolean(session?.user?.id)} telegramLinked={Boolean(user?.telegramId)} shopAvailable={availability.available} payment={payment} />
+        <CheckoutSheet productId={product.id} productTitle={product.title} variants={product.variants.map((item) => ({ id: item.id, name: item.name, sku: item.sku, priceMinor: item.priceMinor, available: item.available, availableQuantity: item.availableQuantity, estimatedMinutes: item.estimatedMinutes, activePromotion: item.activePromotion ? { salePriceMinor: item.activePromotion.salePriceMinor, discountMinor: item.activePromotion.discountMinor } : null }))} fields={product.fields.map((field) => ({ key: field.key, label: field.label, description: field.description, placeholder: field.placeholder, type: field.type, isRequired: field.isRequired, isSensitive: field.isSensitive, options: Array.isArray(field.optionsJson) ? field.optionsJson.filter((option): option is string => typeof option === "string") : [] }))} termsVersion={settings.termsVersion} currency={settings.currency} authenticated={Boolean(session?.user?.id)} telegramLinked={Boolean(user?.telegramId && user?.telegramUsername)} shopAvailable={availability.available} payment={payment} />
         <div className={styles.trustGrid} style={{ gridTemplateColumns: "1fr", marginTop: "1rem" }}><article className={styles.trustCard}><UserRoundCheck /><h3>Продавец назначается безопасно</h3><p>Полные игровые данные открываются продавцу только после принятия заказа.</p></article></div>
       </aside>
     </div>

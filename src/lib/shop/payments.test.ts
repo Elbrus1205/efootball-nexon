@@ -37,13 +37,14 @@ test("подтверждённый webhook оплачивает заказ ро�
     async confirmPayment(input) {
       confirmations.push(input.orderId);
     },
+    async cancelPayment() {},
     async failEvent() {},
   };
 
   const first = await handlePaymentWebhook({ provider, store, headers: new Headers(), body: "{}" });
   const repeated = await handlePaymentWebhook({ provider, store, headers: new Headers(), body: "{}" });
 
-  assert.deepEqual(first, { accepted: true, duplicate: false, orderId: "order-1" });
+  assert.deepEqual(first, { accepted: true, duplicate: false, orderId: "order-1", status: "SUCCEEDED" });
   assert.deepEqual(repeated, { accepted: true, duplicate: true });
   assert.deepEqual(confirmations, ["order-1"]);
 });
@@ -64,6 +65,7 @@ test("webhook с подменённой суммой не оплачивает �
       return { id: "payment-2", orderId: "order-2", amountMinor: 149_000, currency: "RUB", status: "PENDING" };
     },
     async confirmPayment() { confirmed = true; },
+    async cancelPayment() {},
     async failEvent() {},
   };
 
@@ -72,4 +74,31 @@ test("webhook с подменённой суммой не оплачивает �
     /сумма платежа/i,
   );
   assert.equal(confirmed, false);
+});
+
+
+test("?????????? webhook ????? ???????? ???????????? ?????", async () => {
+  const provider: PaymentProvider = {
+    name: "test",
+    async createPayment() { throw new Error("not used"); },
+    async verifyWebhook() {
+      return { eventId: "evt-cancel", externalPaymentId: "pay-cancel", status: "CANCELLED", amountMinor: 149_000, currency: "RUB", occurredAt: new Date() };
+    },
+    async refundPayment() { throw new Error("not used"); },
+  };
+  const cancellations: string[] = [];
+  const store = {
+    async claimEvent() { return true; },
+    async getPaymentByExternalId() {
+      return { id: "payment-cancel", orderId: "order-cancel", amountMinor: 149_000, currency: "RUB", status: "PENDING" };
+    },
+    async confirmPayment() {},
+    async cancelPayment(input: { orderId: string }) { cancellations.push(input.orderId); },
+    async failEvent() {},
+  } satisfies PaymentWebhookStore;
+
+  const result = await handlePaymentWebhook({ provider, store, headers: new Headers(), body: "{}" });
+
+  assert.deepEqual(result, { accepted: true, duplicate: false, orderId: "order-cancel", status: "CANCELLED" });
+  assert.deepEqual(cancellations, ["order-cancel"]);
 });

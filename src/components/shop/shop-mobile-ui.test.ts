@@ -8,10 +8,10 @@ const shopPage = readFileSync(new URL("../../app/shop/page.tsx", import.meta.url
 const productPage = readFileSync(new URL("../../app/shop/[slug]/page.tsx", import.meta.url), "utf8");
 const nextConfig = readFileSync(new URL("../../../next.config.mjs", import.meta.url), "utf8");
 
-test("shop catalog has no search or filter controls and reviews open Telegram", () => {
+test("shop catalog has no search or filter controls and reviews open on the site", () => {
   assert.doesNotMatch(shopPage, /CatalogFilters|type="search"|name="sort"|shop-catalog-form/);
-  assert.match(shopPage, /settings\.reviewsTelegramUrl/);
-  assert.match(shopPage, /Наши отзывы/);
+  assert.match(shopPage, /href="\/shop\/reviews"/);
+  assert.match(shopPage, /Отзывы игроков/);
   assert.match(shopPage, /shopHeaderAction/);
   assert.match(css, /@keyframes shop-action-sheen/);
 });

@@ -151,6 +151,33 @@
 .warning svg,
 .success svg { flex: 0 0 auto; width: 1.15rem; height: 1.15rem; margin-top: .08rem; }
 
+.telegramContact { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 1rem; align-items: center; margin-bottom: 1rem; padding: 1.15rem; border: 1px solid rgba(70,170,255,.28); border-radius: 18px; background: radial-gradient(circle at 90% 0, rgba(70,170,255,.15), transparent 38%), linear-gradient(135deg,#1d252b,#1b211f); box-shadow: 0 18px 48px rgba(0,0,0,.2); }
+.telegramContact h2 { margin: 0 0 .25rem; font-size: 1.2rem; }
+.telegramContact p { margin: 0; color: #aab6b2; font-size: .82rem; line-height: 1.5; }
+.telegramIcon { width: 50px; height: 50px; display: grid; place-items: center; border-radius: 15px; background: linear-gradient(145deg,#45b9ff,#168bd2); color: #fff; box-shadow: 0 12px 25px rgba(22,139,210,.25); }
+.telegramIcon svg { width: 1.35rem; height: 1.35rem; }
+.reviewComposer { display: grid; gap: 1rem; padding: 1.25rem; border: 1px solid rgba(250,204,21,.24); border-radius: 18px; background: radial-gradient(circle at 90% 0, rgba(250,204,21,.11), transparent 35%), #1d1d1d; }
+.reviewComposer h2 { margin: 0; font-size: 1.4rem; }
+.reviewComposer p { margin: .35rem 0 0; color: #aab6b2; font-size: .84rem; }
+.starPicker { display: flex; gap: .35rem; }
+.starPicker button { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid rgba(250,204,21,.22); border-radius: 12px; background: rgba(250,204,21,.06); color: #facc15; cursor: pointer; }
+.starPicker button:hover, .starPicker button[aria-pressed="true"] { border-color: rgba(250,204,21,.58); background: rgba(250,204,21,.12); transform: translateY(-1px); }
+.starPicker svg { width: 1.3rem; height: 1.3rem; }
+.reviewGrid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; margin-top: 1.25rem; }
+.reviewCard { min-width: 0; padding: 1.15rem; border: 1px solid rgba(244,250,247,.1); border-radius: 18px; background: linear-gradient(145deg,#202220,#1b1c1b); box-shadow: 0 14px 38px rgba(0,0,0,.18); }
+.reviewCard h2 { margin: .7rem 0 .45rem; font-size: 1rem; }
+.reviewCard > p { margin: 0; color: #c1cbc7; font-size: .86rem; line-height: 1.65; }
+.reviewAuthor { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: .75rem; align-items: center; }
+.reviewAuthor div { display: grid; gap: .2rem; }
+.reviewAuthor a, .reviewPlayer { color: #f4faf7; font-weight: 800; }
+.reviewAuthor span { display: inline-flex; align-items: center; gap: .3rem; color: #77f8cb; font-size: .68rem; }
+.reviewAuthor span svg { width: .8rem; height: .8rem; }
+.reviewAuthor time { color: #7f8b87; font-size: .7rem; }
+.reviewAvatar, .reviewAvatarFallback { width: 44px; height: 44px; border-radius: 14px; object-fit: cover; }
+.reviewAvatarFallback { display: grid; place-items: center; background: rgba(33,241,168,.12); color: #77f8cb; font-weight: 900; }
+.reviewStars { display: flex; gap: .2rem; margin-top: .85rem; color: #facc15; }
+.reviewStars svg { width: 1rem; height: 1rem; }
+
 .input,
 .select,
 .textarea {
@@ -451,6 +478,11 @@
 }
 
 @media (max-width: 720px) {
+  .telegramContact { grid-template-columns: auto minmax(0,1fr); }
+  .telegramContact .button { grid-column: 1 / -1; width: 100%; }
+  .reviewGrid { grid-template-columns: 1fr; }
+  .reviewAuthor { grid-template-columns: auto minmax(0,1fr); }
+  .reviewAuthor time { grid-column: 2; }
   .shell { width: min(100% - 1rem, 1180px); padding: .5rem 0 3rem; }
   .hero { grid-template-columns: 1fr; gap: .75rem; padding: .6rem 0 .85rem; }
   .title { font-size: 2.2rem; }

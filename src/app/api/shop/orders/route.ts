@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ order: { id: order.id, orderNumber: order.orderNumber }, payment: { checkoutUrl: payment.checkoutUrl, expiresAt: payment.expiresAt } }, { status: 201 });
   } catch (error) {
-    if (orderId) await cancelShopOrder(orderId, session.user.id, "Платёжная сессия не создана.").catch(() => null);
+    if (orderId) await cancelShopOrder(orderId, session.user.id, "Платёжная сессия не создана.", { deleteUnpaid: true }).catch(() => null);
     if (!(error instanceof ShopError)) console.error("Shop order creation failed", error);
     const response = shopErrorResponse(error);
     return NextResponse.json({ error: response.error, code: response.code }, { status: response.status });
