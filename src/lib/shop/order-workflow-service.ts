@@ -7,6 +7,7 @@ import {
   ShopStockMode,
 } from "@prisma/client";
 import { db } from "@/lib/db";
+import { deliverNotificationsImmediately } from "@/lib/notifications/delivery-worker";
 import { createNotification } from "@/lib/services/notifications";
 import { createCallbackToken, tokenCallback } from "@/lib/services/telegram-callbacks";
 import { canPerformShopAction, type ShopAction } from "@/lib/shop/access";
@@ -14,6 +15,8 @@ import { ShopError } from "@/lib/shop/errors";
 import { formatShopMoney, shopOrderStatusLabels } from "@/lib/shop/format";
 import { assertOrderTransition, type ShopOrderActor, type ShopOrderStatusValue } from "@/lib/shop/order-state-machine";
 import { getShopPermissionIds } from "@/lib/shop/permissions";
+import { isShopComplaintOpen } from "@/lib/shop/order-policy";
+import { getShopSettings } from "@/lib/shop/config";
 import type { TelegramRichMessageDraft } from "@/lib/telegram-rich";
 
 type LockedOrder = Prisma.ShopOrderGetPayload<{
@@ -268,8 +271,11 @@ export async function cancelShopOrder(orderId: string, userId: string, comment?:
 export async function openShopDispute(orderId: string, userId: string, input: { reason: string; description: string; desiredResolution?: string }) {
   const order = await db.$transaction(async (tx) => {
     const locked = await getLockedOrder(tx, orderId);
-    if (!locked) throw new ShopError("ORDER_NOT_FOUND", "Р—Р°РєР°Р· РЅРµ РЅР°Р№РґРµРЅ.", 404);
+    if (!locked) throw new ShopError("ORDER_NOT_FOUND", "Заказ не найден.", 404);
     await ensureAction(locked, userId, "OPEN_DISPUTE");
+    if (locked.buyerId === userId && !isShopComplaintOpen(locked.paidAt)) {
+      throw new ShopError("SHOP_COMPLAINT_WINDOW_EXPIRED", "Срок подачи жалобы истёк. Жалобу можно отправить в течение 48 часов после оплаты.", 409);
+    }
     const actor: ShopOrderActor = locked.buyerId === userId ? "BUYER" : locked.seller?.userId === userId ? "SELLER" : "SUPPORT";
     const updated = await transitionInTx(tx, { order: locked, to: ShopOrderStatus.DISPUTE, actor, actorUserId: userId, reason: "DISPUTE_OPENED", comment: input.description });
     await tx.shopDispute.create({ data: { orderId, openedById: userId, reason: input.reason, description: input.description, desiredResolution: input.desiredResolution } });
@@ -280,15 +286,11 @@ export async function openShopDispute(orderId: string, userId: string, input: { 
 }
 
 export async function runShopTokenAction(action: string, orderId: string, userId: string) {
-  if (action === "SHOP_ACCEPT_ORDER") return acceptShopOrder(orderId, userId);
-  if (action === "SHOP_START_ORDER") return startShopOrder(orderId, userId);
-  if (action === "SHOP_SELLER_COMPLETE") return sellerCompleteShopOrder(orderId, userId);
-  if (action === "SHOP_BUYER_CONFIRM") return confirmShopOrder(orderId, userId);
   if (action === "SHOP_OPEN_DISPUTE") {
-    return openShopDispute(orderId, userId, { reason: "OTHER", description: "РџРѕРєСѓРїР°С‚РµР»СЊ РѕС‚РєСЂС‹Р» СЃРїРѕСЂ С‡РµСЂРµР· Telegram." });
+    return openShopDispute(orderId, userId, { reason: "OTHER", description: "Покупатель отправил жалобу через Telegram." });
   }
   if (action === "SHOP_CANCEL_ORDER") return cancelShopOrder(orderId, userId);
-  throw new ShopError("UNKNOWN_SHOP_ACTION", "РќРµРёР·РІРµСЃС‚РЅРѕРµ РґРµР№СЃС‚РІРёРµ РјР°РіР°Р·РёРЅР°.");
+  throw new ShopError("UNKNOWN_SHOP_ACTION", "Неизвестное действие магазина.");
 }
 
 export async function resolveShopDispute(input: {
@@ -349,18 +351,20 @@ async function shopButtons(order: Awaited<ReturnType<typeof loadNotificationOrde
     { text: "Открыть заказ", url: `${appUrl}/shop/orders/${order.id}`, row: 1 },
   ];
   const contactUsername = recipient === "buyer" ? order.seller?.user.telegramUsername : order.buyer.telegramUsername;
-  const contactHiddenStatuses: ShopOrderStatus[] = [ShopOrderStatus.WAITING_SELLER, ShopOrderStatus.PAID, ShopOrderStatus.PENDING_PAYMENT];
-  if (contactUsername && !contactHiddenStatuses.includes(order.status)) {
+  if (contactUsername && order.paidAt) {
     buttons.push({ text: recipient === "buyer" ? "Связаться с исполнителем" : "Связаться с покупателем", url: `https://t.me/${contactUsername.replace(/^@/, "")}`, row: 2 });
   }
-  const tokenActions = recipient === "seller"
-    ? order.status === ShopOrderStatus.WAITING_SELLER ? [["Взяться за работу", "SHOP_ACCEPT_ORDER"]] : order.status === ShopOrderStatus.ACCEPTED ? [["Начать выполнение", "SHOP_START_ORDER"]] : order.status === ShopOrderStatus.IN_PROGRESS ? [["Монеты куплены", "SHOP_SELLER_COMPLETE"]] : []
-    : order.status === ShopOrderStatus.WAITING_BUYER_CONFIRMATION ? [["Подтвердить получение", "SHOP_BUYER_CONFIRM"], ["Есть проблема", "SHOP_OPEN_DISPUTE"]] : [];
+  const tokenActions = recipient === "buyer" && order.status === ShopOrderStatus.IN_PROGRESS && isShopComplaintOpen(order.paidAt)
+    ? [["Пожаловаться", "SHOP_OPEN_DISPUTE"]]
+    : [];
   for (const [index, [text, action]] of tokenActions.entries()) {
     const token = await createCallbackToken({ userId: recipient === "buyer" ? order.buyerId : order.seller!.userId, action, shopOrderId: order.id });
     buttons.push({ text, callbackData: tokenCallback(token), row: index + 3 });
   }
-  if (recipient === "buyer" && order.status === ShopOrderStatus.COMPLETED) buttons.push({ text: "Оставить отзыв", url: `${appUrl}/shop/orders/${order.id}#review`, row: 3 });
+  if (recipient === "buyer" && order.status === ShopOrderStatus.COMPLETED) {
+    const settings = await getShopSettings();
+    if (settings.reviewsTelegramUrl) buttons.push({ text: "Оставить отзыв", url: settings.reviewsTelegramUrl, row: 3 });
+  }
   return buttons;
 }
 
@@ -377,22 +381,16 @@ function loadNotificationOrder(orderId: string) {
 
 function buyerStatusMessage(status: ShopOrderStatus, sellerName?: string | null) {
   switch (status) {
-    case ShopOrderStatus.WAITING_SELLER: return "Оплата подтверждена. Ищем исполнителя для вашего заказа.";
-    case ShopOrderStatus.ACCEPTED: return `${sellerName || "Исполнитель"} взялся за ваш заказ. Теперь вы можете связаться в Telegram.`;
-    case ShopOrderStatus.IN_PROGRESS: return "Исполнитель начал работу. Следующее уведомление придёт, когда монеты будут куплены.";
-    case ShopOrderStatus.WAITING_BUYER_CONFIRMATION: return "Монеты куплены. Зайдите в аккаунт, проверьте результат и подтвердите получение.";
-    case ShopOrderStatus.COMPLETED: return "��аказ успешно закрыт. Спасибо за покупку — пожалуйста, оставьте отзыв.";
+    case ShopOrderStatus.IN_PROGRESS: return `Оплата подтверждена. Исполнитель ${sellerName || "назначен"} уже получил заказ. Жалоба доступна в течение 48 часов после оплаты.`;
+    case ShopOrderStatus.COMPLETED: return "Заказ закрыт после 48-часового периода защиты. Отзыв можно оставить в Telegram.";
     default: return `Статус заказа обновлён: ${shopOrderStatusLabels[status] ?? status}.`;
   }
 }
 
 function sellerStatusMessage(status: ShopOrderStatus, buyerName?: string | null) {
   switch (status) {
-    case ShopOrderStatus.WAITING_SELLER: return "Новый оплаченный заказ доступен вам. Возьмитесь за работу, если готовы выполнить его вовремя.";
-    case ShopOrderStatus.ACCEPTED: return `Вы взялись за заказ игрока ${buyerName || "Покупатель"}. Связь доступна в Telegram.`;
-    case ShopOrderStatus.IN_PROGRESS: return "Заказ в работе. После покупки монет нажмите «Монеты куплены».";
-    case ShopOrderStatus.WAITING_BUYER_CONFIRMATION: return "Покупатель получил уведомление и должен подтвердить результат.";
-    case ShopOrderStatus.COMPLETED: return "Покупатель подтвердил получение. Заказ успешно завершён.";
+    case ShopOrderStatus.IN_PROGRESS: return `Вам автоматически назначен оплаченный заказ игрока ${buyerName || "Покупатель"}. Можно сразу написать покупателю в Telegram и выполнить заказ.`;
+    case ShopOrderStatus.COMPLETED: return "48-часовой период защиты завершён. Заказ успешно закрыт.";
     default: return `Статус заказа обновлён: ${shopOrderStatusLabels[status] ?? status}.`;
   }
 }
@@ -409,13 +407,17 @@ export async function notifyShopOrderStatus(orderId: string) {
     fallbackText: `<b>${status}</b>\n\n${body}`,
     buttons: await shopButtons(order, "buyer"),
   };
-  await createNotification({ userId: order.buyerId, title: status, body, type: NotificationType.SYSTEM, link: `/shop/orders/${order.id}`, dedupeKey: `shop:${order.id}:${order.status}:buyer`, telegramRichMessage: buyerDraft });
+  const notificationIds: string[] = [];
+  const buyerNotification = await createNotification({ userId: order.buyerId, title: status, body, type: NotificationType.SYSTEM, link: `/shop/orders/${order.id}`, dedupeKey: `shop:${order.id}:${order.status}:buyer`, telegramRichMessage: buyerDraft });
+  notificationIds.push(buyerNotification.id);
   if (order.seller?.userId) {
     const sellerDraft: TelegramRichMessageDraft = {
       blocks: [{ type: "section_heading", text: status }, { type: "table", columns: ["Заказ", "Данные"], rows: orderRows }, { type: "paragraph", text: sellerStatusMessage(order.status, order.buyer.name) }, { type: "footer", text: "Полные игровые данные доступны только на защищённой странице заказа." }],
       fallbackText: `<b>${status}</b>\n\n${body}`,
       buttons: await shopButtons(order, "seller"),
     };
-    await createNotification({ userId: order.seller.userId, title: status, body, type: NotificationType.SYSTEM, link: `/shop/orders/${order.id}`, dedupeKey: `shop:${order.id}:${order.status}:seller`, telegramRichMessage: sellerDraft });
+    const sellerNotification = await createNotification({ userId: order.seller.userId, title: status, body, type: NotificationType.SYSTEM, link: `/shop/orders/${order.id}`, dedupeKey: `shop:${order.id}:${order.status}:seller`, telegramRichMessage: sellerDraft });
+    notificationIds.push(sellerNotification.id);
   }
+  await deliverNotificationsImmediately(notificationIds).catch((error) => console.error("Immediate shop notification delivery failed", error));
 }

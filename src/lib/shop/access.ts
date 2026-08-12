@@ -36,7 +36,7 @@ export function canPerformShopAction(action: ShopAction, context: ShopAccessCont
     case "CONFIRM_ORDER":
       return isBuyer || isManager;
     case "OPEN_DISPUTE":
-      return isBuyer || isSeller || isSupport || isManager;
+      return isBuyer || isSupport || isManager;
     case "RESOLVE_DISPUTE":
       return isSupport || isManager;
     case "MANAGE_CATALOG":

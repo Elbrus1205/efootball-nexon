@@ -4,7 +4,7 @@ import { ShopProductFieldType, ShopProductType } from "@prisma/client";
 import { requirePermission } from "@/lib/auth/session";
 import { getRequestBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
-import { getShopAdminDashboard, recalculateProductRating } from "@/lib/shop/admin";
+import { getShopAdminDashboard } from "@/lib/shop/admin";
 import { parseShopMoneyToMinor } from "@/lib/shop/format";
 import { isForbiddenShopCredentialField } from "@/lib/shop/validators";
 import { resolveShopDispute } from "@/lib/shop/order-workflow-service";
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const form = await request.formData();
   const action = text(form, "_action");
-  const manageActions = new Set(["saveSettings", "createCategory", "updateCategory", "createProduct", "updateProduct", "toggleProduct", "createField", "updateField", "addSeller", "updateSeller", "toggleSeller", "assignSellerProduct", "createPromotion", "updatePromotion", "createPromoCode", "updatePromoCode", "moderateReview"]);
+  const manageActions = new Set(["saveSettings", "createCategory", "updateCategory", "createProduct", "updateProduct", "toggleProduct", "createField", "updateField", "addSeller", "updateSeller", "toggleSeller", "assignSellerProduct", "createPromotion", "updatePromotion", "createPromoCode", "updatePromoCode"]);
   const session = await requirePermission(manageActions.has(action) ? "shop.manage" : "shop.support");
   try {
     if (action === "saveSettings") {
@@ -97,9 +97,9 @@ export async function POST(request: Request) {
           slug: text(form, "slug").toLowerCase(),
           type: text(form, "type") === "PROMOTIONAL" ? ShopProductType.PROMOTIONAL : ShopProductType.IN_GAME,
           title: text(form, "title"),
-          shortDescription: text(form, "shortDescription"),
-          description: text(form, "description"),
-          fulfillmentTerms: text(form, "fulfillmentTerms"),
+          shortDescription: "",
+          description: "",
+          fulfillmentTerms: "",
           estimatedMinutes: integer(form, "estimatedMinutes", 30),
           isActive: form.get("isActive") === "true",
           isFeatured: form.get("isFeatured") === "true",
@@ -117,7 +117,7 @@ export async function POST(request: Request) {
       const stock = parseShopStockInput({ unlimited: form.get("unlimited") === "true", stockQuantity: text(form, "stockQuantity") || "0" });
       const imageUrl = text(form, "imageUrl");
       await db.$transaction(async (tx) => {
-        await tx.shopProduct.update({ where: { id }, data: { categoryId: text(form, "categoryId"), slug: text(form, "slug").toLowerCase(), type: text(form, "type") === "PROMOTIONAL" ? ShopProductType.PROMOTIONAL : ShopProductType.IN_GAME, title: text(form, "title"), shortDescription: text(form, "shortDescription"), description: text(form, "description"), fulfillmentTerms: text(form, "fulfillmentTerms"), estimatedMinutes: integer(form, "estimatedMinutes", 30), isActive: form.get("isActive") === "true", isFeatured: form.get("isFeatured") === "true", isPopular: form.get("isPopular") === "true", updatedById: session.user.id } });
+        await tx.shopProduct.update({ where: { id }, data: { categoryId: text(form, "categoryId"), slug: text(form, "slug").toLowerCase(), type: text(form, "type") === "PROMOTIONAL" ? ShopProductType.PROMOTIONAL : ShopProductType.IN_GAME, title: text(form, "title"), shortDescription: "", description: "", fulfillmentTerms: "", estimatedMinutes: integer(form, "estimatedMinutes", 30), isActive: form.get("isActive") === "true", isFeatured: form.get("isFeatured") === "true", isPopular: form.get("isPopular") === "true", updatedById: session.user.id } });
         await tx.shopProductVariant.update({ where: { id: variantId }, data: { sku: text(form, "sku").toUpperCase(), name: text(form, "variantName") || "Стандартный", priceMinor, ...stock, maxPerOrder: integer(form, "maxPerOrder", 10), estimatedMinutes: integer(form, "estimatedMinutes", 30), updatedById: session.user.id } });
         const currentImage = await tx.shopProductImage.findFirst({ where: { productId: id }, orderBy: { sortOrder: "asc" } });
         if (imageUrl && currentImage) await tx.shopProductImage.update({ where: { id: currentImage.id }, data: { url: imageUrl, alt: text(form, "title") } });
@@ -207,10 +207,6 @@ export async function POST(request: Request) {
       const discountType = text(form, "discountType") === "FIXED" ? "FIXED" : "PERCENT";
       await db.shopPromoCode.update({ where: { id }, data: { code: text(form, "code").toUpperCase(), description: form.has("description") ? text(form, "description") || null : undefined, discountType, discountValue: discountType === "FIXED" ? parseShopMoneyToMinor(text(form, "discountValue")) : integer(form, "discountValue"), minimumSubtotalMinor: parseShopMoneyToMinor(text(form, "minimumSubtotal") || "0"), startsAt: parseMoscowDateTimeLocal(text(form, "startsAt")), endsAt: parseMoscowDateTimeLocal(text(form, "endsAt")), totalUsageLimit: text(form, "totalUsageLimit") ? integer(form, "totalUsageLimit") : null, perUserUsageLimit: integer(form, "perUserUsageLimit", 1), newUsersOnly: form.get("newUsersOnly") === "true", isActive: form.get("isActive") === "true", updatedById: session.user.id } });
       await db.shopAuditLog.create({ data: { actorUserId: session.user.id, entityType: "ShopPromoCode", entityId: id, action: "UPDATE" } });
-    } else if (action === "moderateReview") {
-      const id = text(form, "id");
-      const review = await db.shopReview.update({ where: { id }, data: { status: form.get("approve") === "true" ? "PUBLISHED" : "REJECTED", publishedAt: form.get("approve") === "true" ? new Date() : null } });
-      await recalculateProductRating(review.productId);
     } else if (action === "resolveDispute") {
       const targetStatus = text(form, "targetStatus");
       if (!["COMPLETED", "REFUND_PENDING", "IN_PROGRESS", "CANCELLED"].includes(targetStatus)) throw new Error("Недопустимый исход спора.");

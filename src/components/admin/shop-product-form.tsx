@@ -23,9 +23,6 @@ type ProductInitial = {
   estimatedMinutes: number;
   maxPerOrder: number;
   imageUrl: string;
-  shortDescription: string;
-  description: string;
-  fulfillmentTerms: string;
   isActive: boolean;
   isFeatured: boolean;
   isPopular: boolean;
@@ -108,10 +105,6 @@ export function ShopProductForm({ categories, initial }: { categories: CategoryO
       <label className={styles.checkLabel}><input type="checkbox" name="isFeatured" value="true" defaultChecked={initial?.isFeatured} /> Рекомендуемый<span className={styles.helper}>Можно выделять в подборках магазина.</span></label>
       <label className={styles.checkLabel}><input type="checkbox" name="isPopular" value="true" defaultChecked={initial?.isPopular} /> Популярный<span className={styles.helper}>Попадает в популярную сортировку и блок на главной.</span></label>
     </div>
-
-    <label className={styles.fieldLabel}>Краткое описание<input className={styles.input} name="shortDescription" required defaultValue={initial?.shortDescription} placeholder="Что покупатель получает и для какой платформы" /><small className={styles.helper}>Одна короткая строка для карточки товара — без подробных условий.</small></label>
-    <label className={styles.fieldLabel}>Полное описание<textarea className={styles.textarea} name="description" required defaultValue={initial?.description} placeholder="Подробно опишите состав товара, ограничения и совместимость" /><small className={styles.helper}>Показывается на странице товара. Объясните содержание простыми словами.</small></label>
-    <label className={styles.fieldLabel}>Условия получения<textarea className={styles.textarea} name="fulfillmentTerms" required defaultValue={initial?.fulfillmentTerms} placeholder="Какие данные нужны, как проходит выполнение и что нельзя передавать" /><small className={styles.helper}>Пошагово объясните получение. Не запрашивайте пароль, OTP, токен или доступ к аккаунту.</small></label>
 
     <button className={styles.button} type="submit" disabled={uploading}>{editing ? <><Save /> Сохранить товар</> : <><PackagePlus /> Создать товар</>}</button>
   </form>;

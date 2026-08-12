@@ -45,9 +45,9 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
           <Link className={`${styles.shopHeaderAction} ${styles.ordersAction}`} href={session?.user ? "/shop/orders" : "/login?callbackUrl=/shop/orders"}>
             <span className={styles.shopActionIcon}><History aria-hidden="true" /></span><span className={styles.shopActionCopy}><strong>Мои заказы</strong><small>Статусы и история</small></span><span className={styles.shopActionSignal} aria-hidden="true" />
           </Link>
-          <Link className={`${styles.shopHeaderAction} ${styles.reviewsAction}`} href="/shop/reviews">
-            <span className={styles.shopActionIcon}><MessageSquareText aria-hidden="true" /></span><span className={styles.shopActionCopy}><strong>Отзывы игроков</strong><small>Проверенные покупки</small></span><span className={styles.shopActionSignal} aria-hidden="true" />
-          </Link>
+          {settings.reviewsTelegramUrl ? <Link className={`${styles.shopHeaderAction} ${styles.reviewsAction}`} href={settings.reviewsTelegramUrl} target="_blank" rel="noreferrer">
+            <span className={styles.shopActionIcon}><MessageSquareText aria-hidden="true" /></span><span className={styles.shopActionCopy}><strong>Отзывы игроков</strong><small>Открыть пост в Telegram</small></span><span className={styles.shopActionSignal} aria-hidden="true" />
+          </Link> : null}
         </div>
       </header>
 
@@ -68,12 +68,12 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
       <section className={styles.section}><div className={styles.sectionHead}><div><p className={styles.eyebrow}>Без скрытых шагов</p><h2 className={styles.sectionTitle}>Как проходит покупка</h2></div></div><div className={styles.stepsGrid}>
         <article className={styles.stepCard}><span className={styles.stepNumber}>Шаг 1</span><Sparkles /><h3>Выберите вариант</h3><p>Цена, скидка, остаток и время выполнения показываются до оформления.</p></article>
         <article className={styles.stepCard}><span className={styles.stepNumber}>Шаг 2</span><ShieldCheck /><h3>Проверьте данные</h3><p>Итог считается на сервере. Чувствительные игровые данные хранятся зашифрованно.</p></article>
-        <article className={styles.stepCard}><span className={styles.stepNumber}>Шаг 3</span><History /><h3>Следите за заказом</h3><p>Каждый переход сохраняется в истории, а важные события приходят в Telegram.</p></article>
+        <article className={styles.stepCard}><span className={styles.stepNumber}>Шаг 3</span><History /><h3>Получите исполнителя</h3><p>После оплаты исполнитель назначается автоматически, а контакты сразу приходят в Telegram.</p></article>
       </div></section>
 
       <section className={styles.section}><div className={styles.trustGrid}>
         <article className={styles.trustCard}><ShieldCheck /><h3>Подтверждение webhook</h3><p>Возврат на сайт не считается оплатой. Заказ запускается только после проверенного сообщения провайдера.</p></article>
-        <article className={styles.trustCard}><History /><h3>Полная история</h3><p>Видно, кто и когда принял, начал, завершил или оспорил заказ.</p></article>
+        <article className={styles.trustCard}><History /><h3>48 часов защиты</h3><p>После оплаты покупатель может отправить жалобу по заказу в течение 48 часов.</p></article>
         <article className={styles.trustCard}><MessageSquareText /><h3>Поддержка споров</h3><p>При проблеме исполнение и выплата блокируются до решения поддержки.</p></article>
       </div></section>
     </div>

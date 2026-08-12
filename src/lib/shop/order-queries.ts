@@ -54,7 +54,6 @@ export async function getShopOrderForUser(orderId: string, userId: string) {
       seller: { include: { user: { select: { id: true, name: true, image: true, telegramUsername: true } } } },
       payments: { select: { id: true, provider: true, status: true, amountMinor: true, currency: true, checkoutUrl: true, expiresAt: true, paidAt: true } },
       disputes: { orderBy: { createdAt: "desc" }, include: { messages: { where: { isInternal: false }, orderBy: { createdAt: "asc" } } } },
-      review: true,
     },
   });
   if (!order) throw new ShopError("ORDER_NOT_FOUND", "Заказ не найден.", 404);
@@ -71,11 +70,7 @@ export async function getShopOrderForUser(orderId: string, userId: string) {
   const isBuyer = order.buyerId === userId;
   const isSeller = order.seller?.userId === userId;
   const isStaff = permissions.includes("shop.support") || permissions.includes("shop.manage");
-  const hiddenFromSeller: ShopOrderStatus[] = [
-    ShopOrderStatus.PENDING_PAYMENT,
-    ShopOrderStatus.PAID,
-    ShopOrderStatus.WAITING_SELLER,
-  ];
+  const hiddenFromSeller: ShopOrderStatus[] = [ShopOrderStatus.PENDING_PAYMENT, ShopOrderStatus.PAID];
   const sellerCanSeeFull = isSeller && !hiddenFromSeller.includes(order.status);
   const showFullFields = isBuyer || sellerCanSeeFull || isStaff;
   return {

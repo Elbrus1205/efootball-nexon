@@ -3,15 +3,11 @@ import test from "node:test";
 
 import { OrderTransitionError, assertOrderTransition } from "./order-state-machine";
 
-test("заказ проходит подтверждённый сценарий исполнения", () => {
+test("оплаченный заказ сразу назначает��я и запускается", () => {
   const flow = [
     ["PENDING_PAYMENT", "PAID", "SYSTEM"],
-    ["PAID", "WAITING_SELLER", "SYSTEM"],
-    ["WAITING_SELLER", "ACCEPTED", "SELLER"],
-    ["ACCEPTED", "IN_PROGRESS", "SELLER"],
-    ["IN_PROGRESS", "SELLER_COMPLETED", "SELLER"],
-    ["SELLER_COMPLETED", "WAITING_BUYER_CONFIRMATION", "SYSTEM"],
-    ["WAITING_BUYER_CONFIRMATION", "COMPLETED", "BUYER"],
+    ["PAID", "IN_PROGRESS", "SYSTEM"],
+    ["IN_PROGRESS", "COMPLETED", "SYSTEM"],
   ] as const;
 
   for (const [from, to, actor] of flow) {
@@ -19,15 +15,15 @@ test("заказ проходит подтверждённый сценарий 
   }
 });
 
-test("продавец не может пропустить подтверждение покупателя", () => {
+test("продавец не может сам завершить заказ", () => {
   assert.throws(
     () => assertOrderTransition({ from: "IN_PROGRESS", to: "COMPLETED", actor: "SELLER" }),
-    (error: unknown) => error instanceof OrderTransitionError && error.code === "TRANSITION_NOT_ALLOWED",
+    (error: unknown) => error instanceof OrderTransitionError && error.code === "ACTOR_NOT_ALLOWED",
   );
 });
 
-test("покупатель может открыть спор только на исполняемом заказе", () => {
-  assert.doesNotThrow(() => assertOrderTransition({ from: "WAITING_BUYER_CONFIRMATION", to: "DISPUTE", actor: "BUYER" }));
+test("покупатель может открыть спор на исполняемом заказе", () => {
+  assert.doesNotThrow(() => assertOrderTransition({ from: "IN_PROGRESS", to: "DISPUTE", actor: "BUYER" }));
   assert.throws(() => assertOrderTransition({ from: "PENDING_PAYMENT", to: "DISPUTE", actor: "BUYER" }), /недоступен/);
 });
 

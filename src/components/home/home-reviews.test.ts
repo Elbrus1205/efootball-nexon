@@ -16,7 +16,7 @@ test("главная выводит настоящие отзывы и ведё�
   assert.match(css, /\.reviewStream\s*\{/);
 });
 
-test("ссылка Telegram-чата отзывов редактируется в настройках магазина", () => {
+test("ссылка Telegram-поста отзывов редактируется в настройках магазина", () => {
   assert.match(admin, /name="reviewsTelegramUrl"/);
-  assert.match(admin, /Ссылка на чат с отзывами/);
+  assert.match(admin, /Ссылка на пост с отзывами/);
 });

@@ -337,13 +337,7 @@ async function consumeTokenAction(userId: string, token: string): Promise<Callba
   if (record.action.startsWith("SHOP_") && record.shopOrderId) {
     const { runShopTokenAction } = await import("@/lib/shop/order-workflow-service");
     await runShopTokenAction(record.action, record.shopOrderId, userId);
-    const toast = record.action === "SHOP_SELLER_COMPLETE"
-      ? "Монеты куплены. Ждём подтверждения покупателя."
-      : record.action === "SHOP_BUYER_CONFIRM"
-        ? "Получение подтверждено. Заказ завершён — оставьте отзыв на сайте."
-        : record.action === "SHOP_ACCEPT_ORDER"
-          ? "Вы взялись за заказ. Контакт покупателя доступен в Telegram и на сайте."
-          : "Действие с заказом выполнено.";
+    const toast = record.action === "SHOP_OPEN_DISPUTE" ? "Жалоба отправлена в поддержку." : "Действие с заказом выполнено.";
     return { toast, clearKeyboard: true };
   }
 

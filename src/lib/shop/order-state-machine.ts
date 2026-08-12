@@ -27,6 +27,7 @@ const rules: Record<ShopOrderStatusValue, readonly TransitionRule[]> = {
   ],
   PAID: [
     { to: "WAITING_SELLER", actors: ["SYSTEM", "ADMIN"] },
+    { to: "IN_PROGRESS", actors: ["SYSTEM", "ADMIN"] },
     { to: "REFUND_PENDING", actors: ["SUPPORT", "ADMIN"] },
   ],
   WAITING_SELLER: [
@@ -42,6 +43,7 @@ const rules: Record<ShopOrderStatusValue, readonly TransitionRule[]> = {
   ],
   IN_PROGRESS: [
     { to: "SELLER_COMPLETED", actors: ["SELLER", "ADMIN"] },
+    { to: "COMPLETED", actors: ["SYSTEM", "ADMIN"] },
     { to: "DISPUTE", actors: ["BUYER", "SELLER", "SUPPORT", "ADMIN"] },
   ],
   SELLER_COMPLETED: [

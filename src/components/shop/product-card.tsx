@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock3, PackageCheck, Star } from "lucide-react";
+import { Clock3, PackageCheck } from "lucide-react";
 import { formatFulfillmentTime, formatShopMoney } from "@/lib/shop/format";
 import styles from "./shop.module.css";
 
@@ -7,10 +7,8 @@ type ProductCardProps = {
   product: {
     slug: string;
     title: string;
-    shortDescription: string;
     type: string;
     purchaseCount: number;
-    ratingAverage: number;
     estimatedMinutes: number;
     category: { name: string };
     images: Array<{ url: string; alt: string }>;
@@ -43,10 +41,8 @@ export function ProductCard({ product, currency = "RUB" }: ProductCardProps) {
       <div className={styles.productBody}>
         <div className={styles.productCategory}>{product.category.name}</div>
         <h2 className={styles.productName}>{product.title}</h2>
-        <p className={styles.productDescription}>{product.shortDescription}</p>
         <div className={styles.productFacts}>
           <span><Clock3 aria-hidden="true" />{formatFulfillmentTime(product.estimatedMinutes)}</span>
-          <span><Star aria-hidden="true" />{product.ratingAverage > 0 ? product.ratingAverage.toFixed(1) : "Новый"}</span>
           <span><PackageCheck aria-hidden="true" />{product.available ? "В наличии" : "Закончился"}</span>
         </div>
         <div className={styles.priceRow}>

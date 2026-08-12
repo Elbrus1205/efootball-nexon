@@ -16,7 +16,7 @@ export const checkoutShopOrderSchema = z.object({
 });
 
 export const shopOrderActionSchema = z.object({
-  action: z.enum(["ACCEPT", "START", "SELLER_COMPLETE", "BUYER_CONFIRM", "CANCEL", "OPEN_DISPUTE"]),
+  action: z.enum(["CANCEL", "OPEN_DISPUTE"]),
   comment: z.string().trim().max(2_000).optional(),
   reason: z.string().trim().max(120).optional(),
   desiredResolution: z.string().trim().max(500).optional(),

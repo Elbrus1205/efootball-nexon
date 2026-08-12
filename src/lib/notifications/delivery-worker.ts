@@ -17,11 +17,12 @@ import { sendWebPushNotification } from "@/lib/services/web-push";
 const LOCK_TIMEOUT_MS = 5 * 60_000;
 const DELIVERY_CONCURRENCY = 4;
 
-async function claimDeliveries(limit: number) {
+async function claimDeliveries(limit: number, notificationIds?: string[]) {
   const now = new Date();
   const staleLock = new Date(now.getTime() - LOCK_TIMEOUT_MS);
   const candidates = await db.notificationDelivery.findMany({
     where: {
+      ...(notificationIds?.length ? { notificationId: { in: notificationIds } } : {}),
       deliveredAt: null,
       availableAt: { lte: now },
       OR: [{ lockedAt: null }, { lockedAt: { lt: staleLock } }],
@@ -60,25 +61,8 @@ async function deliverOne(delivery: Awaited<ReturnType<typeof claimDeliveries>>[
     let telegramDelivered = Boolean(delivery.telegramDeliveredAt);
     const channelErrors: string[] = [];
 
-    if (!pushDelivered) {
-      try {
-        await sendWebPushNotification(notification.userId, {
-          title: notification.title,
-          body: notification.body,
-          link: notification.link,
-          tag: notification.dedupeKey || notification.id,
-        });
-        const marked = await db.notificationDelivery.updateMany({
-          where: { id: delivery.id, lockToken: delivery.lockToken, pushDeliveredAt: null },
-          data: { pushDeliveredAt: new Date() },
-        });
-        if (marked.count !== 1) throw new Error("notification-delivery-lock-lost");
-        pushDelivered = true;
-      } catch (error) {
-        channelErrors.push(`push:${error instanceof Error ? error.message : "unknown-error"}`);
-      }
-    }
-
+    // Telegram is intentionally delivered before web push so a slow push provider
+    // cannot delay time-sensitive order messages.
     if (!telegramDelivered) {
       try {
         if (!delivery.skipTelegram && notification.user.telegramId && process.env.TELEGRAM_BOT_TOKEN) {
@@ -114,6 +98,25 @@ async function deliverOne(delivery: Awaited<ReturnType<typeof claimDeliveries>>[
       }
     }
 
+    if (!pushDelivered) {
+      try {
+        await sendWebPushNotification(notification.userId, {
+          title: notification.title,
+          body: notification.body,
+          link: notification.link,
+          tag: notification.dedupeKey || notification.id,
+        });
+        const marked = await db.notificationDelivery.updateMany({
+          where: { id: delivery.id, lockToken: delivery.lockToken, pushDeliveredAt: null },
+          data: { pushDeliveredAt: new Date() },
+        });
+        if (marked.count !== 1) throw new Error("notification-delivery-lock-lost");
+        pushDelivered = true;
+      } catch (error) {
+        channelErrors.push(`push:${error instanceof Error ? error.message : "unknown-error"}`);
+      }
+    }
+
     if (channelErrors.length) throw new Error(channelErrors.join(";"));
     if (!pushDelivered || !telegramDelivered) throw new Error("notification-delivery-incomplete");
     await db.notificationDelivery.updateMany({
@@ -138,8 +141,8 @@ async function deliverOne(delivery: Awaited<ReturnType<typeof claimDeliveries>>[
   }
 }
 
-export async function deliverNotificationOutbox(limit = 20) {
-  const deliveries = await claimDeliveries(Math.max(1, Math.min(100, limit)));
+async function deliverClaimedNotifications(limit: number, notificationIds?: string[]) {
+  const deliveries = await claimDeliveries(Math.max(1, Math.min(100, limit)), notificationIds);
   let delivered = 0;
 
   for (let index = 0; index < deliveries.length; index += DELIVERY_CONCURRENCY) {
@@ -148,4 +151,13 @@ export async function deliverNotificationOutbox(limit = 20) {
   }
 
   return { claimed: deliveries.length, delivered, failed: deliveries.length - delivered };
+}
+
+export function deliverNotificationOutbox(limit = 20) {
+  return deliverClaimedNotifications(limit);
+}
+
+export async function deliverNotificationsImmediately(notificationIds: string[]) {
+  if (!notificationIds.length) return { claimed: 0, delivered: 0, failed: 0 };
+  return deliverClaimedNotifications(notificationIds.length, notificationIds);
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BarChart3, Boxes, ChevronDown, CircleDollarSign, PackageCheck, Settings2, ShieldCheck, ShoppingBag, Star, Tag, TicketPercent, Users } from "lucide-react";
+import { BarChart3, Boxes, ChevronDown, CircleDollarSign, PackageCheck, Settings2, ShieldCheck, ShoppingBag, Tag, TicketPercent, Users } from "lucide-react";
 import { ShopProductForm } from "@/components/admin/shop-product-form";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { getShopAdminDashboard } from "@/lib/shop/admin";
@@ -48,7 +48,6 @@ export default async function AdminShopPage(props: { searchParams: Promise<Recor
         { label: "Успешные оплаты", value: data.metrics.successfulPayments, icon: ShieldCheck },
         { label: "Возвраты", value: data.metrics.refunds, icon: CircleDollarSign },
         { label: "Споры", value: data.metrics.disputes, icon: ShieldCheck },
-        { label: "Отзывы на модерации", value: data.metrics.pendingReviews, icon: Star },
       ].map((metric) => <article className={styles.statCard} key={metric.label}><metric.icon size={18} /><span>{metric.label}</span><strong>{metric.value}</strong></article>)}</div>
     </section>
 
@@ -62,7 +61,7 @@ export default async function AdminShopPage(props: { searchParams: Promise<Recor
               <label className={styles.checkLabel}><input type="checkbox" name="isEnabled" value="true" defaultChecked={settings.isEnabled} /> Магазин включён<Hint>Показывает каталог как доступный. Оплата всё равно требует Platega.</Hint></label>
               <label className={styles.checkLabel}><input type="checkbox" name="maintenanceMode" value="true" defaultChecked={settings.maintenanceMode} /> Технические работы<Hint>Каталог виден, но оформление временно закрыто.</Hint></label>
               <label className={styles.checkLabel}><input type="checkbox" name="showHomeBlock" value="true" defaultChecked={settings.showHomeBlock} /> Блок на главной<Hint>Показывает до трёх реальных популярных товаров.</Hint></label>
-              <label className={styles.checkLabel}><input type="checkbox" name="autoCompleteEnabled" value="true" defaultChecked={settings.autoCompleteEnabled} /> Автозавершение<Hint>Если продавец выполнил заказ, а покупатель не ответил за время проверки, заказ завершится автоматически.</Hint></label>
+              <input type="hidden" name="autoCompleteEnabled" value="true" />
             </div>
             <div className={styles.formRow}>
               <label className={styles.fieldLabel}>Валюта<input className={styles.input} name="currency" defaultValue={settings.currency} /><Hint>Трёхбуквенный код, например RUB.</Hint></label>
@@ -72,15 +71,13 @@ export default async function AdminShopPage(props: { searchParams: Promise<Recor
             </div>
             <div className={styles.formRow}>
               <label className={styles.fieldLabel}>Оплата, мин<input className={styles.input} name="paymentTimeoutMinutes" type="number" min="1" defaultValue={settings.paymentTimeoutMinutes} /><Hint>Сколько живёт платёжная ссылка и резерв товара.</Hint></label>
-              <label className={styles.fieldLabel}>Принятие, мин<input className={styles.input} name="sellerAcceptTimeoutMinutes" type="number" min="1" defaultValue={settings.sellerAcceptTimeoutMinutes} /><Hint>Сколько продавец может принимать назначенный заказ до переназначения.</Hint></label>
-              <label className={styles.fieldLabel}>Выполнение, мин<input className={styles.input} name="fulfillmentTimeoutMinutes" type="number" min="1" defaultValue={settings.fulfillmentTimeoutMinutes} /><Hint>Резервный срок выполнения, если у товара не задан свой.</Hint></label>
-              <label className={styles.fieldLabel}>Проверка, мин<input className={styles.input} name="buyerConfirmTimeoutMinutes" type="number" min="1" defaultValue={settings.buyerConfirmTimeoutMinutes} /><Hint>Сколько покупатель может подтвердить получение или открыть спор.</Hint></label>
+              <label className={styles.fieldLabel}>Защита заказа<input className={styles.input} value="48 часов" readOnly /><Hint>В течение 48 часов после оплаты покупатель может отправить жалобу. Затем заказ закроется автоматически.</Hint></label>
             </div>
             <div className={styles.formRow}>
               <label className={styles.fieldLabel}>Контакты поддержки<input className={styles.input} name="supportContact" defaultValue={settings.supportContact ?? ""} placeholder="Например: @efootball_nexon" /><Hint>Показываются покупателю при вопросах по заказу.</Hint></label>
-              <label className={styles.fieldLabel}>Ссылка на чат с отзывами<input className={styles.input} name="reviewsTelegramUrl" type="url" defaultValue={settings.reviewsTelegramUrl ?? ""} placeholder="https://t.me/nexon_reviews" /><Hint>Открывается из блока «Наши отзывы» на главной. Если поле пустое, используется основная Telegram-ссылка сайта.</Hint></label>
+              <label className={styles.fieldLabel}>Ссылка на пост с отзывами<input className={styles.input} name="reviewsTelegramUrl" type="url" defaultValue={settings.reviewsTelegramUrl ?? ""} placeholder="https://t.me/nexon_reviews/123" /><Hint>Открывается из магазина и приходит покупателю после успешного завершения заказа.</Hint></label>
             </div>
-            <input type="hidden" name="cancellationEnabled" value="true" /><input type="hidden" name="reviewModerationEnabled" value="true" />
+            <input type="hidden" name="sellerAcceptTimeoutMinutes" value={settings.sellerAcceptTimeoutMinutes} /><input type="hidden" name="fulfillmentTimeoutMinutes" value={settings.fulfillmentTimeoutMinutes} /><input type="hidden" name="buyerConfirmTimeoutMinutes" value="2880" /><input type="hidden" name="cancellationEnabled" value="true" /><input type="hidden" name="reviewModerationEnabled" value="true" />
             <button className={styles.button}><Settings2 /> Сохранить настройки</button>
           </form>
         </Editor>
@@ -149,7 +146,7 @@ export default async function AdminShopPage(props: { searchParams: Promise<Recor
         const variant = product.variants[0];
         return <Editor key={product.id} title={product.title} caption={`${product.category.name} · ${variant ? formatShopMoney(variant.priceMinor) : "нет варианта"} · ${product.isActive ? "опубликован" : "черновик"}`}>
           {canManage && variant ? <>
-            <ShopProductForm categories={categoryOptions} initial={{ id: product.id, variantId: variant.id, categoryId: product.categoryId, type: product.type, title: product.title, slug: product.slug, sku: variant.sku, variantName: variant.name, price: String(variant.priceMinor / 100), stockMode: variant.stockMode, stockQuantity: variant.stockQuantity, estimatedMinutes: variant.estimatedMinutes ?? product.estimatedMinutes, maxPerOrder: variant.maxPerOrder, imageUrl: product.images[0]?.url ?? "", shortDescription: product.shortDescription, description: product.description, fulfillmentTerms: product.fulfillmentTerms, isActive: product.isActive, isFeatured: product.isFeatured, isPopular: product.isPopular }} />
+            <ShopProductForm categories={categoryOptions} initial={{ id: product.id, variantId: variant.id, categoryId: product.categoryId, type: product.type, title: product.title, slug: product.slug, sku: variant.sku, variantName: variant.name, price: String(variant.priceMinor / 100), stockMode: variant.stockMode, stockQuantity: variant.stockQuantity, estimatedMinutes: variant.estimatedMinutes ?? product.estimatedMinutes, maxPerOrder: variant.maxPerOrder, imageUrl: product.images[0]?.url ?? "", isActive: product.isActive, isFeatured: product.isFeatured, isPopular: product.isPopular }} />
             <div className={styles.subEditor}><h3>Поля покупателя</h3><p className={styles.sectionText}>Например игровой ID или регион. Пароли и коды доступа запрещены.</p>{product.fields.map((field) => <form action="/api/admin/shop" method="post" className={styles.compactEditForm} key={field.id}><input type="hidden" name="_action" value="updateField" /><input type="hidden" name="id" value={field.id} /><input className={styles.input} name="label" defaultValue={field.label} aria-label="Название поля" /><input className={styles.input} name="description" defaultValue={field.description ?? ""} placeholder="Подсказка покупателю" aria-label="Описание поля" /><label className={styles.checkLabel}><input type="checkbox" name="isRequired" value="true" defaultChecked={field.isRequired} /> Обязательное</label><button className={styles.buttonSecondary}>Сохранить поле</button></form>)}<form action="/api/admin/shop" method="post" className={styles.compactEditForm}><input type="hidden" name="_action" value="createField" /><input type="hidden" name="productId" value={product.id} /><input className={styles.input} name="key" required pattern="[a-zA-Z][a-zA-Z0-9_-]*" placeholder="gameId" aria-label="Ключ поля" /><input className={styles.input} name="label" required placeholder="Игровой ID" aria-label="Название поля" /><input className={styles.input} name="description" placeholder="Где найти этот ID" aria-label="Описание поля" /><input type="hidden" name="fieldType" value="TEXT" /><label className={styles.checkLabel}><input type="checkbox" name="isRequired" value="true" defaultChecked /> Обязательное</label><button className={styles.buttonSecondary}>Добавить поле</button></form></div>
           </> : <p className={styles.sectionText}>У товара нет доступного варианта для редактирования.</p>}
         </Editor>;

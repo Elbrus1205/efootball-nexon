@@ -428,6 +428,27 @@
 .table th { color: #899691; font-size: .66rem; text-transform: uppercase; letter-spacing: .07em; }
 .table td { color: #dce5e1; }
 .status { display: inline-flex; padding: .3rem .48rem; border: 1px solid rgba(119, 248, 203, .22); border-radius: 999px; background: rgba(33, 241, 168, .06); color: #b9fbe4; font-size: .66rem; font-weight: 800; }
+.productCheckoutPage { width: min(620px, 100%); margin: 0 auto; }
+.orderHero { display: flex; justify-content: space-between; gap: 1rem; align-items: end; padding: 1rem 0 1.25rem; }
+.orderHeroMeta { display: grid; justify-items: end; gap: .55rem; }
+.orderHeroMeta strong { font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+.complaintBar { display: flex; justify-content: space-between; gap: 1rem; align-items: center; margin: 1rem 0; padding: 1rem; border: 1px solid rgba(251,191,36,.24); border-radius: 16px; background: rgba(251,191,36,.055); }
+.complaintBar > div { display: flex; gap: .65rem; align-items: center; color: #d8dfdc; font-size: .8rem; line-height: 1.5; }
+.complaintBar svg { width: 1rem; flex: 0 0 auto; }
+.orderTimelineCard { margin-top: 1rem; padding: 1rem; border: 1px solid rgba(244,250,247,.09); border-radius: 16px; background: #1d1d1d; }
+.orderTimelineCard h2 { margin: 0; font-size: 1rem; }
+.orderList { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem; margin-top: 1.25rem; }
+.orderCard { min-width: 0; display: grid; gap: .8rem; padding: 1rem; border: 1px solid rgba(244,250,247,.1); border-radius: 17px; background: linear-gradient(145deg,#202220,#1b1c1b); color: #f4faf7; box-shadow: 0 15px 36px rgba(0,0,0,.17); transition: border-color 180ms ease, transform 180ms ease; }
+.orderCard:hover { border-color: rgba(119,248,203,.38); transform: translateY(-2px); }
+.orderCardHead, .orderCard footer { display: flex; justify-content: space-between; gap: .7rem; align-items: center; }
+.orderCardHead > span:first-child { min-width: 0; overflow: hidden; color: #899691; font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
+.orderCard h2 { margin: 0; font-size: 1rem; }
+.orderCardMeta { display: flex; flex-wrap: wrap; gap: .65rem; color: #aab6b2; font-size: .7rem; }
+.orderCardMeta span { display: inline-flex; gap: .35rem; align-items: center; }
+.orderCardMeta svg, .orderCard footer svg { width: .85rem; height: .85rem; }
+.orderCard footer { padding-top: .75rem; border-top: 1px solid rgba(244,250,247,.08); }
+.orderCard footer strong { font-size: 1rem; }
+.orderCard footer span { display: inline-flex; gap: .3rem; align-items: center; color: #77f8cb; font-size: .72rem; font-weight: 800; }
 
 .adminGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
 .adminCard { padding: 1rem; border: 1px solid rgba(244, 250, 247, .09); border-radius: 14px; background: #1d1d1d; }
@@ -480,6 +501,12 @@
 @media (max-width: 720px) {
   .telegramContact { grid-template-columns: auto minmax(0,1fr); }
   .telegramContact .button { grid-column: 1 / -1; width: 100%; }
+  .orderHero { align-items: start; flex-direction: column; }
+  .orderHeroMeta { width: 100%; justify-items: start; grid-template-columns: auto 1fr; align-items: center; }
+  .complaintBar { align-items: stretch; flex-direction: column; }
+  .complaintBar .buttonDanger { width: 100%; }
+  .orderList { grid-template-columns: 1fr; gap: .65rem; }
+  .orderCard { padding: .85rem; border-radius: 15px; }
   .reviewGrid { grid-template-columns: 1fr; }
   .reviewAuthor { grid-template-columns: auto minmax(0,1fr); }
   .reviewAuthor time { grid-column: 2; }

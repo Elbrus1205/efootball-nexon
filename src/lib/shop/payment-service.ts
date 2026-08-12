@@ -8,6 +8,7 @@ import {
 } from "@prisma/client";
 import { db } from "@/lib/db";
 import { ShopError } from "@/lib/shop/errors";
+import { getShopComplaintExpiresAt } from "@/lib/shop/order-policy";
 import { notifyShopOrderStatus } from "@/lib/shop/order-workflow-service";
 import { handlePaymentWebhook, type PaymentProvider, type PaymentWebhookStore, type VerifiedPaymentWebhook } from "@/lib/shop/payments";
 
@@ -19,6 +20,19 @@ export async function beginShopPayment(input: { orderId: string; buyerId: string
   if (!order) throw new ShopError("ORDER_NOT_FOUND", "Заказ не найден.", 404);
   if (order.status !== ShopOrderStatus.PENDING_PAYMENT) throw new ShopError("ORDER_NOT_PAYABLE", "Этот заказ уже нельзя оплатить.", 409);
   if (order.paymentExpiresAt && order.paymentExpiresAt <= new Date()) throw new ShopError("PAYMENT_EXPIRED", "Время оплаты заказа истекло.", 409);
+  const sellerCandidates = await db.shopSeller.findMany({
+    where: {
+      isActive: true,
+      deletedAt: null,
+      products: { some: { productId: { in: order.items.map((item) => item.productId) }, isActive: true } },
+      user: { telegramUsername: { not: null } },
+    },
+    include: { _count: { select: { orders: { where: { status: { in: [ShopOrderStatus.IN_PROGRESS, ShopOrderStatus.DISPUTE] } } } } } },
+    take: 20,
+  });
+  if (!sellerCandidates.some((seller) => seller._count.orders < seller.maxActiveOrders)) {
+    throw new ShopError("SELLER_NOT_AVAILABLE", "Сейчас нет доступного исполнителя. Попробуйте позже или обратитесь в поддержку.", 409);
+  }
 
   const idempotencyKey = `shop-order:${order.id}:payment:v1`;
   const existing = await db.shopPayment.findUnique({ where: { idempotencyKey } });
@@ -78,6 +92,23 @@ function createPrismaWebhookStore(providerName: string): PaymentWebhookStore {
         if (payment.status === ShopPaymentStatus.SUCCEEDED) return;
         if (order.status !== ShopOrderStatus.PENDING_PAYMENT) throw new ShopError("ORDER_PAYMENT_STATE_INVALID", "Заказ не ожидает оплату.", 409);
 
+        const productIds = Array.from(new Set(order.items.map((item) => item.productId)));
+        const sellers = await tx.shopSeller.findMany({
+          where: {
+            isActive: true,
+            deletedAt: null,
+            products: { some: { productId: { in: productIds }, isActive: true } },
+            user: { telegramUsername: { not: null } },
+          },
+          include: { _count: { select: { orders: { where: { status: { in: [ShopOrderStatus.IN_PROGRESS, ShopOrderStatus.DISPUTE] } } } } } },
+          orderBy: [{ isOnline: "desc" }, { lastAssignedAt: "asc" }],
+          take: 20,
+        });
+        const seller = sellers.find((candidate) => candidate._count.orders < candidate.maxActiveOrders);
+        if (!seller) throw new ShopError("SELLER_NOT_AVAILABLE", "Сейчас нет свободного исполнителя для оплаченного товара. Обратитесь в поддержку.", 409);
+        const commissionMinor = Math.floor((order.totalMinor * seller.commissionBps) / 10_000);
+        const complaintExpiresAt = getShopComplaintExpiresAt(input.occurredAt);
+
         await tx.shopPayment.update({
           where: { id: payment.id },
           data: { status: ShopPaymentStatus.SUCCEEDED, paidAt: input.occurredAt },
@@ -85,9 +116,16 @@ function createPrismaWebhookStore(providerName: string): PaymentWebhookStore {
         await tx.shopOrder.update({
           where: { id: order.id },
           data: {
-            status: ShopOrderStatus.WAITING_SELLER,
+            status: ShopOrderStatus.IN_PROGRESS,
+            sellerId: seller.id,
             paidAt: input.occurredAt,
-            sellerAcceptExpiresAt: new Date(input.occurredAt.getTime() + 10 * 60_000),
+            acceptedAt: input.occurredAt,
+            startedAt: input.occurredAt,
+            sellerAcceptExpiresAt: null,
+            buyerConfirmationExpiresAt: complaintExpiresAt,
+            fulfillmentExpiresAt: complaintExpiresAt,
+            commissionMinor,
+            sellerEarningMinor: order.totalMinor - commissionMinor,
           },
         });
         await tx.shopOrderStatusHistory.createMany({
@@ -104,8 +142,9 @@ function createPrismaWebhookStore(providerName: string): PaymentWebhookStore {
               orderId: order.id,
               actorType: ShopOrderActorType.SYSTEM,
               previousStatus: ShopOrderStatus.PAID,
-              newStatus: ShopOrderStatus.WAITING_SELLER,
-              reason: "SELLER_ASSIGNMENT_STARTED",
+              newStatus: ShopOrderStatus.IN_PROGRESS,
+              reason: "SELLER_AUTO_ASSIGNED_AND_STARTED",
+              technicalInfoJson: { sellerId: seller.id, complaintExpiresAt: complaintExpiresAt.toISOString() },
             },
           ],
         });
@@ -125,12 +164,13 @@ function createPrismaWebhookStore(providerName: string): PaymentWebhookStore {
           where: { provider_eventId: { provider: providerName, eventId: input.eventId } },
           data: { status: "PROCESSED", processedAt: new Date() },
         });
+        await tx.shopSeller.update({ where: { id: seller.id }, data: { lastAssignedAt: input.occurredAt } });
         await tx.shopJob.createMany({
           data: [{
-            type: "SELLER_ACCEPT_TIMEOUT",
-            dedupeKey: `seller-accept-timeout:${order.id}:1`,
-            payload: { orderId: order.id, attempt: 1 },
-            availableAt: new Date(input.occurredAt.getTime() + 10 * 60_000),
+            type: "AUTO_COMPLETE_ORDER",
+            dedupeKey: `auto-complete:${order.id}`,
+            payload: { orderId: order.id },
+            availableAt: complaintExpiresAt,
           }],
           skipDuplicates: true,
         });
@@ -141,7 +181,7 @@ function createPrismaWebhookStore(providerName: string): PaymentWebhookStore {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`shop-order:${input.orderId}`}))`;
         const payment = await tx.shopPayment.findUnique({ where: { id: input.paymentId } });
         const order = await tx.shopOrder.findUnique({ where: { id: input.orderId }, include: { items: true } });
-        if (!payment || !order) throw new ShopError("PAYMENT_ORDER_NOT_FOUND", "????? ??????? ?? ??????.", 404);
+        if (!payment || !order) throw new ShopError("PAYMENT_ORDER_NOT_FOUND", "Заказ платежа не найден.", 404);
         if (payment.status === ShopPaymentStatus.SUCCEEDED) return;
 
         await tx.shopPayment.update({
@@ -217,7 +257,6 @@ export async function processShopPaymentWebhook(input: { provider: PaymentProvid
     body: input.body,
   });
   if (!result.duplicate && result.orderId && result.status === "SUCCEEDED") {
-    await assignShopOrderSeller(result.orderId);
     await notifyShopOrderStatus(result.orderId).catch((error) => console.error("Failed to notify paid shop order", error));
   }
   return result;

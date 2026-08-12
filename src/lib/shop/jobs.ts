@@ -8,7 +8,6 @@ import {
   ShopStockMode,
 } from "@prisma/client";
 import { db } from "@/lib/db";
-import { assignShopOrderSeller } from "@/lib/shop/payment-service";
 import { notifyShopOrderStatus } from "@/lib/shop/order-workflow-service";
 
 type JobPayload = { orderId?: string; attempt?: number };
@@ -39,53 +38,19 @@ async function expireUnpaidOrder(orderId: string) {
   if (changed) await notifyShopOrderStatus(orderId).catch(() => null);
 }
 
-async function reassignTimedOutSeller(orderId: string, attempt: number) {
-  const shouldAssign = await db.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`shop-order:${orderId}`}))`;
-    const order = await tx.shopOrder.findUnique({ where: { id: orderId } });
-    if (!order || order.status !== ShopOrderStatus.WAITING_SELLER || !order.sellerId || !order.sellerAcceptExpiresAt || order.sellerAcceptExpiresAt > new Date()) return false;
-    await tx.shopSeller.update({ where: { id: order.sellerId }, data: { lastAssignedAt: new Date() } });
-    await tx.shopOrder.update({
-      where: { id: order.id },
-      data: { sellerId: null, sellerAcceptExpiresAt: new Date(Date.now() + 10 * 60_000) },
-    });
-    await tx.shopAuditLog.create({
-      data: { orderId: order.id, entityType: "ShopOrder", entityId: order.id, action: "SELLER_ASSIGNMENT_TIMEOUT", reason: `Попытка ${attempt}` },
-    });
-    return true;
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 15_000 });
-  if (!shouldAssign) return;
-  const assigned = await assignShopOrderSeller(orderId);
-  if (assigned?.sellerId) {
-    await db.shopJob.createMany({
-      data: [{
-        type: "SELLER_ACCEPT_TIMEOUT",
-        dedupeKey: `seller-accept-timeout:${orderId}:${attempt + 1}`,
-        payload: { orderId, attempt: attempt + 1 },
-        availableAt: new Date(Date.now() + 10 * 60_000),
-      }],
-      skipDuplicates: true,
-    });
-    await notifyShopOrderStatus(orderId).catch(() => null);
-  }
-}
-
 async function autoCompleteOrder(orderId: string) {
   const changed = await db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`shop-order:${orderId}`}))`;
-    const [settings, order] = await Promise.all([
-      tx.shopSettings.findUnique({ where: { id: "default" } }),
-      tx.shopOrder.findUnique({ where: { id: orderId }, include: { seller: true, items: true } }),
-    ]);
-    if (!settings?.autoCompleteEnabled || !order || order.status !== ShopOrderStatus.WAITING_BUYER_CONFIRMATION || !order.buyerConfirmationExpiresAt || order.buyerConfirmationExpiresAt > new Date()) return false;
+    const order = await tx.shopOrder.findUnique({ where: { id: orderId }, include: { seller: true, items: true } });
+    if (!order || order.status !== ShopOrderStatus.IN_PROGRESS || !order.buyerConfirmationExpiresAt || order.buyerConfirmationExpiresAt > new Date()) return false;
     await tx.shopOrder.update({ where: { id: order.id }, data: { status: ShopOrderStatus.COMPLETED, completedAt: new Date() } });
     await tx.shopOrderStatusHistory.create({
       data: {
         orderId: order.id,
         actorType: ShopOrderActorType.SYSTEM,
-        previousStatus: ShopOrderStatus.WAITING_BUYER_CONFIRMATION,
+        previousStatus: ShopOrderStatus.IN_PROGRESS,
         newStatus: ShopOrderStatus.COMPLETED,
-        reason: "AUTO_COMPLETED_AFTER_REVIEW_WINDOW",
+        reason: "AUTO_COMPLETED_AFTER_COMPLAINT_WINDOW",
       },
     });
     if (order.sellerId) {
@@ -108,7 +73,6 @@ async function executeJob(job: { type: string; payload: Prisma.JsonValue }) {
   const payload = (job.payload ?? {}) as JobPayload;
   if (!payload.orderId) throw new Error("Shop job does not contain orderId");
   if (job.type === "EXPIRE_UNPAID_ORDER") return expireUnpaidOrder(payload.orderId);
-  if (job.type === "SELLER_ACCEPT_TIMEOUT") return reassignTimedOutSeller(payload.orderId, payload.attempt ?? 1);
   if (job.type === "AUTO_COMPLETE_ORDER") return autoCompleteOrder(payload.orderId);
   throw new Error(`Unknown shop job type: ${job.type}`);
 }

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentSession } from "@/lib/auth/session";
 import { enforceRateLimit } from "@/lib/request-rate-limit";
 import { ShopError, shopErrorResponse } from "@/lib/shop/errors";
-import { acceptShopOrder, cancelShopOrder, confirmShopOrder, openShopDispute, sellerCompleteShopOrder, startShopOrder } from "@/lib/shop/order-workflow-service";
+import { cancelShopOrder, openShopDispute } from "@/lib/shop/order-workflow-service";
 import { shopOrderActionSchema } from "@/lib/shop/validators";
 
 export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
@@ -15,11 +15,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   const { id } = await props.params;
   try {
     const data = parsed.data;
-    const order = data.action === "ACCEPT" ? await acceptShopOrder(id, session.user.id)
-      : data.action === "START" ? await startShopOrder(id, session.user.id)
-      : data.action === "SELLER_COMPLETE" ? await sellerCompleteShopOrder(id, session.user.id, data.comment)
-      : data.action === "BUYER_CONFIRM" ? await confirmShopOrder(id, session.user.id)
-      : data.action === "CANCEL" ? await cancelShopOrder(id, session.user.id, data.comment)
+    const order = data.action === "CANCEL" ? await cancelShopOrder(id, session.user.id, data.comment)
       : await openShopDispute(id, session.user.id, { reason: data.reason ?? "OTHER", description: data.comment ?? "Проблема с выполнением заказа.", desiredResolution: data.desiredResolution });
     return NextResponse.json({ order: { id: order.id, status: order.status } });
   } catch (error) {
