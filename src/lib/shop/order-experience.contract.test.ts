@@ -12,7 +12,7 @@ test("buyer history contains only paid orders", () => {
   assert.match(queries, /payments:\s*\{\s*some:\s*\{\s*status:\s*ShopPaymentStatus\.SUCCEEDED/);
 });
 
-test("paid order is assigned and started atomically without confirmations", () => {
+test("paid order is assigned and started atomically without acceptance or start confirmations", () => {
   const payment = read("src", "lib", "shop", "payment-service.ts");
   const actions = read("src", "components", "shop", "order-actions.tsx");
   const telegram = read("src", "lib", "shop", "order-workflow-service.ts");
@@ -20,7 +20,8 @@ test("paid order is assigned and started atomically without confirmations", () =
   assert.match(payment, /status:\s*ShopOrderStatus\.IN_PROGRESS/);
   assert.match(payment, /sellerId:\s*seller\.id/);
   assert.match(payment, /getShopComplaintExpiresAt/);
-  assert.doesNotMatch(actions, /ACCEPT|START|SELLER_COMPLETE|BUYER_CONFIRM/);
+  assert.doesNotMatch(actions, /SHOP_ACCEPT_ORDER|SHOP_START_ORDER|SHOP_BUYER_CONFIRM/);
+  assert.match(actions, /SELLER_COMPLETE/);
   assert.doesNotMatch(telegram, /SHOP_ACCEPT_ORDER|SHOP_START_ORDER|SHOP_SELLER_COMPLETE|SHOP_BUYER_CONFIRM/);
 });
 

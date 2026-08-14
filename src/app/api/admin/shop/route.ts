@@ -8,7 +8,7 @@ import { getShopAdminDashboard } from "@/lib/shop/admin";
 import { parseShopMoneyToMinor } from "@/lib/shop/format";
 import { isForbiddenShopCredentialField } from "@/lib/shop/validators";
 import { resolveShopDispute } from "@/lib/shop/order-workflow-service";
-import { parseCommissionPercent, parseShopStockInput } from "@/lib/shop/admin-input";
+import { parseShopStockInput } from "@/lib/shop/admin-input";
 import { parseTelegramChatUrl } from "@/lib/shop/telegram-url";
 import { parseMoscowDateTimeLocal } from "@/lib/utils";
 
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const form = await request.formData();
   const action = text(form, "_action");
-  const manageActions = new Set(["saveSettings", "createCategory", "updateCategory", "createProduct", "updateProduct", "toggleProduct", "createField", "updateField", "addSeller", "updateSeller", "toggleSeller", "assignSellerProduct", "createPromotion", "updatePromotion", "createPromoCode", "updatePromoCode"]);
+  const manageActions = new Set(["saveSettings", "createCategory", "updateCategory", "deleteCategory", "createProduct", "updateProduct", "deleteProduct", "toggleProduct", "createField", "updateField", "addSeller", "removeSeller", "createPromotion", "updatePromotion", "createPromoCode", "updatePromoCode"]);
   const session = await requirePermission(manageActions.has(action) ? "shop.manage" : "shop.support");
   try {
     if (action === "saveSettings") {
@@ -88,6 +88,15 @@ export async function POST(request: Request) {
       const id = text(form, "id");
       await db.shopCategory.update({ where: { id }, data: { name: text(form, "name"), slug: text(form, "slug").toLowerCase(), description: text(form, "description") || null, sortOrder: integer(form, "sortOrder"), isActive: form.get("isActive") === "true", updatedById: session.user.id } });
       await db.shopAuditLog.create({ data: { actorUserId: session.user.id, entityType: "ShopCategory", entityId: id, action: "UPDATE" } });
+    } else if (action === "deleteCategory") {
+      if (text(form, "confirmation") !== "УДАЛИТЬ") throw new Error("Для удаления категории введите УДАЛИТЬ.");
+      const id = text(form, "id");
+      const productCount = await db.shopProduct.count({ where: { categoryId: id, deletedAt: null } });
+      if (productCount > 0) throw new Error("Сначала удалите все товары из этой категории.");
+      await db.$transaction([
+        db.shopCategory.update({ where: { id }, data: { isActive: false, deletedAt: new Date(), updatedById: session.user.id } }),
+        db.shopAuditLog.create({ data: { actorUserId: session.user.id, entityType: "ShopCategory", entityId: id, action: "DELETE" } }),
+      ]);
     } else if (action === "createProduct") {
       const priceMinor = parseShopMoneyToMinor(text(form, "price"));
       const stock = parseShopStockInput({ unlimited: form.get("unlimited") === "true", stockQuantity: text(form, "stockQuantity") || "0" });
@@ -125,6 +134,15 @@ export async function POST(request: Request) {
         else await tx.shopProductImage.deleteMany({ where: { productId: id } });
         await tx.shopAuditLog.create({ data: { actorUserId: session.user.id, entityType: "ShopProduct", entityId: id, action: "UPDATE", afterJson: { title: text(form, "title"), slug: text(form, "slug"), priceMinor, stockMode: stock.stockMode, stockQuantity: stock.stockQuantity } } });
       });
+    } else if (action === "deleteProduct") {
+      if (text(form, "confirmation") !== "УДАЛИТЬ") throw new Error("Для удаления товара введите УДАЛИТЬ.");
+      const id = text(form, "id");
+      const now = new Date();
+      await db.$transaction(async (tx) => {
+        await tx.shopProduct.update({ where: { id }, data: { isActive: false, deletedAt: now, updatedById: session.user.id } });
+        await tx.shopProductVariant.updateMany({ where: { productId: id, deletedAt: null }, data: { isActive: false, deletedAt: now, updatedById: session.user.id } });
+        await tx.shopAuditLog.create({ data: { actorUserId: session.user.id, entityType: "ShopProduct", entityId: id, action: "DELETE" } });
+      });
     } else if (action === "toggleProduct") {
       const id = text(form, "id");
       const current = await db.shopProduct.findUniqueOrThrow({ where: { id } });
@@ -144,22 +162,14 @@ export async function POST(request: Request) {
       const publicId = text(form, "publicId");
       const user = await db.user.findUnique({ where: { publicId } });
       if (!user) throw new Error("Пользователь с таким публичным ID не найден.");
-      const commissionBps = parseCommissionPercent(text(form, "commissionPercent") || "30");
-      await db.shopSeller.upsert({ where: { userId: user.id }, create: { userId: user.id, maxActiveOrders: integer(form, "maxActiveOrders", 3), commissionBps }, update: { isActive: true, deletedAt: null, maxActiveOrders: integer(form, "maxActiveOrders", 3), commissionBps } });
-    } else if (action === "updateSeller") {
+      await db.shopSeller.upsert({ where: { userId: user.id }, create: { userId: user.id }, update: { deletedAt: null } });
+    } else if (action === "removeSeller") {
+      if (text(form, "confirmation") !== "УДАЛИТЬ") throw new Error("Для удаления исполнителя введите УДАЛИТЬ.");
       const id = text(form, "id");
-      await db.shopSeller.update({ where: { id }, data: { isActive: form.get("isActive") === "true", maxActiveOrders: integer(form, "maxActiveOrders", 3), commissionBps: parseCommissionPercent(text(form, "commissionPercent") || "30") } });
-      await db.shopAuditLog.create({ data: { actorUserId: session.user.id, entityType: "ShopSeller", entityId: id, action: "UPDATE" } });
-    } else if (action === "toggleSeller") {
-      const id = text(form, "id");
-      const seller = await db.shopSeller.findUniqueOrThrow({ where: { id } });
-      await db.shopSeller.update({ where: { id }, data: { isActive: !seller.isActive } });
-    } else if (action === "assignSellerProduct") {
-      await db.shopSellerProduct.upsert({
-        where: { sellerId_productId: { sellerId: text(form, "sellerId"), productId: text(form, "productId") } },
-        create: { sellerId: text(form, "sellerId"), productId: text(form, "productId") },
-        update: { isActive: true },
-      });
+      await db.$transaction([
+        db.shopSeller.update({ where: { id }, data: { deletedAt: new Date() } }),
+        db.shopAuditLog.create({ data: { actorUserId: session.user.id, entityType: "ShopSeller", entityId: id, action: "DELETE" } }),
+      ]);
     } else if (action === "createPromotion") {
       const discountType = text(form, "discountType") === "FIXED" ? "FIXED" : "PERCENT";
       const promotion = await db.shopPromotion.create({
