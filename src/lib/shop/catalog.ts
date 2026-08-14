@@ -155,7 +155,6 @@ export async function getShopProductBySlug(slug: string) {
     include: {
       ...productInclude,
       fields: { orderBy: { sortOrder: "asc" } },
-      sellers: { where: { isActive: true }, include: { seller: { include: { user: { select: { name: true, image: true } } } } } },
     },
   });
   return product ? presentShopProduct(product) : null;

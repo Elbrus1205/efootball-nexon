@@ -455,6 +455,8 @@
 .adminCard h2 { margin: 0 0 .8rem; font-size: 1rem; }
 .adminForm { display: grid; gap: .85rem; min-width: 0; }
 .adminForm > .button { width: fit-content; min-width: 180px; margin-top: .25rem; }
+.dangerForm { display: grid; grid-template-columns: minmax(180px, 1fr) auto; gap: .7rem; align-items: end; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(251, 113, 133, .18); }
+.actionGroup { display: flex; flex-wrap: wrap; gap: .55rem; justify-content: flex-end; }
 .adminCardHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
 .adminCardHead h2 { margin: 0; }
 .adminCardHead > svg { width: 1.15rem; color: #77f8cb; }
@@ -542,6 +544,10 @@
   .adminEditorBody { padding: .75rem; }
   .adminForm { gap: .7rem; }
   .adminForm > .button { width: 100%; }
+  .dangerForm { grid-template-columns: 1fr; }
+  .dangerForm .buttonDanger { width: 100%; }
+  .actionGroup { width: 100%; display: grid; grid-template-columns: 1fr; }
+  .actionGroup > * { width: 100%; }
   .switchGrid { grid-template-columns: 1fr; }
   .compactEditForm { grid-template-columns: 1fr; padding: .7rem 0; border-bottom: 1px solid rgba(244, 250, 247, .08); }
   .uploadFrame { min-height: 170px; }

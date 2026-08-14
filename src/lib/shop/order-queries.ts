@@ -26,7 +26,7 @@ export async function listBuyerShopOrders(userId: string, page = 1, pageSize = 2
 }
 
 export async function listSellerShopOrders(userId: string, page = 1, pageSize = 20) {
-  const seller = await db.shopSeller.findFirst({ where: { userId, isActive: true, deletedAt: null } });
+  const seller = await db.shopSeller.findFirst({ where: { userId, deletedAt: null } });
   if (!seller) throw new ShopError("SELLER_NOT_FOUND", "Профиль продавца не активен.", 403);
   const safePage = Math.max(1, page);
   const safeSize = Math.min(50, Math.max(1, pageSize));
@@ -62,7 +62,7 @@ export async function getShopOrderForUser(orderId: string, userId: string) {
     userId,
     buyerId: order.buyerId,
     sellerUserId: order.seller?.userId,
-    isActiveSeller: order.seller?.isActive,
+    isActiveSeller: Boolean(order.seller),
     permissions,
   });
   if (!allowed) throw new ShopError("ORDER_FORBIDDEN", "Заказ принадлежит другому пользователю.", 403);

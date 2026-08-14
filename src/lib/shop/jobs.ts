@@ -42,13 +42,13 @@ async function autoCompleteOrder(orderId: string) {
   const changed = await db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`shop-order:${orderId}`}))`;
     const order = await tx.shopOrder.findUnique({ where: { id: orderId }, include: { seller: true, items: true } });
-    if (!order || order.status !== ShopOrderStatus.IN_PROGRESS || !order.buyerConfirmationExpiresAt || order.buyerConfirmationExpiresAt > new Date()) return false;
+    if (!order || (order.status !== ShopOrderStatus.IN_PROGRESS && order.status !== ShopOrderStatus.WAITING_BUYER_CONFIRMATION) || !order.buyerConfirmationExpiresAt || order.buyerConfirmationExpiresAt > new Date()) return false;
     await tx.shopOrder.update({ where: { id: order.id }, data: { status: ShopOrderStatus.COMPLETED, completedAt: new Date() } });
     await tx.shopOrderStatusHistory.create({
       data: {
         orderId: order.id,
         actorType: ShopOrderActorType.SYSTEM,
-        previousStatus: ShopOrderStatus.IN_PROGRESS,
+        previousStatus: order.status,
         newStatus: ShopOrderStatus.COMPLETED,
         reason: "AUTO_COMPLETED_AFTER_COMPLAINT_WINDOW",
       },

@@ -22,15 +22,12 @@ export async function beginShopPayment(input: { orderId: string; buyerId: string
   if (order.paymentExpiresAt && order.paymentExpiresAt <= new Date()) throw new ShopError("PAYMENT_EXPIRED", "Время оплаты заказа истекло.", 409);
   const sellerCandidates = await db.shopSeller.findMany({
     where: {
-      isActive: true,
       deletedAt: null,
-      products: { some: { productId: { in: order.items.map((item) => item.productId) }, isActive: true } },
       user: { telegramUsername: { not: null } },
     },
-    include: { _count: { select: { orders: { where: { status: { in: [ShopOrderStatus.IN_PROGRESS, ShopOrderStatus.DISPUTE] } } } } } },
-    take: 20,
+    take: 1,
   });
-  if (!sellerCandidates.some((seller) => seller._count.orders < seller.maxActiveOrders)) {
+  if (sellerCandidates.length === 0) {
     throw new ShopError("SELLER_NOT_AVAILABLE", "Сейчас нет доступного исполнителя. Попробуйте позже или обратитесь в поддержку.", 409);
   }
 
@@ -92,21 +89,16 @@ function createPrismaWebhookStore(providerName: string): PaymentWebhookStore {
         if (payment.status === ShopPaymentStatus.SUCCEEDED) return;
         if (order.status !== ShopOrderStatus.PENDING_PAYMENT) throw new ShopError("ORDER_PAYMENT_STATE_INVALID", "Заказ не ожидает оплату.", 409);
 
-        const productIds = Array.from(new Set(order.items.map((item) => item.productId)));
         const sellers = await tx.shopSeller.findMany({
           where: {
-            isActive: true,
             deletedAt: null,
-            products: { some: { productId: { in: productIds }, isActive: true } },
             user: { telegramUsername: { not: null } },
           },
-          include: { _count: { select: { orders: { where: { status: { in: [ShopOrderStatus.IN_PROGRESS, ShopOrderStatus.DISPUTE] } } } } } },
-          orderBy: [{ isOnline: "desc" }, { lastAssignedAt: "asc" }],
+          orderBy: [{ lastAssignedAt: "asc" }, { createdAt: "asc" }],
           take: 20,
         });
-        const seller = sellers.find((candidate) => candidate._count.orders < candidate.maxActiveOrders);
+        const seller = sellers[0];
         if (!seller) throw new ShopError("SELLER_NOT_AVAILABLE", "Сейчас нет свободного исполнителя для оплаченного товара. Обратитесь в поддержку.", 409);
-        const commissionMinor = Math.floor((order.totalMinor * seller.commissionBps) / 10_000);
         const complaintExpiresAt = getShopComplaintExpiresAt(input.occurredAt);
 
         await tx.shopPayment.update({
@@ -124,8 +116,8 @@ function createPrismaWebhookStore(providerName: string): PaymentWebhookStore {
             sellerAcceptExpiresAt: null,
             buyerConfirmationExpiresAt: complaintExpiresAt,
             fulfillmentExpiresAt: complaintExpiresAt,
-            commissionMinor,
-            sellerEarningMinor: order.totalMinor - commissionMinor,
+            commissionMinor: 0,
+            sellerEarningMinor: order.totalMinor,
           },
         });
         await tx.shopOrderStatusHistory.createMany({
@@ -230,19 +222,15 @@ export async function assignShopOrderSeller(orderId: string) {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`shop-order:${orderId}`}))`;
     const order = await tx.shopOrder.findUnique({ where: { id: orderId }, include: { items: true } });
     if (!order || order.status !== ShopOrderStatus.WAITING_SELLER || order.sellerId) return order;
-    const productIds = Array.from(new Set(order.items.map((item) => item.productId)));
     const sellers = await tx.shopSeller.findMany({
       where: {
-        isActive: true,
         deletedAt: null,
-        products: { some: { productId: { in: productIds }, isActive: true } },
         user: { telegramUsername: { not: null } },
       },
-      include: { _count: { select: { orders: { where: { status: { in: [ShopOrderStatus.ACCEPTED, ShopOrderStatus.IN_PROGRESS, ShopOrderStatus.SELLER_COMPLETED, ShopOrderStatus.WAITING_BUYER_CONFIRMATION, ShopOrderStatus.DISPUTE] } } } } } },
-      orderBy: [{ isOnline: "desc" }, { lastAssignedAt: "asc" }],
+      orderBy: [{ lastAssignedAt: "asc" }, { createdAt: "asc" }],
       take: 20,
     });
-    const seller = sellers.find((candidate) => candidate._count.orders < candidate.maxActiveOrders);
+    const seller = sellers[0];
     if (!seller) return order;
     await tx.shopSeller.update({ where: { id: seller.id }, data: { lastAssignedAt: new Date() } });
     return tx.shopOrder.update({ where: { id: order.id }, data: { sellerId: seller.id } });
