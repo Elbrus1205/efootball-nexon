@@ -444,6 +444,12 @@ export function MatchManager({
           // так параллельные сохранения двух полей счёта не затирают друг друга,
           // а голая запись без relations не заменяет назначенных игроков капитанами.
           patchLocalMatch(matchId, pickAdminMatchSaveResult(payload, result.match as Record<string, unknown>));
+          if (Array.isArray(result.correctedMatches)) {
+            for (const correctedMatch of result.correctedMatches) {
+              if (!correctedMatch || typeof correctedMatch !== "object" || !("id" in correctedMatch) || typeof correctedMatch.id !== "string") continue;
+              patchLocalMatch(correctedMatch.id, correctedMatch as Record<string, unknown>);
+            }
+          }
           return;
         }
 

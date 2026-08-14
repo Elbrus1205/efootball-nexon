@@ -1,7 +1,8 @@
-import { MatchStatus, TeamInviteStatus, TournamentParticipantMode } from "@prisma/client";
+import { MatchStatus, Prisma, TeamInviteStatus, TournamentParticipantMode } from "@prisma/client";
 import { db } from "@/lib/db";
 
 type MatchLineupClient = Pick<typeof db, "match" | "matchLineupPlayer">;
+type MatchLineupTransactionClient = Pick<Prisma.TransactionClient, "matchLineupPlayer">;
 
 type LineupMatch = NonNullable<Awaited<ReturnType<typeof getLineupMatch>>>;
 
@@ -86,6 +87,37 @@ export async function ensureMatchLineupSnapshot(matchId: string, client: MatchLi
   });
 
   return lineup.map((item) => ({ userId: item.userId, side: item.side }));
+}
+
+export async function replaceMatchLineupSnapshotPlayer(params: {
+  client: MatchLineupTransactionClient;
+  matchId: string;
+  side: 1 | 2;
+  previousUserId: string | null;
+  nextUserId: string;
+  registrationId: string | null;
+}) {
+  if (!params.previousUserId || params.previousUserId === params.nextUserId) return;
+
+  const existing = await params.client.matchLineupPlayer.findUnique({
+    where: {
+      matchId_side_userId: {
+        matchId: params.matchId,
+        side: params.side,
+        userId: params.previousUserId,
+      },
+    },
+    select: { id: true },
+  });
+  if (!existing) return;
+
+  await params.client.matchLineupPlayer.update({
+    where: { id: existing.id },
+    data: {
+      userId: params.nextUserId,
+      registrationId: params.registrationId,
+    },
+  });
 }
 
 export async function backfillConfirmedMatchLineups(limit = 500) {

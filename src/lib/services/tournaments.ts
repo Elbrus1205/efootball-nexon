@@ -1094,6 +1094,7 @@ export async function autoAssignExpiredCaptainTeamMatchSlots(now = new Date()) {
         select: {
           id: true,
           startsAt: true,
+          updatedAt: true,
           matches: {
             where: { isPenaltyTiebreak: false },
             select: {
@@ -1133,6 +1134,7 @@ export async function autoAssignExpiredCaptainTeamMatchSlots(now = new Date()) {
         matches: stage.matches,
         tournamentStartsAt: tournament.startsAt,
         stageStartsAt: stage.startsAt,
+        stageActivatedAt: stage.updatedAt,
       });
       if (!activeRound || now.getTime() - activeRound.startedAt.getTime() < CAPTAIN_TEAM_AUTO_ASSIGNMENT_DELAY_MS) {
         continue;
@@ -1165,7 +1167,7 @@ export async function autoAssignExpiredCaptainTeamMatchSlots(now = new Date()) {
       }
 
       for (const fixtureMatches of fixtureGroups.values()) {
-        if (!fixtureMatches.some((match) => !match.player1Id && !match.player2Id && match.status === MatchStatus.PENDING)) {
+        if (!fixtureMatches.some((match) => (!match.player1Id || !match.player2Id) && match.status === MatchStatus.PENDING)) {
           continue;
         }
 
@@ -1186,6 +1188,7 @@ export async function autoAssignExpiredCaptainTeamMatchSlots(now = new Date()) {
               bracketId: fixture.bracketId,
               round: activeRound.round,
               legNumber: fixture.legNumber,
+              id: { notIn: fixtureMatches.map((match) => match.id) },
               OR: [{ player1Id: { not: null } }, { player2Id: { not: null } }],
             },
             select: { player1Id: true, player2Id: true },
@@ -1217,8 +1220,8 @@ export async function autoAssignExpiredCaptainTeamMatchSlots(now = new Date()) {
               where: {
                 id: assignment.matchId,
                 status: MatchStatus.PENDING,
-                player1Id: null,
-                player2Id: null,
+                player1Id: assignment.previousPlayer1Id,
+                player2Id: assignment.previousPlayer2Id,
               },
               data: {
                 player1Id: assignment.player1Id,
@@ -3811,9 +3814,10 @@ export async function startTournament(tournamentId: string) {
   });
 
   if (firstStage) {
+    const activatedAt = new Date();
     await db.tournamentStage.update({
       where: { id: firstStage.id },
-      data: { status: StageStatus.ACTIVE },
+      data: { status: StageStatus.ACTIVE, startsAt: firstStage.startsAt ?? activatedAt },
     });
   }
   await applyTournamentAbsenceRatingPenalty(tournamentId);
@@ -4047,9 +4051,10 @@ export async function syncTournamentLifecycleStatus(tournamentId: string) {
 
       const firstPlayoffStage = playoffStages[0];
       if (firstPlayoffStage) {
+        const activatedAt = new Date();
         await db.tournamentStage.update({
           where: { id: firstPlayoffStage.id },
-          data: { status: StageStatus.ACTIVE },
+          data: { status: StageStatus.ACTIVE, startsAt: firstPlayoffStage.startsAt ?? activatedAt },
         });
       }
 

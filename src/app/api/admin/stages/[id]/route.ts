@@ -19,12 +19,13 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
   });
 
   const before = await db.tournamentStage.findUnique({ where: { id: params.id } });
+  const activatesStage = body.status === StageStatus.ACTIVE && before?.status !== StageStatus.ACTIVE;
   const stage = await db.tournamentStage.update({
     where: { id: params.id },
     data: {
       name: body.name,
       status: body.status as StageStatus | undefined,
-      startsAt: body.startsAt ? new Date(body.startsAt) : undefined,
+      startsAt: body.startsAt ? new Date(body.startsAt) : activatesStage && !before?.startsAt ? new Date() : undefined,
       endsAt: body.endsAt ? new Date(body.endsAt) : undefined,
     },
   });

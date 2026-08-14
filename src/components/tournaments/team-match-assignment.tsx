@@ -10,17 +10,21 @@ type PlayerOption = { id: string; name: string };
 export function TeamMatchAssignment({
   tournamentId,
   matchId,
+  initialPlayer1Id,
+  initialPlayer2Id,
   homePlayers,
   awayPlayers,
 }: {
   tournamentId: string;
   matchId: string;
+  initialPlayer1Id?: string | null;
+  initialPlayer2Id?: string | null;
   homePlayers: PlayerOption[];
   awayPlayers: PlayerOption[];
 }) {
   const router = useRouter();
-  const [player1Id, setPlayer1Id] = useState("");
-  const [player2Id, setPlayer2Id] = useState("");
+  const [player1Id, setPlayer1Id] = useState(initialPlayer1Id ?? "");
+  const [player2Id, setPlayer2Id] = useState(initialPlayer2Id ?? "");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
 

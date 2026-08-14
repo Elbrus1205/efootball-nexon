@@ -444,6 +444,17 @@ export const matchUpdateSchema = z.object({
   reliabilityPenaltyUserId: z.string().trim().optional().or(z.literal("")),
   reliabilityPenaltyUserIds: z.array(z.string().trim().min(1)).max(2).optional(),
   notes: z.string().max(1000).optional().or(z.literal("")),
+}).superRefine((data, ctx) => {
+  const participantFields = ["player1Id", "player2Id", "participant1EntryId", "participant2EntryId"] as const;
+  const changedParticipantFields = participantFields.filter((field) => field in data);
+  const otherFields = Object.keys(data).filter((field) => !participantFields.includes(field as (typeof participantFields)[number]));
+
+  if (changedParticipantFields.length && otherFields.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Игроков и команды нужно изменять отдельно от счёта и статуса матча.",
+    });
+  }
 });
 
 export const matchReorderSchema = z.object({

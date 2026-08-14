@@ -25,3 +25,12 @@ test("a roster replacement only transfers open matches assigned to the replaced 
     /filter\(\(m\) => m\.participant1EntryId === registrationId\)/,
   );
 });
+
+test("a roster replacement does not clear another captain's half-filled team slot", () => {
+  const branchStart = participantRouteSource.indexOf('if (body.action === "replaceMember"');
+  const branchEnd = participantRouteSource.indexOf('if (body.action === "addMember"', branchStart);
+  const branch = participantRouteSource.slice(branchStart, branchEnd);
+
+  assert.doesNotMatch(branch, /OR: \[\{ player1Id: null \}, \{ player2Id: null \}\]/);
+  assert.doesNotMatch(branch, /data: \{ player1Id: null, player2Id: null/);
+});

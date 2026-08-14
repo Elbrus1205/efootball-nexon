@@ -64,7 +64,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       if (match.tournament.status !== TournamentStatus.IN_PROGRESS) {
         throw new TeamMatchAssignmentError("Пары игроков можно назначать после начала тура.", 400);
       }
-      if (!match.isCaptainAssignedTeamMatch || match.player1Id || match.player2Id || match.status !== MatchStatus.PENDING) {
+      if (!match.isCaptainAssignedTeamMatch || (match.player1Id && match.player2Id) || match.status !== MatchStatus.PENDING) {
         throw new TeamMatchAssignmentError("Эта пара уже подтверждена и больше не редактируется.");
       }
       if (!match.participant1EntryId || !match.participant2EntryId || !match.participant1Entry || !match.participant2Entry) {
@@ -91,7 +91,10 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
           round: match.round,
           legNumber: match.legNumber,
           id: { not: match.id },
-          OR: [{ player1Id }, { player2Id }],
+          OR: [
+            ...(match.player1Id === player1Id ? [] : [{ player1Id }]),
+            ...(match.player2Id === player2Id ? [] : [{ player2Id }]),
+          ],
         },
         select: { id: true },
       });
@@ -99,10 +102,18 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
         throw new TeamMatchAssignmentError("Этот игрок уже назначен на матч в данном туре.");
       }
 
-      await tx.match.update({
-        where: { id: match.id },
+      const updated = await tx.match.updateMany({
+        where: {
+          id: match.id,
+          status: MatchStatus.PENDING,
+          player1Id: match.player1Id,
+          player2Id: match.player2Id,
+        },
         data: { player1Id, player2Id, status: MatchStatus.READY },
       });
+      if (updated.count !== 1) {
+        throw new TeamMatchAssignmentError("Состав матча уже изменился. Обновите страницу и повторите.");
+      }
     });
   } catch (error) {
     if (error instanceof TeamMatchAssignmentError) {

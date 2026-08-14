@@ -1232,8 +1232,7 @@ export default async function TournamentDetailsPage(
                 const canAssignTeamMatch =
                   tournament.captainsCreateTeamMatches &&
                   match.isCaptainAssignedTeamMatch &&
-                  !match.player1Id &&
-                  !match.player2Id &&
+                  (!match.player1Id || !match.player2Id) &&
                   match.status === MatchStatus.PENDING &&
                   currentRosterMembership?.isCaptain &&
                   currentRosterMembership.status === "ACCEPTED" &&
@@ -1335,6 +1334,8 @@ export default async function TournamentDetailsPage(
                     <TeamMatchAssignment
                       tournamentId={tournament.id}
                       matchId={match.id}
+                      initialPlayer1Id={match.player1Id}
+                      initialPlayer2Id={match.player2Id}
                       homePlayers={homeRosterEntry.rosterMembers
                         .filter((member) => member.status === "ACCEPTED")
                         .map((member) => ({ id: member.user.id, name: getPlayerDisplayName(member.user) }))}

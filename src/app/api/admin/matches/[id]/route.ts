@@ -1,10 +1,10 @@
-import { MatchStatus, Prisma, ReliabilityPenaltyScope, type Match } from "@prisma/client";
+import { MatchStatus, Prisma, ReliabilityPenaltyScope, TeamInviteStatus, type Match } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { assertCanManageMatch } from "@/lib/admin-tournament-access";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { logAdminAction } from "@/lib/services/admin-actions";
-import { ensureMatchLineupSnapshot } from "@/lib/services/match-lineups";
+import { ensureMatchLineupSnapshot, replaceMatchLineupSnapshotPlayer } from "@/lib/services/match-lineups";
 import {
   applyConfiguredReliabilityPenalty,
   applyConfiguredReliabilityPenaltyToUsers,
@@ -17,6 +17,8 @@ import { notifyMatchReady, recalculateGroupStandings, resolveConfirmedMatch, syn
 import { invalidateTournamentSchedule } from "@/lib/tournament-cache";
 import { matchUpdateSchema } from "@/lib/validators";
 import { canEditMatchParticipants } from "@/lib/admin-match-participant-policy";
+import { planCaptainTeamPlayerCorrection } from "@/lib/tournaments/captain-team-player-correction";
+import { invalidatePlayerRatings } from "@/lib/ratings-cache";
 
 function matchRequiresWinner(match: {
   bracketId: string | null;
@@ -217,7 +219,7 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
     "player2Id" in body ||
     "participant1EntryId" in body ||
     "participant2EntryId" in body;
-  if (participantFieldsChanged && !canEditMatchParticipants(before)) {
+  if (participantFieldsChanged && !canEditMatchParticipants(before, body)) {
     return NextResponse.json(
       { error: "Нельзя менять игроков или команды в матче с подтверждённым результатом." },
       { status: 409 },
@@ -296,10 +298,104 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
     }
   }
 
-  const updated = await db.match.update({
-    where: { id: params.id },
-    data,
-  });
+  const correctedMatches: Match[] = [];
+  const requestedPlayerSide =
+    before.isCaptainAssignedTeamMatch && "player1Id" in body && !("player2Id" in body)
+      ? 1
+      : before.isCaptainAssignedTeamMatch && "player2Id" in body && !("player1Id" in body)
+        ? 2
+        : null;
+  const requestedPlayerId = requestedPlayerSide === 1 ? nextPlayer1Id : requestedPlayerSide === 2 ? nextPlayer2Id : null;
+
+  if (requestedPlayerSide && requestedPlayerId) {
+    const registrationId = requestedPlayerSide === 1 ? before.participant1EntryId : before.participant2EntryId;
+    const rosterMember = registrationId
+      ? await db.tournamentRegistrationMember.findFirst({
+          where: {
+            registrationId,
+            userId: requestedPlayerId,
+            status: TeamInviteStatus.ACCEPTED,
+          },
+          select: { id: true },
+        })
+      : null;
+    if (!rosterMember) {
+      return NextResponse.json({ error: "Выберите игрока из актуального состава этой команды." }, { status: 400 });
+    }
+  }
+
+  let updated: Match;
+  if (requestedPlayerSide && requestedPlayerId) {
+    updated = await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`captain-team-assignment:${before.tournamentId}`}))`;
+
+      const siblings = await tx.match.findMany({
+        where: {
+          id: { not: before.id },
+          tournamentId: before.tournamentId,
+          stageId: before.stageId,
+          groupId: before.groupId,
+          bracketId: before.bracketId,
+          round: before.round,
+          matchNumber: before.matchNumber,
+          legNumber: before.legNumber,
+          seriesKey: before.seriesKey,
+          participant1EntryId: before.participant1EntryId,
+          participant2EntryId: before.participant2EntryId,
+          isCaptainAssignedTeamMatch: true,
+          isTeamCaptainTiebreak: false,
+        },
+      });
+      const corrections = planCaptainTeamPlayerCorrection({
+        target: before,
+        siblings,
+        side: requestedPlayerSide,
+        nextPlayerId: requestedPlayerId,
+      });
+
+      for (const correction of corrections.slice(1)) {
+        const sibling = siblings.find((match) => match.id === correction.matchId);
+        if (!sibling) continue;
+
+        const siblingData: Prisma.MatchUpdateInput = requestedPlayerSide === 1
+          ? { player1: { connect: { id: correction.nextPlayerId } } }
+          : { player2: { connect: { id: correction.nextPlayerId } } };
+        if (sibling.winnerId === correction.previousPlayerId) {
+          siblingData.winner = { connect: { id: correction.nextPlayerId } };
+        }
+
+        const correctedSibling = await tx.match.update({ where: { id: sibling.id }, data: siblingData });
+        await replaceMatchLineupSnapshotPlayer({
+          client: tx,
+          matchId: sibling.id,
+          side: requestedPlayerSide,
+          previousUserId: correction.previousPlayerId,
+          nextUserId: correction.nextPlayerId,
+          registrationId: requestedPlayerSide === 1 ? sibling.participant1EntryId : sibling.participant2EntryId,
+        });
+        correctedMatches.push(correctedSibling);
+      }
+
+      const correctedTarget = await tx.match.update({ where: { id: params.id }, data });
+      const targetCorrection = corrections[0];
+      if (targetCorrection) {
+        await replaceMatchLineupSnapshotPlayer({
+          client: tx,
+          matchId: correctedTarget.id,
+          side: requestedPlayerSide,
+          previousUserId: targetCorrection.previousPlayerId,
+          nextUserId: targetCorrection.nextPlayerId,
+          registrationId: requestedPlayerSide === 1 ? correctedTarget.participant1EntryId : correctedTarget.participant2EntryId,
+        });
+      }
+      return correctedTarget;
+    });
+  } else {
+    updated = await db.match.update({
+      where: { id: params.id },
+      data,
+    });
+  }
 
   // The match row (a schedule-slice field) always changed here; structure/rules
   // get busted below via recalculateGroupStandings / resolveConfirmedMatch when relevant.
@@ -329,6 +425,12 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
   if (opponentsChanged && updated.player1Id && updated.player2Id && updated.status !== MatchStatus.CANCELLED) {
     await notifyMatchReady(updated.id);
   }
+  await Promise.all(
+    correctedMatches
+      .filter((match) => match.player1Id && match.player2Id && match.status !== MatchStatus.CANCELLED)
+      .map((match) => notifyMatchReady(match.id)),
+  );
+  if (correctedMatches.length) invalidatePlayerRatings();
 
   const canHaveConfiguredPenalty =
     updated.status === MatchStatus.CONFIRMED || updated.status === MatchStatus.FINISHED || updated.status === MatchStatus.FORFEIT;
@@ -454,5 +556,5 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
     afterJson: updated,
   });
 
-  return NextResponse.json({ ok: true, match: updated });
+  return NextResponse.json({ ok: true, match: updated, correctedMatches });
 }

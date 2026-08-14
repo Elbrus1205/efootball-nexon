@@ -20,6 +20,7 @@ export function resolveActiveCaptainTeamRound(params: {
   matches: CaptainTeamRoundMatch[];
   tournamentStartsAt: Date;
   stageStartsAt: Date | null;
+  stageActivatedAt?: Date | null;
 }) {
   const rounds = Array.from(new Set(params.matches.map((match) => match.round))).sort((a, b) => a - b);
   const activeRound = rounds.find((round) => {
@@ -41,9 +42,10 @@ export function resolveActiveCaptainTeamRound(params: {
     : null;
 
   const previousMatches = params.matches.filter((match) => match.round < activeRound);
+  const firstRoundStart = params.stageStartsAt ?? params.stageActivatedAt ?? params.tournamentStartsAt;
   const lifecycleStart = previousMatches.length
     ? new Date(Math.max(...previousMatches.map((match) => (match.finishedAt ?? match.updatedAt).getTime())))
-    : params.stageStartsAt ?? params.tournamentStartsAt;
+    : firstRoundStart;
   const startedAt = plannedRoundStart && plannedRoundStart > lifecycleStart ? plannedRoundStart : lifecycleStart;
 
   return { round: activeRound, startedAt };
@@ -72,14 +74,42 @@ export function buildRandomCaptainTeamAssignments(params: {
     return result;
   };
 
+  // A roster replacement can leave a slot half-filled when an older request
+  // raced with the replacement transaction. Treat that row as an open slot,
+  // but never replace the player that is already there.
+  const openSlots = params.slots.filter((slot) => !slot.player1Id || !slot.player2Id);
   const homeUsers = shuffle(Array.from(new Set(params.homeUserIds)).filter((userId) => !occupied.has(userId)));
   const awayUsers = shuffle(Array.from(new Set(params.awayUserIds)).filter((userId) => !occupied.has(userId)));
-  const openSlots = params.slots.filter((slot) => !slot.player1Id && !slot.player2Id);
-  const assignmentsCount = Math.min(openSlots.length, homeUsers.length, awayUsers.length);
+  const homeAssignments = new Map<string, string>();
+  const awayAssignments = new Map<string, string>();
 
-  return openSlots.slice(0, assignmentsCount).map((slot, index) => ({
-    matchId: slot.id,
-    player1Id: homeUsers[index],
-    player2Id: awayUsers[index],
-  }));
+  for (const slot of openSlots) {
+    if (slot.player1Id) homeAssignments.set(slot.id, slot.player1Id);
+    if (slot.player2Id) awayAssignments.set(slot.id, slot.player2Id);
+  }
+
+  const availableHomeUsers = [...homeUsers];
+  const availableAwayUsers = [...awayUsers];
+  for (const slot of openSlots) {
+    if (!homeAssignments.has(slot.id)) {
+      const player1Id = availableHomeUsers.shift();
+      if (!player1Id) break;
+      homeAssignments.set(slot.id, player1Id);
+    }
+    if (!awayAssignments.has(slot.id)) {
+      const player2Id = availableAwayUsers.shift();
+      if (!player2Id) break;
+      awayAssignments.set(slot.id, player2Id);
+    }
+  }
+
+  return openSlots
+    .filter((slot) => homeAssignments.has(slot.id) && awayAssignments.has(slot.id))
+    .map((slot) => ({
+      matchId: slot.id,
+      player1Id: homeAssignments.get(slot.id)!,
+      player2Id: awayAssignments.get(slot.id)!,
+      previousPlayer1Id: slot.player1Id,
+      previousPlayer2Id: slot.player2Id,
+    }));
 }
