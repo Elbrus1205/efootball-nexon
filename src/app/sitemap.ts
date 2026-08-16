@@ -1,4 +1,4 @@
-﻿import type { MetadataRoute } from "next";
+import type { MetadataRoute } from "next";
 
 const baseUrl = "https://efootball-nexon.com";
 
@@ -13,6 +13,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/regulations",
     "/contacts",
     "/shop",
+    "/shop/legal/rules",
+    "/shop/legal/terms",
+    "/shop/legal/refunds",
+    "/shop/legal/disputes",
+    "/shop/legal/data",
     "/terms",
     "/privacy",
     "/cookies",
