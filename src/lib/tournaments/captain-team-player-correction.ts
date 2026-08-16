@@ -10,6 +10,25 @@ export type CaptainTeamPlayerCorrection = {
   nextPlayerId: string;
 };
 
+export type CaptainTeamPlayerChangeSide = 1 | 2 | "MULTIPLE" | null;
+
+export function resolveCaptainTeamPlayerChangeSide(params: {
+  currentPlayer1Id: string | null;
+  currentPlayer2Id: string | null;
+  nextPlayer1Id: string | null;
+  nextPlayer2Id: string | null;
+  player1Provided: boolean;
+  player2Provided: boolean;
+}): CaptainTeamPlayerChangeSide {
+  const changedSides: Array<1 | 2> = [];
+
+  if (params.player1Provided && params.currentPlayer1Id !== params.nextPlayer1Id) changedSides.push(1);
+  if (params.player2Provided && params.currentPlayer2Id !== params.nextPlayer2Id) changedSides.push(2);
+
+  if (changedSides.length > 1) return "MULTIPLE";
+  return changedSides[0] ?? null;
+}
+
 export function planCaptainTeamPlayerCorrection(params: {
   target: CaptainTeamPlayerCorrectionMatch;
   siblings: CaptainTeamPlayerCorrectionMatch[];

@@ -1,6 +1,37 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { planCaptainTeamPlayerCorrection } from "./captain-team-player-correction";
+import {
+  planCaptainTeamPlayerCorrection,
+  resolveCaptainTeamPlayerChangeSide,
+} from "./captain-team-player-correction";
+
+test("detects the actually changed team player when both ids are present in the payload", () => {
+  assert.equal(
+    resolveCaptainTeamPlayerChangeSide({
+      currentPlayer1Id: "home-a",
+      currentPlayer2Id: "away-a",
+      nextPlayer1Id: "home-b",
+      nextPlayer2Id: "away-a",
+      player1Provided: true,
+      player2Provided: true,
+    }),
+    1,
+  );
+});
+
+test("rejects changing both team match players in one correction", () => {
+  assert.equal(
+    resolveCaptainTeamPlayerChangeSide({
+      currentPlayer1Id: "home-a",
+      currentPlayer2Id: "away-a",
+      nextPlayer1Id: "home-b",
+      nextPlayer2Id: "away-b",
+      player1Provided: true,
+      player2Provided: true,
+    }),
+    "MULTIPLE",
+  );
+});
 
 test("putting a scored team player into another slot swaps the players and leaves score data on each slot", () => {
   const target = {

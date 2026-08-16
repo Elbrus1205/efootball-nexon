@@ -17,7 +17,10 @@ import { notifyMatchReady, recalculateGroupStandings, resolveConfirmedMatch, syn
 import { invalidateTournamentSchedule } from "@/lib/tournament-cache";
 import { matchUpdateSchema } from "@/lib/validators";
 import { canEditMatchParticipants } from "@/lib/admin-match-participant-policy";
-import { planCaptainTeamPlayerCorrection } from "@/lib/tournaments/captain-team-player-correction";
+import {
+  planCaptainTeamPlayerCorrection,
+  resolveCaptainTeamPlayerChangeSide,
+} from "@/lib/tournaments/captain-team-player-correction";
 import { invalidatePlayerRatings } from "@/lib/ratings-cache";
 
 function matchRequiresWinner(match: {
@@ -299,12 +302,23 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
   }
 
   const correctedMatches: Match[] = [];
-  const requestedPlayerSide =
-    before.isCaptainAssignedTeamMatch && "player1Id" in body && !("player2Id" in body)
-      ? 1
-      : before.isCaptainAssignedTeamMatch && "player2Id" in body && !("player1Id" in body)
-        ? 2
-        : null;
+  const requestedPlayerChangeSide = before.isCaptainAssignedTeamMatch
+    ? resolveCaptainTeamPlayerChangeSide({
+        currentPlayer1Id: before.player1Id,
+        currentPlayer2Id: before.player2Id,
+        nextPlayer1Id,
+        nextPlayer2Id,
+        player1Provided: "player1Id" in body,
+        player2Provided: "player2Id" in body,
+      })
+    : null;
+  if (requestedPlayerChangeSide === "MULTIPLE") {
+    return NextResponse.json(
+      { error: "Меняйте игроков командного матча по одному, чтобы система корректно переставила их между парами." },
+      { status: 400 },
+    );
+  }
+  const requestedPlayerSide = requestedPlayerChangeSide;
   const requestedPlayerId = requestedPlayerSide === 1 ? nextPlayer1Id : requestedPlayerSide === 2 ? nextPlayer2Id : null;
 
   if (requestedPlayerSide && requestedPlayerId) {
