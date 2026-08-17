@@ -3,10 +3,15 @@ import { getAdminTournamentAccessWhere } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { TournamentBuilderForm } from "@/components/admin/tournament-builder-form";
+import { Card, CardDescription } from "@/components/ui/card";
 import { formatMoscowDateTimeLocalInput } from "@/lib/utils";
 
-export default async function AdminTournamentEditPage(props: { params: Promise<{ id: string }> }) {
+export default async function AdminTournamentEditPage(props: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ error?: string }>;
+}) {
   const params = await props.params;
+  const searchParams = await props.searchParams;
   const session = await requirePermission("tournaments.createEdit");
 
   const tournament = await db.tournament.findFirst({
@@ -17,6 +22,11 @@ export default async function AdminTournamentEditPage(props: { params: Promise<{
 
   return (
     <div className="space-y-6">
+      {searchParams?.error ? (
+        <Card className="border-red-400/25 bg-red-500/10" role="alert" aria-live="polite">
+          <CardDescription className="break-words text-red-100">{searchParams.error}</CardDescription>
+        </Card>
+      ) : null}
       <TournamentBuilderForm
         action={`/api/admin/tournaments/${tournament.id}/update`}
         submitLabel="Сохранить изменения"
