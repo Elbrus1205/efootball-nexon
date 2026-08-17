@@ -5,6 +5,7 @@ import {
   NotificationType,
   ParticipantStatus,
   PlayoffType,
+  Prisma,
   SeedingMethod,
   StageStatus,
   StageType,
@@ -22,6 +23,13 @@ import { normalizeFormatBlueprint, type FormatBlueprint, type PlayoffSelectionRu
 import { applyTournamentAbsenceRatingPenalty, getPlayerRatings } from "@/lib/ratings";
 import { invalidatePlayerRatings } from "@/lib/ratings-cache";
 import { prepareCaptainAssignedTeamMatchSlots } from "@/lib/tournaments/captain-team-matches";
+import {
+  deriveExpectedCustomStructure,
+  findCustomStructureDrift,
+  getCustomOpeningGroupName,
+  planTournamentEditSynchronization,
+  type TournamentMatchShape,
+} from "@/lib/tournaments/tournament-edit-sync";
 import {
   buildRandomCaptainTeamAssignments,
   resolveActiveCaptainTeamRound,
@@ -758,12 +766,6 @@ function isCustomDirectPlayoff(format: TournamentFormat, blueprintJson: unknown)
 function getStageStatus(hasPreviousStages: boolean, tournamentStatus: TournamentStatus) {
   if (hasPreviousStages) return StageStatus.PENDING;
   return tournamentStatus === TournamentStatus.IN_PROGRESS ? StageStatus.ACTIVE : StageStatus.PENDING;
-}
-
-function countSelectionEntries(selections: PlayoffSelectionRule[], targetBracket?: "upper" | "lower") {
-  return selections
-    .filter((selection) => !targetBracket || selection.targetBracket === targetBracket)
-    .reduce((total, selection) => total + Math.max(0, selection.toRank - selection.fromRank + 1), 0);
 }
 
 function expandSelectionRefs(groups: { id: string; orderIndex: number }[], selections: PlayoffSelectionRule[], targetBracket: "upper" | "lower") {
@@ -2132,50 +2134,42 @@ async function createCustomFormatStages(params: {
   blueprint: FormatBlueprint;
 }) {
   const stages: TournamentStage[] = [];
-  const hasOpeningStage = params.blueprint.openingStageMode !== "NONE";
+  const expected = deriveExpectedCustomStructure(params.blueprint, params.tournament.maxParticipants);
+  const hasOpeningStage = expected.opening !== null;
 
-  if (hasOpeningStage) {
-    const participantsPerDivision =
-      params.blueprint.participantsPerGroup ?? Math.max(2, Math.ceil(params.tournament.maxParticipants / params.blueprint.divisionsCount));
-    const openingToursCount = params.blueprint.openingRoundsCount ?? getRoundRobinToursCount(participantsPerDivision);
-
+  if (expected.opening) {
+    const opening = expected.opening;
     const leagueStage = await db.tournamentStage.create({
       data: {
         tournamentId: params.tournamentId,
-        name: params.blueprint.leagueStageName,
+        name: opening.name,
         type: StageType.GROUP_STAGE,
         status: getStageStatus(false, params.tournament.status),
         orderIndex: 1,
-        groupsCount: params.blueprint.divisionsCount,
-        participantsPerGroup: params.blueprint.participantsPerGroup ?? undefined,
-        roundsCount: openingToursCount,
+        groupsCount: opening.divisionsCount,
+        participantsPerGroup: opening.participantsPerGroup ?? undefined,
+        roundsCount: opening.roundsCount,
         pointsForWin: params.tournament.pointsForWin,
         pointsForDraw: params.tournament.pointsForDraw,
         pointsForLoss: params.tournament.pointsForLoss,
         sortRules: params.tournament.sortRules,
         settingsJson: {
-          mode: params.blueprint.openingStageMode === "LEAGUE" ? "custom-league" : "custom-groups",
-          divisionsCount: params.blueprint.divisionsCount,
-          roundsCount: openingToursCount,
-          matchesPerOpponent: params.blueprint.roundsCount,
-          participantsPerGroup: params.blueprint.participantsPerGroup,
+          mode: opening.mode,
+          divisionsCount: opening.divisionsCount,
+          roundsCount: opening.roundsCount,
+          matchesPerOpponent: opening.matchesPerOpponent,
+          participantsPerGroup: opening.participantsPerGroup,
         },
       },
     });
 
-    for (let index = 0; index < params.blueprint.divisionsCount; index += 1) {
-      const groupLetter = String.fromCharCode(65 + index);
+    for (let index = 0; index < opening.divisionsCount; index += 1) {
       await db.tournamentGroup.create({
         data: {
           stageId: leagueStage.id,
-          name:
-            params.blueprint.divisionsCount === 1
-              ? params.blueprint.leagueStageName
-              : params.blueprint.openingStageMode === "GROUPS"
-                ? `Группа ${groupLetter}`
-                : `${params.blueprint.leagueStageName} ${index + 1}`,
+          name: getCustomOpeningGroupName(opening, index),
           orderIndex: index + 1,
-          capacity: params.blueprint.participantsPerGroup ?? undefined,
+          capacity: opening.participantsPerGroup ?? undefined,
         },
       });
     }
@@ -2183,13 +2177,8 @@ async function createCustomFormatStages(params: {
     stages.push(leagueStage);
   }
 
-  for (let index = 0; index < params.blueprint.playoffs.length; index += 1) {
-    const playoff = params.blueprint.playoffs[index];
-    const upperEntriesCount = countSelectionEntries(playoff.selections, "upper");
-    const lowerEntriesCount = countSelectionEntries(playoff.selections, "lower");
-    const directEntriesCount = hasOpeningStage ? 0 : params.tournament.maxParticipants;
-    const roundsCount = Math.log2(nextPowerOfTwo(Math.max(upperEntriesCount, lowerEntriesCount, directEntriesCount, 2)));
-
+  for (let index = 0; index < expected.playoffs.length; index += 1) {
+    const playoff = expected.playoffs[index];
     const stage = await db.tournamentStage.create({
       data: {
         tournamentId: params.tournamentId,
@@ -2197,12 +2186,12 @@ async function createCustomFormatStages(params: {
         type: StageType.PLAYOFF,
         status: getStageStatus(stages.length > 0, params.tournament.status),
         orderIndex: stages.length + 1,
-        roundsCount,
+        roundsCount: playoff.roundsCount,
         settingsJson: {
           mode: hasOpeningStage ? "custom-playoff-stage" : "custom-direct-playoff-stage",
-          upperEntriesCount,
-          lowerEntriesCount,
-          directEntriesCount,
+          upperEntriesCount: playoff.upperEntriesCount,
+          lowerEntriesCount: playoff.lowerEntriesCount,
+          directEntriesCount: playoff.directEntriesCount,
         },
       },
     });
@@ -2212,15 +2201,15 @@ async function createCustomFormatStages(params: {
         tournamentId: params.tournamentId,
         stageId: stage.id,
         type: playoff.type,
-        size: nextPowerOfTwo(Math.max(upperEntriesCount, lowerEntriesCount, directEntriesCount, 2)),
-        legsCount: playoff.type === PlayoffType.DOUBLE ? 1 : playoff.legsCount,
-        thirdPlaceMatch: playoff.type === PlayoffType.DOUBLE ? false : playoff.thirdPlaceMatch,
+        size: playoff.size,
+        legsCount: playoff.legsCount,
+        thirdPlaceMatch: playoff.thirdPlaceMatch,
         settingsJson: hasOpeningStage
           ? ({
               mode: "custom",
               selections: playoff.selections,
-              upperEntriesCount,
-              lowerEntriesCount,
+              upperEntriesCount: playoff.upperEntriesCount,
+              lowerEntriesCount: playoff.lowerEntriesCount,
             } satisfies CustomPlayoffSettings)
           : {
               mode: "custom-direct",
@@ -2415,6 +2404,504 @@ async function ensureCustomPlayoffMatchesGenerated(tournamentId: string) {
       matchupFormat: tournament.matchupFormat,
       bestOfWins: tournament.bestOfWins,
     });
+  }
+}
+
+function tournamentMatchShape(tournament: TournamentMatchShape): TournamentMatchShape {
+  return {
+    participantMode: tournament.participantMode,
+    rosterSize: tournament.rosterSize,
+    captainsCreateTeamMatches: tournament.captainsCreateTeamMatches,
+    matchupFormat: tournament.matchupFormat,
+    bestOfWins: tournament.bestOfWins,
+  };
+}
+
+const PLAYED_MATCH_STATUSES = [MatchStatus.CONFIRMED, MatchStatus.FINISHED, MatchStatus.FORFEIT, MatchStatus.CANCELLED] as const;
+
+export class TournamentEditConflictError extends Error {
+  override name = "TournamentEditConflictError";
+}
+
+export async function assertTournamentEditAllowed(input: {
+  tournamentId: string;
+  previousBlueprintJson: unknown;
+  nextBlueprint: FormatBlueprint;
+  previousMaxParticipants: number;
+  nextMaxParticipants: number;
+  previousMatchShape: TournamentMatchShape;
+  nextMatchShape: TournamentMatchShape;
+  previousScoringShape: { pointsForWin: number; pointsForDraw: number; pointsForLoss: number; sortRules: readonly string[] };
+  nextScoringShape: { pointsForWin: number; pointsForDraw: number; pointsForLoss: number; sortRules: readonly string[] };
+  previousStartsAt: Date;
+  nextStartsAt: Date;
+}) {
+  const plan = planTournamentEditSynchronization({
+    previousBlueprint: normalizeFormatBlueprint(input.previousBlueprintJson),
+    nextBlueprint: input.nextBlueprint,
+    previousMaxParticipants: input.previousMaxParticipants,
+    nextMaxParticipants: input.nextMaxParticipants,
+    previousMatchShape: input.previousMatchShape,
+    nextMatchShape: input.nextMatchShape,
+    previousScoringShape: input.previousScoringShape,
+    nextScoringShape: input.nextScoringShape,
+    previousStartsAt: input.previousStartsAt,
+    nextStartsAt: input.nextStartsAt,
+  });
+  const stages = await db.tournamentStage.findMany({
+    where: { tournamentId: input.tournamentId },
+    select: {
+      id: true,
+      type: true,
+      groupsCount: true,
+      participantsPerGroup: true,
+      roundsCount: true,
+      settingsJson: true,
+      bracket: { select: { size: true, type: true, legsCount: true, thirdPlaceMatch: true, settingsJson: true } },
+    },
+    orderBy: { orderIndex: "asc" },
+  });
+  const openingStageIds = stages.filter((stage) => stage.type === StageType.GROUP_STAGE || stage.type === StageType.LEAGUE).map((stage) => stage.id);
+  const playoffStageIds = stages.filter((stage) => stage.type === StageType.PLAYOFF).map((stage) => stage.id);
+  const openingStage = stages.find((stage) => openingStageIds.includes(stage.id));
+  const openingSettings = openingStage?.settingsJson && typeof openingStage.settingsJson === "object" && !Array.isArray(openingStage.settingsJson)
+    ? openingStage.settingsJson as { mode?: unknown; matchesPerOpponent?: unknown }
+    : null;
+  const drift = findCustomStructureDrift(plan.expected, {
+    opening: openingStage
+      ? {
+          divisionsCount: openingStage.groupsCount,
+          participantsPerGroup: openingStage.participantsPerGroup,
+          roundsCount: openingStage.roundsCount,
+          mode: typeof openingSettings?.mode === "string" ? openingSettings.mode : null,
+          matchesPerOpponent: typeof openingSettings?.matchesPerOpponent === "number" ? openingSettings.matchesPerOpponent : null,
+        }
+      : null,
+    playoffs: stages.filter((stage) => stage.type === StageType.PLAYOFF).map((stage) => {
+      const settings = stage.bracket?.settingsJson && typeof stage.bracket.settingsJson === "object" && !Array.isArray(stage.bracket.settingsJson)
+        ? stage.bracket.settingsJson as { upperEntriesCount?: unknown; lowerEntriesCount?: unknown }
+        : null;
+      return {
+        size: stage.bracket?.size ?? 0,
+        roundsCount: stage.roundsCount,
+        type: stage.bracket?.type ?? PlayoffType.SINGLE,
+        legsCount: stage.bracket?.legsCount ?? 1,
+        thirdPlaceMatch: stage.bracket?.thirdPlaceMatch ?? false,
+        upperEntriesCount: typeof settings?.upperEntriesCount === "number" ? settings.upperEntriesCount : null,
+        lowerEntriesCount: typeof settings?.lowerEntriesCount === "number" ? settings.lowerEntriesCount : null,
+      };
+    }),
+  });
+  const rebuildOpening = plan.rebuildOpening || drift.openingDrift;
+  const rebuildPlayoffs = plan.rebuildPlayoffs || drift.playoffDrift;
+  const playedWhere = {
+    OR: [
+      { status: { in: [...PLAYED_MATCH_STATUSES] } },
+      { player1Score: { not: null } },
+      { player2Score: { not: null } },
+      { lineupPlayers: { some: {} } },
+      { submissions: { some: {} } },
+    ],
+  } satisfies Prisma.MatchWhereInput;
+
+  if (input.nextMaxParticipants < input.previousMaxParticipants) {
+    const occupiedPlaces = await db.tournamentRegistration.count({
+      where: {
+        tournamentId: input.tournamentId,
+        status: { in: [ParticipantStatus.PENDING, ParticipantStatus.CONFIRMED, ParticipantStatus.WAITLIST] },
+      },
+    });
+    if (input.nextMaxParticipants < occupiedPlaces) {
+      throw new TournamentEditConflictError(`Нельзя уменьшить лимит до ${input.nextMaxParticipants}: в турнире уже ${occupiedPlaces} активных заявок и участников.`);
+    }
+  }
+
+  if (rebuildOpening && openingStageIds.length) {
+    const playedOpeningMatch = await db.match.findFirst({
+      // Rebuilding the opening stage recreates the entire derived tournament
+      // structure, including playoffs, so every historical match must be safe.
+      where: { tournamentId: input.tournamentId, ...playedWhere },
+      select: { id: true },
+    });
+    if (playedOpeningMatch) {
+      throw new TournamentEditConflictError("Нельзя изменить формат уже сыгранного этапа. Названия, даты, правила, очки и сортировку менять можно; количество групп, туров и формат матчей — только до первого результата.");
+    }
+  }
+
+  if (rebuildPlayoffs && playoffStageIds.length) {
+    const playedPlayoffMatch = await db.match.findFirst({
+      where: { tournamentId: input.tournamentId, stageId: { in: playoffStageIds }, ...playedWhere },
+      select: { id: true },
+    });
+    if (playedPlayoffMatch) {
+      throw new TournamentEditConflictError("Нельзя перестроить плей-офф: в нём уже есть сыгранные матчи или сохранённые составы. Можно изменить название, даты, правила, очки и сортировку.");
+    }
+  }
+}
+
+export async function synchronizeTournamentAfterEdit(input: {
+  tournamentId: string;
+  previousBlueprintJson: unknown;
+  previousMaxParticipants: number;
+  previousMatchShape: TournamentMatchShape;
+  previousScoringShape: {
+    pointsForWin: number;
+    pointsForDraw: number;
+    pointsForLoss: number;
+    sortRules: readonly string[];
+  };
+  previousStartsAt: Date;
+}) {
+  const tournament = await db.tournament.findUnique({
+    where: { id: input.tournamentId },
+    include: {
+      stages: {
+        include: {
+          groups: { orderBy: { orderIndex: "asc" } },
+          bracket: { include: { matches: { select: { id: true, status: true, player1Score: true, player2Score: true, winnerEntryId: true } } } },
+        },
+        orderBy: { orderIndex: "asc" },
+      },
+    },
+  });
+  if (!tournament) throw new Error("Турнир не найден.");
+  if (tournament.format !== TournamentFormat.CUSTOM) return;
+
+  const previousBlueprint = normalizeFormatBlueprint(input.previousBlueprintJson);
+  const nextBlueprint = normalizeFormatBlueprint(tournament.formatBlueprintJson);
+  const plan = planTournamentEditSynchronization({
+    previousBlueprint,
+    nextBlueprint,
+    previousMaxParticipants: input.previousMaxParticipants,
+    nextMaxParticipants: tournament.maxParticipants,
+    previousMatchShape: input.previousMatchShape,
+    nextMatchShape: tournamentMatchShape(tournament),
+    previousScoringShape: input.previousScoringShape,
+    nextScoringShape: {
+      pointsForWin: tournament.pointsForWin,
+      pointsForDraw: tournament.pointsForDraw,
+      pointsForLoss: tournament.pointsForLoss,
+      sortRules: tournament.sortRules,
+    },
+    previousStartsAt: input.previousStartsAt,
+    nextStartsAt: tournament.startsAt,
+  });
+
+  if (!tournament.stages.length) {
+    await generateTournamentStages(tournament.id);
+    if (tournament.status === TournamentStatus.IN_PROGRESS) {
+      if (plan.expected.opening) await assignParticipantsToGroups(tournament.id, { mode: "auto" });
+      await generateTournamentMatches(tournament.id);
+    }
+    return;
+  }
+  const openingStage = tournament.stages.find((stage) => stage.type === StageType.GROUP_STAGE || stage.type === StageType.LEAGUE);
+  const playoffStages = tournament.stages.filter((stage) => stage.type === StageType.PLAYOFF);
+  const openingSettings = openingStage?.settingsJson && typeof openingStage.settingsJson === "object" && !Array.isArray(openingStage.settingsJson)
+    ? openingStage.settingsJson as { mode?: unknown; matchesPerOpponent?: unknown }
+    : null;
+  const actualStructureDrift = findCustomStructureDrift(plan.expected, {
+    opening: openingStage
+      ? {
+          divisionsCount: openingStage.groupsCount,
+          participantsPerGroup: openingStage.participantsPerGroup,
+          roundsCount: openingStage.roundsCount,
+          mode: typeof openingSettings?.mode === "string" ? openingSettings.mode : null,
+          matchesPerOpponent: typeof openingSettings?.matchesPerOpponent === "number" ? openingSettings.matchesPerOpponent : null,
+        }
+      : null,
+    playoffs: playoffStages.map((stage) => {
+      const settings = stage.bracket?.settingsJson && typeof stage.bracket.settingsJson === "object" && !Array.isArray(stage.bracket.settingsJson)
+        ? stage.bracket.settingsJson as { upperEntriesCount?: unknown; lowerEntriesCount?: unknown }
+        : null;
+      return {
+        size: stage.bracket?.size ?? 0,
+        roundsCount: stage.roundsCount,
+        type: stage.bracket?.type ?? PlayoffType.SINGLE,
+        legsCount: stage.bracket?.legsCount ?? 1,
+        thirdPlaceMatch: stage.bracket?.thirdPlaceMatch ?? false,
+        upperEntriesCount: typeof settings?.upperEntriesCount === "number" ? settings.upperEntriesCount : null,
+        lowerEntriesCount: typeof settings?.lowerEntriesCount === "number" ? settings.lowerEntriesCount : null,
+      };
+    }),
+  });
+  const rebuildOpening = plan.rebuildOpening || actualStructureDrift.openingDrift;
+  const rebuildPlayoffs = plan.rebuildPlayoffs || actualStructureDrift.playoffDrift;
+
+  if (plan.scheduleShiftMs !== 0) {
+    const movableMatches = await db.match.findMany({
+      where: {
+        tournamentId: tournament.id,
+        status: { notIn: [...PLAYED_MATCH_STATUSES] },
+        finishedAt: null,
+        OR: [{ scheduledAt: { not: null } }, { startsAt: { not: null } }, { schedules: { some: {} } }],
+      },
+      include: { schedules: true },
+    });
+    const shift = (value: Date | null) => value ? new Date(value.getTime() + plan.scheduleShiftMs) : null;
+    await db.$transaction(async (tx) => {
+      const movableStages = await tx.tournamentStage.findMany({
+        where: { tournamentId: tournament.id, status: { not: StageStatus.COMPLETED } },
+        select: { id: true, startsAt: true, endsAt: true },
+      });
+      for (const stage of movableStages) {
+        await tx.tournamentStage.update({
+          where: { id: stage.id },
+          data: { startsAt: shift(stage.startsAt), endsAt: shift(stage.endsAt) },
+        });
+      }
+      for (const match of movableMatches) {
+        await tx.match.update({
+          where: { id: match.id },
+          data: { scheduledAt: shift(match.scheduledAt), startsAt: shift(match.startsAt) },
+        });
+        for (const schedule of match.schedules) {
+          await tx.matchSchedule.update({
+            where: { id: schedule.id },
+            data: { startsAt: shift(schedule.startsAt)!, endsAt: shift(schedule.endsAt) },
+          });
+        }
+      }
+      const deadlines = await tx.roundDeadline.findMany({ where: { tournamentId: tournament.id } });
+      for (const deadline of deadlines) {
+        await tx.roundDeadline.update({
+          where: { id: deadline.id },
+          data: { deadlineAt: new Date(deadline.deadlineAt.getTime() + plan.scheduleShiftMs) },
+        });
+      }
+    });
+  }
+
+  if (rebuildOpening) {
+    const playedOpeningMatch = await db.match.findFirst({
+      where: {
+        tournamentId: tournament.id,
+        OR: [
+          { status: { in: [...PLAYED_MATCH_STATUSES] } },
+          { player1Score: { not: null } },
+          { player2Score: { not: null } },
+          { lineupPlayers: { some: {} } },
+          { submissions: { some: {} } },
+        ],
+      },
+      select: { id: true },
+    });
+    if (playedOpeningMatch) {
+      throw new Error("Нельзя изменить структуру уже сыгранного этапа. Названия, даты, правила и очки менять можно; формат матчей, количество групп и туров — только до первого сыгранного матча.");
+    }
+
+    await db.$transaction(async (tx) => {
+      await tx.tournamentRegistration.updateMany({ where: { tournamentId: tournament.id }, data: { groupId: null } });
+      await tx.matchResultSubmission.deleteMany({ where: { match: { tournamentId: tournament.id } } });
+      await tx.matchSchedule.deleteMany({ where: { match: { tournamentId: tournament.id } } });
+      await tx.match.deleteMany({ where: { tournamentId: tournament.id } });
+      await tx.groupStanding.deleteMany({ where: { group: { stage: { tournamentId: tournament.id } } } });
+      await tx.bracketSlot.deleteMany({ where: { bracket: { tournamentId: tournament.id } } });
+      await tx.playoffBracket.deleteMany({ where: { tournamentId: tournament.id } });
+      await tx.tournamentGroup.deleteMany({ where: { stage: { tournamentId: tournament.id } } });
+      await tx.tournamentStage.deleteMany({ where: { tournamentId: tournament.id } });
+    });
+    await generateTournamentStages(tournament.id);
+    if (tournament.status === TournamentStatus.IN_PROGRESS) {
+      if (plan.expected.opening) {
+        await assignParticipantsToGroups(tournament.id, { mode: "auto" });
+      }
+      await generateTournamentMatches(tournament.id);
+    }
+    return;
+  }
+
+  if (openingStage && plan.expected.opening) {
+    const expectedOpening = plan.expected.opening;
+    await db.tournamentStage.update({
+      where: { id: openingStage.id },
+      data: {
+        name: expectedOpening.name,
+        groupsCount: expectedOpening.divisionsCount,
+        participantsPerGroup: expectedOpening.participantsPerGroup,
+        roundsCount: expectedOpening.roundsCount,
+        pointsForWin: tournament.pointsForWin,
+        pointsForDraw: tournament.pointsForDraw,
+        pointsForLoss: tournament.pointsForLoss,
+        sortRules: tournament.sortRules,
+        settingsJson: {
+          mode: expectedOpening.mode,
+          divisionsCount: expectedOpening.divisionsCount,
+          roundsCount: expectedOpening.roundsCount,
+          matchesPerOpponent: expectedOpening.matchesPerOpponent,
+          participantsPerGroup: expectedOpening.participantsPerGroup,
+        },
+      },
+    });
+    await Promise.all(
+      openingStage.groups.map((group, index) =>
+        db.tournamentGroup.update({
+          where: { id: group.id },
+          data: {
+            name: getCustomOpeningGroupName(expectedOpening, index),
+            capacity: expectedOpening.participantsPerGroup,
+          },
+        }),
+      ),
+    );
+  }
+
+  const terminalPlayoffMatch = playoffStages
+    .flatMap((stage) => stage.bracket?.matches ?? [])
+    .find((match) =>
+      PLAYED_MATCH_STATUSES.includes(match.status as (typeof PLAYED_MATCH_STATUSES)[number]) ||
+      match.player1Score !== null ||
+      match.player2Score !== null ||
+      match.winnerEntryId !== null,
+    );
+  if (rebuildPlayoffs && terminalPlayoffMatch) {
+    throw new Error("Нельзя перестроить плей-офф: в нём уже есть сыгранные матчи. Измените только название или завершите текущую сетку.");
+  }
+
+  if (rebuildPlayoffs) {
+    await db.$transaction(async (tx) => {
+      await tx.matchResultSubmission.deleteMany({ where: { match: { playoffBracket: { tournamentId: tournament.id } } } });
+      await tx.matchSchedule.deleteMany({ where: { match: { playoffBracket: { tournamentId: tournament.id } } } });
+      await tx.match.deleteMany({ where: { bracketId: { in: playoffStages.flatMap((stage) => stage.bracket?.id ?? []) } } });
+      await tx.bracketSlot.deleteMany({ where: { bracket: { tournamentId: tournament.id } } });
+      await tx.playoffBracket.deleteMany({ where: { tournamentId: tournament.id } });
+      await tx.tournamentStage.deleteMany({ where: { tournamentId: tournament.id, type: StageType.PLAYOFF } });
+    });
+
+    for (const [index, expected] of plan.expected.playoffs.entries()) {
+      const stage = await db.tournamentStage.create({
+        data: {
+          tournamentId: tournament.id,
+          name: expected.name,
+          type: StageType.PLAYOFF,
+          status: openingStage ? StageStatus.PENDING : getStageStatus(index > 0, tournament.status),
+          orderIndex: (openingStage ? 2 : 1) + index,
+          roundsCount: expected.roundsCount,
+          settingsJson: {
+            mode: openingStage ? "custom-playoff-stage" : "custom-direct-playoff-stage",
+            upperEntriesCount: expected.upperEntriesCount,
+            lowerEntriesCount: expected.lowerEntriesCount,
+            directEntriesCount: expected.directEntriesCount,
+          },
+        },
+      });
+      await db.playoffBracket.create({
+        data: {
+          tournamentId: tournament.id,
+          stageId: stage.id,
+          type: expected.type,
+          size: expected.size,
+          legsCount: expected.legsCount,
+          thirdPlaceMatch: expected.thirdPlaceMatch,
+          settingsJson: openingStage
+            ? { mode: "custom", selections: expected.selections, upperEntriesCount: expected.upperEntriesCount, lowerEntriesCount: expected.lowerEntriesCount }
+            : { mode: "custom-direct" },
+        },
+      });
+    }
+
+    if (openingStage?.status === StageStatus.COMPLETED) {
+      await ensureCustomPlayoffMatchesGenerated(tournament.id);
+      const refreshedOpeningStage = await db.tournamentStage.findUnique({
+        where: { id: openingStage.id },
+        include: {
+          groups: {
+            include: {
+              standings: { include: { participant: true }, orderBy: { rank: "asc" } },
+            },
+            orderBy: { orderIndex: "asc" },
+          },
+        },
+      });
+      const refreshedPlayoffs = await db.tournamentStage.findMany({
+        where: { tournamentId: tournament.id, type: StageType.PLAYOFF },
+        include: { bracket: true },
+        orderBy: { orderIndex: "asc" },
+      });
+      if (refreshedOpeningStage) {
+        for (const playoffStage of refreshedPlayoffs) {
+          if (!playoffStage.bracket) continue;
+          await seedCustomPlayoffBracket({
+            bracketId: playoffStage.bracket.id,
+            groups: refreshedOpeningStage.groups.map((group) => ({
+              id: group.id,
+              orderIndex: group.orderIndex,
+              standings: group.standings.map((standing) => ({
+                participantId: standing.participantId,
+                rank: standing.rank,
+                participant: { userId: standing.participant.userId },
+              })),
+            })),
+          });
+        }
+        await prepareCaptainAssignedTeamMatchSlots(tournament.id);
+      }
+      const firstPlayoff = refreshedPlayoffs[0];
+      if (firstPlayoff) {
+        await db.tournamentStage.update({
+          where: { id: firstPlayoff.id },
+          data: { status: StageStatus.ACTIVE, startsAt: firstPlayoff.startsAt ?? new Date() },
+        });
+      }
+    } else if (!openingStage && tournament.status === TournamentStatus.IN_PROGRESS) {
+      await generateTournamentMatches(tournament.id);
+    }
+  } else {
+    for (const [index, expected] of plan.expected.playoffs.entries()) {
+      const stage = playoffStages[index];
+      if (!stage?.bracket) continue;
+      await db.tournamentStage.update({ where: { id: stage.id }, data: { name: expected.name } });
+      await db.playoffBracket.update({
+        where: { id: stage.bracket.id },
+        data: {
+          settingsJson: expected.directEntriesCount > 0
+            ? { mode: "custom-direct" }
+            : {
+                mode: "custom",
+                selections: expected.selections,
+                upperEntriesCount: expected.upperEntriesCount,
+                lowerEntriesCount: expected.lowerEntriesCount,
+              },
+        },
+      });
+    }
+  }
+
+  if (openingStage && plan.recalculateStandings) {
+    const groups = await recalculateGroupStandings(tournament.id);
+    const protectedPlayoffMatch = await db.match.findFirst({
+      where: {
+        tournamentId: tournament.id,
+        stageId: { in: playoffStages.map((stage) => stage.id) },
+        OR: [
+          { status: { in: [...PLAYED_MATCH_STATUSES] } },
+          { player1Score: { not: null } },
+          { player2Score: { not: null } },
+          { winnerEntryId: { not: null } },
+          { lineupPlayers: { some: {} } },
+          { submissions: { some: {} } },
+        ],
+      },
+      select: { id: true },
+    });
+    if (openingStage.status === StageStatus.COMPLETED && !protectedPlayoffMatch) {
+      for (const playoffStage of playoffStages) {
+        if (!playoffStage.bracket) continue;
+        await seedCustomPlayoffBracket({
+          bracketId: playoffStage.bracket.id,
+          groups: groups.map((group) => ({
+            id: group.id,
+            orderIndex: group.orderIndex,
+            standings: group.standings.map((standing) => ({
+              participantId: standing.participantId,
+              rank: standing.rank,
+              participant: { userId: standing.participant.userId },
+            })),
+          })),
+        });
+      }
+      await prepareCaptainAssignedTeamMatchSlots(tournament.id);
+    }
   }
 }
 

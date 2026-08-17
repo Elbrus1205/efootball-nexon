@@ -4,11 +4,17 @@ import { getRequestBaseUrl } from "@/lib/affiliate";
 import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { parseFormatBlueprintJson } from "@/lib/format-blueprint";
+import { normalizeFormatBlueprint, parseFormatBlueprintJson } from "@/lib/format-blueprint";
 import { createNotificationForAllUsers } from "@/lib/services/notifications";
 import { publishTournamentAnnouncement, syncTournamentBulletin } from "@/lib/services/telegram-publications";
-import { notifyTournamentChanges, resolveAutoRegistrationStatus } from "@/lib/services/tournaments";
-import { invalidateTournamentRules } from "@/lib/tournament-cache";
+import {
+  assertTournamentEditAllowed,
+  notifyTournamentChanges,
+  resolveAutoRegistrationStatus,
+  synchronizeTournamentAfterEdit,
+  TournamentEditConflictError,
+} from "@/lib/services/tournaments";
+import { invalidateTournamentAll } from "@/lib/tournament-cache";
 import { tournamentBuilderSchema } from "@/lib/validators";
 import { parseMoscowDateTimeLocal } from "@/lib/utils";
 
@@ -76,7 +82,8 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     sortRules: formData.getAll("sortRules"),
   });
 
-  const formatBlueprint = parseFormatBlueprintJson(typeof body.formatBlueprintJson === "string" ? body.formatBlueprintJson : "");
+  const submittedBlueprintJson = typeof body.formatBlueprintJson === "string" ? body.formatBlueprintJson : "";
+  const formatBlueprint = parseFormatBlueprintJson(submittedBlueprintJson);
   const startsAt = parseMoscowDateTimeLocal(body.startsAt);
   const status = resolveUpdatedStatus(body.status, startsAt, body.autoOpenRegistration);
   const isTest = body.isTest || session.user.role === UserRole.TRAINEE;
@@ -91,8 +98,79 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       startsAt: true,
       prizePool: true,
       format: true,
+      formatBlueprintJson: true,
+      maxParticipants: true,
+      participantMode: true,
+      rosterSize: true,
+      captainsCreateTeamMatches: true,
+      matchupFormat: true,
+      bestOfWins: true,
+      pointsForWin: true,
+      pointsForDraw: true,
+      pointsForLoss: true,
+      sortRules: true,
     },
   });
+
+  if (!before) {
+    return NextResponse.redirect(new URL("/admin/tournaments?warning=Турнир не найден.", getRequestBaseUrl(request)), 303);
+  }
+
+  if (submittedBlueprintJson.trim() && !formatBlueprint) {
+    const redirectUrl = new URL(`/admin/tournaments/${params.id}/edit`, getRequestBaseUrl(request));
+    redirectUrl.searchParams.set("error", "Конфигурация этапов повреждена. Обновите страницу и повторите изменение.");
+    return NextResponse.redirect(redirectUrl, 303);
+  }
+
+  const nextBlueprint = formatBlueprint ?? normalizeFormatBlueprint(before.formatBlueprintJson);
+
+  try {
+    await assertTournamentEditAllowed({
+      tournamentId: params.id,
+      previousBlueprintJson: before.formatBlueprintJson,
+      nextBlueprint,
+      previousMaxParticipants: before.maxParticipants,
+      nextMaxParticipants: body.maxParticipants,
+      previousMatchShape: {
+        participantMode: before.participantMode,
+        rosterSize: before.rosterSize,
+        captainsCreateTeamMatches: before.captainsCreateTeamMatches,
+        matchupFormat: before.matchupFormat,
+        bestOfWins: before.bestOfWins,
+      },
+      nextMatchShape: {
+        participantMode: body.participantMode,
+        rosterSize: body.participantMode === "SINGLE" ? 1 : body.rosterSize,
+        captainsCreateTeamMatches: body.participantMode === "TEAM" && body.captainsCreateTeamMatches,
+        matchupFormat: body.matchupFormat,
+        bestOfWins: body.matchupFormat === "BEST_OF" ? body.bestOfWins : 1,
+      },
+      previousScoringShape: {
+        pointsForWin: before.pointsForWin,
+        pointsForDraw: before.pointsForDraw,
+        pointsForLoss: before.pointsForLoss,
+        sortRules: before.sortRules,
+      },
+      nextScoringShape: {
+        pointsForWin: body.pointsForWin,
+        pointsForDraw: body.pointsForDraw,
+        pointsForLoss: body.pointsForLoss,
+        sortRules: body.sortRules,
+      },
+      previousStartsAt: before.startsAt,
+      nextStartsAt: startsAt,
+    });
+  } catch (error) {
+    if (!(error instanceof TournamentEditConflictError)) {
+      console.error("Failed to validate tournament edit", error);
+    }
+    const message = error instanceof TournamentEditConflictError
+      ? error.message
+      : "Не удалось проверить изменения турнира. Повторите попытку.";
+    const redirectUrl = new URL(`/admin/tournaments/${params.id}/edit`, getRequestBaseUrl(request));
+    redirectUrl.searchParams.set("error", message);
+    return NextResponse.redirect(redirectUrl, 303);
+  }
 
   const updated = await db.tournament.update({
     where: { id: params.id },
@@ -116,7 +194,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       isTest,
       prizePool: body.prizePool || null,
       format: TournamentFormat.CUSTOM,
-      formatBlueprintJson: formatBlueprint ?? Prisma.DbNull,
+      formatBlueprintJson: nextBlueprint as Prisma.InputJsonValue,
       status,
       registrationClosedAt:
         status === TournamentStatus.DRAFT || status === TournamentStatus.REGISTRATION_OPEN ? null : undefined,
@@ -152,6 +230,80 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       sortRules: body.sortRules,
     },
   });
+
+  try {
+    await synchronizeTournamentAfterEdit({
+      tournamentId: updated.id,
+      previousBlueprintJson: before.formatBlueprintJson,
+      previousMaxParticipants: before.maxParticipants,
+      previousMatchShape: {
+        participantMode: before.participantMode,
+        rosterSize: before.rosterSize,
+        captainsCreateTeamMatches: before.captainsCreateTeamMatches,
+        matchupFormat: before.matchupFormat,
+        bestOfWins: before.bestOfWins,
+      },
+      previousScoringShape: {
+        pointsForWin: before.pointsForWin,
+        pointsForDraw: before.pointsForDraw,
+        pointsForLoss: before.pointsForLoss,
+        sortRules: before.sortRules,
+      },
+      previousStartsAt: before.startsAt,
+    });
+  } catch (error) {
+    console.error("Failed to synchronize tournament edit", error);
+    await db.tournament.update({
+      where: { id: updated.id },
+      data: {
+        formatBlueprintJson: before.formatBlueprintJson ?? Prisma.DbNull,
+        maxParticipants: before.maxParticipants,
+        participantMode: before.participantMode,
+        rosterSize: before.rosterSize,
+        captainsCreateTeamMatches: before.captainsCreateTeamMatches,
+        matchupFormat: before.matchupFormat,
+        bestOfWins: before.bestOfWins,
+        pointsForWin: before.pointsForWin,
+        pointsForDraw: before.pointsForDraw,
+        pointsForLoss: before.pointsForLoss,
+        sortRules: before.sortRules,
+      },
+    });
+    let derivedRollbackFailed = false;
+    try {
+      await synchronizeTournamentAfterEdit({
+        tournamentId: updated.id,
+        previousBlueprintJson: updated.formatBlueprintJson,
+        previousMaxParticipants: updated.maxParticipants,
+        previousMatchShape: {
+          participantMode: updated.participantMode,
+          rosterSize: updated.rosterSize,
+          captainsCreateTeamMatches: updated.captainsCreateTeamMatches,
+          matchupFormat: updated.matchupFormat,
+          bestOfWins: updated.bestOfWins,
+        },
+        previousScoringShape: {
+          pointsForWin: updated.pointsForWin,
+          pointsForDraw: updated.pointsForDraw,
+          pointsForLoss: updated.pointsForLoss,
+          sortRules: updated.sortRules,
+        },
+        previousStartsAt: updated.startsAt,
+      });
+    } catch (rollbackError) {
+      derivedRollbackFailed = true;
+      console.error("Failed to roll back derived tournament structure", rollbackError);
+    }
+    invalidateTournamentAll(updated.id);
+    const redirectUrl = new URL(`/admin/tournaments/${params.id}/edit`, getRequestBaseUrl(request));
+    redirectUrl.searchParams.set(
+      "error",
+      derivedRollbackFailed
+        ? "Не удалось синхронизировать этапы турнира и полностью восстановить их автоматически. Не запускайте матчи и обратитесь к администратору системы."
+        : "Не удалось синхронизировать этапы турнира. Настройки структуры возвращены к предыдущим значениям; остальные поля сохранены.",
+    );
+    return NextResponse.redirect(redirectUrl, 303);
+  }
 
   const isRegistrationOpenAnnouncement =
     before?.status !== TournamentStatus.REGISTRATION_OPEN && updated.status === TournamentStatus.REGISTRATION_OPEN;
@@ -197,7 +349,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     await publication.catch((error) => console.error("Failed to update Telegram tournament publication", error));
   }
 
-  invalidateTournamentRules(updated.id);
+  invalidateTournamentAll(updated.id);
 
   const origin = getRequestBaseUrl(request);
   return NextResponse.redirect(new URL("/admin/tournaments?updated=1", origin), 303);

@@ -64,8 +64,8 @@ test("service hubs bust the caches they mutate", () => {
 
 test("mutation routes bust their domain caches", () => {
   const cases: Array<{ file: string[]; expect: RegExp }> = [
-    // RULES
-    { file: ["src", "app", "api", "admin", "tournaments", "[id]", "update", "route.ts"], expect: /invalidateTournamentRules/ },
+    // Editing can change rules, schedules, participants and the generated stage structure.
+    { file: ["src", "app", "api", "admin", "tournaments", "[id]", "update", "route.ts"], expect: /invalidateTournamentAll/ },
     // SCHEDULE
     { file: ["src", "app", "api", "matches", "[id]", "submit", "route.ts"], expect: /invalidateTournamentSchedule/ },
     { file: ["src", "app", "api", "admin", "schedule", "route.ts"], expect: /invalidateTournamentSchedule/ },
