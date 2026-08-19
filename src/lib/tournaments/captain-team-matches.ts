@@ -1,6 +1,22 @@
 import { MatchStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 
+export function shouldSkipCaptainTeamSeriesAssignment(params: {
+  isCaptainAssignedTeamMatch: boolean;
+  slot: 1 | 2;
+  entryId: string | null;
+  participant1EntryId: string | null;
+  participant2EntryId: string | null;
+}) {
+  if (!params.isCaptainAssignedTeamMatch || !params.entryId) return false;
+
+  const currentEntryId = params.slot === 1
+    ? params.participant1EntryId
+    : params.participant2EntryId;
+
+  return currentEntryId === params.entryId;
+}
+
 /**
  * Turns every team-vs-team fixture into one empty slot per roster player.
  * The first row is reused so existing schedule and bracket references stay valid.

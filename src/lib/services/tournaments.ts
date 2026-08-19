@@ -22,7 +22,10 @@ import { getAvailableClubs } from "@/lib/clubs";
 import { normalizeFormatBlueprint, type FormatBlueprint, type PlayoffSelectionRule } from "@/lib/format-blueprint";
 import { applyTournamentAbsenceRatingPenalty, getPlayerRatings } from "@/lib/ratings";
 import { invalidatePlayerRatings } from "@/lib/ratings-cache";
-import { prepareCaptainAssignedTeamMatchSlots } from "@/lib/tournaments/captain-team-matches";
+import {
+  prepareCaptainAssignedTeamMatchSlots,
+  shouldSkipCaptainTeamSeriesAssignment,
+} from "@/lib/tournaments/captain-team-matches";
 import {
   deriveExpectedCustomStructure,
   findCustomStructureDrift,
@@ -522,13 +525,32 @@ async function assignParticipantToSeries(params: {
       id: true,
       seriesKey: true,
       isPenaltyTiebreak: true,
+      isCaptainAssignedTeamMatch: true,
       player1Id: true,
       player2Id: true,
+      participant1EntryId: true,
+      participant2EntryId: true,
     },
   });
 
   if (!seedMatch) {
     throw new Error("Match not found");
+  }
+
+  // A captain-team fixture has already been expanded into physical player
+  // rows. Its even playoff leg is intentionally reversed, so applying the
+  // same logical bracket slot to every row again would overwrite assignments
+  // and turn the return leg back into the first leg's home/away order.
+  if (
+    shouldSkipCaptainTeamSeriesAssignment({
+      isCaptainAssignedTeamMatch: seedMatch.isCaptainAssignedTeamMatch,
+      slot: params.slot,
+      entryId: params.entryId,
+      participant1EntryId: seedMatch.participant1EntryId,
+      participant2EntryId: seedMatch.participant2EntryId,
+    })
+  ) {
+    return;
   }
 
   const targetMatches = seedMatch.seriesKey
