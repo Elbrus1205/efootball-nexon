@@ -20,12 +20,17 @@ import { tournamentFormatLabel, tournamentStatusLabel } from "@/lib/admin-displa
 import { db } from "@/lib/db";
 import { getAvailableClubs } from "@/lib/clubs";
 import { normalizeFormatBlueprint, type FormatBlueprint, type PlayoffSelectionRule } from "@/lib/format-blueprint";
+import { ensureMatchLineupSnapshot } from "@/lib/services/match-lineups";
 import { applyTournamentAbsenceRatingPenalty, getPlayerRatings } from "@/lib/ratings";
 import { invalidatePlayerRatings } from "@/lib/ratings-cache";
+import { prepareCaptainAssignedTeamMatchSlots } from "@/lib/tournaments/captain-team-matches";
 import {
-  prepareCaptainAssignedTeamMatchSlots,
+  createSupersededCaptainTeamSeriesKey,
+  nextCaptainTeamSeriesAssignmentStatus,
+  planCaptainTeamSeriesProgressReset,
+  resolveCaptainTeamSeriesAssignmentSide,
   shouldSkipCaptainTeamSeriesAssignment,
-} from "@/lib/tournaments/captain-team-matches";
+} from "@/lib/tournaments/captain-team-series-assignment";
 import {
   deriveExpectedCustomStructure,
   findCustomStructureDrift,
@@ -513,23 +518,85 @@ function getMatchWinnerAndLoser(match: {
   return { winnerEntryId, loserId, loserEntryId };
 }
 
-async function assignParticipantToSeries(params: {
+type SeriesParticipantAssignment = {
   matchId: string;
   slot: 1 | 2;
   userId: string | null;
   entryId: string | null;
-}) {
-  const seedMatch = await db.match.findUnique({
+};
+
+type CaptainTeamSeriesMatch = Prisma.MatchGetPayload<{
+  include: {
+    lineupPlayers: { select: { id: true } };
+    submissions: { select: { id: true } };
+  };
+}>;
+
+async function archiveCaptainTeamSeriesMatch(
+  tx: Prisma.TransactionClient,
+  match: CaptainTeamSeriesMatch,
+) {
+  const archived = await tx.match.create({
+    data: {
+      tournamentId: match.tournamentId,
+      stageId: match.stageId,
+      groupId: match.groupId,
+      bracketId: match.bracketId,
+      round: match.round,
+      matchNumber: match.matchNumber,
+      bracket: match.bracket,
+      seriesKey: createSupersededCaptainTeamSeriesKey({
+        seriesKey: match.seriesKey,
+        matchId: match.id,
+      }),
+      legNumber: match.legNumber,
+      isPenaltyTiebreak: match.isPenaltyTiebreak,
+      isCaptainAssignedTeamMatch: match.isCaptainAssignedTeamMatch,
+      isTeamCaptainTiebreak: match.isTeamCaptainTiebreak,
+      seriesWinsRequired: match.seriesWinsRequired,
+      seriesMatchNumber: match.seriesMatchNumber,
+      isThirdPlaceMatch: match.isThirdPlaceMatch,
+      scheduledAt: match.scheduledAt,
+      startsAt: match.startsAt,
+      finishedAt: match.finishedAt,
+      player1Id: match.player1Id,
+      player2Id: match.player2Id,
+      participant1EntryId: match.participant1EntryId,
+      participant2EntryId: match.participant2EntryId,
+      winnerId: match.winnerId,
+      winnerEntryId: match.winnerEntryId,
+      player1Score: match.player1Score,
+      player2Score: match.player2Score,
+      player1PenaltyScore: match.player1PenaltyScore,
+      player2PenaltyScore: match.player2PenaltyScore,
+      status: MatchStatus.CANCELLED,
+      notes: match.notes ? `${match.notes}\nРезультат отменён после изменения сетки.` : "Результат отменён после изменения сетки.",
+      locationLabel: match.locationLabel,
+    },
+    select: { id: true },
+  });
+
+  await Promise.all([
+    tx.matchLineupPlayer.updateMany({ where: { matchId: match.id }, data: { matchId: archived.id } }),
+    tx.matchResultSubmission.updateMany({ where: { matchId: match.id }, data: { matchId: archived.id } }),
+  ]);
+}
+
+async function assignParticipantToSeriesInTransaction(
+  tx: Prisma.TransactionClient,
+  params: SeriesParticipantAssignment,
+  matchReadyIds: Set<string>,
+  visitedAssignments: Set<string>,
+) {
+  const visitKey = `${params.matchId}:${params.slot}`;
+  if (visitedAssignments.has(visitKey)) return;
+  visitedAssignments.add(visitKey);
+
+  const seedMatch = await tx.match.findUnique({
     where: { id: params.matchId },
-    select: {
-      id: true,
-      seriesKey: true,
-      isPenaltyTiebreak: true,
-      isCaptainAssignedTeamMatch: true,
-      player1Id: true,
-      player2Id: true,
-      participant1EntryId: true,
-      participant2EntryId: true,
+    include: {
+      lineupPlayers: { select: { id: true }, take: 1 },
+      submissions: { select: { id: true }, take: 1 },
     },
   });
 
@@ -554,39 +621,110 @@ async function assignParticipantToSeries(params: {
   }
 
   const targetMatches = seedMatch.seriesKey
-    ? await db.match.findMany({
+    ? await tx.match.findMany({
         where: {
           seriesKey: seedMatch.seriesKey,
           isPenaltyTiebreak: false,
         },
-        select: { id: true, player1Id: true, player2Id: true, status: true },
+        include: {
+          lineupPlayers: { select: { id: true }, take: 1 },
+          submissions: { select: { id: true }, take: 1 },
+        },
       })
-    : [{ id: seedMatch.id, player1Id: seedMatch.player1Id, player2Id: seedMatch.player2Id, status: MatchStatus.PENDING }];
+    : [seedMatch];
+
+  const previousEntryId = params.slot === 1
+    ? seedMatch.participant1EntryId
+    : seedMatch.participant2EntryId;
+
+  const seriesProgressPlan = planCaptainTeamSeriesProgressReset({
+    previousEntryId,
+    nextEntryId: params.entryId,
+    player1Score: seedMatch.player1Score,
+    player2Score: seedMatch.player2Score,
+    winnerEntryId: seedMatch.winnerEntryId,
+    hasLineupSnapshot: seedMatch.lineupPlayers.length > 0,
+    hasResultSubmission: seedMatch.submissions.length > 0,
+  });
+  const resetsSeriesProgress = seriesProgressPlan.resetsProgress;
+
+  if (resetsSeriesProgress) {
+    const downstreamSlots = new Map<string, SeriesParticipantAssignment>();
+    for (const targetMatch of targetMatches) {
+      if (targetMatch.nextMatchId && targetMatch.nextMatchSlot) {
+        downstreamSlots.set(`winner:${targetMatch.nextMatchId}:${targetMatch.nextMatchSlot}`, {
+          matchId: targetMatch.nextMatchId,
+          slot: targetMatch.nextMatchSlot as 1 | 2,
+          userId: null,
+          entryId: null,
+        });
+      }
+      if (targetMatch.loserNextMatchId && targetMatch.loserNextMatchSlot) {
+        downstreamSlots.set(`loser:${targetMatch.loserNextMatchId}:${targetMatch.loserNextMatchSlot}`, {
+          matchId: targetMatch.loserNextMatchId,
+          slot: targetMatch.loserNextMatchSlot as 1 | 2,
+          userId: null,
+          entryId: null,
+        });
+      }
+    }
+    for (const downstream of downstreamSlots.values()) {
+      await assignParticipantToSeriesInTransaction(tx, downstream, matchReadyIds, visitedAssignments);
+    }
+  }
 
   for (const targetMatch of targetMatches) {
-    const nextPlayer1Id = params.slot === 1 ? params.userId : targetMatch.player1Id;
-    const nextPlayer2Id = params.slot === 2 ? params.userId : targetMatch.player2Id;
-    const nextStatus =
-      nextPlayer1Id && nextPlayer2Id && targetMatch.status === MatchStatus.PENDING
-        ? MatchStatus.READY
-        : nextPlayer1Id && nextPlayer2Id && targetMatch.status === MatchStatus.SCHEDULED
-          ? MatchStatus.SCHEDULED
-          : (!nextPlayer1Id || !nextPlayer2Id) && (targetMatch.status === MatchStatus.READY || targetMatch.status === MatchStatus.SCHEDULED)
-            ? MatchStatus.PENDING
-            : targetMatch.status;
+    const captainTeamSlot = targetMatch.isCaptainAssignedTeamMatch
+      ? resolveCaptainTeamSeriesAssignmentSide({
+          previousEntryId,
+          participant1EntryId: targetMatch.participant1EntryId,
+          participant2EntryId: targetMatch.participant2EntryId,
+        })
+      : null;
+    if (targetMatch.isCaptainAssignedTeamMatch && !captainTeamSlot) continue;
 
-    await db.match.update({
+    const targetSlot = captainTeamSlot ?? params.slot;
+    const targetProgressPlan = planCaptainTeamSeriesProgressReset({
+      previousEntryId,
+      nextEntryId: params.entryId,
+      player1Score: targetMatch.player1Score,
+      player2Score: targetMatch.player2Score,
+      winnerEntryId: targetMatch.winnerEntryId,
+      hasLineupSnapshot: targetMatch.lineupPlayers.length > 0,
+      hasResultSubmission: targetMatch.submissions.length > 0,
+    });
+    if (targetProgressPlan.archivesHistory) {
+      await archiveCaptainTeamSeriesMatch(tx, targetMatch);
+    }
+
+    // Expanded rows contain physical player assignments. When a bracket edit
+    // replaces a club, clear the old club's players instead of copying the new
+    // captain into every row; the new roster can then be assigned normally.
+    const assignedUserId = targetMatch.isCaptainAssignedTeamMatch ? null : params.userId;
+    const nextPlayer1Id = targetSlot === 1 ? assignedUserId : targetMatch.player1Id;
+    const nextPlayer2Id = targetSlot === 2 ? assignedUserId : targetMatch.player2Id;
+    const nextStatus = nextCaptainTeamSeriesAssignmentStatus({
+      currentStatus: targetMatch.status,
+      resetsProgress: resetsSeriesProgress,
+      isTeamCaptainTiebreak: targetMatch.isTeamCaptainTiebreak,
+      hasPlayer1: Boolean(nextPlayer1Id),
+      hasPlayer2: Boolean(nextPlayer2Id),
+    });
+
+    await tx.match.update({
       where: { id: targetMatch.id },
       data: {
-        ...(params.slot === 1
-          ? { player1Id: params.userId, participant1EntryId: params.entryId }
-          : { player2Id: params.userId, participant2EntryId: params.entryId }),
-        ...(!nextPlayer1Id || !nextPlayer2Id
+        ...(targetSlot === 1
+          ? { player1Id: assignedUserId, participant1EntryId: params.entryId }
+          : { player2Id: assignedUserId, participant2EntryId: params.entryId }),
+        ...(resetsSeriesProgress || !nextPlayer1Id || !nextPlayer2Id
           ? {
               winnerId: null,
               winnerEntryId: null,
               player1Score: null,
               player2Score: null,
+              player1PenaltyScore: null,
+              player2PenaltyScore: null,
               finishedAt: null,
               notes: null,
             }
@@ -596,9 +734,17 @@ async function assignParticipantToSeries(params: {
     });
 
     if (nextPlayer1Id && nextPlayer2Id) {
-      await notifyMatchReady(targetMatch.id);
+      matchReadyIds.add(targetMatch.id);
     }
   }
+}
+
+async function assignParticipantToSeries(params: SeriesParticipantAssignment) {
+  const matchReadyIds = new Set<string>();
+  await db.$transaction(async (tx) => {
+    await assignParticipantToSeriesInTransaction(tx, params, matchReadyIds, new Set<string>());
+  });
+  await Promise.all(Array.from(matchReadyIds, (matchId) => notifyMatchReady(matchId)));
 }
 
 async function advanceResolvedWinnerForMatch(matchId: string, winnerId: string, loserId?: string | null, winnerEntryId?: string | null, loserEntryId?: string | null) {
@@ -4939,6 +5085,32 @@ async function resolveCaptainTeamPlayoffSeriesIfCompleted(match: {
         participant2EntryId: resolution.participant2EntryId,
         legNumber: lastLegNumber + 1,
       });
+    } else if (existingTiebreak.status === MatchStatus.CANCELLED) {
+      const captainIds = await getTeamCaptainIds([
+        resolution.participant1EntryId,
+        resolution.participant2EntryId,
+      ]);
+      const player1Id = captainIds.get(resolution.participant1EntryId) ?? null;
+      const player2Id = captainIds.get(resolution.participant2EntryId) ?? null;
+      await db.match.update({
+        where: { id: existingTiebreak.id },
+        data: {
+          participant1EntryId: resolution.participant1EntryId,
+          participant2EntryId: resolution.participant2EntryId,
+          player1Id,
+          player2Id,
+          player1Score: null,
+          player2Score: null,
+          player1PenaltyScore: null,
+          player2PenaltyScore: null,
+          winnerId: null,
+          winnerEntryId: null,
+          finishedAt: null,
+          status: player1Id && player2Id ? MatchStatus.READY : MatchStatus.PENDING,
+          notes: TEAM_CAPTAIN_TIEBREAK_NOTE,
+        },
+      });
+      if (player1Id && player2Id) await notifyMatchReady(existingTiebreak.id);
     }
     return true;
   }
@@ -5165,6 +5337,9 @@ export async function resolveConfirmedMatch(matchId: string) {
     },
   });
   if (!match) throw new Error("Match not found");
+  // Every confirmation path (including admin random scores and moderation)
+  // reaches this resolver, so keep the historical lineup invariant here too.
+  await ensureMatchLineupSnapshot(match.id);
   invalidatePlayerRatings();
   // This resolves a confirmed match: it advances winners (schedule) and can
   // reshape the bracket (structure). Status changes go through

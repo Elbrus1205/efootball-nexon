@@ -40,8 +40,10 @@ test("tournament page reads from the cached slices, not a live findUnique", () =
   assert.match(page, /getCachedTournamentStructure\(params\.id\)/);
   // noStore would defeat the per-domain cache — it must be gone.
   assert.doesNotMatch(page, /noStore\(\)/);
-  // The cached matches array is shared; it must be copied before the in-place sort.
-  assert.match(page, /\[\.\.\.tournament\.matches\]\.sort\(/);
+  // The cached matches array is shared; filter archive rows, then copy before the in-place sort.
+  assert.match(page, /activePublicMatches = tournament\.matches\.filter\(/);
+  assert.match(page, /isSupersededCaptainTeamSeriesArchive/);
+  assert.match(page, /\[\.\.\.activePublicMatches\]\.sort\(/);
 });
 
 test("service hubs bust the caches they mutate", () => {

@@ -44,6 +44,7 @@ import {
   compareCaptainAssignedTeamMatches,
   isCaptainTeamMatchVisibleToUser,
 } from "@/lib/tournaments/captain-team-match-presentation";
+import { isSupersededCaptainTeamSeriesArchive } from "@/lib/tournaments/captain-team-series-assignment";
 import { cn, formatDate } from "@/lib/utils";
 import {
   buildLeagueTable as buildPublicLeagueTable,
@@ -704,8 +705,9 @@ export default async function TournamentDetailsPage(
           })),
     );
 
+  const activePublicMatches = tournament.matches.filter((match) => !isSupersededCaptainTeamSeriesArchive(match));
   const myMatchIds = currentUserId
-    ? tournament.matches
+    ? activePublicMatches
         .filter(isCurrentUserMatch)
         .map((m) => m.id)
     : [];
@@ -830,7 +832,7 @@ export default async function TournamentDetailsPage(
   }
 
   // Copy before sort: tournament.matches is the shared cached array (mutating it in place would corrupt the cache).
-  const visibleMatches = [...tournament.matches].sort(
+  const visibleMatches = [...activePublicMatches].sort(
     (a, b) =>
       (a.stage?.orderIndex ?? 999) - (b.stage?.orderIndex ?? 999) ||
       (a.group?.orderIndex ?? 0) - (b.group?.orderIndex ?? 0) ||
@@ -881,8 +883,8 @@ export default async function TournamentDetailsPage(
     });
 
   const leagueMatches = leagueStage
-    ? tournament.matches.filter((match) => match.stageId === leagueStage.id)
-    : tournament.matches.filter((match) => !match.groupId && !match.bracketId);
+    ? activePublicMatches.filter((match) => match.stageId === leagueStage.id)
+    : activePublicMatches.filter((match) => !match.groupId && !match.bracketId);
 
   const leagueTable =
     tournament.format === TournamentFormat.ROUND_ROBIN || tournament.format === TournamentFormat.LEAGUE
@@ -1136,7 +1138,7 @@ export default async function TournamentDetailsPage(
               {tournament.stages.map((stage) => {
                 if (stage.type === StageType.PLAYOFF) {
                   return (
-                    <BracketView key={stage.id} matches={tournament.matches.filter((match) => match.stageId === stage.id)} clubsByUserId={participantClubMap} currentUserId={currentUserId} />
+                    <BracketView key={stage.id} matches={activePublicMatches.filter((match) => match.stageId === stage.id)} clubsByUserId={participantClubMap} currentUserId={currentUserId} />
                   );
                 }
 
@@ -1145,7 +1147,7 @@ export default async function TournamentDetailsPage(
                   return (
                     <div key={stage.id} className="space-y-4">
                       {orderedGroups.map((group) => {
-                    const groupMatches = tournament.matches.filter((match) => match.groupId === group.id);
+                    const groupMatches = activePublicMatches.filter((match) => match.groupId === group.id);
                     const groupMembers = participantsByGroupId.get(group.id) ?? [];
                     const activeMembers = groupMembers.filter((member) => member.status === ParticipantStatus.CONFIRMED);
                     const groupRows = buildPublicLeagueTable(groupMembers, groupMatches, clubsBySlug, stage).map((row) => ({ ...row, isCurrentTeam: row.id === currentUserId }));
@@ -1184,7 +1186,7 @@ export default async function TournamentDetailsPage(
                   );
                 }
 
-                const stageMatches = tournament.matches.filter((match) => match.stageId === stage.id);
+                const stageMatches = activePublicMatches.filter((match) => match.stageId === stage.id);
                 const stageTable = (stage.type === StageType.LEAGUE ? buildPublicLeagueTable(tournament.participants, stageMatches, clubsBySlug, stage) : leagueTable)
                   .map((row) => ({ ...row, isCurrentTeam: row.id === currentUserId }));
                 return (
