@@ -7,6 +7,40 @@ const TERMINAL_STATUSES = new Set<MatchStatus>([
   MatchStatus.CANCELLED,
 ]);
 
+type CaptainTeamAssignmentNotificationMatch = {
+  isCaptainAssignedTeamMatch: boolean;
+  isTeamCaptainTiebreak: boolean;
+  status: MatchStatus;
+  player1Id: string | null;
+  player2Id: string | null;
+  participant1Entry?: {
+    rosterMembers: Array<{ userId: string }>;
+  } | null;
+};
+
+export function collectCaptainTeamAssignmentCaptainIds(
+  matches: readonly CaptainTeamAssignmentNotificationMatch[],
+) {
+  const captainIds = new Set<string>();
+
+  for (const match of matches) {
+    if (
+      !match.isCaptainAssignedTeamMatch ||
+      match.isTeamCaptainTiebreak ||
+      match.status !== MatchStatus.PENDING ||
+      (match.player1Id && match.player2Id)
+    ) {
+      continue;
+    }
+
+    for (const member of match.participant1Entry?.rosterMembers ?? []) {
+      captainIds.add(member.userId);
+    }
+  }
+
+  return [...captainIds];
+}
+
 export type CaptainTeamRoundMatch = {
   round: number;
   status: MatchStatus;
