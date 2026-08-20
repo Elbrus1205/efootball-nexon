@@ -3,6 +3,7 @@ import test from "node:test";
 import { MatchStatus } from "@prisma/client";
 import {
   buildRandomCaptainTeamAssignments,
+  collectCaptainTeamAssignmentCaptainIds,
   resolveActiveCaptainTeamRound,
 } from "./captain-team-auto-assignment";
 
@@ -117,4 +118,42 @@ test("random captain assignments repair a half-filled slot after a roster replac
       previousPlayer2Id: null,
     },
   ]);
+});
+
+test("round-start notifications target captains with open home slots", () => {
+  assert.deepEqual(
+    collectCaptainTeamAssignmentCaptainIds([
+      {
+        isCaptainAssignedTeamMatch: true,
+        isTeamCaptainTiebreak: false,
+        status: MatchStatus.PENDING,
+        player1Id: null,
+        player2Id: null,
+        participant1Entry: {
+          rosterMembers: [{ userId: "captain-a" }],
+        },
+      },
+      {
+        isCaptainAssignedTeamMatch: true,
+        isTeamCaptainTiebreak: false,
+        status: MatchStatus.READY,
+        player1Id: "home-1",
+        player2Id: "away-1",
+        participant1Entry: {
+          rosterMembers: [{ userId: "captain-b" }],
+        },
+      },
+      {
+        isCaptainAssignedTeamMatch: false,
+        isTeamCaptainTiebreak: false,
+        status: MatchStatus.PENDING,
+        player1Id: null,
+        player2Id: null,
+        participant1Entry: {
+          rosterMembers: [{ userId: "captain-c" }],
+        },
+      },
+    ]),
+    ["captain-a"],
+  );
 });

@@ -40,6 +40,7 @@ import {
 } from "@/lib/tournaments/tournament-edit-sync";
 import {
   buildRandomCaptainTeamAssignments,
+  collectCaptainTeamAssignmentCaptainIds,
   resolveActiveCaptainTeamRound,
 } from "@/lib/tournaments/captain-team-auto-assignment";
 import { resolveCaptainTeamPlayoffAggregate } from "@/lib/tournaments/captain-team-playoff";
@@ -1097,8 +1098,6 @@ export async function notifyActiveTournamentRoundsStarted(tournamentId: string) 
           matches: {
             where: {
               isPenaltyTiebreak: false,
-              player1Id: { not: null },
-              player2Id: { not: null },
             },
             select: {
               id: true,
@@ -1106,6 +1105,19 @@ export async function notifyActiveTournamentRoundsStarted(tournamentId: string) 
               status: true,
               player1Id: true,
               player2Id: true,
+              isCaptainAssignedTeamMatch: true,
+              isTeamCaptainTiebreak: true,
+              participant1Entry: {
+                select: {
+                  rosterMembers: {
+                    where: {
+                      isCaptain: true,
+                      status: TeamInviteStatus.ACCEPTED,
+                    },
+                    select: { userId: true },
+                  },
+                },
+              },
             },
           },
         },
@@ -1137,25 +1149,39 @@ export async function notifyActiveTournamentRoundsStarted(tournamentId: string) 
     const roundMatches = stage.matches.filter((match) => match.round === currentRound);
     const activeRoundMatches = roundMatches.filter((match) => !TERMINAL_MATCH_STATUSES.has(match.status));
     const userIds = activeRoundMatches.flatMap((match) => [match.player1Id, match.player2Id]).filter(Boolean) as string[];
+    const captainIds = collectCaptainTeamAssignmentCaptainIds(activeRoundMatches);
 
-    if (!userIds.length) continue;
+    if (userIds.length) {
+      await createNotificationsForUsers({
+        userIds,
+        title: buildRoundStartTitle(stage.type, currentRound),
+        body: buildRoundStartBody({
+          tournamentTitle: tournament.title,
+          stageName: stage.name,
+          stageType: stage.type,
+          round: currentRound,
+          matchesCount: activeRoundMatches.length,
+          deadlineAt,
+        }),
+        type: NotificationType.TOURNAMENT,
+        link: `/tournaments/${tournament.id}`,
+        dedupeKey: `tournament-round-start:${tournament.id}:${stage.id}:${currentRound}`,
+        dedupeWithinHours: 24 * 365,
+      });
+    }
 
-    await createNotificationsForUsers({
-      userIds,
-      title: buildRoundStartTitle(stage.type, currentRound),
-      body: buildRoundStartBody({
-        tournamentTitle: tournament.title,
-        stageName: stage.name,
-        stageType: stage.type,
-        round: currentRound,
-        matchesCount: activeRoundMatches.length,
-        deadlineAt,
-      }),
-      type: NotificationType.TOURNAMENT,
-      link: `/tournaments/${tournament.id}`,
-      dedupeKey: `tournament-round-start:${tournament.id}:${stage.id}:${currentRound}`,
-      dedupeWithinHours: 24 * 365,
-    });
+    if (captainIds.length) {
+      const unit = roundUnitForStage(stage.type).toLowerCase();
+      await createNotificationsForUsers({
+        userIds: captainIds,
+        title: "Нужно выбрать пары игроков",
+        body: `${tournament.title}: ${stage.name}, ${unit} ${currentRound} начался. Выберите пары игроков для незаполненных матчей до дедлайна ${formatScheduleDate(deadlineAt)} МСК.`,
+        type: NotificationType.MATCH,
+        link: `/tournaments/${tournament.id}?tab=my-matches`,
+        dedupeKey: `captain-team-round-start:${tournament.id}:${stage.id}:${currentRound}`,
+        dedupeWithinHours: 24 * 365,
+      });
+    }
   }
 }
 
