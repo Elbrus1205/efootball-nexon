@@ -16,7 +16,7 @@ export const TELEGRAM_AI_SYSTEM_PROMPT = `Ты официальный помощ
 {{context}}`;
 
 const WILLOW_DEFAULT_BASE_URL = "https://api.willowapi.digital/v1";
-const WILLOW_DEFAULT_MODEL = "gpt-4o-mini";
+const WILLOW_DEFAULT_MODEL = "gpt-5.6-luna";
 const TELEGRAM_TEXT_LIMIT = 4096;
 
 export type TelegramAiMessage = {
