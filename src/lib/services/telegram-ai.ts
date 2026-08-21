@@ -1,4 +1,6 @@
-import { sendTelegramMessage, type TelegramSentMessage } from "@/lib/telegram-bot";
+import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
+import { sendTelegramMessage, type TelegramInlineKeyboardMarkup, type TelegramSentMessage } from "@/lib/telegram-bot";
+import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
 
 export const TELEGRAM_AI_SYSTEM_PROMPT = `Ты официальный помощник платформы eFootball Nexon в Telegram.
 
@@ -34,6 +36,7 @@ export type TelegramAiMessage = {
 export type TelegramAiContext = {
   user: { name: string | null; telegramUsername: string | null } | null;
   tournament: {
+    id: string;
     title: string;
     rules: string;
     status: string;
@@ -41,7 +44,16 @@ export type TelegramAiContext = {
     registrationStartsAt: string | null;
     registrationEndsAt: string | null;
   } | null;
+  upcomingTournaments: Array<{
+    id: string;
+    title: string;
+    status: string;
+    startsAt: string;
+    registrationEndsAt: string;
+  }>;
   personalMatch: {
+    id: string;
+    tournamentId: string;
     tournamentTitle: string;
     stage: string;
     round: number;
@@ -170,12 +182,14 @@ export async function handleTelegramAiMessage(params: {
   if (!answer) return { handled: false } as const;
 
   const send = params.send ?? sendTelegramMessage;
+  const replyMarkup = buildTelegramAiReplyMarkup(params.context);
   for (const [index, chunk] of splitTelegramText(answer).entries()) {
     await send({
       chatId,
       text: chunk,
       parseMode: null,
       disableWebPagePreview: true,
+      ...(index === 0 && replyMarkup ? { replyMarkup } : {}),
       ...(index === 0 && messageId ? { replyParameters: { messageId, allowSendingWithoutReply: true } } : {}),
       ...(params.message.message_thread_id !== undefined ? { messageThreadId: params.message.message_thread_id } : {}),
     });
@@ -184,5 +198,39 @@ export async function handleTelegramAiMessage(params: {
 }
 
 export function buildEmptyTelegramAiContext(): TelegramAiContext {
-  return { user: null, tournament: null, personalMatch: null };
+  return { user: null, tournament: null, upcomingTournaments: [], personalMatch: null };
+}
+
+export function buildTelegramAiReplyMarkup(context: TelegramAiContext): TelegramInlineKeyboardMarkup | undefined {
+  const siteBaseUrl = getConfiguredSiteBaseUrl();
+  const buttons: Array<{ text: string; url: string; row: number }> = [];
+
+  if (context.personalMatch) {
+    buttons.push({
+      text: "Мой матч",
+      url: new URL(`/tournaments/${context.personalMatch.tournamentId}?tab=my-matches`, siteBaseUrl).toString(),
+      row: 1,
+    });
+  }
+
+  if (context.tournament) {
+    buttons.push({
+      text: "Открыть турнир",
+      url: new URL(`/tournaments/${context.tournament.id}`, siteBaseUrl).toString(),
+      row: 2,
+    });
+    buttons.push({
+      text: "Регламент",
+      url: new URL(`/tournaments/${context.tournament.id}?tab=rules`, siteBaseUrl).toString(),
+      row: 2,
+    });
+  } else if (context.upcomingTournaments.length > 0) {
+    buttons.push({
+      text: "Ближайшие турниры",
+      url: new URL("/tournaments", siteBaseUrl).toString(),
+      row: 1,
+    });
+  }
+
+  return buildTelegramInlineKeyboard(buttons.map((button) => ({ ...button, callbackData: undefined })));
 }

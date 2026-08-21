@@ -15,6 +15,7 @@ import { handleTelegramCallbackAction } from "@/lib/services/telegram-callbacks"
 import {
   buildEmptyTelegramAiContext,
   handleTelegramAiMessage,
+  isTelegramAiRelevantMessage,
   type TelegramAiContext,
   type TelegramAiMessage,
 } from "@/lib/services/telegram-ai";
@@ -231,7 +232,27 @@ async function resolveCommandContext(message: TelegramWebhookMessage) {
 
 async function buildTelegramAiContext(message: TelegramWebhookMessage): Promise<TelegramAiContext> {
   const context = await resolveCommandContext(message);
-  if (!context.user && !context.tournament) return buildEmptyTelegramAiContext();
+  const upcomingTournaments = await db.tournament.findMany({
+    where: {
+      isTest: false,
+      status: { in: [TournamentStatus.REGISTRATION_OPEN, TournamentStatus.AWAITING_START, TournamentStatus.IN_PROGRESS] },
+    },
+    orderBy: { startsAt: "asc" },
+    take: 5,
+    select: { id: true, title: true, status: true, startsAt: true, registrationEndsAt: true },
+  });
+  if (!context.user && !context.tournament) {
+    return {
+      ...buildEmptyTelegramAiContext(),
+      upcomingTournaments: upcomingTournaments.map((tournament) => ({
+        id: tournament.id,
+        title: tournament.title,
+        status: tournament.status,
+        startsAt: tournament.startsAt.toISOString(),
+        registrationEndsAt: tournament.registrationEndsAt.toISOString(),
+      })),
+    };
+  }
 
   const user = context.user && telegramUserId(message)
     ? await db.user.findUnique({
@@ -263,6 +284,8 @@ async function buildTelegramAiContext(message: TelegramWebhookMessage): Promise<
         ? await db.roundDeadline.findUnique({ where: { stageId_round: { stageId: match.stageId, round: match.round } }, select: { deadlineAt: true } })
         : null;
       personalMatch = {
+        id: match.id,
+        tournamentId: match.tournamentId,
         tournamentTitle: match.tournament.title,
         stage: match.stage?.name || "Основной этап",
         round: match.round,
@@ -278,6 +301,7 @@ async function buildTelegramAiContext(message: TelegramWebhookMessage): Promise<
     user: user ? { name: user.name?.trim() || null, telegramUsername: user.telegramUsername?.trim() || null } : null,
     tournament: context.tournament
       ? {
+          id: context.tournament.id,
           title: context.tournament.title,
           rules: context.tournament.rules,
           status: context.tournament.status,
@@ -286,6 +310,13 @@ async function buildTelegramAiContext(message: TelegramWebhookMessage): Promise<
           registrationEndsAt: context.tournament.registrationEndsAt?.toISOString() ?? null,
         }
       : null,
+    upcomingTournaments: upcomingTournaments.map((tournament) => ({
+      id: tournament.id,
+      title: tournament.title,
+      status: tournament.status,
+      startsAt: tournament.startsAt.toISOString(),
+      registrationEndsAt: tournament.registrationEndsAt.toISOString(),
+    })),
     personalMatch,
   };
 }
@@ -450,7 +481,7 @@ export async function POST(request: NextRequest) {
     const incomingMessage = update.message ?? update.channel_post;
     if (incomingMessage) {
       await handleCommand(incomingMessage);
-      if (!commandName(incomingMessage.text)) {
+      if (!commandName(incomingMessage.text) && isTelegramAiRelevantMessage(incomingMessage, process.env.TELEGRAM_BOT_USERNAME ?? process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME)) {
         const context = await buildTelegramAiContext(incomingMessage).catch((error) => {
           console.error("Failed to build Telegram AI context", error);
           return buildEmptyTelegramAiContext();
