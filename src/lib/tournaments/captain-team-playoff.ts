@@ -47,7 +47,11 @@ export function resolveCaptainTeamPlayoffAggregate(
   matches: readonly CaptainTeamPlayoffMatch[],
 ): CaptainTeamPlayoffResolution {
   const baseMatches = matches.filter(
-    (match) => match.isCaptainAssignedTeamMatch && !match.isTeamCaptainTiebreak && !match.isPenaltyTiebreak,
+    (match) =>
+      match.isCaptainAssignedTeamMatch &&
+      !match.isTeamCaptainTiebreak &&
+      !match.isPenaltyTiebreak &&
+      match.status !== "CANCELLED",
   );
   const referenceMatch = baseMatches.find(
     (match) => match.participant1EntryId && match.participant2EntryId,

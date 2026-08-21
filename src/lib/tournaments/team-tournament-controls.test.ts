@@ -126,14 +126,12 @@ test("new captain playoff rounds notify captains with open pairings", () => {
   assert.match(reminderServiceSource, /tab=my-matches/);
 });
 
-fix/team-playoff-idempotent-advancement
 test("captain team slot expansion is serialized and locks source fixtures", () => {
   assert.match(captainTeamMatchesSource, /return db\.\$transaction\(async \(tx\) =>/);
   assert.match(captainTeamMatchesSource, /FOR UPDATE/);
   assert.match(captainTeamMatchesSource, /"isCaptainAssignedTeamMatch" = false/);
 });
 
-main
 test("started league and group structures hide unfilled participant places", () => {
   assert.match(
     tournamentPageSource,
