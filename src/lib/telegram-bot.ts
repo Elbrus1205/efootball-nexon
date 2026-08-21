@@ -24,19 +24,29 @@ type TelegramErrorPayload = {
   ok?: boolean;
   error_code?: number;
   description?: string;
+  parameters?: {
+    retry_after?: number;
+  };
 };
 
 export class TelegramApiError extends Error {
   readonly status: number;
   readonly errorCode?: number;
   readonly description?: string;
+  readonly retryAfterSeconds?: number;
 
-  constructor(message: string, params: { status: number; errorCode?: number; description?: string }) {
+  constructor(message: string, params: {
+    status: number;
+    errorCode?: number;
+    description?: string;
+    retryAfterSeconds?: number;
+  }) {
     super(message);
     this.name = "TelegramApiError";
     this.status = params.status;
     this.errorCode = params.errorCode;
     this.description = params.description;
+    this.retryAfterSeconds = params.retryAfterSeconds;
   }
 }
 
@@ -69,6 +79,9 @@ async function readTelegramError(response: Response, fallback: string) {
           ok: typeof parsed.ok === "boolean" ? parsed.ok : undefined,
           error_code: typeof parsed.error_code === "number" ? parsed.error_code : undefined,
           description: typeof parsed.description === "string" ? parsed.description : undefined,
+          parameters: isRecord(parsed.parameters) && typeof parsed.parameters.retry_after === "number"
+            ? { retry_after: parsed.parameters.retry_after }
+            : undefined,
         };
       }
     } catch {
@@ -81,7 +94,16 @@ async function readTelegramError(response: Response, fallback: string) {
     status: response.status,
     errorCode: payload?.error_code,
     description,
+    retryAfterSeconds: payload?.parameters?.retry_after,
   });
+}
+
+export function getTelegramRetryAfterMs(error: unknown) {
+  if (!(error instanceof TelegramApiError) || error.retryAfterSeconds === undefined) {
+    return undefined;
+  }
+
+  return Math.max(0, error.retryAfterSeconds * 1_000);
 }
 
 export function isTelegramRecipientUnavailableError(error: unknown) {
@@ -120,12 +142,18 @@ async function callTelegramApi<T>(method: string, init?: RequestInit) {
     ...init,
     signal: init?.signal ?? AbortSignal.timeout(8_000),
   });
-  const payload = (await response.json().catch(() => null)) as { ok?: boolean; result?: T; description?: string } | null;
+  const payload = (await response.json().catch(() => null)) as {
+    ok?: boolean;
+    result?: T;
+    description?: string;
+    parameters?: { retry_after?: number };
+  } | null;
 
   if (!response.ok || !payload?.ok) {
     throw new TelegramApiError(payload?.description || `Telegram API ${method} failed`, {
       status: response.status,
       description: payload?.description,
+      retryAfterSeconds: payload?.parameters?.retry_after,
     });
   }
 
@@ -334,6 +362,7 @@ export async function sendTelegramMessage(params: SendTelegramMessageParams): Pr
     result?: TelegramSentMessage;
     description?: string;
     error_code?: number;
+    parameters?: { retry_after?: number };
   } | null;
 
   if (!res.ok || !payload?.ok) {
@@ -342,6 +371,7 @@ export async function sendTelegramMessage(params: SendTelegramMessageParams): Pr
       status: res.status,
       errorCode: payload?.error_code,
       description,
+      retryAfterSeconds: payload?.parameters?.retry_after,
     });
   }
 
