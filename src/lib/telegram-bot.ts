@@ -268,11 +268,14 @@ export async function ensureTelegramWebhook(baseUrl: string) {
     pending_update_count?: number;
     last_error_date?: number;
     last_error_message?: string;
+    allowed_updates?: string[];
   }>("getWebhookInfo", {
     cache: "no-store",
   });
 
-  const needsReset = current.url !== webhookUrl || Boolean(current.last_error_message);
+  const requiredUpdates = ["message", "edited_message", "channel_post", "edited_channel_post", "callback_query"];
+  const hasRequiredUpdates = requiredUpdates.every((update) => current.allowed_updates?.includes(update));
+  const needsReset = current.url !== webhookUrl || Boolean(current.last_error_message) || !hasRequiredUpdates;
 
   if (!needsReset) {
     return {
@@ -291,7 +294,7 @@ export async function ensureTelegramWebhook(baseUrl: string) {
     body: JSON.stringify({
       url: webhookUrl,
       secret_token: webhookSecret,
-      allowed_updates: ["message", "edited_message", "callback_query"],
+      allowed_updates: requiredUpdates,
       drop_pending_updates: false,
     }),
   });
