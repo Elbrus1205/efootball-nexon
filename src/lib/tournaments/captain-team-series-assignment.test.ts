@@ -113,6 +113,20 @@ test("repeating the same winner preserves downstream results", () => {
   );
 });
 
+test("repeated advancement repairs a partially expanded captain-team series", () => {
+  assert.equal(
+    shouldSkipCaptainTeamSeriesAssignment({
+      isCaptainAssignedTeamMatch: true,
+      slot: 1,
+      entryId: "team-a",
+      participant1EntryId: "team-a",
+      participant2EntryId: "team-b",
+      allSeriesSlotsAssigned: false,
+    }),
+    false,
+  );
+});
+
 test("filling an empty bracket slot is initial assignment, not a progress reset", () => {
   assert.equal(
     shouldResetCaptainTeamSeriesProgress({

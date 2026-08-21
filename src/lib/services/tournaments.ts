@@ -616,6 +616,16 @@ async function assignParticipantToSeriesInTransaction(
       entryId: params.entryId,
       participant1EntryId: seedMatch.participant1EntryId,
       participant2EntryId: seedMatch.participant2EntryId,
+      allSeriesSlotsAssigned: seedMatch.seriesKey
+        ? (
+            await tx.match.findMany({
+              where: { seriesKey: seedMatch.seriesKey, isPenaltyTiebreak: false },
+              select: { participant1EntryId: true, participant2EntryId: true },
+            })
+          ).every((targetMatch) =>
+            (params.slot === 1 ? targetMatch.participant1EntryId : targetMatch.participant2EntryId) === params.entryId,
+          )
+        : true,
     })
   ) {
     return;
@@ -5078,7 +5088,11 @@ async function resolveCaptainTeamPlayoffSeriesIfCompleted(match: {
     orderBy: [{ legNumber: "asc" }, { createdAt: "asc" }],
   });
   const baseMatches = seriesMatches.filter(
-    (item) => item.isCaptainAssignedTeamMatch && !item.isTeamCaptainTiebreak && !item.isPenaltyTiebreak,
+    (item) =>
+      item.isCaptainAssignedTeamMatch &&
+      !item.isTeamCaptainTiebreak &&
+      !item.isPenaltyTiebreak &&
+      item.status !== MatchStatus.CANCELLED,
   );
 
   if (

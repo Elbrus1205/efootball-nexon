@@ -26,8 +26,10 @@ export function shouldSkipCaptainTeamSeriesAssignment(params: {
   entryId: string | null;
   participant1EntryId: string | null;
   participant2EntryId: string | null;
+  allSeriesSlotsAssigned?: boolean;
 }) {
   if (!params.isCaptainAssignedTeamMatch || !params.entryId) return false;
+  if (params.allSeriesSlotsAssigned === false) return false;
 
   const currentEntryId = params.slot === 1
     ? params.participant1EntryId
