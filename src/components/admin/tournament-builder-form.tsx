@@ -564,7 +564,7 @@ export function TournamentBuilderForm({
                         return (
                           <label key={league.slug} className={`flex min-h-16 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm transition ${checked ? "border-primary/50 bg-primary/10 text-white" : "border-white/10 bg-white/[0.03] text-zinc-400"}`}>
                             <input type="checkbox" checked={checked} onChange={() => setSelectedLeagueSlugs((current) => checked ? current.filter((slug) => slug !== league.slug) : [...current, league.slug])} className="sr-only" />
-                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/30 text-[10px] font-bold text-primary">{league.name.slice(0, 2)}</span>
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-black/30"><Image src={league.badgePath} alt={`Эмблема ${league.name}`} width={32} height={32} className="h-8 w-8 object-contain p-0.5" /></span>
                             <span className="font-medium">{league.name}</span>
                           </label>
                         );
