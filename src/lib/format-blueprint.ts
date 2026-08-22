@@ -1,4 +1,12 @@
 import { PlayoffType } from "@prisma/client";
+import {
+  normalizeStageGraph,
+  type StageGraphBlueprint,
+  type StageGraphStage,
+  type StageGraphTransition,
+} from "@/lib/tournament-stage-graph";
+
+export type { StageGraphBlueprint, StageGraphStage, StageGraphTransition } from "@/lib/tournament-stage-graph";
 
 export type OpeningStageMode = "GROUPS" | "LEAGUE" | "NONE";
 export type PlayoffTargetBracket = "upper" | "lower";
@@ -21,6 +29,7 @@ export type PlayoffStageBlueprint = {
 };
 
 export type FormatBlueprint = {
+  version?: 2;
   leagueStageName: string;
   openingStageMode: OpeningStageMode;
   divisionsCount: number;
@@ -28,6 +37,8 @@ export type FormatBlueprint = {
   openingRoundsCount: number | null;
   participantsPerGroup: number | null;
   playoffs: PlayoffStageBlueprint[];
+  /** Optional graph editor representation. Legacy fields remain the source of truth when omitted. */
+  stageGraph?: StageGraphBlueprint;
 };
 
 function randomId(prefix: string) {
@@ -130,7 +141,21 @@ export function normalizeFormatBlueprint(input: unknown): FormatBlueprint {
     }),
   }));
 
+  const rawGraph = value.stageGraph;
+  const graph = rawGraph && typeof rawGraph === "object"
+    ? normalizeStageGraph(rawGraph)
+    : createLegacyStageGraph({
+        openingStageMode,
+        leagueStageName,
+        divisionsCount,
+        roundsCount,
+        openingRoundsCount,
+        participantsPerGroup,
+        playoffs: normalizedPlayoffs,
+      });
+
   return {
+    version: 2,
     leagueStageName,
     openingStageMode,
     divisionsCount,
@@ -138,7 +163,64 @@ export function normalizeFormatBlueprint(input: unknown): FormatBlueprint {
     openingRoundsCount,
     participantsPerGroup,
     playoffs: openingStageMode === "NONE" && !normalizedPlayoffs.length ? createDefaultFormatBlueprint().playoffs : normalizedPlayoffs,
+    stageGraph: graph,
   };
+}
+
+function createLegacyStageGraph(params: {
+  openingStageMode: OpeningStageMode;
+  leagueStageName: string;
+  divisionsCount: number;
+  roundsCount: number;
+  openingRoundsCount: number | null;
+  participantsPerGroup: number | null;
+  playoffs: PlayoffStageBlueprint[];
+}): StageGraphBlueprint {
+  const stages: StageGraphStage[] = [];
+  const openingId = "opening";
+  if (params.openingStageMode !== "NONE") {
+    stages.push({
+      id: openingId,
+      name: params.leagueStageName,
+      type: params.openingStageMode,
+      divisionsCount: params.divisionsCount,
+      participantsPerDivision: params.participantsPerGroup,
+      roundsCount: params.openingRoundsCount ?? params.roundsCount,
+      matchesPerOpponent: params.openingRoundsCount,
+    });
+  }
+
+  const transitions: StageGraphTransition[] = [];
+  for (const playoff of params.playoffs) {
+    stages.push({
+      id: playoff.id,
+      name: playoff.name,
+      type: "PLAYOFF",
+      divisionsCount: 1,
+      participantsPerDivision: null,
+      roundsCount: 1,
+      matchesPerOpponent: null,
+      playoffType: playoff.type,
+      legsCount: playoff.legsCount,
+      thirdPlaceMatch: playoff.thirdPlaceMatch,
+    });
+    if (params.openingStageMode !== "NONE") {
+      for (const selection of playoff.selections) {
+        transitions.push({
+          id: selection.id,
+          fromStageId: openingId,
+          toStageId: playoff.id,
+          result: "RANK",
+          fromDivisionIndex: selection.divisionIndex,
+          fromRank: selection.fromRank,
+          toDivisionIndex: null,
+          targetBracket: selection.targetBracket,
+        });
+      }
+    }
+  }
+
+  return normalizeStageGraph({ stages, transitions, superCup: { enabled: false, name: "Суперкубок", sourcePlayoffIds: [] } });
 }
 
 export function parseFormatBlueprintJson(input: string | null | undefined) {

@@ -16,6 +16,7 @@ import {
 import { tournamentBuilderSchema } from "@/lib/validators";
 import { parseMoscowDateTimeLocal, slugify } from "@/lib/utils";
 import { ensureManagedClubCatalog } from "@/lib/clubs";
+import { validateStageGraph } from "@/lib/tournament-stage-graph";
 
 function checkboxValue(value: FormDataEntryValue | null) {
   return value === "true" || value === "on";
@@ -92,6 +93,12 @@ export async function POST(request: Request) {
 
     const body = parsed.data;
     const formatBlueprint = parseFormatBlueprintJson(typeof body.formatBlueprintJson === "string" ? body.formatBlueprintJson : "");
+    if (formatBlueprint?.stageGraph) {
+      const issue = validateStageGraph(formatBlueprint.stageGraph)[0];
+      if (issue) {
+        return NextResponse.redirect(new URL(`/admin/tournaments/builder?error=${encodeURIComponent(issue.message)}`, origin), 303);
+      }
+    }
     const startsAt = parseMoscowDateTimeLocal(body.startsAt);
     const activeSeason = await getActiveSeason();
     const status = resolveInitialStatus(body.status, startsAt, body.autoOpenRegistration);

@@ -18,6 +18,7 @@ import { invalidateTournamentAll } from "@/lib/tournament-cache";
 import { tournamentBuilderSchema } from "@/lib/validators";
 import { parseMoscowDateTimeLocal } from "@/lib/utils";
 import { ensureManagedClubCatalog } from "@/lib/clubs";
+import { validateStageGraph } from "@/lib/tournament-stage-graph";
 
 function checkboxValue(value: FormDataEntryValue | null) {
   return value === "true" || value === "on";
@@ -88,6 +89,14 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
 
   const submittedBlueprintJson = typeof body.formatBlueprintJson === "string" ? body.formatBlueprintJson : "";
   const formatBlueprint = parseFormatBlueprintJson(submittedBlueprintJson);
+  if (formatBlueprint?.stageGraph) {
+    const issue = validateStageGraph(formatBlueprint.stageGraph)[0];
+    if (issue) {
+      const redirectUrl = new URL(`/admin/tournaments/${params.id}/edit`, getRequestBaseUrl(request));
+      redirectUrl.searchParams.set("error", issue.message);
+      return NextResponse.redirect(redirectUrl, 303);
+    }
+  }
   const startsAt = parseMoscowDateTimeLocal(body.startsAt);
   const status = resolveUpdatedStatus(body.status, startsAt, body.autoOpenRegistration);
   const isTest = body.isTest || session.user.role === UserRole.TRAINEE;

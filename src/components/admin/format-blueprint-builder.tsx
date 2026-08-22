@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { StageGraphEditor } from "@/components/admin/stage-graph-editor";
 import {
   TournamentBuilderChoice,
   TournamentBuilderField,
@@ -186,6 +187,12 @@ export function FormatBlueprintBuilder({
   return (
     <div className="min-w-0 space-y-7">
       <input type="hidden" name={name} value={stringifyFormatBlueprint(blueprint)} />
+      {blueprint.stageGraph ? (
+        <StageGraphEditor
+          value={blueprint.stageGraph}
+          onChange={(stageGraph) => setBlueprint((current) => ({ ...current, stageGraph }))}
+        />
+      ) : null}
 
       <div className="flex flex-col gap-4 rounded-xl border border-primary/15 bg-primary/[0.05] p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
