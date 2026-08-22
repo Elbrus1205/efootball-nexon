@@ -40,6 +40,15 @@ test("resolves rank routes without duplicating a registration", () => {
   assert.deepEqual(assignments.map((item) => [item.registrationId, item.toStageId]), [["r1", "elite"], ["r1", "rest"]]);
 });
 
+test("routes a rank range into one downstream league", () => {
+  const graph = normalizeStageGraph({
+    stages: [{ id: "source", name: "Источник", type: "LEAGUE" }, { id: "elite", name: "Элита", type: "LEAGUE" }],
+    transitions: [{ id: "top-eight", fromStageId: "source", toStageId: "elite", result: "RANK", fromDivisionIndex: 1, fromRank: 1, toRank: 2 }],
+  });
+  const assignments = resolveStageGraphAssignments({ graph, fromStageId: "source", standings: [{ registrationId: "r1", divisionIndex: 1, rank: 1 }, { registrationId: "r2", divisionIndex: 1, rank: 2 }, { registrationId: "r3", divisionIndex: 1, rank: 3 }] });
+  assert.deepEqual(assignments.map((item) => item.registrationId), ["r1", "r2"]);
+});
+
 test("materializes a super cup stage from two playoff winners", () => {
   const graph = normalizeStageGraph({
     stages: [{ id: "p1", name: "Кубок A", type: "PLAYOFF" }, { id: "p2", name: "Кубок B", type: "PLAYOFF" }],
