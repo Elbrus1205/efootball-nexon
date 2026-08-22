@@ -167,7 +167,10 @@ export const tournamentBuilderSchema = z.object({
   participantMode: z.nativeEnum(TournamentParticipantMode).default(TournamentParticipantMode.SINGLE),
   rosterSize: z.coerce.number().int().min(1).max(8).default(1),
   topRankingRestrictionEnabled: z.coerce.boolean().default(false),
-  topRankingLimit: z.coerce.number().int().min(1, "Размер топа должен быть не меньше 1.").max(500, "Размер топа не может быть больше 500.").default(10),
+  topRankingLimit: z.preprocess(
+    (value) => (value === "" || value === null || value === undefined ? 10 : value),
+    z.coerce.number().int().min(1, "Размер топа должен быть не меньше 1.").max(500, "Размер топа не может быть больше 500."),
+  ),
   topRankingPlayerLimit: z.preprocess(
     (value) => (value === "" || value === null || value === undefined ? 1 : value),
     z.coerce.number().int().min(1, "Разрешите хотя бы одного игрока из топа.").max(8),

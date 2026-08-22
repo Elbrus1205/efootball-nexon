@@ -13,11 +13,13 @@ test("random single tournaments do not require a top-ranking player limit", () =
     rosterSize: 1,
     format: TournamentFormat.SINGLE_ELIMINATION,
     seedingMethod: SeedingMethod.RANDOM,
+    topRankingLimit: null,
     topRankingPlayerLimit: null,
   });
 
   assert.equal(result.success, true);
   if (result.success) {
+    assert.equal(result.data.topRankingLimit, 10);
     assert.equal(result.data.topRankingPlayerLimit, 1);
   }
 });
