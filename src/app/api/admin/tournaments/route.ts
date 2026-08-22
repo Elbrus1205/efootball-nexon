@@ -15,6 +15,7 @@ import {
 } from "@/lib/services/tournaments";
 import { tournamentBuilderSchema } from "@/lib/validators";
 import { parseMoscowDateTimeLocal, slugify } from "@/lib/utils";
+import { ensureManagedClubCatalog } from "@/lib/clubs";
 
 function checkboxValue(value: FormDataEntryValue | null) {
   return value === "true" || value === "on";
@@ -78,6 +79,9 @@ export async function POST(request: Request) {
       telegramGroupId: formData.get("telegramGroupId"),
       telegramAutoPublish: checkboxValue(formData.get("telegramAutoPublish")),
       clubSelectionMode: formData.get("clubSelectionMode"),
+      clubSelectionByLeague: checkboxValue(formData.get("clubSelectionByLeague")),
+      clubSelectionInGameOnly: checkboxValue(formData.get("clubSelectionInGameOnly")),
+      selectedLeagueSlugs: formData.getAll("selectedLeagueSlugs"),
       sortRules: formData.getAll("sortRules"),
     });
 
@@ -148,10 +152,20 @@ export async function POST(request: Request) {
         telegramGroupId: body.telegramGroupId || null,
         telegramAutoPublish: body.telegramAutoPublish,
         clubSelectionMode: body.clubSelectionMode,
+        clubSelectionByLeague: body.clubSelectionByLeague,
+        clubSelectionInGameOnly: body.clubSelectionInGameOnly,
         sortRules: body.sortRules,
         createdById: session.user.id,
       },
     });
+
+    if (body.clubSelectionByLeague && body.selectedLeagueSlugs.length) {
+      await ensureManagedClubCatalog();
+      const leagues = await db.league.findMany({ where: { slug: { in: body.selectedLeagueSlugs }, isEnabled: true }, select: { id: true } });
+      if (leagues.length) {
+        await db.tournamentLeague.createMany({ data: leagues.map((league) => ({ tournamentId: tournament.id, leagueId: league.id })), skipDuplicates: true });
+      }
+    }
 
     tournamentCreated = true;
 

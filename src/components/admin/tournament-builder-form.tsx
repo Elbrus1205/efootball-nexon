@@ -52,6 +52,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { FormatBlueprint } from "@/lib/format-blueprint";
 import { optimizedImageUrl } from "@/lib/image-optimization";
 import { uploadFile } from "@/lib/storage/upload-client";
+import { TOP_FIVE_LEAGUES } from "@/lib/club-catalog";
 
 type BuilderValues = {
   title?: string;
@@ -99,6 +100,9 @@ type BuilderValues = {
   telegramGroupId?: string;
   telegramAutoPublish?: boolean;
   clubSelectionMode?: ClubSelectionMode;
+  clubSelectionByLeague?: boolean;
+  clubSelectionInGameOnly?: boolean;
+  selectedLeagueSlugs?: string[];
   sortRules?: SortRule[];
 };
 
@@ -174,6 +178,9 @@ export function TournamentBuilderForm({
   const [topRankingRestrictionEnabled, setTopRankingRestrictionEnabled] = useState(initialValues?.topRankingRestrictionEnabled ?? false);
   const [captainsCreateTeamMatches, setCaptainsCreateTeamMatches] = useState(initialValues?.captainsCreateTeamMatches ?? false);
   const [matchupFormat, setMatchupFormat] = useState(initialValues?.matchupFormat ?? MatchupFormat.SINGLE_MATCH);
+  const [clubSelectionByLeague, setClubSelectionByLeague] = useState(initialValues?.clubSelectionByLeague ?? false);
+  const [clubSelectionInGameOnly, setClubSelectionInGameOnly] = useState(initialValues?.clubSelectionInGameOnly ?? true);
+  const [selectedLeagueSlugs, setSelectedLeagueSlugs] = useState<string[]>(initialValues?.selectedLeagueSlugs ?? TOP_FIVE_LEAGUES.map((league) => league.slug));
   const [submitting, setSubmitting] = useState(false);
   const isEditing = Boolean(initialValues);
   const uploadsPending = coverUploading || lineupExampleUploading;
@@ -264,6 +271,9 @@ export function TournamentBuilderForm({
       <input type="hidden" name="autoCreateSchedule" value={String(initialValues?.autoCreateSchedule ?? false)} />
       <input type="hidden" name="autoAdvanceFromGroups" value={String(initialValues?.autoAdvanceFromGroups ?? false)} />
       <input type="hidden" name="checkInRequired" value={String(initialValues?.checkInRequired ?? false)} />
+      <input type="hidden" name="clubSelectionByLeague" value={String(clubSelectionByLeague)} />
+      <input type="hidden" name="clubSelectionInGameOnly" value={String(clubSelectionInGameOnly)} />
+      {selectedLeagueSlugs.map((slug) => <input key={slug} type="hidden" name="selectedLeagueSlugs" value={slug} />)}
 
       <div className="relative isolate overflow-hidden rounded-2xl border border-primary/20 bg-[#191919] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] sm:p-7">
         <div className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-primary/[0.09] blur-3xl" aria-hidden="true" />
@@ -537,6 +547,39 @@ export function TournamentBuilderForm({
                     <option value={ClubSelectionMode.PLAYER_PICK}>Участники выбирают клуб при регистрации</option>
                   </select>
                 </TournamentBuilderField>
+
+                <div className="md:col-span-2 grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <TournamentBuilderToggle
+                    name="clubSelectionByLeagueToggle"
+                    title="Показывать клубы по лигам"
+                    description="При регистрации игрок сначала выбирает одну из включённых лиг, затем клуб."
+                    checked={clubSelectionByLeague}
+                    onChange={(event) => setClubSelectionByLeague(event.target.checked)}
+                    tone="primary"
+                  />
+                  {clubSelectionByLeague ? (
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                      {TOP_FIVE_LEAGUES.map((league) => {
+                        const checked = selectedLeagueSlugs.includes(league.slug);
+                        return (
+                          <label key={league.slug} className={`flex min-h-16 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm transition ${checked ? "border-primary/50 bg-primary/10 text-white" : "border-white/10 bg-white/[0.03] text-zinc-400"}`}>
+                            <input type="checkbox" checked={checked} onChange={() => setSelectedLeagueSlugs((current) => checked ? current.filter((slug) => slug !== league.slug) : [...current, league.slug])} className="sr-only" />
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/30 text-[10px] font-bold text-primary">{league.name.slice(0, 2)}</span>
+                            <span className="font-medium">{league.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                  <TournamentBuilderToggle
+                    name="clubSelectionInGameOnlyToggle"
+                    title="Показывать только клубы из игры"
+                    description="Отключённые в игре клубы не будут доступны игрокам при регистрации."
+                    checked={clubSelectionInGameOnly}
+                    onChange={(event) => setClubSelectionInGameOnly(event.target.checked)}
+                    tone="primary"
+                  />
+                </div>
               </div>
 
               <TournamentBuilderToggle

@@ -43,6 +43,8 @@ async function loadRulesSlice(tournamentId: string) {
       formatBlueprintJson: true,
       playoffType: true,
       clubSelectionMode: true,
+      clubSelectionByLeague: true,
+      clubSelectionInGameOnly: true,
       participantMode: true,
       rosterSize: true,
       captainsCreateTeamMatches: true,

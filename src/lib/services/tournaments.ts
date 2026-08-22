@@ -18,7 +18,7 @@ import {
 import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { tournamentFormatLabel, tournamentStatusLabel } from "@/lib/admin-display";
 import { db } from "@/lib/db";
-import { getAvailableClubs } from "@/lib/clubs";
+import { getTournamentClubs } from "@/lib/clubs";
 import { normalizeFormatBlueprint, type FormatBlueprint, type PlayoffSelectionRule } from "@/lib/format-blueprint";
 import { ensureMatchLineupSnapshot } from "@/lib/services/match-lineups";
 import { applyTournamentAbsenceRatingPenalty, getPlayerRatings } from "@/lib/ratings";
@@ -3701,7 +3701,7 @@ export async function assignRandomClubsToTournament(tournamentId: string) {
     throw new Error("Registration must be closed before random club assignment.");
   }
 
-  const clubs = await getAvailableClubs();
+  const clubs = await getTournamentClubs(tournament.id);
   if (!clubs.length) throw new Error("No club badges found in public/club-badges.");
 
   const usedClubs = tournament.participants.map((item) => item.clubSlug).filter(Boolean) as string[];

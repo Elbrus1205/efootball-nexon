@@ -28,7 +28,7 @@ import { TelegramProfileLink } from "@/components/telegram-profile-link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getCurrentSession } from "@/lib/auth/session";
-import { getAvailableClubs } from "@/lib/clubs";
+import { getTournamentClubs } from "@/lib/clubs";
 import {
   playoffTypeLabel,
   tournamentStatusLabel,
@@ -742,7 +742,7 @@ export default async function TournamentDetailsPage(
           },
         })
       : Promise.resolve([]),
-    getAvailableClubs(),
+    getTournamentClubs(params.id),
   ]);
   logTiming("load-secondary", secondaryStart);
 
@@ -1067,6 +1067,7 @@ export default async function TournamentDetailsPage(
     <RegisterTournamentButton
       tournamentId={tournament.id}
       clubSelectionMode={tournament.clubSelectionMode ?? ClubSelectionMode.ADMIN_RANDOM}
+      clubSelectionByLeague={tournament.clubSelectionByLeague}
       participantMode={tournament.participantMode}
       rosterSize={tournament.rosterSize}
       requireLineupPhoto={tournament.requireLineupPhoto}

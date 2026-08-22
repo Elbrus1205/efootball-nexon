@@ -1,11 +1,24 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { unstable_cache } from "next/cache";
+import { db } from "@/lib/db";
+import { TOP_FIVE_LEAGUES } from "@/lib/club-catalog";
 
 export type ClubOption = {
   slug: string;
   name: string;
   imagePath: string;
+  leagueSlug?: string | null;
+  leagueName?: string | null;
+  isRegistrationEnabled?: boolean;
+  isInGameEnabled?: boolean;
+};
+
+export type LeagueOption = {
+  slug: string;
+  name: string;
+  badgePath: string;
+  isEnabled?: boolean;
 };
 
 type ClubDefinition = {
@@ -15,6 +28,19 @@ type ClubDefinition = {
 
 const CLUBS_DIR = path.join(process.cwd(), "public", "club-badges");
 const CLUB_THUMBS_DIR = path.join(CLUBS_DIR, "thumbs");
+
+const TOP_FIVE_CLUB_LEAGUES: Record<string, string> = {
+  arsenal: "premier-league", "aston-villa": "premier-league", bournemouth: "premier-league", brentford: "premier-league",
+  "brighton-hove-albion-big-768x773": "premier-league", burnley: "premier-league", chelsea: "premier-league", "crystal-palace-big-2022": "premier-league",
+  everton: "premier-league", fulham: "premier-league", "leeds-united-big (1)": "premier-league", "leicester-city-big-768x768": "premier-league",
+  liverpool: "premier-league", "manchester-city": "premier-league", "manchester-united": "premier-league", "newcastle-united-big-768x774": "premier-league",
+  "nottingham-forest-big": "premier-league", "southampton-big": "premier-league", "sunderland-big-768x640 (1)": "premier-league", "tottenham-hotspur": "premier-league",
+  "west-ham-united": "premier-league", "wolverhampton-wanderers-big-768x666": "premier-league",
+  barcelona: "la-liga", "athletic-club-big-2013 (1)": "la-liga", "atletico-madrid": "la-liga", "real-betis": "la-liga", "real-madrid": "la-liga", "real-sociedad-big": "la-liga", "sevilla-big": "la-liga", valencia: "la-liga", "villarreal-big": "la-liga", "girona-big-768x768": "la-liga", "celta-vigo-big": "la-liga", "espanyol-big": "la-liga",
+  "psg-big-768x768": "ligue-1", lyon: "ligue-1", marseille: "ligue-1", monaco: "ligue-1", lille: "ligue-1", nice: "ligue-1", rennes: "ligue-1", lens: "ligue-1", "bordeaux-big": "ligue-1", "saint-etienne-big-2022": "ligue-1", nantes: "ligue-1", "montpellier-big-768x768": "ligue-1", strasbourg: "ligue-1",
+  "bayern-munich-big-768x768": "bundesliga", "borussia-dortmund": "bundesliga", "bayer-04-leverkusen": "bundesliga", "rb-leipzig-big-587x300": "bundesliga", "eintracht-frankfurt-big-768x768": "bundesliga", "borussia-monchengladbach-big": "bundesliga", stuttgart: "bundesliga", wolfsburg: "bundesliga", "werder-bremen-big": "bundesliga", "hamburger-big-405x300": "bundesliga", "schalke-04-big-768x768": "bundesliga", "koln-big": "bundesliga", "hertha-big-768x715": "bundesliga",
+  atalanta: "serie-a", bologna: "serie-a", "como-1907-big-768x794": "serie-a", fiorentina: "serie-a", "inter-milan": "serie-a", juventus: "serie-a", lazio: "serie-a", milan: "serie-a", napoli: "serie-a", "roma-big (1)": "serie-a", torino: "serie-a", "genoa-big-2022": "serie-a", sampdoria: "serie-a", parma: "serie-a", "udinese-big-768x765": "serie-a",
+};
 
 const CLUBS: ClubDefinition[] = [
   { fileName: "ajax-amsterdam-big-768x773.png", name: "Аякс" },
@@ -155,6 +181,68 @@ export async function getAvailableClubs() {
   return getCachedAvailableClubs();
 }
 
+export async function getAvailableLeagues(): Promise<LeagueOption[]> {
+  try {
+    const leagues = await db.league.findMany({ where: { isEnabled: true }, orderBy: { sortOrder: "asc" }, select: { slug: true, name: true, badgePath: true, isEnabled: true } });
+    if (leagues.length) return leagues;
+  } catch {
+    // Migration may not have been deployed yet; use the bundled top-five catalogue.
+  }
+  return TOP_FIVE_LEAGUES.map((league) => ({ ...league, isEnabled: true }));
+}
+
+export async function getTournamentClubs(tournamentId: string) {
+  try {
+    const tournament = await db.tournament.findUnique({
+      where: { id: tournamentId },
+      select: { clubSelectionByLeague: true, clubSelectionInGameOnly: true, selectedLeagues: { select: { league: { select: { id: true } } } } },
+    });
+    if (tournament) {
+      const leagueIds = tournament.selectedLeagues.map((item) => item.league.id);
+      if (tournament.clubSelectionByLeague && leagueIds.length === 0) return [];
+      const clubs = await db.club.findMany({
+        where: {
+          isRegistrationEnabled: true,
+          ...(tournament.clubSelectionInGameOnly ? { isInGameEnabled: true } : {}),
+          ...(tournament.clubSelectionByLeague && leagueIds.length ? { leagueId: { in: leagueIds } } : {}),
+        },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: { slug: true, name: true, imagePath: true, isRegistrationEnabled: true, isInGameEnabled: true, league: { select: { slug: true, name: true } } },
+      });
+      if (clubs.length) return clubs.map((club) => ({ ...club, leagueSlug: club.league?.slug ?? null, leagueName: club.league?.name ?? null }));
+    }
+  } catch {
+    // Fall through to the static catalogue while the database is being migrated.
+  }
+  return getAvailableClubs();
+}
+
+export async function ensureManagedClubCatalog() {
+  const bundledClubs = await getAvailableClubs();
+  try {
+    const leagueIds = new Map<string, string>();
+    for (const [index, league] of TOP_FIVE_LEAGUES.entries()) {
+      const saved = await db.league.upsert({
+        where: { slug: league.slug },
+        create: { slug: league.slug, name: league.name, badgePath: league.badgePath, sortOrder: index },
+        update: { name: league.name, badgePath: league.badgePath, sortOrder: index },
+        select: { id: true },
+      });
+      leagueIds.set(league.slug, saved.id);
+    }
+    for (const [index, club] of bundledClubs.entries()) {
+      await db.club.upsert({
+        where: { slug: club.slug },
+        create: { slug: club.slug, name: club.name, imagePath: club.imagePath, leagueId: club.leagueSlug ? leagueIds.get(club.leagueSlug) : null, sortOrder: index },
+        update: { name: club.name, imagePath: club.imagePath, leagueId: club.leagueSlug ? leagueIds.get(club.leagueSlug) : null, sortOrder: index },
+      });
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const getCachedAvailableClubs = unstable_cache(
   async () => {
     try {
@@ -171,10 +259,16 @@ const getCachedAvailableClubs = unstable_cache(
         const slug = path.basename(club.fileName, path.extname(club.fileName));
         const thumbFileName = `${slug}.webp`;
 
+        const leagueSlug = TOP_FIVE_CLUB_LEAGUES[slug] ?? null;
+        const league = TOP_FIVE_LEAGUES.find((item) => item.slug === leagueSlug);
         return {
           slug,
           name: club.name,
           imagePath: existingThumbFileNames.has(thumbFileName) ? `/club-badges/thumbs/${thumbFileName}` : `/club-badges/${club.fileName}`,
+          leagueSlug,
+          leagueName: league?.name ?? null,
+          isRegistrationEnabled: true,
+          isInGameEnabled: true,
         };
       });
 
