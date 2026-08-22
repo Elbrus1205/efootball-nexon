@@ -24,6 +24,7 @@ export type StageGraphTransition = {
   result: StageGraphResult;
   fromDivisionIndex: number | null;
   fromRank: number | null;
+  toRank: number | null;
   toDivisionIndex: number | null;
   targetBracket: StageGraphTargetBracket;
 };
@@ -44,6 +45,10 @@ export type StageGraphValidationIssue = {
   path: string;
   message: string;
 };
+
+export type StageGraphStanding = { registrationId: string; divisionIndex: number; rank: number | null };
+export type StageGraphPlayoffResult = { registrationId: string; result: Exclude<StageGraphResult, "RANK"> };
+export type StageGraphAssignment = { registrationId: string; toStageId: string; toDivisionIndex: number; sourceTransitionId: string };
 
 function id(prefix: string, index: number) {
   return `${prefix}_${index + 1}`;
@@ -83,6 +88,7 @@ export function normalizeStageGraph(input: unknown): StageGraphBlueprint {
     if (!raw || typeof raw !== "object") return [];
     const transition = raw as Partial<StageGraphTransition>;
     const fromRank = transition.fromRank == null ? null : positive(transition.fromRank, 1, 128);
+    const toRank = transition.toRank == null ? fromRank : Math.max(fromRank ?? 1, positive(transition.toRank, fromRank ?? 1, 128));
     const result: StageGraphResult = transition.result === "WINNER" || transition.result === "RUNNER_UP" || transition.result === "THIRD_PLACE" ? transition.result : "RANK";
     return [{
       id: typeof transition.id === "string" && transition.id.trim() ? transition.id : id("transition", index),
@@ -91,6 +97,7 @@ export function normalizeStageGraph(input: unknown): StageGraphBlueprint {
       result,
       fromDivisionIndex: transition.fromDivisionIndex == null ? null : positive(transition.fromDivisionIndex, 1, 32),
       fromRank: result === "RANK" ? fromRank : null,
+      toRank: result === "RANK" ? toRank : null,
       toDivisionIndex: transition.toDivisionIndex == null ? null : positive(transition.toDivisionIndex, 1, 32),
       targetBracket: transition.targetBracket === "lower" ? "lower" : "upper",
     } satisfies StageGraphTransition];
@@ -102,14 +109,20 @@ export function normalizeStageGraph(input: unknown): StageGraphBlueprint {
     ? rawSuperCup.sourcePlayoffIds.filter((sourceId): sourceId is string => typeof sourceId === "string" && playoffIds.has(sourceId))
     : [];
 
-  return {
-    stages,
-    transitions,
-    superCup: {
+  const superCup = {
       enabled: Boolean(rawSuperCup.enabled) && sourcePlayoffIds.length >= 2,
       name: typeof rawSuperCup.name === "string" && rawSuperCup.name.trim() ? rawSuperCup.name.trim() : "Суперкубок",
       sourcePlayoffIds,
-    },
+  } satisfies StageGraphSuperCup;
+  const superCupStageId = "supercup";
+  if (superCup.enabled && !stages.some((stage) => stage.id === superCupStageId)) {
+    stages.push({ id: superCupStageId, name: superCup.name, type: "PLAYOFF", divisionsCount: 1, participantsPerDivision: null, roundsCount: 1, matchesPerOpponent: null, playoffType: PlayoffType.SINGLE, legsCount: 1, thirdPlaceMatch: false });
+    for (const sourceId of sourcePlayoffIds) transitions.push({ id: `supercup_${sourceId}`, fromStageId: sourceId, toStageId: superCupStageId, result: "WINNER", fromDivisionIndex: null, fromRank: null, toRank: null, toDivisionIndex: null, targetBracket: "upper" });
+  }
+  return {
+    stages,
+    transitions,
+    superCup,
   };
 }
 
@@ -175,4 +188,27 @@ export function topologicalStageOrder(graph: StageGraphBlueprint): StageGraphSta
     }
   }
   return result.length === graph.stages.length ? result : graph.stages;
+}
+
+export function resolveStageGraphAssignments(params: {
+  graph: StageGraphBlueprint;
+  fromStageId: string;
+  standings?: StageGraphStanding[];
+  playoffResults?: StageGraphPlayoffResult[];
+}) {
+  const outgoing = params.graph.transitions.filter((transition) => transition.fromStageId === params.fromStageId);
+  const assignments: StageGraphAssignment[] = [];
+  const seen = new Set<string>();
+  for (const transition of outgoing) {
+    const candidates = transition.result === "RANK"
+      ? (params.standings ?? []).filter((standing) => standing.rank !== null && transition.fromRank !== null && standing.rank >= transition.fromRank && standing.rank <= (transition.toRank ?? transition.fromRank) && (transition.fromDivisionIndex === null || standing.divisionIndex === transition.fromDivisionIndex))
+      : (params.playoffResults ?? []).filter((result) => result.result === transition.result);
+    for (const candidate of candidates) {
+      const registrationId = "registrationId" in candidate ? candidate.registrationId : "";
+      if (!registrationId || seen.has(`${transition.toStageId}:${registrationId}`)) continue;
+      seen.add(`${transition.toStageId}:${registrationId}`);
+      assignments.push({ registrationId, toStageId: transition.toStageId, toDivisionIndex: transition.toDivisionIndex ?? 1, sourceTransitionId: transition.id });
+    }
+  }
+  return assignments;
 }

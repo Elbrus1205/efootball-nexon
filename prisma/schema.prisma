@@ -961,6 +961,7 @@ model TournamentStage {
   matches              Match[]
   deadlines            RoundDeadline[]
   bracket              PlayoffBracket?
+  entries              TournamentStageEntry[]
 
   @@index([tournamentId, orderIndex])
 }
@@ -994,8 +995,27 @@ model TournamentGroup {
   members    TournamentRegistration[]
   standings  GroupStanding[]
   matches    Match[]
+  stageEntries TournamentStageEntry[]
 
   @@index([stageId, orderIndex])
+}
+
+model TournamentStageEntry {
+  id                 String                @id @default(cuid())
+  stageId            String
+  registrationId     String
+  groupId            String?
+  sourceTransitionId String?
+  resultJson         Json?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  stage              TournamentStage      @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  registration       TournamentRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  group              TournamentGroup?     @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  @@unique([stageId, registrationId])
+  @@index([registrationId, stageId])
+  @@index([groupId])
 }
 
 model TournamentRegistration {
@@ -1026,6 +1046,7 @@ model TournamentRegistration {
   winningMatches      Match[]                        @relation("winningRegistration")
   rosterMembers       TournamentRegistrationMember[]
   matchLineupEntries  MatchLineupPlayer[]
+  stageEntries        TournamentStageEntry[]
 
   @@unique([tournamentId, userId])
   @@unique([tournamentId, clubSlug])

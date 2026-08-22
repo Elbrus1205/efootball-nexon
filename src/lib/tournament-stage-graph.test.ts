@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { validateStageGraph, normalizeStageGraph, topologicalStageOrder } from "@/lib/tournament-stage-graph";
+import { resolveStageGraphAssignments, validateStageGraph, normalizeStageGraph, topologicalStageOrder } from "@/lib/tournament-stage-graph";
 
 test("normalizes a multi-league route and preserves rank transitions", () => {
   const graph = normalizeStageGraph({
@@ -26,4 +26,26 @@ test("rejects a cycle and enables super cup only with multiple playoffs", () => 
   });
   assert.ok(validateStageGraph(graph).some((issue) => issue.path === "transitions"));
   assert.equal(graph.superCup.enabled, false);
+});
+
+test("resolves rank routes without duplicating a registration", () => {
+  const graph = normalizeStageGraph({
+    stages: [{ id: "source", name: "Источник", type: "LEAGUE" }, { id: "elite", name: "Элита", type: "LEAGUE" }, { id: "rest", name: "Резерв", type: "LEAGUE" }],
+    transitions: [
+      { id: "top", fromStageId: "source", toStageId: "elite", fromRank: 1 },
+      { id: "also-top", fromStageId: "source", toStageId: "rest", fromRank: 1 },
+    ],
+  });
+  const assignments = resolveStageGraphAssignments({ graph, fromStageId: "source", standings: [{ registrationId: "r1", divisionIndex: 1, rank: 1 }, { registrationId: "r2", divisionIndex: 1, rank: 2 }] });
+  assert.deepEqual(assignments.map((item) => [item.registrationId, item.toStageId]), [["r1", "elite"], ["r1", "rest"]]);
+});
+
+test("materializes a super cup stage from two playoff winners", () => {
+  const graph = normalizeStageGraph({
+    stages: [{ id: "p1", name: "Кубок A", type: "PLAYOFF" }, { id: "p2", name: "Кубок B", type: "PLAYOFF" }],
+    superCup: { enabled: true, sourcePlayoffIds: ["p1", "p2"] },
+  });
+  assert.equal(graph.superCup.enabled, true);
+  assert.equal(graph.stages.some((stage) => stage.id === "supercup"), true);
+  assert.equal(graph.transitions.filter((transition) => transition.toStageId === "supercup").length, 2);
 });

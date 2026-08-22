@@ -213,6 +213,7 @@ function createLegacyStageGraph(params: {
           result: "RANK",
           fromDivisionIndex: selection.divisionIndex,
           fromRank: selection.fromRank,
+          toRank: selection.toRank,
           toDivisionIndex: null,
           targetBracket: selection.targetBracket,
         });
