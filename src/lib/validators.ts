@@ -168,7 +168,10 @@ export const tournamentBuilderSchema = z.object({
   rosterSize: z.coerce.number().int().min(1).max(8).default(1),
   topRankingRestrictionEnabled: z.coerce.boolean().default(false),
   topRankingLimit: z.coerce.number().int().min(1, "Размер топа должен быть не меньше 1.").max(500, "Размер топа не может быть больше 500.").default(10),
-  topRankingPlayerLimit: z.coerce.number().int().min(1, "Разрешите хотя бы одного игрока из топа.").max(8).default(1),
+  topRankingPlayerLimit: z.preprocess(
+    (value) => (value === "" || value === null || value === undefined ? 1 : value),
+    z.coerce.number().int().min(1, "Разрешите хотя бы одного игрока из топа.").max(8),
+  ),
   captainsCreateTeamMatches: z.coerce.boolean().default(false),
   matchupFormat: z.nativeEnum(MatchupFormat).default(MatchupFormat.SINGLE_MATCH),
   bestOfWins: z.coerce.number().int().min(1).max(9).default(1),
@@ -248,7 +251,7 @@ export const tournamentBuilderSchema = z.object({
     });
   }
 
-  if (data.topRankingPlayerLimit > data.rosterSize) {
+  if (data.topRankingRestrictionEnabled && data.topRankingPlayerLimit > data.rosterSize) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["topRankingPlayerLimit"],
