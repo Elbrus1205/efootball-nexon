@@ -216,6 +216,9 @@ export const tournamentBuilderSchema = z.object({
   telegramGroupId: z.string().trim().max(128).optional().or(z.literal("")),
   telegramAutoPublish: z.coerce.boolean().default(false),
   clubSelectionMode: z.nativeEnum(ClubSelectionMode).default(ClubSelectionMode.ADMIN_RANDOM),
+  clubSelectionByLeague: z.coerce.boolean().default(false),
+  clubSelectionInGameOnly: z.coerce.boolean().default(true),
+  selectedLeagueSlugs: z.array(z.string().trim().min(1)).default([]),
   sortRules: z.array(z.nativeEnum(SortRule)).default([SortRule.POINTS, SortRule.GOAL_DIFFERENCE, SortRule.GOALS_FOR, SortRule.WINS]),
 }).superRefine((data, ctx) => {
   const isLeague = data.format === TournamentFormat.LEAGUE || data.format === TournamentFormat.ROUND_ROBIN;

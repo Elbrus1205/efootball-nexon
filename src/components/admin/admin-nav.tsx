@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   Award,
+  Badge,
   CalendarRange,
   CircleHelp,
   FileText,
@@ -28,6 +29,7 @@ const items = [
   { href: "/admin/statuses", label: "Статусы", icon: Award },
   { href: "/admin/regulations", label: "Регламент", icon: FileText },
   { href: "/admin/faq", label: "FAQ", icon: CircleHelp },
+  { href: "/admin/clubs", label: "Клубы", icon: Badge },
   { href: "/admin/users", label: "Участники", icon: Users },
   { href: "/admin/role-permissions", label: "Права ролей", icon: SlidersHorizontal },
   { href: "/admin/matches", label: "Матчи", icon: Swords },

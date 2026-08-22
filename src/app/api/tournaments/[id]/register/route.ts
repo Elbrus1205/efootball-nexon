@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { getRequestBaseUrl } from "@/lib/affiliate";
 import { requireAuth } from "@/lib/auth/session";
-import { getAvailableClubs } from "@/lib/clubs";
+import { getTournamentClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
 import { hasAcceptedCurrentRegulations } from "@/lib/regulations";
 import { formatReliabilityRegistrationRestriction, syncReliabilityRestriction } from "@/lib/services/reliability";
@@ -70,6 +70,8 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       participantsPerGroup: true,
       maxParticipants: true,
       clubSelectionMode: true,
+      clubSelectionByLeague: true,
+      clubSelectionInGameOnly: true,
       participantMode: true,
       rosterSize: true,
       topRankingRestrictionEnabled: true,
@@ -171,7 +173,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       return NextResponse.json({ error: "Нужно выбрать клуб перед регистрацией." }, { status: 400 });
     }
 
-    const clubs = await getAvailableClubs();
+    const clubs = await getTournamentClubs(params.id);
     const selectedClub = clubs.find((club) => club.slug === selectedClubSlug);
     if (!selectedClub) {
       return NextResponse.json({ error: "Выбранный клуб не найден в списке доступных эмблем." }, { status: 400 });

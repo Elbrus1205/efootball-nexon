@@ -1,7 +1,7 @@
 "use client";
 
 import { ClubSelectionMode, TournamentParticipantMode } from "@prisma/client";
-import { ArrowRight, CheckCircle2, ImagePlus, Loader2, Search, ScrollText, Trash2, Upload, UserPlus, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, ImagePlus, Loader2, Search, ScrollText, Trash2, Upload, UserPlus, X } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useMemo, useState, useTransition } from "react";
@@ -9,11 +9,14 @@ import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { uploadFile } from "@/lib/storage/upload-client";
+import { TOP_FIVE_LEAGUES } from "@/lib/club-catalog";
 
 type ClubOption = {
   slug: string;
   name: string;
   imagePath: string;
+  leagueSlug?: string | null;
+  leagueName?: string | null;
 };
 
 type RegulationsState = {
@@ -45,6 +48,7 @@ const dialogPanelClassName =
 export function RegisterTournamentButton({
   tournamentId,
   clubSelectionMode,
+  clubSelectionByLeague = false,
   participantMode = TournamentParticipantMode.SINGLE,
   rosterSize = 1,
   requireLineupPhoto = false,
@@ -54,6 +58,7 @@ export function RegisterTournamentButton({
 }: {
   tournamentId: string;
   clubSelectionMode: ClubSelectionMode;
+  clubSelectionByLeague?: boolean;
   participantMode?: TournamentParticipantMode;
   rosterSize?: number;
   requireLineupPhoto?: boolean;
@@ -65,6 +70,7 @@ export function RegisterTournamentButton({
   const [isOpen, setIsOpen] = useState(false);
   const [selectedClubSlug, setSelectedClubSlug] = useState("");
   const [clubSearch, setClubSearch] = useState("");
+  const [selectedLeagueSlug, setSelectedLeagueSlug] = useState<string | null>(null);
   const [teamName, setTeamName] = useState("");
   const [teamSetupOpen, setTeamSetupOpen] = useState(false);
   const [lineupPhotoUrl, setLineupPhotoUrl] = useState("");
@@ -108,12 +114,13 @@ export function RegisterTournamentButton({
   );
   const filteredClubs = useMemo(() => {
     const query = normalizeClubSearch(clubSearch);
+    const leagueSource = selectedLeagueSlug ? clubs.filter((club) => club.leagueSlug === selectedLeagueSlug) : clubs;
     const source = query
-      ? clubs.filter((club) => {
+      ? leagueSource.filter((club) => {
           const searchable = [club.name, club.slug, club.imagePath].map(normalizeClubSearch).join(" ");
           return searchable.includes(query);
         })
-      : clubs;
+      : leagueSource;
 
     return [...source].sort((a, b) => {
       const aTaken = takenClubSlugs.includes(a.slug);
@@ -121,7 +128,15 @@ export function RegisterTournamentButton({
       if (aTaken !== bTaken) return Number(aTaken) - Number(bTaken);
       return a.name.localeCompare(b.name, "ru");
     });
-  }, [clubSearch, clubs, takenClubSlugs]);
+  }, [clubSearch, clubs, selectedLeagueSlug, takenClubSlugs]);
+
+  const leagueOptions = useMemo(
+    () => Array.from(new Map(clubs.filter((club) => club.leagueSlug && club.leagueName).map((club) => {
+      const league = TOP_FIVE_LEAGUES.find((item) => item.slug === club.leagueSlug);
+      return [club.leagueSlug, { slug: club.leagueSlug as string, name: club.leagueName as string, badgePath: league?.badgePath ?? club.imagePath }];
+    })).values()),
+    [clubs],
+  );
 
   const loadRegulations = async () => {
     const response = await fetch("/api/regulations/acceptance", { cache: "no-store" });
@@ -344,6 +359,8 @@ export function RegisterTournamentButton({
 
       if (afterRegulationsAction === "choose-club") {
         setMessage("");
+        setSelectedLeagueSlug(null);
+        setClubSearch("");
         setIsOpen(true);
         return;
       }
@@ -640,6 +657,22 @@ export function RegisterTournamentButton({
             <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 sm:gap-5 sm:p-5">
             {clubSelectionMode === ClubSelectionMode.PLAYER_PICK ? (
               <>
+                {clubSelectionByLeague && !selectedLeagueSlug ? (
+                  <div className="grid min-h-0 flex-1 grid-cols-2 gap-3 overflow-y-auto sm:grid-cols-3">
+                    {leagueOptions.map((league) => (
+                      <button key={league.slug} type="button" onClick={() => setSelectedLeagueSlug(league.slug)} className="flex min-h-28 flex-col items-center justify-center gap-3 rounded-2xl border border-white/10 bg-[#171c1d] px-3 py-4 text-center transition hover:border-primary/40 hover:bg-[#1b2321] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                        <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-primary/25 bg-primary/10"><Image src={league.badgePath} alt="" width={48} height={48} className="h-12 w-12 object-contain p-1" /></div>
+                        <span className="text-sm font-semibold text-white">{league.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                <>
+                {clubSelectionByLeague && selectedLeagueSlug ? (
+                  <Button type="button" variant="ghost" className="min-h-11 self-start gap-2 px-2 text-zinc-300" onClick={() => { setSelectedLeagueSlug(null); setClubSearch(""); }}>
+                    <ArrowLeft className="h-4 w-4" /> Все лиги
+                  </Button>
+                ) : null}
                 <label className="block shrink-0 space-y-2">
                   <span className="text-sm font-medium text-zinc-200">Поиск клуба</span>
                   <div className="relative">
@@ -697,6 +730,8 @@ export function RegisterTournamentButton({
                     </div>
                   ) : null}
                 </div>
+                </>
+                )}
               </>
             ) : null}
             </div>

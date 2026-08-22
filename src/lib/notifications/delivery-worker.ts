@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db";
 import {
   isTelegramRecipientUnavailableError,
+  getTelegramRetryAfterMs,
   sendTelegramDraftAsText,
 } from "@/lib/telegram-bot";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
@@ -15,7 +16,10 @@ import {
 import { sendWebPushNotification } from "@/lib/services/web-push";
 
 const LOCK_TIMEOUT_MS = 5 * 60_000;
-const DELIVERY_CONCURRENCY = 4;
+const DELIVERY_CONCURRENCY = 8;
+const MAX_DELIVERY_RUNTIME_MS = 20_000;
+const DEFAULT_DELIVERY_LIMIT = 8;
+const MAX_DELIVERY_ATTEMPTS = 12;
 
 async function claimDeliveries(limit: number, notificationIds?: string[]) {
   const now = new Date();
@@ -55,6 +59,7 @@ async function claimDeliveries(limit: number, notificationIds?: string[]) {
 
 async function deliverOne(delivery: Awaited<ReturnType<typeof claimDeliveries>>[number]) {
   const notification = delivery.notification;
+  let retryAfterMs: number | undefined;
 
   try {
     let pushDelivered = Boolean(delivery.pushDeliveredAt);
@@ -83,6 +88,7 @@ async function deliverOne(delivery: Awaited<ReturnType<typeof claimDeliveries>>[
               replyMarkup: buildTelegramInlineKeyboard(richMessage.buttons ?? []),
             });
           } catch (error) {
+            retryAfterMs = getTelegramRetryAfterMs(error);
             if (!isTelegramRecipientUnavailableError(error)) throw error;
           }
         }
@@ -131,10 +137,16 @@ async function deliverOne(delivery: Awaited<ReturnType<typeof claimDeliveries>>[
       where: { id: delivery.id, lockToken: delivery.lockToken },
       data: {
         attempts,
-        availableAt: new Date(Date.now() + getNotificationRetryDelayMs(attempts)),
+        ...(attempts >= MAX_DELIVERY_ATTEMPTS
+          ? {
+              // Keep permanent failures out of the hot queue without requiring a new schema migration.
+              availableAt: new Date("9999-12-31T23:59:59.999Z"),
+              lastError: `permanent:${message}`,
+            }
+          : { availableAt: new Date(Date.now() + getNotificationRetryDelayMs(attempts, retryAfterMs)) }),
         lockedAt: null,
         lockToken: null,
-        lastError: message,
+        ...(attempts >= MAX_DELIVERY_ATTEMPTS ? {} : { lastError: message }),
       },
     });
     return false;
@@ -142,10 +154,21 @@ async function deliverOne(delivery: Awaited<ReturnType<typeof claimDeliveries>>[
 }
 
 async function deliverClaimedNotifications(limit: number, notificationIds?: string[]) {
-  const deliveries = await claimDeliveries(Math.max(1, Math.min(100, limit)), notificationIds);
+  const deliveries = await claimDeliveries(Math.max(1, Math.min(DEFAULT_DELIVERY_LIMIT, limit)), notificationIds);
   let delivered = 0;
+  const startedAt = Date.now();
 
   for (let index = 0; index < deliveries.length; index += DELIVERY_CONCURRENCY) {
+    if (Date.now() - startedAt >= MAX_DELIVERY_RUNTIME_MS) {
+      await db.notificationDelivery.updateMany({
+        where: {
+          id: { in: deliveries.slice(index).map((delivery) => delivery.id) },
+          lockToken: deliveries[index]?.lockToken,
+        },
+        data: { lockedAt: null, lockToken: null },
+      });
+      break;
+    }
     const results = await Promise.all(deliveries.slice(index, index + DELIVERY_CONCURRENCY).map(deliverOne));
     delivered += results.filter(Boolean).length;
   }
@@ -153,7 +176,7 @@ async function deliverClaimedNotifications(limit: number, notificationIds?: stri
   return { claimed: deliveries.length, delivered, failed: deliveries.length - delivered };
 }
 
-export function deliverNotificationOutbox(limit = 20) {
+export function deliverNotificationOutbox(limit = DEFAULT_DELIVERY_LIMIT) {
   return deliverClaimedNotifications(limit);
 }
 

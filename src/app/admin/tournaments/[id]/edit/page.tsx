@@ -16,6 +16,7 @@ export default async function AdminTournamentEditPage(props: {
 
   const tournament = await db.tournament.findFirst({
     where: { id: params.id, ...getAdminTournamentAccessWhere(session) },
+    include: { selectedLeagues: { select: { league: { select: { slug: true } } } } },
   });
 
   if (!tournament) notFound();
@@ -76,6 +77,9 @@ export default async function AdminTournamentEditPage(props: {
           telegramGroupId: tournament.telegramGroupId ?? "",
           telegramAutoPublish: tournament.telegramAutoPublish,
           clubSelectionMode: tournament.clubSelectionMode,
+          clubSelectionByLeague: tournament.clubSelectionByLeague,
+          clubSelectionInGameOnly: tournament.clubSelectionInGameOnly,
+          selectedLeagueSlugs: tournament.selectedLeagues.map((item) => item.league.slug),
           sortRules: tournament.sortRules,
         }}
       />

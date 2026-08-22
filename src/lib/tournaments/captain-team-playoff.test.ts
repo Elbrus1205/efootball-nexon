@@ -122,3 +122,32 @@ test("waits for penalties when a tied playoff match has no winner yet", () => {
 
   assert.deepEqual(resolveCaptainTeamPlayoffAggregate(matches), { state: "pending" });
 });
+
+test("ignores cancelled rows left by a repaired playoff series", () => {
+  const matches = [
+    ...Array.from({ length: 5 }, (_, index) =>
+      playoffMatch({
+        id: `city-win-${index}`,
+        home: index < 3 ? "city" : "hilal",
+        away: index < 3 ? "hilal" : "city",
+        homeScore: index < 3 ? 1 : 0,
+        awayScore: index < 3 ? 0 : 1,
+      }),
+    ),
+    playoffMatch({ id: "hilal-win", home: "city", away: "hilal", homeScore: 0, awayScore: 1 }),
+    playoffMatch({
+      id: "superseded-row",
+      home: "hilal",
+      away: "old-opponent",
+      homeScore: null,
+      awayScore: null,
+      status: "CANCELLED",
+    }),
+  ];
+
+  const result = resolveCaptainTeamPlayoffAggregate(matches);
+  assert.equal(result.state, "winner");
+  assert.equal(result.state === "winner" ? result.winnerEntryId : null, "city");
+  assert.equal(result.state === "winner" ? result.participant1Score : null, 5);
+  assert.equal(result.state === "winner" ? result.participant2Score : null, 1);
+});

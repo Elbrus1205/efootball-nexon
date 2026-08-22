@@ -119,6 +119,19 @@ test("unfilled home pairings produce thirty-minute deadline reminders", () => {
   assert.match(reminderServiceSource, /Нужно назначить пары игроков/);
 });
 
+test("new captain playoff rounds notify captains with open pairings", () => {
+  assert.match(reminderServiceSource, /collectCaptainTeamAssignmentCaptainIds/);
+  assert.match(reminderServiceSource, /captain-team-round-start:/);
+  assert.match(reminderServiceSource, /Нужно выбрать пары игроков/);
+  assert.match(reminderServiceSource, /tab=my-matches/);
+});
+
+test("captain team slot expansion is serialized and locks source fixtures", () => {
+  assert.match(captainTeamMatchesSource, /return db\.\$transaction\(async \(tx\) =>/);
+  assert.match(captainTeamMatchesSource, /FOR UPDATE/);
+  assert.match(captainTeamMatchesSource, /"isCaptainAssignedTeamMatch" = false/);
+});
+
 test("started league and group structures hide unfilled participant places", () => {
   assert.match(
     tournamentPageSource,

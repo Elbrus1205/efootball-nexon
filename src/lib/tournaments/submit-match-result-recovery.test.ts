@@ -36,6 +36,7 @@ test("a repeated confirmed submission can resume idempotent finalization", () =>
     /if \(match\.status === MatchStatus\.CONFIRMED \|\| match\.status === MatchStatus\.FINISHED\)[\s\S]{0,250}status: 409/,
   );
   assert.match(finalize, /dedupeKey: `match-result:\$\{match\.id\}:\$\{userId\}`/);
+  assert.match(tournaments, /resolveConfirmedMatch[\s\S]+ensureMatchLineupSnapshot\(match\.id\)/);
   assert.match(reliability, /pg_advisory_xact_lock\(hashtext\([\s\S]+reliability-user:/);
   assert.doesNotMatch(reliability, /reliability-confirmed:/);
   assert.match(reliability, /userId: \{ in: lockedUserIds \}/);

@@ -13,9 +13,12 @@ import {
 } from "@/lib/telegram-bot";
 import { handleTelegramCallbackAction } from "@/lib/services/telegram-callbacks";
 import {
-  handleTelegramAutoReply,
-  type TelegramAutoReplyMessage,
-} from "@/lib/services/telegram-auto-replies";
+  buildEmptyTelegramAiContext,
+  handleTelegramAiMessage,
+  isTelegramAiRelevantMessage,
+  type TelegramAiContext,
+  type TelegramAiMessage,
+} from "@/lib/services/telegram-ai";
 import { tgEmoji, tgEmojiId } from "@/lib/telegram-emoji";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
 import { buildPersonalMatchMessage, type TelegramRichMessageDraft } from "@/lib/telegram-rich";
@@ -30,13 +33,16 @@ type TelegramWebhookUser = {
   is_bot?: boolean;
 };
 
-type TelegramWebhookMessage = TelegramAutoReplyMessage & {
+type TelegramWebhookMessage = TelegramAiMessage & {
   from?: TelegramWebhookUser;
 };
 
 type TelegramWebhookUpdate = {
+  update_id?: number;
   message?: TelegramWebhookMessage;
   edited_message?: TelegramWebhookMessage;
+  channel_post?: TelegramWebhookMessage;
+  edited_channel_post?: TelegramWebhookMessage;
   callback_query?: {
     id?: string;
     from?: TelegramWebhookUser;
@@ -77,7 +83,7 @@ function isGroupMessage(message: TelegramWebhookMessage) {
 }
 
 async function syncTelegramUsernameFromWebhook(update: TelegramWebhookUpdate) {
-  const from = update.message?.from ?? update.edited_message?.from ?? update.callback_query?.from;
+  const from = update.message?.from ?? update.edited_message?.from ?? update.channel_post?.from ?? update.edited_channel_post?.from ?? update.callback_query?.from;
   const telegramId = normalizeId(from?.id);
   if (!telegramId || telegramId.startsWith("-")) return;
 
@@ -189,7 +195,15 @@ async function resolveCommandContext(message: TelegramWebhookMessage) {
           ],
         },
         orderBy: { updatedAt: "desc" },
-        select: { id: true, title: true, rules: true },
+        select: {
+          id: true,
+          title: true,
+          rules: true,
+          status: true,
+          startsAt: true,
+          registrationStartsAt: true,
+          registrationEndsAt: true,
+        },
       })
     : null;
 
@@ -201,11 +215,115 @@ async function resolveCommandContext(message: TelegramWebhookMessage) {
           participants: { some: { userId: user.id } },
         },
         orderBy: { updatedAt: "desc" },
-        select: { id: true, title: true, rules: true },
+        select: {
+          id: true,
+          title: true,
+          rules: true,
+          status: true,
+          startsAt: true,
+          registrationStartsAt: true,
+          registrationEndsAt: true,
+        },
       })
     : null;
 
   return { user, tournament: communityTournament ?? userTournament };
+}
+
+async function buildTelegramAiContext(message: TelegramWebhookMessage): Promise<TelegramAiContext> {
+  const context = await resolveCommandContext(message);
+  const upcomingTournaments = await db.tournament.findMany({
+    where: {
+      isTest: false,
+      status: { in: [TournamentStatus.REGISTRATION_OPEN, TournamentStatus.AWAITING_START, TournamentStatus.IN_PROGRESS] },
+    },
+    orderBy: { startsAt: "asc" },
+    take: 5,
+    select: { id: true, title: true, status: true, startsAt: true, registrationEndsAt: true },
+  });
+  if (!context.user && !context.tournament) {
+    return {
+      ...buildEmptyTelegramAiContext(),
+      upcomingTournaments: upcomingTournaments.map((tournament) => ({
+        id: tournament.id,
+        title: tournament.title,
+        status: tournament.status,
+        startsAt: tournament.startsAt.toISOString(),
+        registrationEndsAt: tournament.registrationEndsAt.toISOString(),
+      })),
+    };
+  }
+
+  const user = context.user && telegramUserId(message)
+    ? await db.user.findUnique({
+        where: { id: context.user.id },
+        select: { name: true, telegramUsername: true },
+      })
+    : null;
+
+  let personalMatch: TelegramAiContext["personalMatch"] = null;
+  if (context.user && context.tournament) {
+    const match = await db.match.findFirst({
+      where: {
+        tournamentId: context.tournament.id,
+        status: { in: activeMatchStatuses },
+        isPenaltyTiebreak: false,
+        OR: [{ player1Id: context.user.id }, { player2Id: context.user.id }],
+      },
+      orderBy: [{ scheduledAt: "asc" }, { round: "asc" }, { matchNumber: "asc" }],
+      include: {
+        tournament: { select: { title: true } },
+        stage: { select: { name: true, id: true } },
+        player1: { select: { id: true, name: true, telegramUsername: true } },
+        player2: { select: { id: true, name: true, telegramUsername: true } },
+      },
+    });
+    if (match) {
+      const opponent = match.player1Id === context.user.id ? match.player2 : match.player1;
+      const deadline = match.stageId
+        ? await db.roundDeadline.findUnique({ where: { stageId_round: { stageId: match.stageId, round: match.round } }, select: { deadlineAt: true } })
+        : null;
+      personalMatch = {
+        id: match.id,
+        tournamentId: match.tournamentId,
+        tournamentTitle: match.tournament.title,
+        stage: match.stage?.name || "Основной этап",
+        round: match.round,
+        opponent: opponent?.name?.trim() || (opponent?.telegramUsername ? `@${opponent.telegramUsername.replace(/^@/, "")}` : "Не указан"),
+        status: match.status,
+        scheduledAt: match.scheduledAt?.toISOString() ?? null,
+        deadlineAt: deadline?.deadlineAt?.toISOString() ?? null,
+      };
+    }
+  }
+
+  return {
+    user: user ? { name: user.name?.trim() || null, telegramUsername: user.telegramUsername?.trim() || null } : null,
+    tournament: context.tournament
+      ? {
+          id: context.tournament.id,
+          title: context.tournament.title,
+          rules: context.tournament.rules,
+          status: context.tournament.status,
+          startsAt: context.tournament.startsAt?.toISOString() ?? null,
+          registrationStartsAt: context.tournament.registrationStartsAt?.toISOString() ?? null,
+          registrationEndsAt: context.tournament.registrationEndsAt?.toISOString() ?? null,
+        }
+      : null,
+    upcomingTournaments: upcomingTournaments.map((tournament) => ({
+      id: tournament.id,
+      title: tournament.title,
+      status: tournament.status,
+      startsAt: tournament.startsAt.toISOString(),
+      registrationEndsAt: tournament.registrationEndsAt.toISOString(),
+    })),
+    personalMatch,
+  };
+}
+
+function telegramUserId(message: TelegramWebhookMessage) {
+  const id = normalizeId(message.from?.id);
+  return id && !id.startsWith("-") ? id : null;
 }
 
 async function buildMyMatchDraft(userId: string, tournamentId: string) {
@@ -360,12 +478,23 @@ export async function POST(request: NextRequest) {
   const update = (await request.json().catch(() => null)) as TelegramWebhookUpdate | null;
   if (update) {
     await syncTelegramUsernameFromWebhook(update);
-    if (update.message) {
-      await handleCommand(update.message);
-      await handleTelegramAutoReply(update.message).catch((error) => {
-        if (isTelegramRecipientUnavailableError(error)) return;
-        console.error("Failed to send Telegram auto reply", error);
-      });
+    const incomingMessage = update.message ?? update.channel_post;
+    if (incomingMessage) {
+      await handleCommand(incomingMessage);
+      if (!commandName(incomingMessage.text) && isTelegramAiRelevantMessage(incomingMessage, process.env.TELEGRAM_BOT_USERNAME ?? process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME)) {
+        const context = await buildTelegramAiContext(incomingMessage).catch((error) => {
+          console.error("Failed to build Telegram AI context", error);
+          return buildEmptyTelegramAiContext();
+        });
+        await handleTelegramAiMessage({
+          message: incomingMessage,
+          context,
+          botUsername: process.env.TELEGRAM_BOT_USERNAME ?? process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME,
+        }).catch((error) => {
+          if (isTelegramRecipientUnavailableError(error)) return;
+          console.error("Failed to send Telegram AI reply", error);
+        });
+      }
     }
     if (update.callback_query) await handleCallbackQuery(update.callback_query);
   }

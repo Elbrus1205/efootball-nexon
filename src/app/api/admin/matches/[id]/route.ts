@@ -234,6 +234,16 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
   if ("player2Id" in body) data.player2 = body.player2Id ? { connect: { id: body.player2Id } } : { disconnect: true };
   if ("participant1EntryId" in body) data.participant1Entry = body.participant1EntryId ? { connect: { id: body.participant1EntryId } } : { disconnect: true };
   if ("participant2EntryId" in body) data.participant2Entry = body.participant2EntryId ? { connect: { id: body.participant2EntryId } } : { disconnect: true };
+
+  const teamSideChanged = (side: 1 | 2) => {
+    const participantField = side === 1 ? "participant1EntryId" : "participant2EntryId";
+    const previousId = side === 1 ? before.participant1EntryId : before.participant2EntryId;
+    const nextId = participantField in body ? body[participantField] || null : previousId;
+    return before.isCaptainAssignedTeamMatch && nextId !== previousId;
+  };
+
+  if (teamSideChanged(1)) data.player1 = { disconnect: true };
+  if (teamSideChanged(2)) data.player2 = { disconnect: true };
   if ("scheduledAt" in body) data.scheduledAt = body.scheduledAt ? new Date(body.scheduledAt) : null;
   if ("player1Score" in body) data.player1Score = body.player1Score;
   if ("player2Score" in body) data.player2Score = body.player2Score;
@@ -242,8 +252,8 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
   if ("status" in body && body.status) data.status = body.status as MatchStatus;
   if ("notes" in body) data.notes = body.notes || null;
 
-  const nextPlayer1Id = "player1Id" in body ? body.player1Id || null : before.player1Id;
-  const nextPlayer2Id = "player2Id" in body ? body.player2Id || null : before.player2Id;
+  const nextPlayer1Id = teamSideChanged(1) ? null : ("player1Id" in body ? body.player1Id || null : before.player1Id);
+  const nextPlayer2Id = teamSideChanged(2) ? null : ("player2Id" in body ? body.player2Id || null : before.player2Id);
   const nextParticipant1EntryId = "participant1EntryId" in body ? body.participant1EntryId || null : before.participant1EntryId;
   const nextParticipant2EntryId = "participant2EntryId" in body ? body.participant2EntryId || null : before.participant2EntryId;
   const nextPlayer1Score = "player1Score" in body ? body.player1Score ?? null : before.player1Score;

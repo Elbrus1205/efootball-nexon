@@ -296,6 +296,7 @@ export function MatchManager({
   const [draggedMatchId, setDraggedMatchId] = useState<string | null>(null);
   const scoreInputsRef = useRef<Record<string, { player1?: HTMLInputElement | null; player2?: HTMLInputElement | null }>>({});
   const [orderedMatches, setOrderedMatches] = useState(matches);
+  const saveQueuesRef = useRef<Record<string, Promise<void>>>({});
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sectionFilter, setSectionFilter] = useState<string>(() => buildAdminMatchSections(matches)[0]?.key ?? "all");
@@ -358,16 +359,26 @@ export function MatchManager({
           const participantId = typeof payload.participant1EntryId === "string" ? payload.participant1EntryId : "";
           const participant = participantId ? participantById.get(participantId) ?? null : null;
           next.participant1EntryId = participantId || null;
-          next.player1Id = participant?.userId ?? null;
-          next.player1 = participant ? { name: participant.user.name } : null;
+          if (match.isCaptainAssignedTeamMatch) {
+            next.player1Id = null;
+            next.player1 = null;
+          } else {
+            next.player1Id = participant?.userId ?? null;
+            next.player1 = participant ? { name: participant.user.name } : null;
+          }
         }
 
         if ("participant2EntryId" in payload) {
           const participantId = typeof payload.participant2EntryId === "string" ? payload.participant2EntryId : "";
           const participant = participantId ? participantById.get(participantId) ?? null : null;
           next.participant2EntryId = participantId || null;
-          next.player2Id = participant?.userId ?? null;
-          next.player2 = participant ? { name: participant.user.name } : null;
+          if (match.isCaptainAssignedTeamMatch) {
+            next.player2Id = null;
+            next.player2 = null;
+          } else {
+            next.player2Id = participant?.userId ?? null;
+            next.player2 = participant ? { name: participant.user.name } : null;
+          }
         }
 
         if ("player1Id" in payload) {
@@ -428,9 +439,10 @@ export function MatchManager({
   const saveMatch = (matchId: string, payload: Record<string, unknown>) => {
     patchLocalMatch(matchId, payload);
 
-    // Автосохранение поля (счёт/участники) — оптимистично, без блокировки всей
-    // страницы. UI не ждёт ответа; при ошибке откатываемся через refresh.
-    void (async () => {
+    const previousSave = saveQueuesRef.current[matchId] ?? Promise.resolve();
+    const nextSave = previousSave
+      .catch(() => undefined)
+      .then(async () => {
       try {
         const response = await fetch(`/api/admin/matches/${matchId}`, {
           method: "PATCH",
@@ -458,7 +470,14 @@ export function MatchManager({
       } catch {
         router.refresh();
       }
-    })();
+      });
+
+    saveQueuesRef.current[matchId] = nextSave;
+    void nextSave.finally(() => {
+      if (saveQueuesRef.current[matchId] === nextSave) {
+        delete saveQueuesRef.current[matchId];
+      }
+    });
   };
 
   // Смена статуса (ОК/Спор) — блокирует только кнопки этого конкретного матча.
@@ -690,11 +709,7 @@ export function MatchManager({
                             playerOptions={match.isCaptainAssignedTeamMatch ? selectedParticipantOne?.rosterMembers ?? [] : null}
                             playerValue={match.isCaptainAssignedTeamMatch ? match.player1Id ?? "" : ""}
                             onChange={(participantId) => {
-                              const participant = participantId ? participantById.get(participantId) : null;
-                              saveMatch(match.id, {
-                                participant1EntryId: participantId,
-                                player1Id: participant?.userId ?? null,
-                              });
+                              saveMatch(match.id, { participant1EntryId: participantId });
                             }}
                             onPlayerChange={(playerId) => saveMatch(match.id, { player1Id: playerId })}
                           />
@@ -709,11 +724,7 @@ export function MatchManager({
                             playerOptions={match.isCaptainAssignedTeamMatch ? selectedParticipantTwo?.rosterMembers ?? [] : null}
                             playerValue={match.isCaptainAssignedTeamMatch ? match.player2Id ?? "" : ""}
                             onChange={(participantId) => {
-                              const participant = participantId ? participantById.get(participantId) : null;
-                              saveMatch(match.id, {
-                                participant2EntryId: participantId,
-                                player2Id: participant?.userId ?? null,
-                              });
+                              saveMatch(match.id, { participant2EntryId: participantId });
                             }}
                             onPlayerChange={(playerId) => saveMatch(match.id, { player2Id: playerId })}
                           />

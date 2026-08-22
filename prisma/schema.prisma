@@ -817,6 +817,8 @@ model Tournament {
   manualBracketControl           Boolean                             @default(false)
   manualPlayoffSelection         Boolean                             @default(false)
   clubSelectionMode              ClubSelectionMode                   @default(ADMIN_RANDOM)
+  clubSelectionByLeague          Boolean                             @default(false)
+  clubSelectionInGameOnly        Boolean                             @default(true)
   maxParticipants                Int
   pointsForWin                   Int                                 @default(3)
   pointsForDraw                  Int                                 @default(1)
@@ -839,11 +841,56 @@ model Tournament {
   brackets                       PlayoffBracket[]
   actions                        AdminAction[]
   telegramPublications           TelegramPublication[]
+  selectedLeagues                TournamentLeague[]
 
   @@index([status, startsAt])
   @@index([seasonId, status])
   @@index([participantMode, status])
   @@index([isTest, status])
+}
+
+model League {
+  id                 String             @id @default(cuid())
+  slug               String             @unique
+  name               String
+  badgePath          String
+  isEnabled          Boolean            @default(true)
+  sortOrder          Int                @default(0)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  clubs              Club[]
+  tournamentLeagues  TournamentLeague[]
+
+  @@index([isEnabled, sortOrder])
+}
+
+model Club {
+  id                   String      @id @default(cuid())
+  slug                 String      @unique
+  name                 String
+  imagePath            String
+  leagueId             String?
+  isRegistrationEnabled Boolean    @default(true)
+  isInGameEnabled      Boolean     @default(true)
+  sortOrder            Int         @default(0)
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  league               League?     @relation(fields: [leagueId], references: [id], onDelete: SetNull)
+
+  @@index([leagueId, isRegistrationEnabled, isInGameEnabled])
+  @@index([isRegistrationEnabled, isInGameEnabled, name])
+}
+
+model TournamentLeague {
+  id           String     @id @default(cuid())
+  tournamentId String
+  leagueId     String
+  createdAt    DateTime   @default(now())
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  league       League     @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, leagueId])
+  @@index([leagueId])
 }
 
 model TelegramPublication {
