@@ -36,6 +36,7 @@ import {
 } from "@/lib/admin-display";
 import { db } from "@/lib/db";
 import { normalizeFormatBlueprint } from "@/lib/format-blueprint";
+import { describeStageGraphTransition } from "@/lib/tournament-stage-graph";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { RELIABILITY_REGISTRATION_THRESHOLD } from "@/lib/services/reliability";
 import { getTelegramProfileLinks, hasPublicTelegramUsername, hasTelegramRegistrationContact } from "@/lib/social-links";
@@ -93,10 +94,10 @@ function StageGraphSummary({ graph }: { graph: ReturnType<typeof normalizeFormat
   return (
     <Card className="mb-5 overflow-hidden border-primary/15 bg-primary/[0.04] p-4 sm:p-5">
       <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-sm font-semibold text-white">Схема турнира</h2>{graph.superCup.enabled ? <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-2.5 py-1 text-[10px] font-semibold text-amber-100">Суперкубок</span> : null}</div>
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        {graph.stages.map((stage, index) => <div key={stage.id} className="flex min-w-0 items-center gap-2"><div className="min-w-0 rounded-lg border border-white/10 bg-black/20 px-3 py-2"><div className="truncate text-xs font-semibold text-white">{stage.name}</div><div className="mt-0.5 text-[10px] text-zinc-500">{stage.type === "PLAYOFF" ? "Плей-офф" : stage.type === "LEAGUE" ? `${stage.divisionsCount} лиг` : `${stage.divisionsCount} групп`}</div></div>{index < graph.stages.length - 1 ? <span className="text-primary/70">→</span> : null}</div>)}
+      <div className="grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {graph.stages.map((stage, index) => <div key={stage.id} className="min-w-0 rounded-lg border border-white/10 bg-black/20 px-3 py-3"><div className="flex items-center gap-2"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-primary/20 bg-primary/10 text-[10px] font-bold text-primary">{index + 1}</span><div className="min-w-0 truncate text-xs font-semibold text-white">{stage.name}</div></div><div className="mt-1.5 pl-8 text-[10px] text-zinc-500">{stage.type === "SUPERCUP" ? "Суперкубок" : stage.type === "PLAYOFF" ? "Плей-офф" : stage.type === "LEAGUE" ? `${stage.divisionsCount} лиг` : `${stage.divisionsCount} групп`}</div></div>)}
       </div>
-      {graph.transitions.length ? <div className="mt-3 flex flex-wrap gap-2">{graph.transitions.slice(0, 8).map((transition) => { const from = graph.stages.find((stage) => stage.id === transition.fromStageId); const to = graph.stages.find((stage) => stage.id === transition.toStageId); return <span key={transition.id} className="rounded-full border border-white/10 bg-black/15 px-2.5 py-1 text-[10px] text-zinc-400">{from?.name} → {to?.name}: {transition.result === "RANK" ? `${transition.fromRank ?? 1} место` : transition.result === "WINNER" ? "победитель" : transition.result === "RUNNER_UP" ? "финалист" : "3-е место"}</span>; })}</div> : null}
+      {graph.transitions.length ? <div className="mt-3 grid gap-2 sm:grid-cols-2">{graph.transitions.map((transition) => <span key={transition.id} className="min-w-0 break-words rounded-lg border border-white/10 bg-black/15 px-3 py-2 text-[11px] leading-5 text-zinc-400">{describeStageGraphTransition(graph, transition)}</span>)}</div> : null}
     </Card>
   );
 }
@@ -154,7 +155,7 @@ function scheduleSectionTitle(match: {
   group?: { name: string; orderIndex?: number | null } | null;
   stage?: { name: string | null; type?: StageType | null; roundsCount?: number | null } | null;
 }) {
-  if (match.stage?.type === StageType.PLAYOFF) {
+  if (match.stage?.type === StageType.PLAYOFF || match.stage?.type === StageType.SUPER_CUP) {
     if (match.isThirdPlaceMatch) return "Матч за 3-е место";
     if (match.bracket === "lower") return `Нижняя сетка • Раунд ${match.round}`;
 
@@ -194,7 +195,7 @@ function buildScheduleSections<
     const groupSort = match.group?.orderIndex ?? 0;
     const deadlineAt = match.stage?.deadlines?.find((item) => item.round === match.round)?.deadlineAt ?? null;
 
-    if (match.stage?.type !== StageType.PLAYOFF) {
+    if (match.stage?.type !== StageType.PLAYOFF && match.stage?.type !== StageType.SUPER_CUP) {
       const key = [match.stage?.id ?? "stage", "tour", match.round].join(":");
       const section = sections.get(key);
 
@@ -214,7 +215,7 @@ function buildScheduleSections<
       continue;
     }
 
-    const bracketSort = match.stage?.type === StageType.PLAYOFF && match.bracket === "lower" ? 1 : 0;
+    const bracketSort = (match.stage?.type === StageType.PLAYOFF || match.stage?.type === StageType.SUPER_CUP) && match.bracket === "lower" ? 1 : 0;
     const thirdPlaceSort = match.isThirdPlaceMatch ? 1 : 0;
     const key = [match.stage?.id ?? "stage", match.group?.id ?? "all", match.bracket ?? "none", match.round, thirdPlaceSort].join(":");
     const section = sections.get(key);
@@ -913,9 +914,9 @@ export default async function TournamentDetailsPage(
   const customStandingHighlights = buildCustomStandingHighlights(tournament);
   const structureOptions: TournamentStageOption[] = tournament.stages.map((stage) => ({
     id: stage.id,
-    title: stage.name?.trim() || (stage.type === StageType.PLAYOFF ? "Плей-офф" : stage.type === StageType.LEAGUE ? "Лига" : "Групповой этап"),
+    title: stage.name?.trim() || (stage.type === StageType.SUPER_CUP ? "Суперкубок" : stage.type === StageType.PLAYOFF ? "Плей-офф" : stage.type === StageType.LEAGUE ? "Лига" : "Групповой этап"),
     caption:
-      stage.type === StageType.PLAYOFF
+      stage.type === StageType.PLAYOFF || stage.type === StageType.SUPER_CUP
         ? pluralRu(stage.roundsCount ?? 0, "раунд", "раунда", "раундов")
         : stage.groups.length
           ? pluralRu(stage.groups.length, "группа", "группы", "групп")
@@ -1151,7 +1152,7 @@ export default async function TournamentDetailsPage(
           {structureOptions.length ? (
             <TournamentStageSwitcher options={structureOptions}>
               {tournament.stages.map((stage) => {
-                if (stage.type === StageType.PLAYOFF) {
+                if (stage.type === StageType.PLAYOFF || stage.type === StageType.SUPER_CUP) {
                   return (
                     <BracketView key={stage.id} matches={activePublicMatches.filter((match) => match.stageId === stage.id)} clubsByUserId={participantClubMap} currentUserId={currentUserId} />
                   );

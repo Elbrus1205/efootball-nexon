@@ -94,9 +94,9 @@ export async function POST(request: Request) {
     const body = parsed.data;
     const formatBlueprint = parseFormatBlueprintJson(typeof body.formatBlueprintJson === "string" ? body.formatBlueprintJson : "");
     if (formatBlueprint?.stageGraph) {
-      const issue = validateStageGraph(formatBlueprint.stageGraph)[0];
-      if (issue) {
-        return NextResponse.redirect(new URL(`/admin/tournaments/builder?error=${encodeURIComponent(issue.message)}`, origin), 303);
+      const issues = validateStageGraph(formatBlueprint.stageGraph);
+      if (issues.length) {
+        return NextResponse.redirect(new URL(`/admin/tournaments/builder?error=${encodeURIComponent(issues.map((issue) => issue.message).join(" "))}`, origin), 303);
       }
     }
     const startsAt = parseMoscowDateTimeLocal(body.startsAt);
@@ -188,8 +188,10 @@ export async function POST(request: Request) {
       }
     } catch (automationError) {
       console.error("Tournament was created, but automation failed", automationError);
-      const warning = encodeURIComponent("Турнир создан, но автоматическая генерация стадий, матчей или расписания выполнилась не полностью.");
-      return NextResponse.redirect(new URL(`/admin/tournaments?created=1&warning=${warning}`, origin), 303);
+      await db.tournament.delete({ where: { id: tournament.id } }).catch((rollbackError) => console.error("Failed to roll back incomplete tournament", rollbackError));
+      tournamentCreated = false;
+      const message = encodeURIComponent("Турнир не сохранён: не удалось атомарно создать этапы, матчи или расписание. Исправьте структуру и повторите попытку.");
+      return NextResponse.redirect(new URL(`/admin/tournaments/builder?error=${message}`, origin), 303);
     }
 
     if (notificationsEnabled && status === TournamentStatus.REGISTRATION_OPEN) {

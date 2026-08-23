@@ -20,7 +20,7 @@ type DeadlineRound = {
 type DeadlineStage = {
   id: string;
   name: string;
-  type: "LEAGUE" | "GROUP_STAGE" | "PLAYOFF";
+  type: "LEAGUE" | "GROUP_STAGE" | "PLAYOFF" | "SUPER_CUP";
   rounds: DeadlineRound[];
 };
 
@@ -61,7 +61,7 @@ function toApiDate(value: string) {
 }
 
 function roundUnit(type: DeadlineStage["type"]) {
-  return type === "PLAYOFF" ? "Раунд" : "Тур";
+  return type === "PLAYOFF" || type === "SUPER_CUP" ? "Раунд" : "Тур";
 }
 
 function formatShortDate(value: string) {

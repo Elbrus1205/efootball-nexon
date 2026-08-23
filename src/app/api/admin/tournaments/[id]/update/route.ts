@@ -90,10 +90,10 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   const submittedBlueprintJson = typeof body.formatBlueprintJson === "string" ? body.formatBlueprintJson : "";
   const formatBlueprint = parseFormatBlueprintJson(submittedBlueprintJson);
   if (formatBlueprint?.stageGraph) {
-    const issue = validateStageGraph(formatBlueprint.stageGraph)[0];
-    if (issue) {
+    const issues = validateStageGraph(formatBlueprint.stageGraph);
+    if (issues.length) {
       const redirectUrl = new URL(`/admin/tournaments/${params.id}/edit`, getRequestBaseUrl(request));
-      redirectUrl.searchParams.set("error", issue.message);
+      redirectUrl.searchParams.set("error", issues.map((issue) => issue.message).join(" "));
       return NextResponse.redirect(redirectUrl, 303);
     }
   }

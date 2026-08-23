@@ -50,6 +50,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { FormatBlueprint } from "@/lib/format-blueprint";
+import { normalizeStageGraph, validateStageGraph } from "@/lib/tournament-stage-graph";
 import { optimizedImageUrl } from "@/lib/image-optimization";
 import { uploadFile } from "@/lib/storage/upload-client";
 import { TOP_FIVE_LEAGUES } from "@/lib/club-catalog";
@@ -182,6 +183,7 @@ export function TournamentBuilderForm({
   const [clubSelectionInGameOnly, setClubSelectionInGameOnly] = useState(initialValues?.clubSelectionInGameOnly ?? true);
   const [selectedLeagueSlugs, setSelectedLeagueSlugs] = useState<string[]>(initialValues?.selectedLeagueSlugs ?? TOP_FIVE_LEAGUES.map((league) => league.slug));
   const [submitting, setSubmitting] = useState(false);
+  const [structureError, setStructureError] = useState("");
   const isEditing = Boolean(initialValues);
   const uploadsPending = coverUploading || lineupExampleUploading;
   const submitDisabled = uploadsPending || submitting;
@@ -256,6 +258,26 @@ export function TournamentBuilderForm({
   };
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+    const blueprintField = event.currentTarget.elements.namedItem("formatBlueprintJson");
+    if (blueprintField instanceof HTMLInputElement && blueprintField.value) {
+      try {
+        const parsed = JSON.parse(blueprintField.value) as { stageGraph?: unknown };
+        if (parsed.stageGraph) {
+          const issues = validateStageGraph(normalizeStageGraph(parsed.stageGraph));
+          if (issues.length) {
+            event.preventDefault();
+            setStructureError(issues.map((issue) => issue.message).join(" "));
+            document.getElementById("structure")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            return;
+          }
+        }
+      } catch {
+        event.preventDefault();
+        setStructureError("Конфигурация структуры повреждена. Обновите страницу и повторите настройку.");
+        return;
+      }
+    }
+    setStructureError("");
     const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
     if (submitter?.dataset.intent === "draft") {
       const statusField = event.currentTarget.elements.namedItem("status");
@@ -648,6 +670,7 @@ export function TournamentBuilderForm({
             title="Структура турнира"
             description="Соберите стартовый этап, количество групп или лиг, плей-офф и правила выхода."
           >
+            {structureError ? <div role="alert" className="mb-4 rounded-xl border border-red-400/30 bg-red-400/[0.06] p-4 text-sm leading-6 text-red-100">{structureError}</div> : null}
             <div className="space-y-6">
               <FormatBlueprintBuilder name="formatBlueprintJson" initialValue={initialValues?.formatBlueprint ?? null} visible />
               <div className="border-t border-white/10 pt-6">

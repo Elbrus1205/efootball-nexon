@@ -145,13 +145,13 @@ export function FormatBlueprintBuilder({
   visible: boolean;
 }) {
   const [blueprint, setBlueprint] = useState<FormatBlueprint>(normalizeFormatBlueprint(initialValue ?? createDefaultFormatBlueprint()));
-  const [structureMode, setStructureMode] = useState<"QUICK" | "VISUAL">("VISUAL");
+  const [structureMode, setStructureMode] = useState<"QUICK" | "VISUAL">(() => initialValue?.stageGraph?.mode === "VISUAL" ? "VISUAL" : "QUICK");
   const hasOpeningStage = blueprint.openingStageMode !== "NONE";
   const selectionSourceLabel = blueprint.openingStageMode === "GROUPS" ? "Из группы" : "Из лиги";
 
   useEffect(() => {
     setBlueprint(normalizeFormatBlueprint(initialValue ?? createDefaultFormatBlueprint()));
-    setStructureMode("VISUAL");
+    setStructureMode(initialValue?.stageGraph?.mode === "VISUAL" ? "VISUAL" : "QUICK");
   }, [initialValue]);
 
   const selectStructureMode = (mode: "QUICK" | "VISUAL") => {
@@ -161,7 +161,10 @@ export function FormatBlueprintBuilder({
       return;
     }
 
-    setBlueprint((current) => normalizeFormatBlueprint({ ...current, stageGraph: undefined }));
+    setBlueprint((current) => {
+      const next = normalizeFormatBlueprint({ ...current, stageGraph: undefined });
+      return { ...next, stageGraph: next.stageGraph ? { ...next.stageGraph, mode: "VISUAL" } : undefined };
+    });
   };
 
   const updatePlayoff = (playoffId: string, updater: (playoff: FormatBlueprint["playoffs"][number]) => FormatBlueprint["playoffs"][number]) => {
@@ -217,7 +220,7 @@ export function FormatBlueprintBuilder({
       </div>
 
       {structureMode === "VISUAL" && blueprint.stageGraph ? (
-        <StageGraphEditor value={blueprint.stageGraph} onChange={(stageGraph) => setBlueprint((current) => ({ ...current, stageGraph }))} />
+        <StageGraphEditor value={blueprint.stageGraph} onChange={(stageGraph) => setBlueprint((current) => ({ ...current, stageGraph: { ...stageGraph, mode: "VISUAL" } }))} />
       ) : null}
 
       {structureMode === "QUICK" ? <div className="flex items-center gap-3 border-b border-white/10 pb-1 pt-2"><div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-zinc-400"><Settings2 className="h-4 w-4" /></div><div><h3 className="text-sm font-semibold text-white">Быстрая настройка</h3><p className="text-xs text-zinc-500">Классический вариант: стартовый этап, дивизионы и плей-офф.</p></div></div> : null}

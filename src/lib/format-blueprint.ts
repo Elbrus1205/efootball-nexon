@@ -176,7 +176,7 @@ function createLegacyStageGraph(params: {
   participantsPerGroup: number | null;
   playoffs: PlayoffStageBlueprint[];
 }): StageGraphBlueprint {
-  const stages: StageGraphStage[] = [];
+  const stages: Array<Partial<StageGraphStage> & Pick<StageGraphStage, "id" | "name" | "type">> = [];
   const openingId = "opening";
   if (params.openingStageMode !== "NONE") {
     stages.push({
@@ -190,7 +190,7 @@ function createLegacyStageGraph(params: {
     });
   }
 
-  const transitions: StageGraphTransition[] = [];
+  const transitions: Array<Partial<StageGraphTransition> & Pick<StageGraphTransition, "id" | "fromStageId" | "toStageId">> = [];
   for (const playoff of params.playoffs) {
     stages.push({
       id: playoff.id,
@@ -222,7 +222,7 @@ function createLegacyStageGraph(params: {
     }
   }
 
-  return normalizeStageGraph({ stages, transitions, superCup: { enabled: false, name: "Суперкубок", sourcePlayoffIds: [] } });
+  return normalizeStageGraph({ mode: "QUICK", stages, transitions, superCup: { enabled: false, name: "Суперкубок", sourcePlayoffIds: [] } });
 }
 
 export function parseFormatBlueprintJson(input: string | null | undefined) {

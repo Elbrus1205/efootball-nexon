@@ -93,6 +93,7 @@ enum StageType {
   LEAGUE
   GROUP_STAGE
   PLAYOFF
+  SUPER_CUP
 }
 
 enum StageStatus {

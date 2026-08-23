@@ -19,7 +19,7 @@ import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
 
 function stageRoundUnit(stage?: { type: StageType } | null) {
-  return stage?.type === StageType.PLAYOFF ? "Раунд" : "Тур";
+  return stage?.type === StageType.PLAYOFF || stage?.type === StageType.SUPER_CUP ? "Раунд" : "Тур";
 }
 
 function isBrokenClubName(value: string | null | undefined) {
@@ -144,7 +144,7 @@ function exportRoundTitle(match: {
   round: number;
   stage?: { name: string; type: StageType } | null;
 }) {
-  if (match.stage?.type === StageType.PLAYOFF) {
+  if (match.stage?.type === StageType.PLAYOFF || match.stage?.type === StageType.SUPER_CUP) {
     return `${match.stage.name} · ${stageRoundUnit(match.stage)} ${match.round}`;
   }
 
@@ -264,7 +264,7 @@ export default async function AdminTournamentWorkspacePage(props: { params: Prom
   if (!tournament) notFound();
 
   const groupStage = tournament.stages.find((stage) => stage.type === StageType.GROUP_STAGE);
-  const playoffStage = tournament.stages.find((stage) => stage.type === StageType.PLAYOFF);
+  const playoffStage = tournament.stages.find((stage) => stage.type === StageType.PLAYOFF || stage.type === StageType.SUPER_CUP);
   const clubsBySlug = new Map(availableClubs.map((club) => [club.slug, club]));
   const participantClubMap = new Map(
     tournament.participants.map((entry) => {

@@ -101,6 +101,7 @@ export const stageTypeLabel: Record<StageType, string> = {
   LEAGUE: "Лига",
   GROUP_STAGE: "Групповой этап",
   PLAYOFF: "Плей-офф",
+  SUPER_CUP: "Суперкубок",
 };
 
 export const participantStatusLabel: Record<ParticipantStatus, string> = {
