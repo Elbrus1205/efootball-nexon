@@ -17,7 +17,7 @@ export default async function AdminTournamentBuilderPage(
         </div>
       ) : null}
 
-      <TournamentBuilderForm action="/api/admin/tournaments" submitLabel="Создать турнир" secondaryLabel="Сохранить как черновик" />
+      <TournamentBuilderForm action="/api/admin/tournaments" submitLabel="Создать турнир" secondaryLabel="Сохранить как черновик" restoreDraft={Boolean(searchParams?.error)} />
     </div>
   );
 }

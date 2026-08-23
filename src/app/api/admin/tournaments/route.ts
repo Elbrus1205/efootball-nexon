@@ -188,9 +188,10 @@ export async function POST(request: Request) {
       }
     } catch (automationError) {
       console.error("Tournament was created, but automation failed", automationError);
+      const automationMessage = automationError instanceof Error ? automationError.message : "Неизвестная ошибка автоматической генерации.";
       await db.tournament.delete({ where: { id: tournament.id } }).catch((rollbackError) => console.error("Failed to roll back incomplete tournament", rollbackError));
       tournamentCreated = false;
-      const message = encodeURIComponent("Турнир не сохранён: не удалось атомарно создать этапы, матчи или расписание. Исправьте структуру и повторите попытку.");
+      const message = encodeURIComponent(`Турнир не сохранён: ${automationMessage} Черновик формы сохранён в этой сессии — после возврата проверьте структуру и повторите попытку.`);
       return NextResponse.redirect(new URL(`/admin/tournaments/builder?error=${message}`, origin), 303);
     }
 

@@ -79,6 +79,19 @@ function isAdvancedStageGraph(graph: StageGraphBlueprint) {
   return graph.mode === "VISUAL" || nonPlayoffCount > 1 || graph.superCup.enabled || graph.transitions.some((transition) => transition.result !== "RANK");
 }
 
+function getPersistedGraphStageId(stage: { id: string; settingsJson?: unknown }) {
+  const settings = stage.settingsJson;
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) return stage.id;
+  const graphId = (settings as { graphId?: unknown }).graphId;
+  return typeof graphId === "string" && graphId ? graphId : stage.id;
+}
+
+function getPersistedGraphStage(graph: StageGraphBlueprint | undefined, stage: { id: string; settingsJson?: unknown }) {
+  if (!graph) return undefined;
+  const graphId = getPersistedGraphStageId(stage);
+  return graph.stages.find((node) => node.id === graphId);
+}
+
 function isCustomTourCountStage(stage: { settingsJson?: unknown }) {
   const settings = stage.settingsJson;
   if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
@@ -2350,7 +2363,6 @@ async function createAdvancedGraphStages(params: {
     const isPlayoff = node.type === "PLAYOFF" || node.type === "SUPERCUP";
     const stage = await db.tournamentStage.create({
       data: {
-        id: node.id,
         tournamentId: params.tournamentId,
         name: node.name,
         type: node.type === "SUPERCUP" ? StageType.SUPER_CUP : isPlayoff ? StageType.PLAYOFF : node.type === "LEAGUE" ? StageType.LEAGUE : StageType.GROUP_STAGE,
@@ -2383,7 +2395,7 @@ async function createAdvancedGraphStages(params: {
     if (!isPlayoff) {
       for (let division = 0; division < node.divisionsCount; division += 1) {
         const divisionSettings = node.divisions[division];
-        await db.tournamentGroup.create({ data: { id: divisionSettings?.id, stageId: stage.id, name: divisionSettings?.name ?? (node.divisionsCount === 1 ? node.name : `${node.type === "LEAGUE" ? "Лига" : "Группа"} ${division + 1}`), orderIndex: division + 1, capacity: divisionSettings?.participantsCount ?? node.participantsPerDivision ?? undefined } });
+        await db.tournamentGroup.create({ data: { stageId: stage.id, name: divisionSettings?.name ?? (node.divisionsCount === 1 ? node.name : `${node.type === "LEAGUE" ? "Лига" : "Группа"} ${division + 1}`), orderIndex: division + 1, capacity: divisionSettings?.participantsCount ?? node.participantsPerDivision ?? undefined } });
       }
     } else {
       const transitions = params.graph.transitions.filter((transition) => transition.toStageId === node.id);
@@ -3607,7 +3619,7 @@ export async function generateTournamentMatches(tournamentId: string) {
     });
     const activeRoots = rootStages.filter((stage) => stage.status === StageStatus.ACTIVE);
     const rootCapacities = activeRoots.map((stage) => {
-      const node = advancedGraph.stages.find((item) => item.id === stage.id);
+      const node = getPersistedGraphStage(advancedGraph, stage);
       if (!node) return tournament.participants.length;
       if (node.type === "PLAYOFF" || node.type === "SUPERCUP") return node.bracketSize ?? tournament.participants.length;
       return node.divisions.reduce((sum, division) => sum + (division.participantsCount ?? 0), 0) || tournament.participants.length;
@@ -3659,7 +3671,7 @@ export async function generateTournamentMatches(tournamentId: string) {
           const currentMembers = currentEntries.map((entry) => entry.registration);
           const members = currentMembers.map((entry) => ({ id: entry.id, userId: entry.userId }));
           if (members.length < 2 || await db.match.count({ where: { groupId: group.id } })) continue;
-          const graphDivision = advancedGraph?.stages.find((node) => node.id === stage.id)?.divisions.find((division) => division.id === group.id);
+          const graphDivision = getPersistedGraphStage(advancedGraph, stage)?.divisions[group.orderIndex - 1];
           await createRoundRobinMatchesForEntries({ tournamentId, stageId: stage.id, groupId: group.id, entries: members, roundsCount: graphDivision?.roundsCount ?? stage.roundsCount, matchesPerOpponent: graphDivision?.matchesPerOpponent ?? getCustomStageMatchesPerOpponent(stage, tournament.formatBlueprintJson), roundsMode: "cycles", matchupFormat: tournament.matchupFormat, bestOfWins: tournament.bestOfWins });
         }
         continue;
@@ -3691,7 +3703,7 @@ export async function generateTournamentMatches(tournamentId: string) {
         if (members.length < 2) continue;
         const existingCount = await db.match.count({ where: { groupId: group.id } });
         if (existingCount > 0) continue;
-        const graphDivision = advancedGraph?.stages.find((node) => node.id === stage.id)?.divisions.find((division) => division.id === group.id);
+        const graphDivision = getPersistedGraphStage(advancedGraph, stage)?.divisions[group.orderIndex - 1];
         await createRoundRobinMatchesForEntries({
           tournamentId,
           stageId: stage.id,
@@ -3715,7 +3727,7 @@ export async function generateTournamentMatches(tournamentId: string) {
         const stageEntries = await db.tournamentStageEntry.findMany({ where: { stageId: stage.id, registration: { status: ParticipantStatus.CONFIRMED } }, include: { registration: { select: { id: true, userId: true, seed: true } } } });
         const entries = stageEntries.map((entry) => entry.registration);
         if (entries.length < 2) continue;
-        const graphNode = advancedGraph?.stages.find((node) => node.id === stage.id);
+        const graphNode = getPersistedGraphStage(advancedGraph, stage);
         await createPlayoffMatches({ tournamentId, stageId: stage.id, bracketId: stage.bracket.id, entries, type: stage.bracket.type, legsCount: stage.bracket.legsCount, thirdPlaceMatch: stage.bracket.thirdPlaceMatch, sizeOverride: stage.bracket.size, matchupFormat: (graphNode?.bestOfWins ?? 1) > 1 ? MatchupFormat.BEST_OF : tournament.matchupFormat, bestOfWins: graphNode?.bestOfWins ?? tournament.bestOfWins });
         continue;
       }
@@ -4833,16 +4845,19 @@ async function advanceAdvancedGraphStage(tournamentId: string, tournament: { for
     return stage.status === StageStatus.ACTIVE && matches.length > 0 && matches.every((match) => TERMINAL_MATCH_STATUSES.has(match.status));
   });
   for (const source of completed) {
-    const outgoing = graph.transitions.filter((transition) => transition.fromStageId === source.id);
+    const sourceGraphId = getPersistedGraphStageId(source);
+    const sourceNode = graph.stages.find((node) => node.id === sourceGraphId);
+    const outgoing = graph.transitions.filter((transition) => transition.fromStageId === sourceGraphId);
     if (!outgoing.length) continue;
     const targetIds = [...new Set(outgoing.map((transition) => transition.toStageId))];
-    const targets = stages.filter((stage) => targetIds.includes(stage.id));
+    const targets = stages.filter((stage) => targetIds.includes(getPersistedGraphStageId(stage)));
     const readyTargets = targets.filter((target) => {
-      const incoming = graph.transitions.filter((transition) => transition.toStageId === target.id).map((transition) => transition.fromStageId);
-      return incoming.every((stageId) => stages.find((stage) => stage.id === stageId)?.status === StageStatus.COMPLETED);
+      const targetGraphId = getPersistedGraphStageId(target);
+      const incoming = graph.transitions.filter((transition) => transition.toStageId === targetGraphId).map((transition) => transition.fromStageId);
+      return incoming.every((stageId) => stages.find((stage) => getPersistedGraphStageId(stage) === stageId)?.status === StageStatus.COMPLETED);
     });
     if (!readyTargets.length) continue;
-    const standings = source.groups.flatMap((group) => group.standings.map((standing) => ({ registrationId: standing.participantId, divisionIndex: group.orderIndex, divisionId: group.id, rank: standing.rank })));
+    const standings = source.groups.flatMap((group) => group.standings.map((standing) => ({ registrationId: standing.participantId, divisionIndex: group.orderIndex, divisionId: sourceNode?.divisions[group.orderIndex - 1]?.id ?? null, rank: standing.rank })));
     const playoffMatches = (source.bracket?.matches ?? []).filter((match) => match.winnerEntryId && !match.isPenaltyTiebreak);
     const upperMatches = playoffMatches.filter((match) => match.bracket === "upper" && !match.isThirdPlaceMatch);
     const finalRound = upperMatches.reduce((max, match) => Math.max(max, match.round), 0);
@@ -4864,10 +4879,12 @@ async function advanceAdvancedGraphStage(tournamentId: string, tournament: { for
       ...(lowerFinal?.winnerEntryId ? [{ registrationId: lowerFinal.winnerEntryId, result: "LOWER_BRACKET_WINNER" as const }] : []),
       ...(thirdPlaceWinner ? [{ registrationId: thirdPlaceWinner, result: "THIRD_PLACE" as const }] : []),
     ] : [];
-    const assignments = resolveStageGraphAssignments({ graph, fromStageId: source.id, standings, playoffResults });
+    const assignments = resolveStageGraphAssignments({ graph, fromStageId: sourceGraphId, standings, playoffResults });
     for (const target of readyTargets) {
-      const targetAssignments = assignments.filter((assignment) => assignment.toStageId === target.id);
-      const transitionIds = outgoing.filter((transition) => transition.toStageId === target.id).map((transition) => transition.id);
+      const targetGraphId = getPersistedGraphStageId(target);
+      const targetNode = graph.stages.find((node) => node.id === targetGraphId);
+      const targetAssignments = assignments.filter((assignment) => assignment.toStageId === targetGraphId);
+      const transitionIds = outgoing.filter((transition) => transition.toStageId === targetGraphId).map((transition) => transition.id);
       const existingEntries = await db.tournamentStageEntry.findMany({ where: { stageId: target.id, sourceTransitionId: { in: transitionIds } }, select: { sourceTransitionId: true, registrationId: true } });
       const existingKeys = new Set(existingEntries.map((entry) => `${entry.sourceTransitionId}:${entry.registrationId}`));
       const pendingAssignments = targetAssignments.filter((assignment) => !existingKeys.has(`${assignment.sourceTransitionId}:${assignment.registrationId}`));
@@ -4875,7 +4892,10 @@ async function advanceAdvancedGraphStage(tournamentId: string, tournament: { for
       if (!pendingAssignments.length && target.status === StageStatus.ACTIVE) continue;
       const targetGroups = target.groups;
       for (const assignment of pendingAssignments) {
-        const group = targetGroups.find((item) => item.id === assignment.toDivisionId) ?? targetGroups.find((item) => item.orderIndex === assignment.toDivisionIndex) ?? targetGroups[0];
+        const configuredDivisionIndex = assignment.toDivisionId
+          ? (targetNode?.divisions.findIndex((division) => division.id === assignment.toDivisionId) ?? -1) + 1
+          : assignment.toDivisionIndex;
+        const group = targetGroups.find((item) => item.orderIndex === configuredDivisionIndex) ?? targetGroups[0];
         const transitionResult = { targetBracket: assignment.targetBracket, toSlot: assignment.toSlot };
         await db.tournamentStageEntry.upsert({ where: { stageId_registrationId: { stageId: target.id, registrationId: assignment.registrationId } }, update: { groupId: group?.id ?? null, sourceTransitionId: assignment.sourceTransitionId, resultJson: transitionResult }, create: { stageId: target.id, registrationId: assignment.registrationId, groupId: group?.id ?? null, sourceTransitionId: assignment.sourceTransitionId, resultJson: transitionResult } });
         await db.tournamentRegistration.update({ where: { id: assignment.registrationId }, data: { groupId: group?.id ?? null } });
@@ -4891,7 +4911,6 @@ async function advanceAdvancedGraphStage(tournamentId: string, tournament: { for
           return { id: entry.registrationId, userId: "", seed: typeof result?.toSlot === "number" ? result.toSlot : index + 1 };
         });
         const registrations = await db.tournamentRegistration.findMany({ where: { id: { in: entries.map((entry) => entry.id) } }, select: { id: true, userId: true } });
-        const targetNode = graph.stages.find((node) => node.id === target.id);
         if (entries.length >= 2) await createPlayoffMatches({ tournamentId, stageId: target.id, bracketId: target.bracket.id, entries: entries.map((entry) => ({ ...entry, userId: registrations.find((item) => item.id === entry.id)?.userId ?? "" })), type: target.bracket.type, legsCount: target.bracket.legsCount, thirdPlaceMatch: target.bracket.thirdPlaceMatch, sizeOverride: target.bracket.size, matchupFormat: (targetNode?.bestOfWins ?? 1) > 1 ? MatchupFormat.BEST_OF : tournament.matchupFormat, bestOfWins: targetNode?.bestOfWins ?? tournament.bestOfWins });
       }
       await db.tournamentStage.update({ where: { id: target.id }, data: { status: StageStatus.ACTIVE } });

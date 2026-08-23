@@ -11,7 +11,7 @@ import {
 } from "@prisma/client";
 import type { PlayoffType } from "@prisma/client";
 import type { ChangeEvent, FormEvent } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
   ChartNoAxesColumnIncreasing,
@@ -54,6 +54,12 @@ import { normalizeStageGraph, validateStageGraph } from "@/lib/tournament-stage-
 import { optimizedImageUrl } from "@/lib/image-optimization";
 import { uploadFile } from "@/lib/storage/upload-client";
 import { TOP_FIVE_LEAGUES } from "@/lib/club-catalog";
+import {
+  createTournamentBuilderDraft,
+  parseTournamentBuilderDraft,
+  TOURNAMENT_BUILDER_DRAFT_KEY,
+  type TournamentBuilderDraft,
+} from "@/lib/tournaments/tournament-builder-draft";
 
 type BuilderValues = {
   title?: string;
@@ -163,12 +169,16 @@ export function TournamentBuilderForm({
   submitLabel = "Создать турнир",
   secondaryLabel,
   initialValues,
+  restoreDraft = false,
 }: {
   action: string;
   submitLabel?: string;
   secondaryLabel?: string;
   initialValues?: BuilderValues;
+  restoreDraft?: boolean;
 }) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const [restoredDraft, setRestoredDraft] = useState<TournamentBuilderDraft | null>(null);
   const [coverImage, setCoverImage] = useState(initialValues?.coverImage ?? "");
   const [coverUploading, setCoverUploading] = useState(false);
   const [coverUploadError, setCoverUploadError] = useState("");
@@ -208,6 +218,38 @@ export function TournamentBuilderForm({
     SortRule.GOALS_FOR,
     SortRule.WINS,
   ];
+
+  useEffect(() => {
+    if (isEditing || !restoreDraft) return;
+    const draft = parseTournamentBuilderDraft(window.sessionStorage.getItem(TOURNAMENT_BUILDER_DRAFT_KEY));
+    if (!draft || !formRef.current) return;
+    setRestoredDraft(draft);
+    const form = formRef.current;
+    for (const element of Array.from(form.elements)) {
+      if (!(element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement)) continue;
+      const values = draft.fields[element.name];
+      if (!values) continue;
+      if (element instanceof HTMLInputElement && (element.type === "checkbox" || element.type === "radio")) {
+        element.checked = values.includes(element.value);
+      } else if (!(element instanceof HTMLInputElement && element.type === "file")) {
+        element.value = values[0] ?? "";
+      }
+    }
+    setCoverImage(draft.fields.coverImage?.[0] ?? "");
+    setLineupPhotoExampleUrl(draft.fields.lineupPhotoExampleUrl?.[0] ?? "");
+    setParticipantMode((draft.fields.participantMode?.[0] as TournamentParticipantMode | undefined) ?? TournamentParticipantMode.SINGLE);
+    setTopRankingRestrictionEnabled(draft.fields.topRankingRestrictionEnabled?.includes("on") ?? false);
+    setCaptainsCreateTeamMatches(draft.fields.captainsCreateTeamMatches?.includes("on") ?? false);
+    setMatchupFormat((draft.fields.matchupFormat?.[0] as MatchupFormat | undefined) ?? MatchupFormat.SINGLE_MATCH);
+    setClubSelectionByLeague(draft.fields.clubSelectionByLeague?.[0] === "true");
+    setClubSelectionInGameOnly(draft.fields.clubSelectionInGameOnly?.[0] !== "false");
+    setSelectedLeagueSlugs(draft.fields.selectedLeagueSlugs ?? []);
+  }, [isEditing, restoreDraft]);
+
+  const persistCreationDraft = () => {
+    if (isEditing || !formRef.current) return;
+    window.sessionStorage.setItem(TOURNAMENT_BUILDER_DRAFT_KEY, JSON.stringify(createTournamentBuilderDraft(new FormData(formRef.current))));
+  };
 
   const onCoverChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -258,6 +300,7 @@ export function TournamentBuilderForm({
   };
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+    persistCreationDraft();
     const blueprintField = event.currentTarget.elements.namedItem("formatBlueprintJson");
     if (blueprintField instanceof HTMLInputElement && blueprintField.value) {
       try {
@@ -287,7 +330,7 @@ export function TournamentBuilderForm({
   };
 
   return (
-    <form action={action} method="post" onSubmit={onSubmit} className="min-w-0 space-y-6" aria-busy={submitting}>
+    <form ref={formRef} action={action} method="post" onSubmit={onSubmit} onInput={persistCreationDraft} onChange={persistCreationDraft} className="min-w-0 space-y-6" aria-busy={submitting}>
       <input type="hidden" name="format" value={TournamentFormat.CUSTOM} />
       <input type="hidden" name="autoCreateMatches" value={String(initialValues?.autoCreateMatches ?? false)} />
       <input type="hidden" name="autoCreateSchedule" value={String(initialValues?.autoCreateSchedule ?? false)} />
@@ -672,7 +715,7 @@ export function TournamentBuilderForm({
           >
             {structureError ? <div role="alert" className="mb-4 rounded-xl border border-red-400/30 bg-red-400/[0.06] p-4 text-sm leading-6 text-red-100">{structureError}</div> : null}
             <div className="space-y-6">
-              <FormatBlueprintBuilder name="formatBlueprintJson" initialValue={initialValues?.formatBlueprint ?? null} visible />
+              <FormatBlueprintBuilder name="formatBlueprintJson" initialValue={initialValues?.formatBlueprint ?? null} restoredDraft={restoredDraft} visible />
               <div className="border-t border-white/10 pt-6">
                 <div className="mb-4">
                   <h3 className="text-sm font-semibold text-white">Ручной контроль плей-офф</h3>

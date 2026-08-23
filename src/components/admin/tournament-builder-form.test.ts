@@ -59,6 +59,13 @@ test("builder exposes responsive section navigation and one safe draft intent", 
   assert.doesNotMatch(formSource, /name="status" value=\{TournamentStatus\.DRAFT\}/);
 });
 
+test("failed creation restores the session draft instead of clearing a large graph", () => {
+  assert.match(formSource, /TOURNAMENT_BUILDER_DRAFT_KEY/);
+  assert.match(formSource, /window\.sessionStorage\.setItem/);
+  assert.match(formSource, /restoredDraft=\{restoredDraft\}/);
+  assert.match(formSource, /persistCreationDraft\(\);/);
+});
+
 test("shared builder controls keep accessible touch and focus states", () => {
   assert.match(uiSource, /h-12/);
   assert.match(uiSource, /min-h-16/);

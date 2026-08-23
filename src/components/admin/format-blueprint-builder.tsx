@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StageGraphEditor } from "@/components/admin/stage-graph-editor";
+import type { TournamentBuilderDraft } from "@/lib/tournaments/tournament-builder-draft";
+import { getDraftFormatBlueprint } from "@/lib/tournaments/tournament-builder-draft";
 import {
   TournamentBuilderChoice,
   TournamentBuilderField,
@@ -139,10 +141,12 @@ export function FormatBlueprintBuilder({
   name,
   initialValue,
   visible,
+  restoredDraft,
 }: {
   name: string;
   initialValue?: FormatBlueprint | null;
   visible: boolean;
+  restoredDraft?: TournamentBuilderDraft | null;
 }) {
   const [blueprint, setBlueprint] = useState<FormatBlueprint>(normalizeFormatBlueprint(initialValue ?? createDefaultFormatBlueprint()));
   const [structureMode, setStructureMode] = useState<"QUICK" | "VISUAL">(() => initialValue?.stageGraph?.mode === "VISUAL" ? "VISUAL" : "QUICK");
@@ -150,9 +154,11 @@ export function FormatBlueprintBuilder({
   const selectionSourceLabel = blueprint.openingStageMode === "GROUPS" ? "Из группы" : "Из лиги";
 
   useEffect(() => {
-    setBlueprint(normalizeFormatBlueprint(initialValue ?? createDefaultFormatBlueprint()));
-    setStructureMode(initialValue?.stageGraph?.mode === "VISUAL" ? "VISUAL" : "QUICK");
-  }, [initialValue]);
+    const restoredBlueprint = getDraftFormatBlueprint(restoredDraft ?? null);
+    const next = restoredBlueprint ?? initialValue ?? createDefaultFormatBlueprint();
+    setBlueprint(normalizeFormatBlueprint(next));
+    setStructureMode(next.stageGraph?.mode === "VISUAL" ? "VISUAL" : "QUICK");
+  }, [initialValue, restoredDraft]);
 
   const selectStructureMode = (mode: "QUICK" | "VISUAL") => {
     setStructureMode(mode);
