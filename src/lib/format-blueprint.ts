@@ -203,6 +203,7 @@ function createLegacyStageGraph(params: {
       playoffType: playoff.type,
       legsCount: playoff.legsCount,
       thirdPlaceMatch: playoff.thirdPlaceMatch,
+      bracketSize: null,
     });
     if (params.openingStageMode !== "NONE") {
       for (const selection of playoff.selections) {

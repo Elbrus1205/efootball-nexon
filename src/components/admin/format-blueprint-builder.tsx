@@ -1,7 +1,7 @@
 "use client";
 
 import { PlayoffType } from "@prisma/client";
-import { GitBranch, Layers3, Plus, TableProperties, Trash2, Trophy, UsersRound } from "lucide-react";
+import { Check, GitBranch, Layers3, Plus, Settings2, TableProperties, Trash2, Trophy, UsersRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   createDefaultFormatBlueprint,
@@ -145,12 +145,24 @@ export function FormatBlueprintBuilder({
   visible: boolean;
 }) {
   const [blueprint, setBlueprint] = useState<FormatBlueprint>(normalizeFormatBlueprint(initialValue ?? createDefaultFormatBlueprint()));
+  const [structureMode, setStructureMode] = useState<"QUICK" | "VISUAL">("VISUAL");
   const hasOpeningStage = blueprint.openingStageMode !== "NONE";
   const selectionSourceLabel = blueprint.openingStageMode === "GROUPS" ? "Из группы" : "Из лиги";
 
   useEffect(() => {
     setBlueprint(normalizeFormatBlueprint(initialValue ?? createDefaultFormatBlueprint()));
+    setStructureMode("VISUAL");
   }, [initialValue]);
+
+  const selectStructureMode = (mode: "QUICK" | "VISUAL") => {
+    setStructureMode(mode);
+    if (mode === "QUICK") {
+      setBlueprint((current) => ({ ...current, stageGraph: undefined }));
+      return;
+    }
+
+    setBlueprint((current) => normalizeFormatBlueprint({ ...current, stageGraph: undefined }));
+  };
 
   const updatePlayoff = (playoffId: string, updater: (playoff: FormatBlueprint["playoffs"][number]) => FormatBlueprint["playoffs"][number]) => {
     setBlueprint((current) => ({
@@ -187,13 +199,30 @@ export function FormatBlueprintBuilder({
   return (
     <div className="min-w-0 space-y-7">
       <input type="hidden" name={name} value={stringifyFormatBlueprint(blueprint)} />
-      {blueprint.stageGraph ? (
-        <StageGraphEditor
-          value={blueprint.stageGraph}
-          onChange={(stageGraph) => setBlueprint((current) => ({ ...current, stageGraph }))}
-        />
+      <div className="space-y-4 rounded-xl border border-primary/20 bg-primary/[0.05] p-4 sm:p-5">
+        <div>
+          <h3 className="text-sm font-semibold text-white">Как создать структуру</h3>
+          <p className="mt-1 max-w-3xl text-xs leading-5 text-zinc-400">Выберите быстрый вариант для обычного турнира или визуальную схему для нескольких лиг, групп, плей-офф и Суперкубка.</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2" role="tablist" aria-label="Режим создания структуры">
+          <button type="button" role="tab" aria-selected={structureMode === "QUICK"} className={`rounded-xl border p-4 text-left transition ${structureMode === "QUICK" ? "border-primary/60 bg-primary/[0.12]" : "border-white/10 bg-black/20 hover:border-white/20"}`} onClick={() => selectStructureMode("QUICK")}>
+            <span className="flex items-center gap-2 text-sm font-semibold text-white"><Settings2 className="h-4 w-4 text-primary" />Быстрая настройка</span>
+            <span className="mt-1 block text-xs leading-5 text-zinc-400">Стартовый этап, количество групп или лиг и один или несколько плей-офф.</span>
+          </button>
+          <button type="button" role="tab" aria-selected={structureMode === "VISUAL"} className={`rounded-xl border p-4 text-left transition ${structureMode === "VISUAL" ? "border-primary/60 bg-primary/[0.12]" : "border-white/10 bg-black/20 hover:border-white/20"}`} onClick={() => selectStructureMode("VISUAL")}>
+            <span className="flex items-center gap-2 text-sm font-semibold text-white"><Check className="h-4 w-4 text-primary" />Визуальная схема</span>
+            <span className="mt-1 block text-xs leading-5 text-zinc-400">Перетаскивание этапов, переходы по местам и победителям, настройки сеток и Суперкубка.</span>
+          </button>
+        </div>
+      </div>
+
+      {structureMode === "VISUAL" && blueprint.stageGraph ? (
+        <StageGraphEditor value={blueprint.stageGraph} onChange={(stageGraph) => setBlueprint((current) => ({ ...current, stageGraph }))} />
       ) : null}
 
+      {structureMode === "QUICK" ? <div className="flex items-center gap-3 border-b border-white/10 pb-1 pt-2"><div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-zinc-400"><Settings2 className="h-4 w-4" /></div><div><h3 className="text-sm font-semibold text-white">Быстрая настройка</h3><p className="text-xs text-zinc-500">Классический вариант: стартовый этап, дивизионы и плей-офф.</p></div></div> : null}
+
+      <div className={structureMode === "QUICK" ? "space-y-5" : "hidden"}>
       <div className="flex flex-col gap-4 rounded-xl border border-primary/15 bg-primary/[0.05] p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
@@ -645,6 +674,7 @@ export function FormatBlueprintBuilder({
             </div>
           ))}
         </div>
+      </div>
       </div>
     </div>
   );

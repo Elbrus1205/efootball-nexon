@@ -15,6 +15,7 @@ export type StageGraphStage = {
   playoffType?: PlayoffType;
   legsCount?: number;
   thirdPlaceMatch?: boolean;
+  bracketSize?: number | null;
 };
 
 export type StageGraphTransition = {
@@ -64,6 +65,12 @@ function optionalPositive(value: unknown, max: number) {
   return positive(value, 1, max);
 }
 
+function optionalPowerOfTwo(value: unknown, max: number) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = positive(value, 2, max);
+  return 2 ** Math.ceil(Math.log2(Math.max(2, parsed)));
+}
+
 export function normalizeStageGraph(input: unknown): StageGraphBlueprint {
   const value = input && typeof input === "object" ? input as Partial<StageGraphBlueprint> : {};
   const rawStages = Array.isArray(value.stages) ? value.stages : [];
@@ -81,6 +88,7 @@ export function normalizeStageGraph(input: unknown): StageGraphBlueprint {
       playoffType: type === "PLAYOFF" ? (stage.playoffType === PlayoffType.DOUBLE ? PlayoffType.DOUBLE : PlayoffType.SINGLE) : undefined,
       legsCount: type === "PLAYOFF" ? positive(stage.legsCount, 1, 2) : undefined,
       thirdPlaceMatch: type === "PLAYOFF" ? Boolean(stage.thirdPlaceMatch) : undefined,
+      bracketSize: type === "PLAYOFF" ? optionalPowerOfTwo(stage.bracketSize, 128) : null,
     } satisfies StageGraphStage;
   });
 
@@ -116,8 +124,11 @@ export function normalizeStageGraph(input: unknown): StageGraphBlueprint {
   } satisfies StageGraphSuperCup;
   const superCupStageId = "supercup";
   if (superCup.enabled && !stages.some((stage) => stage.id === superCupStageId)) {
-    stages.push({ id: superCupStageId, name: superCup.name, type: "PLAYOFF", divisionsCount: 1, participantsPerDivision: null, roundsCount: 1, matchesPerOpponent: null, playoffType: PlayoffType.SINGLE, legsCount: 1, thirdPlaceMatch: false });
-    for (const sourceId of sourcePlayoffIds) transitions.push({ id: `supercup_${sourceId}`, fromStageId: sourceId, toStageId: superCupStageId, result: "WINNER", fromDivisionIndex: null, fromRank: null, toRank: null, toDivisionIndex: null, targetBracket: "upper" });
+    stages.push({ id: superCupStageId, name: superCup.name, type: "PLAYOFF", divisionsCount: 1, participantsPerDivision: null, roundsCount: 1, matchesPerOpponent: null, playoffType: PlayoffType.SINGLE, legsCount: 1, thirdPlaceMatch: false, bracketSize: null });
+    for (const sourceId of sourcePlayoffIds) {
+      if (transitions.some((transition) => transition.id === `supercup_${sourceId}`)) continue;
+      transitions.push({ id: `supercup_${sourceId}`, fromStageId: sourceId, toStageId: superCupStageId, result: "WINNER", fromDivisionIndex: null, fromRank: null, toRank: null, toDivisionIndex: null, targetBracket: "upper" });
+    }
   }
   return {
     stages,

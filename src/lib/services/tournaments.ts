@@ -2381,7 +2381,8 @@ async function createAdvancedGraphStages(params: {
     } else {
       const transitions = params.graph.transitions.filter((transition) => transition.toStageId === node.id);
       const entries = transitions.reduce((sum, transition) => sum + (transition.result === "RANK" ? Math.max(1, (transition.toRank ?? transition.fromRank ?? 1) - (transition.fromRank ?? 1) + 1) : 1), 0);
-      const size = nextPowerOfTwo(Math.max(entries, 2));
+      const configuredSize = node.bracketSize && isPowerOfTwo(node.bracketSize) ? node.bracketSize : null;
+      const size = configuredSize ?? nextPowerOfTwo(Math.max(entries, 2));
       await db.playoffBracket.create({ data: { tournamentId: params.tournamentId, stageId: stage.id, type: node.playoffType ?? PlayoffType.SINGLE, size, legsCount: node.legsCount ?? 1, thirdPlaceMatch: node.thirdPlaceMatch ?? false, settingsJson: { mode: "custom-graph", graphId: node.id, transitions } } });
     }
     stages.push(stage);
