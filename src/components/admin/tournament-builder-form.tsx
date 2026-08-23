@@ -20,8 +20,6 @@ import {
   ListChecks,
   Loader2,
   Medal,
-  MessageCircle,
-  Radio,
   Save,
   Send,
   Settings2,
@@ -35,7 +33,7 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
-import { selectableTournamentSeedingMethods, seedingMethodLabel, sortRuleLabel, tournamentStatusLabel } from "@/lib/admin-display";
+import { selectableTournamentSeedingMethods, seedingMethodLabel, tournamentStatusLabel } from "@/lib/admin-display";
 import { FormatBlueprintBuilder } from "@/components/admin/format-blueprint-builder";
 import {
   TournamentBuilderChoice,
@@ -119,7 +117,6 @@ const builderNavigation = [
   { href: "#structure", label: "Структура", icon: Trophy },
   { href: "#matches", label: "Матчи", icon: Swords },
   { href: "#media", label: "Медиа и правила", icon: ImageIcon },
-  { href: "#telegram", label: "Telegram", icon: MessageCircle },
 ] as const;
 
 const participantModeOptions = [
@@ -336,6 +333,14 @@ export function TournamentBuilderForm({
       <input type="hidden" name="autoCreateSchedule" value={String(initialValues?.autoCreateSchedule ?? false)} />
       <input type="hidden" name="autoAdvanceFromGroups" value={String(initialValues?.autoAdvanceFromGroups ?? false)} />
       <input type="hidden" name="checkInRequired" value={String(initialValues?.checkInRequired ?? false)} />
+      <input type="hidden" name="pointsForWin" value={String(initialValues?.pointsForWin ?? 3)} />
+      <input type="hidden" name="pointsForDraw" value={String(initialValues?.pointsForDraw ?? 1)} />
+      <input type="hidden" name="pointsForLoss" value={String(initialValues?.pointsForLoss ?? 0)} />
+      {selectedSortRules.map((rule) => <input key={rule} type="hidden" name="sortRules" value={rule} />)}
+      <input type="hidden" name="telegramCommunityId" value={initialValues?.telegramCommunityId ?? ""} />
+      <input type="hidden" name="telegramChannelId" value={initialValues?.telegramChannelId ?? ""} />
+      <input type="hidden" name="telegramGroupId" value={initialValues?.telegramGroupId ?? ""} />
+      <input type="hidden" name="telegramAutoPublish" value={String(initialValues?.telegramAutoPublish ?? false)} />
       <input type="hidden" name="clubSelectionByLeague" value={String(clubSelectionByLeague)} />
       <input type="hidden" name="clubSelectionInGameOnly" value={String(clubSelectionInGameOnly)} />
       {selectedLeagueSlugs.map((slug) => <input key={slug} type="hidden" name="selectedLeagueSlugs" value={slug} />)}
@@ -363,7 +368,7 @@ export function TournamentBuilderForm({
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:w-[360px]">
             <div className="rounded-xl border border-white/10 bg-black/25 p-3">
               <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">Разделов</div>
-              <div className="mt-1 text-lg font-semibold text-white">6</div>
+              <div className="mt-1 text-lg font-semibold text-white">5</div>
             </div>
             <div className="rounded-xl border border-white/10 bg-black/25 p-3">
               <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">Формат</div>
@@ -814,36 +819,6 @@ export function TournamentBuilderForm({
                 </TournamentBuilderField>
               </div>
 
-              <div className="border-t border-white/10 pt-6">
-                <div className="grid gap-5 sm:grid-cols-3">
-                  <TournamentBuilderField htmlFor="pointsForWin" label="За победу">
-                    <Input id="pointsForWin" name="pointsForWin" type="number" inputMode="numeric" min={0} max={10} defaultValue={initialValues?.pointsForWin ?? 3} className={tournamentBuilderInputClass} />
-                  </TournamentBuilderField>
-                  <TournamentBuilderField htmlFor="pointsForDraw" label="За ничью">
-                    <Input id="pointsForDraw" name="pointsForDraw" type="number" inputMode="numeric" min={0} max={10} defaultValue={initialValues?.pointsForDraw ?? 1} className={tournamentBuilderInputClass} />
-                  </TournamentBuilderField>
-                  <TournamentBuilderField htmlFor="pointsForLoss" label="За поражение">
-                    <Input id="pointsForLoss" name="pointsForLoss" type="number" inputMode="numeric" min={0} max={10} defaultValue={initialValues?.pointsForLoss ?? 0} className={tournamentBuilderInputClass} />
-                  </TournamentBuilderField>
-                </div>
-              </div>
-
-              <div className="border-t border-white/10 pt-6">
-                <TournamentBuilderField label="Правила сортировки" description="Выбранные показатели применяются к таблице этапа в заданном системой порядке.">
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    {Object.values(SortRule).map((rule) => (
-                      <TournamentBuilderToggle
-                        key={rule}
-                        name="sortRules"
-                        value={rule}
-                        title={sortRuleLabel[rule]}
-                        defaultChecked={selectedSortRules.includes(rule)}
-                        className="min-h-14"
-                      />
-                    ))}
-                  </div>
-                </TournamentBuilderField>
-              </div>
             </div>
           </TournamentBuilderSection>
 
@@ -909,77 +884,6 @@ export function TournamentBuilderForm({
                   required
                 />
               </TournamentBuilderField>
-            </div>
-          </TournamentBuilderSection>
-
-          <TournamentBuilderSection
-            id="telegram"
-            number="06"
-            icon={MessageCircle}
-            title="Telegram турнира"
-            description="Подключите канал и группу для анонсов, расписания, таблиц, результатов и команд участников."
-          >
-            <div className="grid gap-5 md:grid-cols-2">
-              <TournamentBuilderField
-                htmlFor="telegramChannelId"
-                label="Канал для публикаций"
-                description="Бот должен быть администратором канала с правом публикации."
-              >
-                <div className="relative">
-                  <Radio className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" aria-hidden="true" />
-                  <Input
-                    id="telegramChannelId"
-                    name="telegramChannelId"
-                    defaultValue={initialValues?.telegramChannelId ?? ""}
-                    placeholder="-1001234567890 или @channel"
-                    autoComplete="off"
-                    className={`${tournamentBuilderInputClass} pl-11`}
-                  />
-                </div>
-              </TournamentBuilderField>
-
-              <TournamentBuilderField
-                htmlFor="telegramGroupId"
-                label="Группа участников"
-                description="В группе работают команды /mymatch, /deadline, /table и /rules."
-              >
-                <div className="relative">
-                  <UsersRound className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" aria-hidden="true" />
-                  <Input
-                    id="telegramGroupId"
-                    name="telegramGroupId"
-                    defaultValue={initialValues?.telegramGroupId ?? ""}
-                    placeholder="-1001234567890"
-                    autoComplete="off"
-                    className={`${tournamentBuilderInputClass} pl-11`}
-                  />
-                </div>
-              </TournamentBuilderField>
-
-              <TournamentBuilderField
-                htmlFor="telegramCommunityId"
-                label="ID сообщества Telegram"
-                description="Необязательно. Используется для связанного Telegram Community."
-                className="md:col-span-2"
-              >
-                <Input
-                  id="telegramCommunityId"
-                  name="telegramCommunityId"
-                  defaultValue={initialValues?.telegramCommunityId ?? ""}
-                  placeholder="ID связанного сообщества"
-                  autoComplete="off"
-                  className={tournamentBuilderInputClass}
-                />
-              </TournamentBuilderField>
-
-              <TournamentBuilderToggle
-                name="telegramAutoPublish"
-                title="Включить автопубликацию"
-                description="Telegram будет обновлять единый бюллетень и публиковать карточки регистрации, матчей и итогов."
-                defaultChecked={initialValues?.telegramAutoPublish ?? false}
-                tone="primary"
-                className="md:col-span-2"
-              />
             </div>
           </TournamentBuilderSection>
 

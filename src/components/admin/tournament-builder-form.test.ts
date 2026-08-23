@@ -4,6 +4,7 @@ import test from "node:test";
 
 const formSource = readFileSync(new URL("./tournament-builder-form.tsx", import.meta.url), "utf8");
 const formatSource = readFileSync(new URL("./format-blueprint-builder.tsx", import.meta.url), "utf8");
+const stageGraphSource = readFileSync(new URL("./stage-graph-editor.tsx", import.meta.url), "utf8");
 const uiSource = readFileSync(new URL("./tournament-builder-ui.tsx", import.meta.url), "utf8");
 
 test("redesigned tournament builder keeps the complete server submission contract", () => {
@@ -49,10 +50,12 @@ test("redesigned tournament builder keeps the complete server submission contrac
 });
 
 test("builder exposes responsive section navigation and one safe draft intent", () => {
-  for (const sectionId of ["overview", "participants", "structure", "matches", "media", "telegram"]) {
+  for (const sectionId of ["overview", "participants", "structure", "matches", "media"]) {
     assert.ok(formSource.includes(`id="${sectionId}"`), `missing builder section: ${sectionId}`);
     assert.ok(formSource.includes(`href: "#${sectionId}"`), `missing builder navigation item: ${sectionId}`);
   }
+
+  assert.doesNotMatch(formSource, /id="telegram"|href: "#telegram"|Telegram турнира/);
 
   assert.match(formSource, /data-intent="draft"/);
   assert.match(formSource, /elements\.namedItem\("status"\)/);
@@ -73,6 +76,12 @@ test("shared builder controls keep accessible touch and focus states", () => {
   assert.match(uiSource, /type="radio"/);
   assert.match(uiSource, /type="checkbox"/);
   assert.match(formSource, /role="alert"/);
-  assert.match(formatSource, /aria-label=\{`Удалить плей-офф/);
-  assert.match(formatSource, /aria-label="Удалить правило выхода"/);
+  assert.match(stageGraphSource, /aria-label=\{`Удалить этап/);
+  assert.match(stageGraphSource, /aria-label="Удалить переход"/);
+});
+
+test("structure builder exposes only the visual stage graph", () => {
+  assert.match(formatSource, /<StageGraphEditor/);
+  assert.match(formatSource, /mode: "VISUAL"/);
+  assert.doesNotMatch(formatSource, /Быстрая настройка|structureMode|selectStructureMode/);
 });
