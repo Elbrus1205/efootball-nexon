@@ -29,6 +29,31 @@ test("normalizes individually configured leagues without losing their names and 
   assert.equal(graph.stages[0]?.divisionsCount, 2);
 });
 
+test("keeps explicitly cleared names empty so the editor does not restore a fallback while typing", () => {
+  const graph = normalizeStageGraph({
+    stages: [{
+      id: "opening",
+      name: "",
+      type: "GROUPS",
+      divisions: [{ id: "group-a", name: "" }],
+    }],
+  });
+
+  assert.equal(graph.stages[0]?.name, "");
+  assert.equal(graph.stages[0]?.divisions[0]?.name, "");
+  assert.ok(validateStageGraph(graph).some((issue) => issue.path === "stages.0.name"));
+  assert.ok(validateStageGraph(graph).some((issue) => issue.path === "stages.0.divisions.0.name"));
+});
+
+test("preserves spaces while an administrator types a multi-word stage name", () => {
+  const graph = normalizeStageGraph({
+    stages: [{ id: "final", name: "Золотой ", type: "PLAYOFF" }],
+  });
+
+  assert.equal(graph.stages[0]?.name, "Золотой ");
+  assert.equal(normalizeStageGraph({ ...graph, stages: [{ ...graph.stages[0]!, name: "Золотой финал" }] }).stages[0]?.name, "Золотой финал");
+});
+
 test("keeps legacy quick setup graphs compatible", () => {
   const graph = normalizeStageGraph({
     stages: [

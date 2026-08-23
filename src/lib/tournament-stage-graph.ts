@@ -83,6 +83,7 @@ const RESULT_VALUES = new Set<StageGraphResult>(["RANK", "WINNER", "RUNNER_UP", 
 
 function fallbackId(prefix: string, index: number) { return `${prefix}_${index + 1}`; }
 function text(value: unknown, fallback: string) { return typeof value === "string" && value.trim() ? value.trim() : fallback; }
+function editableText(value: unknown, fallback: string) { return typeof value === "string" ? value : fallback; }
 function integer(value: unknown, fallback: number, min: number, max: number) {
   const parsed = Number(value);
   return Math.max(min, Math.min(max, Number.isFinite(parsed) ? Math.floor(parsed) : fallback));
@@ -111,7 +112,7 @@ function normalizeStage(raw: unknown, index: number): StageGraphStage {
   const value = raw && typeof raw === "object" ? raw as Partial<StageGraphStage> : {};
   const type = stageType(value.type);
   const isBracket = type === "PLAYOFF" || type === "SUPERCUP";
-  const name = text(value.name, type === "SUPERCUP" ? "Суперкубок" : `Этап ${index + 1}`);
+  const name = editableText(value.name, type === "SUPERCUP" ? "Суперкубок" : `Этап ${index + 1}`);
   const rawDivisions = Array.isArray(value.divisions) ? value.divisions : [];
   const divisionsCount = isBracket ? 1 : integer(value.divisionsCount ?? rawDivisions.length, 1, 1, 32);
   const participantsPerDivision = isBracket ? null : optionalInteger(value.participantsPerDivision, 2, 256);
@@ -122,7 +123,7 @@ function normalizeStage(raw: unknown, index: number): StageGraphStage {
     const rawDivision = rawDivisions[divisionIndex] && typeof rawDivisions[divisionIndex] === "object" ? rawDivisions[divisionIndex] as Partial<StageGraphDivision> : {};
     return {
       id: text(rawDivision.id, `${stageId}_division_${divisionIndex + 1}`),
-      name: text(rawDivision.name, defaultDivisionName(type, divisionIndex, divisionsCount, name)),
+      name: editableText(rawDivision.name, defaultDivisionName(type, divisionIndex, divisionsCount, name)),
       participantsCount: optionalInteger(rawDivision.participantsCount, 2, 256) ?? participantsPerDivision,
       roundsCount: integer(rawDivision.roundsCount, roundsCount, 1, 256),
       matchesPerOpponent: integer(rawDivision.matchesPerOpponent, matchesPerOpponent ?? 1, 1, 12),
@@ -185,7 +186,7 @@ function normalizeTransition(raw: unknown, index: number): StageGraphTransition 
 function normalizeSuperCup(raw: unknown): StageGraphSuperCup {
   const value = raw && typeof raw === "object" ? raw as Partial<StageGraphSuperCup> : {};
   return {
-    enabled: Boolean(value.enabled), stageId: text(value.stageId, "supercup"), name: text(value.name, "Суперкубок"),
+    enabled: Boolean(value.enabled), stageId: text(value.stageId, "supercup"), name: editableText(value.name, "Суперкубок"),
     sourcePlayoffIds: Array.isArray(value.sourcePlayoffIds) ? value.sourcePlayoffIds.filter((id): id is string => typeof id === "string" && Boolean(id)) : [],
     result: value.result && RESULT_VALUES.has(value.result) ? value.result : "WINNER",
     playoffType: value.playoffType === PlayoffType.DOUBLE ? PlayoffType.DOUBLE : PlayoffType.SINGLE,
