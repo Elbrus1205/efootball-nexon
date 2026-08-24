@@ -46,7 +46,9 @@ async function callTelegram(method, body) {
 }
 
 const current = await callTelegram("getWebhookInfo");
-if (current?.url === webhookUrl && !current?.last_error_message) {
+const requiredUpdates = ["message", "edited_message", "channel_post", "edited_channel_post", "callback_query"];
+const hasRequiredUpdates = requiredUpdates.every((update) => current?.allowed_updates?.includes(update));
+if (current?.url === webhookUrl && !current?.last_error_message && hasRequiredUpdates) {
   console.log(`Telegram webhook is ready: ${webhookUrl}`);
   process.exit(0);
 }
@@ -54,7 +56,7 @@ if (current?.url === webhookUrl && !current?.last_error_message) {
 await callTelegram("setWebhook", {
   url: webhookUrl,
   secret_token: webhookSecret,
-  allowed_updates: ["message", "edited_message", "callback_query"],
+  allowed_updates: requiredUpdates,
   drop_pending_updates: false,
 });
 console.log(`Telegram webhook updated: ${webhookUrl}`);

@@ -17,9 +17,12 @@ test("Telegram /start sends the branded welcome and linked-user count", () => {
 
 test("production startup repairs the Telegram webhook", () => {
   const startup = read("scripts", "start-standalone.mjs");
+  const webhookSetup = read("scripts", "ensure-telegram-webhook.mjs");
 
   assert.match(startup, /ensure-telegram-webhook\.mjs/);
   assert.match(startup, /warm-public-routes\.mjs/);
+  assert.match(webhookSetup, /channel_post/);
+  assert.match(webhookSetup, /hasRequiredUpdates/);
 });
 
 test("the website notification bell and inbox are removed", () => {
