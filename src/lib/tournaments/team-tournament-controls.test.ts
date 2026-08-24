@@ -129,7 +129,8 @@ test("new captain playoff rounds notify captains with open pairings", () => {
 test("captain team slot expansion is serialized and locks source fixtures", () => {
   assert.match(captainTeamMatchesSource, /return db\.\$transaction\(async \(tx\) =>/);
   assert.match(captainTeamMatchesSource, /FOR UPDATE/);
-  assert.match(captainTeamMatchesSource, /"isCaptainAssignedTeamMatch" = false/);
+  assert.match(captainTeamMatchesSource, /planCaptainTeamFixtureExpansion/);
+  assert.match(captainTeamMatchesSource, /rowsToCreate/);
 });
 
 test("started league and group structures hide unfilled participant places", () => {
