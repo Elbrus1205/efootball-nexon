@@ -3,6 +3,7 @@ import test from "node:test";
 import { tgEmojiId } from "@/lib/telegram-emoji";
 import {
   TELEGRAM_AI_SYSTEM_PROMPT,
+  TELEGRAM_AI_NAME,
   askWillow,
   handleTelegramAiMessage,
   isTelegramAiRelevantMessage,
@@ -83,7 +84,7 @@ const context: TelegramAiContext = {
   },
 };
 
-test("Willow request uses bearer auth and includes live context in the system prompt", async () => {
+test("Willow request requires a grounded structured answer", async () => {
   process.env.WILLOW_API_TOKEN = "test-token";
   let request: RequestInit | undefined;
   const answer = await askWillow({
@@ -91,23 +92,38 @@ test("Willow request uses bearer auth and includes live context in the system pr
     context,
     fetchImpl: async (_input, init) => {
       request = init;
-      return new Response(JSON.stringify({ choices: [{ message: { content: "Ваш соперник: @opponent." } }] }), { status: 200 });
+      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
+        answer: "Ваш соперник: @opponent.",
+        type: "match",
+        sourceIds: ["personalMatch"],
+        confidence: 0.98,
+      }) } }] }), { status: 200 });
     },
   });
 
-  assert.equal(answer, "Ваш соперник: @opponent.");
+  assert.deepEqual(answer, {
+    answer: "Ваш соперник: @opponent.",
+    type: "match",
+    sourceIds: ["personalMatch"],
+    confidence: 0.98,
+  });
   assert.equal((request?.headers as Record<string, string>).Authorization, "Bearer test-token");
   const body = JSON.parse(String(request?.body)) as { messages: Array<{ role: string; content: string }> };
   assert.equal(body.messages[0]?.role, "system");
   assert.match(body.messages[0]?.content ?? "", /Весенний кубок/);
   assert.match(body.messages[0]?.content ?? "", /Общий регламент/);
-  assert.match(body.messages[0]?.content ?? "", /2026-08-22T16:00:00.000Z/);
+  assert.match(body.messages[0]?.content ?? "", /personalMatch/);
   assert.match(body.messages[0]?.content ?? "", /organizer_nexon/);
   assert.match(body.messages[0]?.content ?? "", /только по eFootball Nexon/);
   assert.equal(body.messages[1]?.content, "С кем я играю?");
+  const requestBody = JSON.parse(String(request?.body)) as { response_format?: { type?: string } };
+  assert.equal(requestBody.response_format?.type, "json_schema");
 });
 
-test("group chatter is gated while tournament questions and linked tournament chat prompts are eligible", () => {
+test("private small talk is ignored and tournament questions require /ask", () => {
+  assert.equal(isTelegramAiRelevantMessage({ chat: { type: "private" }, text: "Привет" }, "nexon_bot"), false);
+  assert.equal(isTelegramAiRelevantMessage({ chat: { type: "private" }, text: "Как дела?" }, "nexon_bot"), false);
+  assert.equal(isTelegramAiRelevantMessage({ chat: { type: "private" }, text: "Когда мой матч?" }, "nexon_bot"), true);
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "Кто сегодня играет?" }, "nexon_bot"), true);
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "Как дела?" }, "nexon_bot"), false);
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "Как дела" }, "nexon_bot"), false);
@@ -119,18 +135,20 @@ test("group chatter is gated while tournament questions and linked tournament ch
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "@nexon_bot кто мой соперник?" }, "nexon_bot"), true);
 });
 
-test("Willow can silently ignore a candidate that is not actually about tournaments", async () => {
+test("Willow rejects unknown, low-confidence, and unverified sources", async () => {
   process.env.WILLOW_API_TOKEN = "test-token";
-  const answer = await askWillow({
-    text: "Где ближайшее кафе?",
-    context,
-    fetchImpl: async () => new Response(
-      JSON.stringify({ choices: [{ message: { content: "NO_TOURNAMENT_REPLY" } }] }),
-      { status: 200 },
-    ),
-  });
-
-  assert.equal(answer, null);
+  for (const content of [
+    { answer: "Не знаю", type: "unknown", sourceIds: [], confidence: 1 },
+    { answer: "Матч в 20:00", type: "match", sourceIds: ["personalMatch"], confidence: 0.2 },
+    { answer: "Матч в 20:00", type: "match", sourceIds: ["invented"], confidence: 0.99 },
+  ]) {
+    const answer = await askWillow({
+      text: "Когда матч?",
+      context,
+      fetchImpl: async () => new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(content) } }] }), { status: 200 }),
+    });
+    assert.equal(answer, null);
+  }
 });
 
 test("AI reply keeps the message thread and author reply", async () => {
@@ -142,11 +160,11 @@ test("AI reply keeps the message thread and author reply", async () => {
       message_id: 42,
       message_thread_id: 7,
       chat: { id: -100, type: "supergroup" },
-      from: { id: 9, is_bot: false },
-      text: "Как отправить результат матча?",
+      from: { id: 9, is_bot: false, first_name: "Илья" },
+      text: "/ask Как отправить результат матча?",
     },
     context,
-    ask: async () => "Откройте матч на сайте и отправьте счёт.",
+    ask: async () => ({ answer: "Откройте матч на сайте и отправьте счёт.", type: "rules", sourceIds: ["regulations"], confidence: 0.9 }),
     send: async (params) => { sent.push(params as unknown as Record<string, unknown>); return {}; },
   });
 
@@ -155,6 +173,7 @@ test("AI reply keeps the message thread and author reply", async () => {
   assert.deepEqual(sent[0]?.replyParameters, { messageId: 42, allowSendingWithoutReply: true });
   assert.equal(sent[0]?.messageThreadId, 7);
   assert.equal(sent[0]?.parseMode, null);
+  assert.match(String(sent[0]?.text), /^Илья, /);
   assert.deepEqual(sent[0]?.replyMarkup, {
     inline_keyboard: [
       [{ text: "Мой матч", url: "https://nexon.example/tournaments/tournament-1?tab=my-matches", icon_custom_emoji_id: tgEmojiId("arrowRight") }],
@@ -167,7 +186,34 @@ test("AI reply keeps the message thread and author reply", async () => {
   });
 });
 
+test("a tournament question without /ask gets a named command hint without calling Willow", async () => {
+  const sent: Array<Record<string, unknown>> = [];
+  let asked = false;
+  const result = await handleTelegramAiMessage({
+    message: { message_id: 4, chat: { id: 9, type: "private" }, from: { first_name: "Анна" }, text: "Когда начнётся турнир?" },
+    context,
+    ask: async () => { asked = true; return null; },
+    send: async (params) => { sent.push(params as unknown as Record<string, unknown>); return {}; },
+  });
+
+  assert.equal(result.handled, true);
+  assert.equal(asked, false);
+  assert.match(String(sent[0]?.text), /Анна/);
+  assert.match(String(sent[0]?.text), /\/ask ваш вопрос/);
+});
+
+test("/ask without a question asks the user to enter one", async () => {
+  const sent: Array<Record<string, unknown>> = [];
+  await handleTelegramAiMessage({
+    message: { message_id: 5, chat: { id: 9, type: "private" }, from: { first_name: "Анна" }, text: "/ask" },
+    context,
+    send: async (params) => { sent.push(params as unknown as Record<string, unknown>); return {}; },
+  });
+  assert.match(String(sent[0]?.text), /\/ask ваш вопрос/);
+});
+
 test("system prompt rejects unrelated topics and forbids invented facts", () => {
+  assert.equal(TELEGRAM_AI_NAME, "Роки");
   assert.match(TELEGRAM_AI_SYSTEM_PROMPT, /только по eFootball Nexon/);
   assert.match(TELEGRAM_AI_SYSTEM_PROMPT, /Не выдумывай даты/);
   assert.match(TELEGRAM_AI_SYSTEM_PROMPT, /тестовые турниры/);
@@ -175,5 +221,6 @@ test("system prompt rejects unrelated topics and forbids invented facts", () => 
   assert.match(TELEGRAM_AI_SYSTEM_PROMPT, /матчи и расписание/i);
   assert.match(TELEGRAM_AI_SYSTEM_PROMPT, /staffContacts/);
   assert.match(TELEGRAM_AI_SYSTEM_PROMPT, /не выдумывай.*Telegram/i);
-  assert.match(TELEGRAM_AI_SYSTEM_PROMPT, /NO_TOURNAMENT_REPLY/);
+  assert.match(TELEGRAM_AI_SYSTEM_PROMPT, /sourceIds/);
+  assert.match(TELEGRAM_AI_SYSTEM_PROMPT, /confidence/);
 });

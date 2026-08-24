@@ -20,6 +20,8 @@ test("production startup repairs the Telegram webhook", () => {
   const webhookSetup = read("scripts", "ensure-telegram-webhook.mjs");
 
   assert.match(startup, /ensure-telegram-webhook\.mjs/);
+  assert.match(webhookSetup, /setMyCommands/);
+  assert.match(webhookSetup, /command: "ask"/);
   assert.match(startup, /warm-public-routes\.mjs/);
   assert.match(webhookSetup, /channel_post/);
   assert.match(webhookSetup, /hasRequiredUpdates/);

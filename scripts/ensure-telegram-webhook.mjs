@@ -21,6 +21,16 @@ const baseUrl = configuredBaseUrl && /^https:\/\/[^/]+/i.test(configuredBaseUrl)
   : "https://efootball-nexon.com";
 const webhookUrl = `${baseUrl}/api/telegram/webhook`;
 const apiBase = `https://api.telegram.org/bot${token}`;
+const botCommands = [
+  { command: "ask", description: "Задать Роки вопрос о турнире" },
+  { command: "mymatches", description: "Мой ближайший матч" },
+  { command: "myresults", description: "Результаты активного турнира" },
+  { command: "schedule", description: "Расписание турнира" },
+  { command: "table", description: "Таблица турнира" },
+  { command: "rules", description: "Регламент турнира" },
+  { command: "contacts", description: "Связь с основателем" },
+  { command: "help", description: "Все команды бота" },
+];
 
 async function callTelegram(method, body) {
   let lastError;
@@ -46,6 +56,7 @@ async function callTelegram(method, body) {
 }
 
 const current = await callTelegram("getWebhookInfo");
+await callTelegram("setMyCommands", { commands: botCommands });
 const requiredUpdates = ["message", "edited_message", "channel_post", "edited_channel_post", "callback_query"];
 const hasRequiredUpdates = requiredUpdates.every((update) => current?.allowed_updates?.includes(update));
 if (current?.url === webhookUrl && !current?.last_error_message && hasRequiredUpdates) {

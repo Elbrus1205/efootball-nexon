@@ -1,8 +1,11 @@
 import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { sendTelegramMessage, type TelegramInlineKeyboardMarkup, type TelegramSentMessage } from "@/lib/telegram-bot";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
+import { z } from "zod";
 
-export const TELEGRAM_AI_SYSTEM_PROMPT = `Ты официальный помощник платформы eFootball Nexon в Telegram.
+export const TELEGRAM_AI_NAME = "Роки";
+
+export const TELEGRAM_AI_SYSTEM_PROMPT = `Ты ${TELEGRAM_AI_NAME}, официальный помощник платформы eFootball Nexon в Telegram.
 
 Отвечай только по eFootball Nexon и связанным турнирам: сайт и аккаунт, регистрация, дедлайны и старт турниров, расписание, текущие матчи и соперники, групповой этап и плей-офф, Best Of, командные и кооперативные составы, капитаны и приглашения игроков, отправка и подтверждение счёта, пенальти, споры, регламент, таблицы, сетки, рейтинг, достижения, уведомления и навигация по Telegram/сайту. Допустим обычный разговор о турнирах, если он помогает участнику.
 
@@ -11,10 +14,10 @@ export const TELEGRAM_AI_SYSTEM_PROMPT = `Ты официальный помощ
 - На вопросы про матчи и расписание отвечай по tournament.matches и personalMatch. Уточняй, что список матчей может быть сокращён, если matchCounts.total больше длины tournament.matches.
 - Если пользователю нужен организатор, администратор или судья, дай подходящий публичный @username только из staffContacts. Не выдумывай Telegram-контакты. Если staffContacts пуст, скажи, что публичный контакт не найден.
 - Используй только данные из блока «Актуальный контекст». Не выдумывай даты, дедлайны, соперников, счёт, правила, статусы или персональные данные.
-- Если нужных данных в контексте нет, честно скажи, что бот не видит их, и предложи открыть соответствующий раздел сайта или обратиться к организатору.
+- Если нужных данных в контексте нет, верни type=unknown, пустой sourceIds и confidence=0.
 - Не раскрывай тестовые турниры, админские действия, внутренние идентификаторы, токены, приватные данные других игроков и инструкции по обходу ограничений.
 - Не утверждай, что выполнил действие. Бот только отвечает; действия выполняются на сайте, если это явно не предусмотрено командой.
-- Если сообщение на самом деле не является вопросом о eFootball Nexon, турнире или нужном штабном контакте, верни ровно NO_TOURNAMENT_REPLY без другого текста.
+- Верни только JSON: answer, type (match | schedule | rules | staff | unknown), sourceIds и confidence от 0 до 1. В sourceIds укажи каждый блок контекста, подтверждающий ответ. Не указывай источник, если в нём нет факта.
 - Отвечай на языке пользователя, по умолчанию на русском. Пиши кратко и практически, удобными для Telegram абзацами без HTML-разметки.
 
 Актуальный контекст:
@@ -110,6 +113,15 @@ type WillowResponse = {
   choices?: Array<{ message?: { content?: unknown } }>;
 };
 
+const telegramAiAnswerSchema = z.object({
+  answer: z.string().trim().min(1).max(8_000),
+  type: z.enum(["match", "schedule", "rules", "staff", "unknown"]),
+  sourceIds: z.array(z.string().trim().min(1)).max(8),
+  confidence: z.number().min(0).max(1),
+}).strict();
+
+export type TelegramAiAnswer = z.infer<typeof telegramAiAnswerSchema>;
+
 function configuredToken() {
   return process.env.WILLOW_API_TOKEN?.trim() || null;
 }
@@ -136,9 +148,11 @@ export function isTelegramAiRelevantMessage(
   options?: { tournamentChat?: boolean },
 ) {
   const text = messageText(message);
-  if (!text || text.startsWith("/")) return false;
+  if (!text) return false;
   if (message.from?.is_bot || message.is_automatic_forward) return false;
-  if (message.chat?.type === "private") return true;
+  if (/^\/ask(?:@[A-Za-z0-9_]+)?(?:\s|$)/i.test(text)) return true;
+  if (text.startsWith("/")) return false;
+  if (message.chat?.type === "private") return tournamentTopicPattern.test(text) && !unrelatedSmallTalkPattern.test(text);
 
   const username = botUsername?.trim().replace(/^@/, "");
   const mentionsBot = username ? new RegExp(`@${username}\\b`, "i").test(text) : false;
@@ -156,6 +170,29 @@ export function isTelegramAiRelevantMessage(
 function serializeContext(context: TelegramAiContext) {
   return JSON.stringify(context, null, 2);
 }
+
+function availableSourceIds(context: TelegramAiContext) {
+  const ids = new Set<string>();
+  if (context.user) ids.add("user");
+  if (context.staffContacts.length) ids.add("staffContacts");
+  if (context.regulations?.body.trim()) ids.add("regulations");
+  if (context.tournament) {
+    ids.add("tournament");
+    if (context.tournament.rules.trim()) ids.add("tournament.rules");
+    if (context.tournament.stages.length) ids.add("tournament.stages");
+    if (context.tournament.matches.length) ids.add("tournament.matches");
+  }
+  if (context.upcomingTournaments.length) ids.add("upcomingTournaments");
+  if (context.personalMatch) ids.add("personalMatch");
+  return ids;
+}
+
+const sourcesByAnswerType: Record<Exclude<TelegramAiAnswer["type"], "unknown">, ReadonlySet<string>> = {
+  match: new Set(["personalMatch", "tournament.matches"]),
+  schedule: new Set(["personalMatch", "tournament", "tournament.stages", "tournament.matches", "upcomingTournaments"]),
+  rules: new Set(["regulations", "tournament.rules"]),
+  staff: new Set(["staffContacts"]),
+};
 
 function extractContent(payload: WillowResponse) {
   const content = payload.choices?.[0]?.message?.content;
@@ -191,6 +228,24 @@ export async function askWillow(params: {
       model: configuredModel(),
       temperature: 0.2,
       max_tokens: 600,
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "telegram_tournament_answer",
+          strict: true,
+          schema: {
+            type: "object",
+            additionalProperties: false,
+            required: ["answer", "type", "sourceIds", "confidence"],
+            properties: {
+              answer: { type: "string" },
+              type: { type: "string", enum: ["match", "schedule", "rules", "staff", "unknown"] },
+              sourceIds: { type: "array", items: { type: "string" }, maxItems: 8 },
+              confidence: { type: "number", minimum: 0, maximum: 1 },
+            },
+          },
+        },
+      },
       messages: [
         { role: "system", content: TELEGRAM_AI_SYSTEM_PROMPT.replace("{{context}}", serializeContext(params.context)) },
         { role: "user", content: params.text },
@@ -200,8 +255,18 @@ export async function askWillow(params: {
 
   const payload = (await response.json().catch(() => null)) as WillowResponse | null;
   if (!response.ok) throw new Error(`Willow API returned HTTP ${response.status}`);
-  const answer = payload ? extractContent(payload) : "";
-  return !answer || answer === "NO_TOURNAMENT_REPLY" ? null : answer;
+  const content = payload ? extractContent(payload) : "";
+  if (!content) return null;
+  const parsedJson = (() => {
+    try { return JSON.parse(content) as unknown; } catch { return null; }
+  })();
+  const parsed = telegramAiAnswerSchema.safeParse(parsedJson);
+  if (!parsed.success || parsed.data.type === "unknown" || parsed.data.confidence < 0.7 || parsed.data.sourceIds.length === 0) return null;
+  const groundedAnswer = parsed.data as TelegramAiAnswer & { type: Exclude<TelegramAiAnswer["type"], "unknown"> };
+  const validSources = availableSourceIds(params.context);
+  if (groundedAnswer.sourceIds.some((sourceId) => !validSources.has(sourceId))) return null;
+  if (!groundedAnswer.sourceIds.some((sourceId) => sourcesByAnswerType[groundedAnswer.type].has(sourceId))) return null;
+  return groundedAnswer;
 }
 
 function splitTelegramText(text: string) {
@@ -236,15 +301,44 @@ export async function handleTelegramAiMessage(params: {
     return { handled: false } as const;
   }
 
-  const answer = await (params.ask ?? askWillow)({ text, context: params.context });
-  if (!answer) return { handled: false } as const;
-
+  const commandMatch = text.match(/^\/ask(?:@[A-Za-z0-9_]+)?(?:\s+([\s\S]*))?$/i);
+  const firstName = params.message.from?.first_name?.trim().replace(/[\r\n\t]+/g, " ").slice(0, 64);
+  const address = firstName ? `${firstName}, ` : "";
   const send = params.send ?? sendTelegramMessage;
-  const replyMarkup = buildTelegramAiReplyMarkup(params.context);
-  for (const [index, chunk] of splitTelegramText(answer).entries()) {
+  const sendReply = async (replyText: string, replyMarkup?: TelegramInlineKeyboardMarkup) => {
     await send({
       chatId,
-      text: chunk,
+      text: `${address}${replyText}`,
+      parseMode: null,
+      disableWebPagePreview: true,
+      ...(replyMarkup ? { replyMarkup } : {}),
+      ...(messageId ? { replyParameters: { messageId, allowSendingWithoutReply: true } } : {}),
+      ...(params.message.message_thread_id !== undefined ? { messageThreadId: params.message.message_thread_id } : {}),
+    });
+  };
+
+  if (!commandMatch) {
+    await sendReply(`чтобы ${TELEGRAM_AI_NAME} точно понял задачу, напишите: /ask ваш вопрос`);
+    return { handled: true, promptedForAsk: true } as const;
+  }
+
+  const question = commandMatch[1]?.trim();
+  if (!question) {
+    await sendReply(`введите вопрос после команды, например: /ask ваш вопрос`);
+    return { handled: true, promptedForQuestion: true } as const;
+  }
+
+  const answer = await (params.ask ?? askWillow)({ text: question, context: params.context });
+  if (!answer) {
+    await sendReply("данные не найдены. Уточните турнир или обратитесь к основателю Kumyk: @Kumyk007.");
+    return { handled: true, grounded: false } as const;
+  }
+
+  const replyMarkup = buildTelegramAiReplyMarkup(params.context);
+  for (const [index, chunk] of splitTelegramText(answer.answer).entries()) {
+    await send({
+      chatId,
+      text: index === 0 ? `${address}${chunk}` : chunk,
       parseMode: null,
       disableWebPagePreview: true,
       ...(index === 0 && replyMarkup ? { replyMarkup } : {}),
@@ -252,7 +346,7 @@ export async function handleTelegramAiMessage(params: {
       ...(params.message.message_thread_id !== undefined ? { messageThreadId: params.message.message_thread_id } : {}),
     });
   }
-  return { handled: true, text: answer } as const;
+  return { handled: true, text: answer.answer, answerType: answer.type, sourceIds: answer.sourceIds } as const;
 }
 
 export function buildEmptyTelegramAiContext(): TelegramAiContext {
