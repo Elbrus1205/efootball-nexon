@@ -1,4 +1,4 @@
-import { MatchStatus, TournamentStatus } from "@prisma/client";
+import { MatchStatus, TournamentStatus, UserRole } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
@@ -22,6 +22,7 @@ import {
 import { tgEmoji, tgEmojiId } from "@/lib/telegram-emoji";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
 import { buildPersonalMatchMessage, type TelegramRichMessageDraft } from "@/lib/telegram-rich";
+import { getRegulationsDocument } from "@/lib/regulations";
 import { buildTournamentBulletin } from "@/lib/services/telegram-publications";
 
 export const runtime = "nodejs";
@@ -58,6 +59,33 @@ const activeMatchStatuses = [
   MatchStatus.RESULT_SUBMITTED,
   MatchStatus.DISPUTED,
 ];
+
+const completedMatchStatuses = [MatchStatus.CONFIRMED, MatchStatus.FINISHED, MatchStatus.FORFEIT];
+const upcomingTournamentContextMatchLimit = 18;
+const completedTournamentContextMatchLimit = 6;
+
+const telegramAiMatchSelect = {
+  id: true,
+  stageId: true,
+  round: true,
+  matchNumber: true,
+  status: true,
+  scheduledAt: true,
+  startsAt: true,
+  player1Score: true,
+  player2Score: true,
+  player1: { select: { name: true, telegramUsername: true } },
+  player2: { select: { name: true, telegramUsername: true } },
+  participant1Entry: {
+    select: { teamName: true, clubName: true, user: { select: { name: true, telegramUsername: true } } },
+  },
+  participant2Entry: {
+    select: { teamName: true, clubName: true, user: { select: { name: true, telegramUsername: true } } },
+  },
+  stage: { select: { name: true } },
+  group: { select: { name: true } },
+  schedules: { orderBy: { startsAt: "asc" as const }, take: 1, select: { startsAt: true, endsAt: true } },
+} as const;
 
 function normalizeTelegramUsername(value?: string | null) {
   const username = value?.trim().replace(/^@/, "");
@@ -198,11 +226,22 @@ async function resolveCommandContext(message: TelegramWebhookMessage) {
         select: {
           id: true,
           title: true,
+          description: true,
           rules: true,
           status: true,
           startsAt: true,
           registrationStartsAt: true,
           registrationEndsAt: true,
+          format: true,
+          participantMode: true,
+          rosterSize: true,
+          matchupFormat: true,
+          bestOfWins: true,
+          playoffType: true,
+          playoffLegs: true,
+          pointsForWin: true,
+          pointsForDraw: true,
+          pointsForLoss: true,
         },
       })
     : null;
@@ -218,11 +257,22 @@ async function resolveCommandContext(message: TelegramWebhookMessage) {
         select: {
           id: true,
           title: true,
+          description: true,
           rules: true,
           status: true,
           startsAt: true,
           registrationStartsAt: true,
           registrationEndsAt: true,
+          format: true,
+          participantMode: true,
+          rosterSize: true,
+          matchupFormat: true,
+          bestOfWins: true,
+          playoffType: true,
+          playoffLegs: true,
+          pointsForWin: true,
+          pointsForDraw: true,
+          pointsForLoss: true,
         },
       })
     : null;
@@ -232,18 +282,43 @@ async function resolveCommandContext(message: TelegramWebhookMessage) {
 
 async function buildTelegramAiContext(message: TelegramWebhookMessage): Promise<TelegramAiContext> {
   const context = await resolveCommandContext(message);
-  const upcomingTournaments = await db.tournament.findMany({
-    where: {
-      isTest: false,
-      status: { in: [TournamentStatus.REGISTRATION_OPEN, TournamentStatus.AWAITING_START, TournamentStatus.IN_PROGRESS] },
-    },
-    orderBy: { startsAt: "asc" },
-    take: 5,
-    select: { id: true, title: true, status: true, startsAt: true, registrationEndsAt: true },
+  const [upcomingTournaments, regulationsDocument, staffUsers] = await Promise.all([
+    db.tournament.findMany({
+      where: {
+        isTest: false,
+        status: { in: [TournamentStatus.REGISTRATION_OPEN, TournamentStatus.AWAITING_START, TournamentStatus.IN_PROGRESS] },
+      },
+      orderBy: { startsAt: "asc" },
+      take: 5,
+      select: { id: true, title: true, status: true, startsAt: true, registrationEndsAt: true },
+    }),
+    getRegulationsDocument(),
+    db.user.findMany({
+      where: {
+        role: { in: [UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE] },
+        telegramUsername: { not: null },
+        isBanned: false,
+      },
+      orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+      take: 12,
+      select: { name: true, role: true, telegramUsername: true },
+    }),
+  ]);
+  const regulations = { body: regulationsDocument.body, version: regulationsDocument.version };
+  const staffContacts = staffUsers.flatMap((staff) => {
+    const telegramUsername = normalizeTelegramUsername(staff.telegramUsername);
+    if (!telegramUsername) return [];
+    return [{
+      name: staff.name?.trim() || telegramUsername,
+      role: staff.role,
+      telegramUsername: `@${telegramUsername}`,
+    }];
   });
   if (!context.user && !context.tournament) {
     return {
       ...buildEmptyTelegramAiContext(),
+      staffContacts,
+      regulations,
       upcomingTournaments: upcomingTournaments.map((tournament) => ({
         id: tournament.id,
         title: tournament.title,
@@ -290,6 +365,7 @@ async function buildTelegramAiContext(message: TelegramWebhookMessage): Promise<
         stage: match.stage?.name || "Основной этап",
         round: match.round,
         opponent: opponent?.name?.trim() || (opponent?.telegramUsername ? `@${opponent.telegramUsername.replace(/^@/, "")}` : "Не указан"),
+        opponentTelegramUsername: opponent?.telegramUsername ? `@${opponent.telegramUsername.replace(/^@/, "")}` : null,
         status: match.status,
         scheduledAt: match.scheduledAt?.toISOString() ?? null,
         deadlineAt: deadline?.deadlineAt?.toISOString() ?? null,
@@ -297,19 +373,109 @@ async function buildTelegramAiContext(message: TelegramWebhookMessage): Promise<
     }
   }
 
+  let tournamentDetails: TelegramAiContext["tournament"] = null;
+  if (context.tournament) {
+    const [stages, upcomingMatchRows, completedMatchRows, totalMatches, upcomingMatches, completedMatches, deadlines] = await Promise.all([
+      db.tournamentStage.findMany({
+        where: { tournamentId: context.tournament.id },
+        orderBy: { orderIndex: "asc" },
+        take: 16,
+        select: { name: true, type: true, status: true, startsAt: true, endsAt: true },
+      }),
+      db.match.findMany({
+        where: {
+          tournamentId: context.tournament.id,
+          isPenaltyTiebreak: false,
+          status: { notIn: [...completedMatchStatuses, MatchStatus.CANCELLED, MatchStatus.REJECTED] },
+        },
+        orderBy: [{ scheduledAt: "asc" }, { round: "asc" }, { matchNumber: "asc" }],
+        take: upcomingTournamentContextMatchLimit,
+        select: telegramAiMatchSelect,
+      }),
+      db.match.findMany({
+        where: {
+          tournamentId: context.tournament.id,
+          isPenaltyTiebreak: false,
+          status: { in: completedMatchStatuses },
+        },
+        orderBy: [{ finishedAt: "desc" }, { round: "desc" }, { matchNumber: "desc" }],
+        take: completedTournamentContextMatchLimit,
+        select: telegramAiMatchSelect,
+      }),
+      db.match.count({ where: { tournamentId: context.tournament.id, isPenaltyTiebreak: false } }),
+      db.match.count({ where: { tournamentId: context.tournament.id, isPenaltyTiebreak: false, status: { in: activeMatchStatuses } } }),
+      db.match.count({ where: { tournamentId: context.tournament.id, isPenaltyTiebreak: false, status: { in: completedMatchStatuses } } }),
+      db.roundDeadline.findMany({
+        where: { tournamentId: context.tournament.id },
+        select: { stageId: true, round: true, deadlineAt: true },
+      }),
+    ]);
+    const deadlineByStageAndRound = new Map(
+      deadlines.map((deadline) => [`${deadline.stageId}:${deadline.round}`, deadline.deadlineAt.toISOString()]),
+    );
+    const matches = [...upcomingMatchRows, ...completedMatchRows];
+    const participantName = (entry: {
+      teamName: string | null;
+      clubName: string | null;
+      user: { name: string | null; telegramUsername: string | null };
+    } | null, player: { name: string | null; telegramUsername: string | null } | null) =>
+      entry?.teamName?.trim()
+      || entry?.clubName?.trim()
+      || entry?.user.name?.trim()
+      || (entry?.user.telegramUsername ? `@${entry.user.telegramUsername.replace(/^@/, "")}` : "")
+      || player?.name?.trim()
+      || (player?.telegramUsername ? `@${player.telegramUsername.replace(/^@/, "")}` : "")
+      || "Ещё не определён";
+
+    tournamentDetails = {
+      ...context.tournament,
+      startsAt: context.tournament.startsAt.toISOString(),
+      registrationStartsAt: context.tournament.registrationStartsAt?.toISOString() ?? null,
+      registrationEndsAt: context.tournament.registrationEndsAt.toISOString(),
+      stages: stages.map((stage) => ({
+        name: stage.name,
+        type: stage.type,
+        status: stage.status,
+        startsAt: stage.startsAt?.toISOString() ?? null,
+        endsAt: stage.endsAt?.toISOString() ?? null,
+      })),
+      matches: matches.map((match) => {
+        const schedule = match.schedules[0];
+        return {
+          id: match.id,
+          stage: match.stage?.name ?? null,
+          group: match.group?.name ?? null,
+          round: match.round,
+          matchNumber: match.matchNumber,
+          home: participantName(match.participant1Entry, match.player1),
+          away: participantName(match.participant2Entry, match.player2),
+          homeTelegramUsername: match.player1?.telegramUsername
+            ? `@${match.player1.telegramUsername.replace(/^@/, "")}`
+            : match.participant1Entry?.user.telegramUsername
+              ? `@${match.participant1Entry.user.telegramUsername.replace(/^@/, "")}`
+              : null,
+          awayTelegramUsername: match.player2?.telegramUsername
+            ? `@${match.player2.telegramUsername.replace(/^@/, "")}`
+            : match.participant2Entry?.user.telegramUsername
+              ? `@${match.participant2Entry.user.telegramUsername.replace(/^@/, "")}`
+              : null,
+          status: match.status,
+          scheduledAt: match.scheduledAt?.toISOString() ?? match.startsAt?.toISOString() ?? null,
+          scheduleStartsAt: schedule?.startsAt.toISOString() ?? null,
+          scheduleEndsAt: schedule?.endsAt?.toISOString() ?? null,
+          deadlineAt: match.stageId ? deadlineByStageAndRound.get(`${match.stageId}:${match.round}`) ?? null : null,
+          score: match.player1Score !== null && match.player2Score !== null ? `${match.player1Score}:${match.player2Score}` : null,
+        };
+      }),
+      matchCounts: { total: totalMatches, upcoming: upcomingMatches, completed: completedMatches },
+    };
+  }
+
   return {
     user: user ? { name: user.name?.trim() || null, telegramUsername: user.telegramUsername?.trim() || null } : null,
-    tournament: context.tournament
-      ? {
-          id: context.tournament.id,
-          title: context.tournament.title,
-          rules: context.tournament.rules,
-          status: context.tournament.status,
-          startsAt: context.tournament.startsAt?.toISOString() ?? null,
-          registrationStartsAt: context.tournament.registrationStartsAt?.toISOString() ?? null,
-          registrationEndsAt: context.tournament.registrationEndsAt?.toISOString() ?? null,
-        }
-      : null,
+    staffContacts,
+    regulations,
+    tournament: tournamentDetails,
     upcomingTournaments: upcomingTournaments.map((tournament) => ({
       id: tournament.id,
       title: tournament.title,
@@ -319,6 +485,21 @@ async function buildTelegramAiContext(message: TelegramWebhookMessage): Promise<
     })),
     personalMatch,
   };
+}
+
+async function isConfiguredTournamentChat(message: TelegramWebhookMessage) {
+  if (!isGroupMessage(message)) return false;
+  const chatId = normalizeId(message.chat?.id);
+  if (!chatId) return false;
+
+  const tournament = await db.tournament.findFirst({
+    where: {
+      isTest: false,
+      OR: [{ telegramGroupId: chatId }, { telegramChannelId: chatId }, { telegramCommunityId: chatId }],
+    },
+    select: { id: true },
+  });
+  return Boolean(tournament);
 }
 
 function telegramUserId(message: TelegramWebhookMessage) {
@@ -481,19 +662,29 @@ export async function POST(request: NextRequest) {
     const incomingMessage = update.message ?? update.channel_post;
     if (incomingMessage) {
       await handleCommand(incomingMessage);
-      if (!commandName(incomingMessage.text) && isTelegramAiRelevantMessage(incomingMessage, process.env.TELEGRAM_BOT_USERNAME ?? process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME)) {
-        const context = await buildTelegramAiContext(incomingMessage).catch((error) => {
-          console.error("Failed to build Telegram AI context", error);
-          return buildEmptyTelegramAiContext();
-        });
-        await handleTelegramAiMessage({
-          message: incomingMessage,
-          context,
-          botUsername: process.env.TELEGRAM_BOT_USERNAME ?? process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME,
-        }).catch((error) => {
-          if (isTelegramRecipientUnavailableError(error)) return;
-          console.error("Failed to send Telegram AI reply", error);
-        });
+      if (!commandName(incomingMessage.text)) {
+        const botUsername = process.env.TELEGRAM_BOT_USERNAME ?? process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
+        const initiallyRelevant = isTelegramAiRelevantMessage(incomingMessage, botUsername);
+        const couldBeTournamentChatQuestion = !initiallyRelevant
+          && isTelegramAiRelevantMessage(incomingMessage, botUsername, { tournamentChat: true });
+        const tournamentChat = couldBeTournamentChatQuestion
+          ? await isConfiguredTournamentChat(incomingMessage)
+          : false;
+        if (initiallyRelevant || tournamentChat) {
+          const context = await buildTelegramAiContext(incomingMessage).catch((error) => {
+            console.error("Failed to build Telegram AI context", error);
+            return buildEmptyTelegramAiContext();
+          });
+          await handleTelegramAiMessage({
+            message: incomingMessage,
+            context,
+            botUsername,
+            tournamentChat,
+          }).catch((error) => {
+            if (isTelegramRecipientUnavailableError(error)) return;
+            console.error("Failed to send Telegram AI reply", error);
+          });
+        }
       }
     }
     if (update.callback_query) await handleCallbackQuery(update.callback_query);
