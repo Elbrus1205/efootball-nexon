@@ -1,4 +1,4 @@
-import { MatchStatus, TournamentStatus, UserRole } from "@prisma/client";
+import { MatchStatus, TournamentStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
@@ -16,6 +16,7 @@ import {
   buildEmptyTelegramAiContext,
   handleTelegramAiMessage,
   isTelegramAiRelevantMessage,
+  TELEGRAM_AI_NAME,
   type TelegramAiContext,
   type TelegramAiMessage,
 } from "@/lib/services/telegram-ai";
@@ -24,6 +25,7 @@ import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
 import { buildPersonalMatchMessage, type TelegramRichMessageDraft } from "@/lib/telegram-rich";
 import { getRegulationsDocument } from "@/lib/regulations";
 import { buildTournamentBulletin } from "@/lib/services/telegram-publications";
+import { claimTelegramUpdate, consumeTelegramAiRateLimit } from "@/lib/services/telegram-webhook-guard";
 
 export const runtime = "nodejs";
 
@@ -63,6 +65,7 @@ const activeMatchStatuses = [
 const completedMatchStatuses = [MatchStatus.CONFIRMED, MatchStatus.FINISHED, MatchStatus.FORFEIT];
 const upcomingTournamentContextMatchLimit = 18;
 const completedTournamentContextMatchLimit = 6;
+const founderContact = { name: "Kumyk", role: "FOUNDER", telegramUsername: "@Kumyk007" } as const;
 
 const telegramAiMatchSelect = {
   id: true,
@@ -282,7 +285,7 @@ async function resolveCommandContext(message: TelegramWebhookMessage) {
 
 async function buildTelegramAiContext(message: TelegramWebhookMessage): Promise<TelegramAiContext> {
   const context = await resolveCommandContext(message);
-  const [upcomingTournaments, regulationsDocument, staffUsers] = await Promise.all([
+  const [upcomingTournaments, regulationsDocument] = await Promise.all([
     db.tournament.findMany({
       where: {
         isTest: false,
@@ -293,27 +296,9 @@ async function buildTelegramAiContext(message: TelegramWebhookMessage): Promise<
       select: { id: true, title: true, status: true, startsAt: true, registrationEndsAt: true },
     }),
     getRegulationsDocument(),
-    db.user.findMany({
-      where: {
-        role: { in: [UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE] },
-        telegramUsername: { not: null },
-        isBanned: false,
-      },
-      orderBy: [{ role: "asc" }, { createdAt: "asc" }],
-      take: 12,
-      select: { name: true, role: true, telegramUsername: true },
-    }),
   ]);
   const regulations = { body: regulationsDocument.body, version: regulationsDocument.version };
-  const staffContacts = staffUsers.flatMap((staff) => {
-    const telegramUsername = normalizeTelegramUsername(staff.telegramUsername);
-    if (!telegramUsername) return [];
-    return [{
-      name: staff.name?.trim() || telegramUsername,
-      role: staff.role,
-      telegramUsername: `@${telegramUsername}`,
-    }];
-  });
+  const staffContacts = [founderContact];
   if (!context.user && !context.tournament) {
     return {
       ...buildEmptyTelegramAiContext(),
@@ -546,7 +531,7 @@ async function buildMyMatchDraft(userId: string, tournamentId: string) {
 async function handleCommand(message: TelegramWebhookMessage) {
   if (!process.env.TELEGRAM_BOT_TOKEN) return;
   const command = commandName(message.text);
-  if (!command || !["start", "mymatch", "deadline", "table", "schedule", "rules"].includes(command)) return;
+  if (!command || !["start", "help", "contacts", "mymatch", "mymatches", "myresults", "deadline", "table", "schedule", "rules"].includes(command)) return;
 
   if (command === "start") {
     const telegramId = normalizeId(message.from?.id);
@@ -563,6 +548,26 @@ async function handleCommand(message: TelegramWebhookMessage) {
     return;
   }
 
+  if (command === "help") {
+    const firstName = message.from?.first_name?.trim();
+    const greeting = firstName ? `${firstName}, ` : "";
+    const draft = infoMessage(
+      `${TELEGRAM_AI_NAME} · команды`,
+      `${greeting}я отвечаю на турнирные вопросы только через /ask.\n\n/ask ваш вопрос — спросить ИИ\n/mymatches — мой ближайший матч\n/myresults — результаты турнира\n/schedule — расписание\n/table — таблица\n/rules — регламент\n/contacts — связь с основателем`,
+    );
+    await deliverCommandMessage({ message, draft });
+    return;
+  }
+
+  if (command === "contacts") {
+    const url = "https://t.me/Kumyk007";
+    await deliverCommandMessage({
+      message,
+      draft: infoMessage("Основатель eFootball Nexon", "Kumyk · @Kumyk007", { text: "Написать Kumyk", url }),
+    });
+    return;
+  }
+
   const context = await resolveCommandContext(message);
   let draft: TelegramRichMessageDraft;
 
@@ -575,7 +580,7 @@ async function handleCommand(message: TelegramWebhookMessage) {
     );
   } else if (!context.tournament) {
     draft = infoMessage("Нет активного турнира", "Сейчас для вашего аккаунта не найден активный турнир или эта группа ещё не привязана организатором.");
-  } else if (command === "mymatch" || command === "deadline") {
+  } else if (command === "mymatch" || command === "mymatches" || command === "deadline") {
     draft = await buildMyMatchDraft(context.user.id, context.tournament.id)
       ?? infoMessage("Нет активного матча", "Для вас пока нет матча, требующего результата. Проверьте расписание турнира позже.");
   } else if (command === "rules") {
@@ -658,11 +663,22 @@ export async function POST(request: NextRequest) {
 
   const update = (await request.json().catch(() => null)) as TelegramWebhookUpdate | null;
   if (update) {
+    if (!Number.isSafeInteger(update.update_id) || (update.update_id ?? -1) < 0) {
+      return NextResponse.json({ ok: false, error: "Invalid Telegram update." }, { status: 400 });
+    }
+    const claimed = await claimTelegramUpdate(update.update_id!).catch((error) => {
+      console.error("Failed to claim Telegram update", error);
+      return null;
+    });
+    if (claimed === null) return NextResponse.json({ ok: false }, { status: 503 });
+    if (!claimed) return NextResponse.json({ ok: true, duplicate: true });
+
     await syncTelegramUsernameFromWebhook(update);
     const incomingMessage = update.message ?? update.channel_post;
     if (incomingMessage) {
       await handleCommand(incomingMessage);
-      if (!commandName(incomingMessage.text)) {
+      const command = commandName(incomingMessage.text);
+      if (!command || command === "ask") {
         const botUsername = process.env.TELEGRAM_BOT_USERNAME ?? process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
         const initiallyRelevant = isTelegramAiRelevantMessage(incomingMessage, botUsername);
         const couldBeTournamentChatQuestion = !initiallyRelevant
@@ -671,10 +687,30 @@ export async function POST(request: NextRequest) {
           ? await isConfiguredTournamentChat(incomingMessage)
           : false;
         if (initiallyRelevant || tournamentChat) {
-          const context = await buildTelegramAiContext(incomingMessage).catch((error) => {
-            console.error("Failed to build Telegram AI context", error);
-            return buildEmptyTelegramAiContext();
-          });
+          const userId = normalizeId(incomingMessage.from?.id);
+          const chatId = normalizeId(incomingMessage.chat?.id);
+          if (!userId || !chatId) return NextResponse.json({ ok: true });
+          const rateLimit = await consumeTelegramAiRateLimit({ userId, chatId });
+          if (!rateLimit.allowed) {
+            const firstName = incomingMessage.from?.first_name?.trim();
+            await sendTelegramMessage({
+              chatId,
+              text: `${firstName ? `${firstName}, ` : ""}слишком много вопросов. Повторите через ${rateLimit.retryAfterSeconds} сек.`,
+              parseMode: null,
+              replyParameters: incomingMessage.message_id
+                ? { messageId: incomingMessage.message_id, allowSendingWithoutReply: true }
+                : undefined,
+            }).catch((error) => {
+              if (!isTelegramRecipientUnavailableError(error)) console.error("Failed to send Telegram rate-limit reply", error);
+            });
+            return NextResponse.json({ ok: true, rateLimited: true });
+          }
+          const context = command === "ask"
+            ? await buildTelegramAiContext(incomingMessage).catch((error) => {
+                console.error("Failed to build Telegram AI context", error);
+                return buildEmptyTelegramAiContext();
+              })
+            : buildEmptyTelegramAiContext();
           await handleTelegramAiMessage({
             message: incomingMessage,
             context,

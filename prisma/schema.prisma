@@ -1457,6 +1457,27 @@ model TelegramCallbackToken {
   @@index([shopOrderId, action])
 }
 
+// Persistent webhook idempotency: Telegram may redeliver the same update.
+model TelegramProcessedUpdate {
+  updateId  BigInt   @id
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+// Atomic per-user/chat fixed-window limiter shared by all app instances.
+model TelegramAiRateBucket {
+  id              String   @id @default(cuid())
+  scopeKey        String
+  windowStartedAt DateTime
+  count           Int      @default(1)
+  createdAt       DateTime @default(now())
+
+  @@unique([scopeKey, windowStartedAt])
+  @@index([windowStartedAt])
+}
+
 model ShopCategory {
   id          String                  @id @default(cuid())
   slug        String                  @unique
