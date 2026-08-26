@@ -411,6 +411,10 @@
 .summary { display: grid; gap: .45rem; padding: .8rem; border: 1px solid rgba(33, 241, 168, .16); border-radius: 12px; background: rgba(33, 241, 168, .045); }
 .summaryRow { display: flex; justify-content: space-between; gap: 1rem; color: #aab6b2; font-size: .78rem; }
 .summaryRow strong { color: #f4faf7; font-variant-numeric: tabular-nums; }
+.legalConfirmCard { display: grid; gap: .5rem; padding: .9rem; border: 1px solid rgba(215,188,130,.25); border-radius: 14px; background: linear-gradient(145deg,rgba(215,188,130,.1),rgba(215,188,130,.035)); }
+.legalConfirmTitle { display: flex; align-items: center; gap: .45rem; color: #e6cc93; font-weight: 800; font-size: .82rem; }
+.legalConfirmCard p { margin: 0; color: #aaa59d; font-size: .75rem; line-height: 1.5; }
+.legalConfirmCard a { color: #e6cc93; text-decoration: underline; text-underline-offset: 2px; }
 
 .timeline { display: grid; gap: 0; margin-top: 1rem; }
 .timelineItem { position: relative; display: grid; grid-template-columns: 18px 1fr; gap: .7rem; padding-bottom: 1rem; }

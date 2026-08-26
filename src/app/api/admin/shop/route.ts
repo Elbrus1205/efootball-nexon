@@ -115,7 +115,7 @@ export async function POST(request: Request) {
           isPopular: form.get("isPopular") === "true",
           createdById: session.user.id,
           images: text(form, "imageUrl") ? { create: { url: text(form, "imageUrl"), alt: text(form, "title") } } : undefined,
-          variants: { create: { sku: text(form, "sku").toUpperCase(), name: text(form, "variantName") || "Стандартный", priceMinor, ...stock, maxPerOrder: integer(form, "maxPerOrder", 10), estimatedMinutes: integer(form, "estimatedMinutes", 30), isDefault: true, createdById: session.user.id } },
+          variants: { create: { sku: text(form, "sku").toUpperCase(), name: text(form, "variantName") || "Стандартный", priceMinor, ...stock, maxPerOrder: integer(form, "maxPerOrder", 10), quantityEnabled: form.get("quantityEnabled") === "true", estimatedMinutes: integer(form, "estimatedMinutes", 30), isDefault: true, createdById: session.user.id } },
         },
       });
       await db.shopAuditLog.create({ data: { actorUserId: session.user.id, entityType: "ShopProduct", entityId: product.id, action: "CREATE", afterJson: { title: product.title, slug: product.slug, priceMinor } } });
@@ -127,7 +127,7 @@ export async function POST(request: Request) {
       const imageUrl = text(form, "imageUrl");
       await db.$transaction(async (tx) => {
         await tx.shopProduct.update({ where: { id }, data: { categoryId: text(form, "categoryId"), slug: text(form, "slug").toLowerCase(), type: text(form, "type") === "PROMOTIONAL" ? ShopProductType.PROMOTIONAL : ShopProductType.IN_GAME, title: text(form, "title"), shortDescription: "", description: "", fulfillmentTerms: "", estimatedMinutes: integer(form, "estimatedMinutes", 30), isActive: form.get("isActive") === "true", isFeatured: form.get("isFeatured") === "true", isPopular: form.get("isPopular") === "true", updatedById: session.user.id } });
-        await tx.shopProductVariant.update({ where: { id: variantId }, data: { sku: text(form, "sku").toUpperCase(), name: text(form, "variantName") || "Стандартный", priceMinor, ...stock, maxPerOrder: integer(form, "maxPerOrder", 10), estimatedMinutes: integer(form, "estimatedMinutes", 30), updatedById: session.user.id } });
+        await tx.shopProductVariant.update({ where: { id: variantId }, data: { sku: text(form, "sku").toUpperCase(), name: text(form, "variantName") || "Стандартный", priceMinor, ...stock, maxPerOrder: integer(form, "maxPerOrder", 10), quantityEnabled: form.get("quantityEnabled") === "true", estimatedMinutes: integer(form, "estimatedMinutes", 30), updatedById: session.user.id } });
         const currentImage = await tx.shopProductImage.findFirst({ where: { productId: id }, orderBy: { sortOrder: "asc" } });
         if (imageUrl && currentImage) await tx.shopProductImage.update({ where: { id: currentImage.id }, data: { url: imageUrl, alt: text(form, "title") } });
         else if (imageUrl) await tx.shopProductImage.create({ data: { productId: id, url: imageUrl, alt: text(form, "title") } });

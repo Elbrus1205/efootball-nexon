@@ -23,7 +23,7 @@ export const defaultShopSettings = {
   reviewsTelegramChatId: null,
   reviewsTelegramUrl: null,
   supportContact: "SadullaevEM@yandex.ru · Telegram @BekDes",
-  termsVersion: "shop-2026-08-09",
+  termsVersion: "shop-2026-08-26-beks-konami",
   legalTextsJson: null,
   updatedById: null,
 };

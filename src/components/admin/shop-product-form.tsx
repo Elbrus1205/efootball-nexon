@@ -22,6 +22,7 @@ type ProductInitial = {
   stockQuantity: number;
   estimatedMinutes: number;
   maxPerOrder: number;
+  quantityEnabled: boolean;
   imageUrl: string;
   isActive: boolean;
   isFeatured: boolean;
@@ -100,6 +101,7 @@ export function ShopProductForm({ categories, initial }: { categories: CategoryO
     </div>
 
     <div className={styles.switchGrid}>
+      <label className={styles.checkLabel}><input type="checkbox" name="quantityEnabled" value="true" defaultChecked={initial?.quantityEnabled} /> Разрешить выбор количества<span className={styles.helper}>Если выключено, покупатель офо��мляет ровно 1 единицу.</span></label>
       <label className={styles.checkLabel}><input type="checkbox" name="unlimited" value="true" checked={unlimited} onChange={(event) => setUnlimited(event.target.checked)} /> Неограниченный остаток<span className={styles.helper}>Количество не показывается и не уменьшается.</span></label>
       <label className={styles.checkLabel}><input type="checkbox" name="isActive" value="true" defaultChecked={initial?.isActive} /> Опубликовать<span className={styles.helper}>Товар станет виден в каталоге.</span></label>
       <label className={styles.checkLabel}><input type="checkbox" name="isFeatured" value="true" defaultChecked={initial?.isFeatured} /> Рекомендуемый<span className={styles.helper}>Можно выделять в подборках магазина.</span></label>

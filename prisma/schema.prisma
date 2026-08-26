@@ -1547,6 +1547,7 @@ model ShopProductVariant {
   stockQuantity    Int             @default(0)
   reservedQuantity Int             @default(0)
   maxPerOrder      Int             @default(10)
+  quantityEnabled  Boolean         @default(false)
   estimatedMinutes Int?
   isDefault        Boolean         @default(false)
   isActive         Boolean         @default(true)

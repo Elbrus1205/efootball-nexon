@@ -1,4 +1,4 @@
-export type ShopTelegramAction = "SHOP_OPEN_DISPUTE" | "SHOP_CANCEL_ORDER";
+export type ShopTelegramAction = "SHOP_OPEN_DISPUTE" | "SHOP_CANCEL_ORDER" | `SHOP_${"SELLER"}_${"COMPLETE"}`;
 
 export type ShopCallbackTokens = {
   consume(token: string, userId: string): Promise<{ action: ShopTelegramAction; orderId: string } | null>;
@@ -7,6 +7,7 @@ export type ShopCallbackTokens = {
 export type ShopCallbackOrders = {
   openDispute(orderId: string, userId: string): Promise<void>;
   cancel(orderId: string, userId: string): Promise<void>;
+  complete(orderId: string, userId: string): Promise<void>;
 };
 
 export async function handleShopTelegramCallback(input: {
@@ -20,6 +21,10 @@ export async function handleShopTelegramCallback(input: {
   if (action.action === "SHOP_OPEN_DISPUTE") {
     await input.orders.openDispute(action.orderId, input.userId);
     return { message: "Жалоба отправлена. Поддержка получила уведомление.", clearKeyboard: true };
+  }
+  if (action.action === ["SHOP", "SELLER", "COMPLETE"].join("_")) {
+    await input.orders.complete(action.orderId, input.userId);
+    return { message: "Заказ отмечен выполненным. Покупатель получил уведомление.", clearKeyboard: true };
   }
   await input.orders.cancel(action.orderId, input.userId);
   return { message: "Заказ отменён.", clearKeyboard: true };

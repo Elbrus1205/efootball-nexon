@@ -85,7 +85,12 @@ async function loadCheckoutData(tx: Prisma.TransactionClient, input: CheckoutInp
   if (!buyer || buyer.isBanned) throw new ShopError("BUYER_NOT_AVAILABLE", "Покупатель не найден или заблокирован.", 403);
   if (!buyer.telegramId) throw new ShopError("TELEGRAM_REQUIRED", "Перед покупкой привяжите Telegram в настройках безопасности.", 409);
   if (!variant) throw new ShopError("VARIANT_NOT_FOUND", "Выбранный вариант товара недоступен.", 404);
-  if (input.quantity > variant.maxPerOrder) throw new ShopError("QUANTITY_LIMIT", `За один заказ можно выбрать не больше ${variant.maxPerOrder}.`);
+  if (!variant.quantityEnabled && input.quantity !== 1) {
+    throw new ShopError("QUANTITY_NOT_ENABLED", "Only one unit can be ordered for this product.", 409);
+  }
+  if (input.quantity > variant.maxPerOrder) {
+    throw new ShopError("QUANTITY_LIMIT", `The maximum quantity per order is ${variant.maxPerOrder}.`);
+  }
   if (variant.stockMode === ShopStockMode.FINITE && variant.stockQuantity - variant.reservedQuantity < input.quantity) {
     throw new ShopError("OUT_OF_STOCK", "Недостаточно товара в наличии.", 409);
   }

@@ -45,7 +45,7 @@ async function main() {
       id: "default",
       isEnabled: false,
       showHomeBlock: true,
-      termsVersion: "shop-2026-08-09",
+      termsVersion: "shop-2026-08-26-beks-konami",
       updatedById: admin.id,
     },
   });

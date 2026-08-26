@@ -6,7 +6,7 @@ test("Telegram callback покупателя одноразово отправл
   let available = true;
   const complaints: string[] = [];
   const tokens: ShopCallbackTokens = { async consume() { if (!available) return null; available = false; return { action: "SHOP_OPEN_DISPUTE", orderId: "order-1" }; } };
-  const orders: ShopCallbackOrders = { async openDispute(orderId) { complaints.push(orderId); }, async cancel() {} };
+  const orders: ShopCallbackOrders = { async openDispute(orderId) { complaints.push(orderId); }, async cancel() {}, async complete() {} };
   const first = await handleShopTelegramCallback({ userId: "buyer-1", token: "token-1", tokens, orders });
   const repeated = await handleShopTelegramCallback({ userId: "buyer-1", token: "token-1", tokens, orders });
   assert.match(first.message, /Жалоба отправлена/);
