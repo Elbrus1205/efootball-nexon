@@ -1,5 +1,6 @@
 import { ShopError } from "@/lib/shop/errors";
 import type { PaymentProvider } from "@/lib/shop/payments";
+import { createCasheraProvider, getCasheraReadiness } from "@/lib/shop/cashera-provider";
 import { createPlategaProvider, getPlategaReadiness } from "@/lib/shop/platega-provider";
 
 export function getPaymentProvider(): PaymentProvider {
@@ -12,6 +13,7 @@ export function getPaymentProvider(): PaymentProvider {
     );
   }
 
+  if (provider === "cashera") return createCasheraProvider();
   if (provider === "platega") return createPlategaProvider();
 
   throw new ShopError("PAYMENT_PROVIDER_UNKNOWN", `Unknown payment provider: ${provider}.`, 500);
@@ -19,6 +21,14 @@ export function getPaymentProvider(): PaymentProvider {
 
 export function getPaymentReadiness() {
   const provider = process.env.SHOP_PAYMENT_PROVIDER?.trim().toLowerCase();
+  if (provider === "cashera") {
+    const readiness = getCasheraReadiness();
+    return {
+      configured: readiness.configured,
+      provider,
+      reason: readiness.reason ?? "Cashera is configured.",
+    };
+  }
   if (provider === "platega") {
     const readiness = getPlategaReadiness();
     return {
@@ -30,7 +40,7 @@ export function getPaymentReadiness() {
 
   return {
     configured: false,
-    provider: provider || "platega",
+    provider: provider || "cashera",
     reason: provider ? `Unknown payment provider: ${provider}.` : "Payment provider is not configured.",
   };
 }

@@ -33,7 +33,11 @@ export function getPlategaReadiness(): PlategaReadiness {
     };
 }
 
-export function createPlategaProvider(): PaymentProvider {
+type PlategaProvider = Omit<PaymentProvider, "verifyWebhook"> & {
+  verifyWebhook(input: { headers: Headers; body: string }): Promise<VerifiedPaymentWebhook>;
+};
+
+export function createPlategaProvider(): PlategaProvider {
   return {
     name: "platega",
     async createPayment(input) {

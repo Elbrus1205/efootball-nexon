@@ -22,7 +22,7 @@ export type PaymentProvider = {
     description: string;
     idempotencyKey: string;
   }): Promise<{ externalPaymentId: string; checkoutUrl: string; expiresAt?: Date | null }>;
-  verifyWebhook(input: { headers: Headers; body: string }): Promise<VerifiedPaymentWebhook>;
+  verifyWebhook(input: { headers: Headers; body: string }): Promise<VerifiedPaymentWebhook | null>;
   refundPayment(input: {
     externalPaymentId: string;
     amountMinor: number;
@@ -65,6 +65,7 @@ export async function handlePaymentWebhook(input: {
   body: string;
 }) {
   const event = await input.provider.verifyWebhook({ headers: input.headers, body: input.body });
+  if (!event) return { accepted: true as const, ignored: true as const, duplicate: false as const };
   const claimed = await input.store.claimEvent(event.eventId, event);
   if (!claimed) return { accepted: true as const, duplicate: true as const };
 

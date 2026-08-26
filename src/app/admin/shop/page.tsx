@@ -58,7 +58,7 @@ export default async function AdminShopPage(props: { searchParams: Promise<Recor
           <form action="/api/admin/shop" method="post" className={styles.adminForm}>
             <input type="hidden" name="_action" value="saveSettings" />
             <div className={styles.switchGrid}>
-              <label className={styles.checkLabel}><input type="checkbox" name="isEnabled" value="true" defaultChecked={settings.isEnabled} /> Магазин включён<Hint>Показывает каталог как доступный. Оплата всё равно требует Platega.</Hint></label>
+              <label className={styles.checkLabel}><input type="checkbox" name="isEnabled" value="true" defaultChecked={settings.isEnabled} /> Магазин включён<Hint>Показывает каталог как доступный. Оплата требует настроенный Cashera.</Hint></label>
               <label className={styles.checkLabel}><input type="checkbox" name="maintenanceMode" value="true" defaultChecked={settings.maintenanceMode} /> Технические работы<Hint>Каталог виден, но оформление временно закрыто.</Hint></label>
               <label className={styles.checkLabel}><input type="checkbox" name="showHomeBlock" value="true" defaultChecked={settings.showHomeBlock} /> Блок на главной<Hint>Показывает до трёх реальных популярных товаров.</Hint></label>
               <input type="hidden" name="autoCompleteEnabled" value="true" />
