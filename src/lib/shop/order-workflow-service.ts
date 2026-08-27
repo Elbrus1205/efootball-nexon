@@ -387,5 +387,3 @@ export async function notifyShopOrderStatus(orderId: string) {
   }
   await deliverNotificationsImmediately(notificationIds).catch((error) => console.error("Immediate shop notification delivery failed", error));
 }
-
-
