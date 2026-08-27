@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import {
   getTelegramChat,
+  getTelegramRetryAfterMs,
   isTelegramRecipientUnavailableError,
   normalizeTelegramUsername,
 } from "@/lib/telegram-bot";
@@ -53,7 +54,19 @@ export async function syncTelegramUsernameForUser(user: SyncableUser): Promise<T
   }
 
   try {
-    const chat = await getTelegramChat(user.telegramId);
+    // Telegram may briefly rate-limit a bulk refresh. Honour retry_after so a
+    // single user does not make the whole 12-hour run fail or get skipped.
+    let chat: Awaited<ReturnType<typeof getTelegramChat>>;
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        chat = await getTelegramChat(user.telegramId);
+        break;
+      } catch (error) {
+        const retryAfterMs = getTelegramRetryAfterMs(error);
+        if (retryAfterMs === undefined || attempt >= 2) throw error;
+        await new Promise((resolve) => setTimeout(resolve, Math.min(retryAfterMs, 60_000)));
+      }
+    }
     const { changed, nextUsername } = resolveUsernameChange(user.telegramUsername, chat.username);
 
     if (!changed) {
@@ -97,14 +110,14 @@ export type TelegramUsernameSyncSummary = {
 };
 
 /**
- * Refreshes every linked user's Telegram username. Runs in small sequential
- * batches with a short pause so we stay within Telegram's rate limits.
+ * Refreshes every linked user's Telegram username. Requests are deliberately
+ * serialized: getChat is a Bot API call and a burst of parallel calls causes
+ * 429 responses on real production accounts.
  */
 export async function syncAllTelegramUsernames(options?: {
   batchSize?: number;
   pauseMs?: number;
 }): Promise<TelegramUsernameSyncSummary> {
-  const batchSize = Math.max(1, options?.batchSize ?? 25);
   const pauseMs = Math.max(0, options?.pauseMs ?? 1_000);
 
   const users = await db.user.findMany({
@@ -120,18 +133,15 @@ export async function syncAllTelegramUsernames(options?: {
     errors: 0,
   };
 
-  for (let index = 0; index < users.length; index += batchSize) {
-    const batch = users.slice(index, index + batchSize);
-    const results = await Promise.all(batch.map((user) => syncTelegramUsernameForUser(user)));
+  for (let index = 0; index < users.length; index += 1) {
+    const result = await syncTelegramUsernameForUser(users[index]);
+    if (result.outcome === "updated") summary.updated += 1;
+    else if (result.outcome === "unchanged") summary.unchanged += 1;
+    else if (result.outcome === "unavailable") summary.unavailable += 1;
+    else summary.errors += 1;
 
-    for (const result of results) {
-      if (result.outcome === "updated") summary.updated += 1;
-      else if (result.outcome === "unchanged") summary.unchanged += 1;
-      else if (result.outcome === "unavailable") summary.unavailable += 1;
-      else summary.errors += 1;
-    }
-
-    if (pauseMs && index + batchSize < users.length) {
+    // Pause between every request to stay within Telegram's rate limits.
+    if (pauseMs && index + 1 < users.length) {
       await new Promise((resolve) => setTimeout(resolve, pauseMs));
     }
   }

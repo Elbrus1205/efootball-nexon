@@ -62,7 +62,7 @@ npm start
 - `POST /api/tournaments/deadline-reminders` — по расписанию напоминаний; шлёт напоминания за 24 ч / 6 ч / 1 ч до дедлайна тура.
 - `POST /api/security/email/reminders` — по расписанию email-напоминаний.
 - `POST /api/profile-statuses/expire` — периодическая обработка истёкших статусов.
-- `POST /api/telegram/sync-usernames` — раз в сутки; обновляет @username привязанных игроков при смене ника в Telegram.
+- `POST /api/telegram/sync-usernames` — каждые 12 часов; обновляет @username всех привязанных игроков при смене ника в Telegram. SQL-задание: [deploy/sql/telegram-username-sync.sql](deploy/sql/telegram-username-sync.sql).
 - `POST /api/ops/digest` — раз в сутки (вечером); отправляет основателям и организаторам одну сводку по платформе (застрявшая доставка, недоступность Telegram-бота, открытые споры, просроченные матчи, заявки на проверке).
 
 ### Автоответы Telegram в группах и комментариях

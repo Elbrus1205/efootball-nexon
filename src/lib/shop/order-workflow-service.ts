@@ -320,14 +320,14 @@ async function shopButtons(order: Awaited<ReturnType<typeof loadNotificationOrde
   if (!order) return [];
   const buttons: NonNullable<TelegramRichMessageDraft["buttons"]> = [];
   const contactUsername = recipient === "buyer" ? order.seller?.user.telegramUsername : order.buyer.telegramUsername;
-  if (contactUsername && order.paidAt && order.status === ShopOrderStatus.IN_PROGRESS) buttons.push({ text: recipient === "buyer" ? "????????? ? ????????????" : "????????? ? ???????????", url: `https://t.me/${contactUsername.replace(/^@/, "")}`, row: 1 });
+  if (contactUsername && order.paidAt && order.status === ShopOrderStatus.IN_PROGRESS) buttons.push({ text: recipient === "buyer" ? "Написать исполнителю" : "Написать покупателю", url: `https://t.me/${contactUsername.replace(/^@/, "")}`, row: 1 });
   if (recipient === "seller" && order.status === ShopOrderStatus.IN_PROGRESS) {
     const token = await createCallbackToken({ userId: order.seller!.userId, action: sellerCompleteAction, shopOrderId: order.id });
-    buttons.push({ text: "????? ????????", callbackData: tokenCallback(token), row: 2 });
+    buttons.push({ text: "Заказ выполнен", callbackData: tokenCallback(token), row: 2 });
   }
   if (recipient === "buyer" && order.status === ShopOrderStatus.COMPLETED) {
     const settings = await getShopSettings();
-    if (settings.reviewsTelegramUrl) buttons.push({ text: "???????? ?????", url: settings.reviewsTelegramUrl, row: 1 });
+    if (settings.reviewsTelegramUrl) buttons.push({ text: "Оставить отзыв", url: settings.reviewsTelegramUrl, row: 1 });
   }
   return buttons;
 }
@@ -345,19 +345,19 @@ function loadNotificationOrder(orderId: string) {
 
 function buyerStatusMessage(status: ShopOrderStatus, sellerName?: string | null) {
   switch (status) {
-    case ShopOrderStatus.IN_PROGRESS: return `РћРїР»Р°С‚Р° РїРѕРґС‚РІРµСЂР¶РґРµРЅР°. РСЃРїРѕР»РЅРёС‚РµР»СЊ ${sellerName || "РЅР°Р·РЅР°С‡РµРЅ"} СѓР¶Рµ РїРѕР»СѓС‡РёР» Р·Р°РєР°Р·. Р–Р°Р»РѕР±Р° РґРѕСЃС‚СѓРїРЅР° РІ С‚РµС‡РµРЅРёРµ 48 С‡Р°СЃРѕРІ РїРѕСЃР»Рµ РѕРїР»Р°С‚С‹.`;
-    case ShopOrderStatus.WAITING_BUYER_CONFIRMATION: return "РСЃРїРѕР»РЅРёС‚РµР»СЊ РѕС‚РјРµС‚РёР» Р·Р°РєР°Р· РІС‹РїРѕР»РЅРµРЅРЅС‹Рј. РџСЂРѕРІРµСЂСЊС‚Рµ СЂРµР·СѓР»СЊС‚Р°С‚ Рё РѕСЃС‚Р°РІСЊС‚Рµ РѕС‚Р·С‹РІ РІ РєРѕРјРјРµРЅС‚Р°СЂРёСЏС… Рє РїРѕСЃС‚Сѓ Telegram.";
-    case ShopOrderStatus.COMPLETED: return "Р—Р°РєР°Р· Р·Р°РєСЂС‹С‚ РїРѕСЃР»Рµ 48-С‡Р°СЃРѕРІРѕРіРѕ РїРµСЂРёРѕРґР° Р·Р°С‰РёС‚С‹. РћС‚Р·С‹РІ РјРѕР¶РЅРѕ РѕСЃС‚Р°РІРёС‚СЊ РІ Telegram.";
-    default: return `РЎС‚Р°С‚СѓСЃ Р·Р°РєР°Р·Р° РѕР±РЅРѕРІР»С‘РЅ: ${shopOrderStatusLabels[status] ?? status}.`;
+    case ShopOrderStatus.IN_PROGRESS: return `Оплата подтверждена. Исполнитель ${sellerName || "назначен"} уже получил заказ. Жалоба доступна в течение 48 часов после оплаты.`;
+    case ShopOrderStatus.WAITING_BUYER_CONFIRMATION: return "Исполнитель отметил заказ выполненным. Проверьте результат и оставьте отзыв в комментариях к посту Telegram.";
+    case ShopOrderStatus.COMPLETED: return "Заказ закрыт после 48-часового периода защиты. Отзыв можно оставить в Telegram.";
+    default: return `Статус заказа обновлён: ${shopOrderStatusLabels[status] ?? status}.`;
   }
 }
 
 function sellerStatusMessage(status: ShopOrderStatus, buyerName?: string | null) {
   switch (status) {
-    case ShopOrderStatus.IN_PROGRESS: return `Р’Р°Рј Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РЅР°Р·РЅР°С‡РµРЅ РѕРїР»Р°С‡РµРЅРЅС‹Р№ Р·Р°РєР°Р· РёРіСЂРѕРєР° ${buyerName || "РџРѕРєСѓРїР°С‚РµР»СЊ"}. РњРѕР¶РЅРѕ СЃСЂР°Р·Сѓ РЅР°РїРёСЃР°С‚СЊ РїРѕРєСѓРїР°С‚РµР»СЋ РІ Telegram Рё РІС‹РїРѕР»РЅРёС‚СЊ Р·Р°РєР°Р·.`;
-    case ShopOrderStatus.WAITING_BUYER_CONFIRMATION: return "Р’С‹ РѕС‚РјРµС‚РёР»Рё Р·Р°РєР°Р· РІС‹РїРѕР»РЅРµРЅРЅС‹Рј. РџРѕРєСѓРїР°С‚РµР»СЋ РѕС‚РїСЂР°РІР»РµРЅР° СЃСЃС‹Р»РєР° РЅР° РѕС‚Р·С‹РІС‹ РІ Telegram.";
-    case ShopOrderStatus.COMPLETED: return "48-С‡Р°СЃРѕРІРѕР№ РїРµСЂРёРѕРґ Р·Р°С‰РёС‚С‹ Р·Р°РІРµСЂС€С‘РЅ. Р—Р°РєР°Р· СѓСЃРїРµС€РЅРѕ Р·Р°РєСЂС‹С‚.";
-    default: return `РЎС‚Р°С‚СѓСЃ Р·Р°РєР°Р·Р° РѕР±РЅРѕРІР»С‘РЅ: ${shopOrderStatusLabels[status] ?? status}.`;
+    case ShopOrderStatus.IN_PROGRESS: return `Вам автоматически назначен оплаченный заказ игрока ${buyerName || "Покупатель"}. Можно сразу написать покупателю в Telegram и выполнить заказ.`;
+    case ShopOrderStatus.WAITING_BUYER_CONFIRMATION: return "Вы отметили заказ выполненным. Покупателю отправлена ссылка на отзывы в Telegram.";
+    case ShopOrderStatus.COMPLETED: return "48-часовой период защиты завершён. Заказ успешно закрыт.";
+    default: return `Статус заказа обновлён: ${shopOrderStatusLabels[status] ?? status}.`;
   }
 }
 
@@ -366,10 +366,10 @@ export async function notifyShopOrderStatus(orderId: string) {
   if (!order) return;
   const item = order.items[0];
   const status = shopOrderStatusLabels[order.status] ?? order.status;
-  const body = `${order.orderNumber}: ${item?.productTitle ?? "Р·Р°РєР°Р·"} вЂ” ${status}.`;
-  const orderRows = [["Р—Р°РєР°Р·", order.orderNumber], ["РўРѕРІР°СЂ", item?.productTitle ?? "Р—Р°РєР°Р·"], ["Р’Р°СЂРёР°РЅС‚", item?.variantName ?? "вЂ”"], ["РљРѕР»РёС‡РµСЃС‚РІРѕ", String(item?.quantity ?? 1)], ["РЎСѓРјРјР°", formatShopMoney(order.totalMinor, order.currency)], ["РЎС‚Р°С‚СѓСЃ", status]];
+  const body = `${order.orderNumber}: ${item?.productTitle ?? "заказ"} — ${status}.`;
+  const orderRows = [["Заказ", order.orderNumber], ["Товар", item?.productTitle ?? "Заказ"], ["Вариант", item?.variantName ?? "—"], ["Количество", String(item?.quantity ?? 1)], ["Сумма", formatShopMoney(order.totalMinor, order.currency)], ["Статус", status]];
   const buyerDraft: TelegramRichMessageDraft = {
-    blocks: [{ type: "section_heading", text: status }, { type: "table", columns: ["Р—Р°РєР°Р·", "Р”Р°РЅРЅС‹Рµ"], rows: orderRows }, { type: "paragraph", text: buyerStatusMessage(order.status, order.seller?.user.name) }, { type: "footer", text: "eFootball Nexon В· РјР°РіР°Р·РёРЅ" }],
+    blocks: [{ type: "section_heading", text: status }, { type: "table", columns: ["Заказ", "Данные"], rows: orderRows }, { type: "paragraph", text: buyerStatusMessage(order.status, order.seller?.user.name) }, { type: "footer", text: "eFootball Nexon · магазин" }],
     fallbackText: `<b>${status}</b>\n\n${body}`,
     buttons: await shopButtons(order, "buyer"),
   };
@@ -378,7 +378,7 @@ export async function notifyShopOrderStatus(orderId: string) {
   notificationIds.push(buyerNotification.id);
   if (order.seller?.userId) {
     const sellerDraft: TelegramRichMessageDraft = {
-      blocks: [{ type: "section_heading", text: status }, { type: "table", columns: ["Р—Р°РєР°Р·", "Р”Р°РЅРЅС‹Рµ"], rows: orderRows }, { type: "paragraph", text: sellerStatusMessage(order.status, order.buyer.name) }, { type: "footer", text: "РџРѕР»РЅС‹Рµ РёРіСЂРѕРІС‹Рµ РґР°РЅРЅС‹Рµ РґРѕСЃС‚СѓРїРЅС‹ С‚РѕР»СЊРєРѕ РЅР° Р·Р°С‰РёС‰С‘РЅРЅРѕР№ СЃС‚СЂР°РЅРёС†Рµ Р·Р°РєР°Р·Р°." }],
+      blocks: [{ type: "section_heading", text: status }, { type: "table", columns: ["Заказ", "Данные"], rows: orderRows }, { type: "paragraph", text: sellerStatusMessage(order.status, order.buyer.name) }, { type: "footer", text: "Полные игровые данные доступны только на защищённой странице заказа." }],
       fallbackText: `<b>${status}</b>\n\n${body}`,
       buttons: await shopButtons(order, "seller"),
     };
@@ -387,4 +387,5 @@ export async function notifyShopOrderStatus(orderId: string) {
   }
   await deliverNotificationsImmediately(notificationIds).catch((error) => console.error("Immediate shop notification delivery failed", error));
 }
+
 
