@@ -6,6 +6,7 @@ import {
   TELEGRAM_AI_NAME,
   askWillow,
   handleTelegramAiMessage,
+  isTelegramAbusiveMessage,
   isTelegramAiRelevantMessage,
   type TelegramAiContext,
 } from "@/lib/services/telegram-ai";
@@ -120,7 +121,7 @@ test("Willow request requires a grounded structured answer", async () => {
   assert.equal(requestBody.response_format?.type, "json_schema");
 });
 
-test("private small talk is ignored and tournament questions require /ask", () => {
+test("small talk is ignored while tournament messages are understood without /ask", () => {
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "private" }, text: "Привет" }, "nexon_bot"), false);
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "private" }, text: "Как дела?" }, "nexon_bot"), false);
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "private" }, text: "Когда мой матч?" }, "nexon_bot"), true);
@@ -133,6 +134,11 @@ test("private small talk is ignored and tournament questions require /ask", () =
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "Где админ?" }, "nexon_bot"), true);
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "@nexon_bot привет" }, "nexon_bot"), false);
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "@nexon_bot кто мой соперник?" }, "nexon_bot"), true);
+});
+
+test("moderation detects abusive messages without flagging ordinary tournament speech", () => {
+  assert.equal(isTelegramAbusiveMessage({ chat: { type: "supergroup" }, text: "Ты идиот, успокойся" }), true);
+  assert.equal(isTelegramAbusiveMessage({ chat: { type: "supergroup" }, text: "Счёт отправил, ждём подтверждение судьи" }), false);
 });
 
 test("Willow rejects unknown, low-confidence, and unverified sources", async () => {
@@ -186,20 +192,20 @@ test("AI reply keeps the message thread and author reply", async () => {
   });
 });
 
-test("a tournament question without /ask gets a named command hint without calling Willow", async () => {
+test("a tournament question without /ask is sent to Willow", async () => {
   const sent: Array<Record<string, unknown>> = [];
   let asked = false;
   const result = await handleTelegramAiMessage({
     message: { message_id: 4, chat: { id: 9, type: "private" }, from: { first_name: "Анна" }, text: "Когда начнётся турнир?" },
     context,
-    ask: async () => { asked = true; return null; },
+    ask: async () => { asked = true; return { answer: "Турнир начинается завтра.", type: "schedule", sourceIds: ["tournament"], confidence: 0.9 }; },
     send: async (params) => { sent.push(params as unknown as Record<string, unknown>); return {}; },
   });
 
   assert.equal(result.handled, true);
-  assert.equal(asked, false);
+  assert.equal(asked, true);
   assert.match(String(sent[0]?.text), /Анна/);
-  assert.match(String(sent[0]?.text), /\/ask ваш вопрос/);
+  assert.match(String(sent[0]?.text), /Турнир начинается завтра/);
 });
 
 test("/ask without a question asks the user to enter one", async () => {

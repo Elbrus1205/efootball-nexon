@@ -5,20 +5,21 @@ import { z } from "zod";
 
 export const TELEGRAM_AI_NAME = "Роки";
 
-export const TELEGRAM_AI_SYSTEM_PROMPT = `Ты ${TELEGRAM_AI_NAME}, официальный помощник платформы eFootball Nexon в Telegram.
+export const TELEGRAM_AI_SYSTEM_PROMPT = `Ты ${TELEGRAM_AI_NAME}, официальный турнирный помощник и нейтральный судья платформы eFootball Nexon в Telegram.
 
-Отвечай только по eFootball Nexon и связанным турнирам: сайт и аккаунт, регистрация, дедлайны и старт турниров, расписание, текущие матчи и соперники, групповой этап и плей-офф, Best Of, командные и кооперативные составы, капитаны и приглашения игроков, отправка и подтверждение счёта, пенальти, споры, регламент, таблицы, сетки, рейтинг, достижения, уведомления и навигация по Telegram/сайту. Допустим обычный разговор о турнирах, если он помогает участнику.
+Твоя задача — понять смысл сообщения, а не требовать специальную команду. Отвечай только по eFootball Nexon и связанным турнирам, но на обычные сообщения о платформе и турнирах отвечай без /ask. Команда /ask нужна для явного вопроса и позволяет спросить о любой опубликованной функции сайта, FAQ, регламенте или турнире. Отвечай о сайте и аккаунте, регистрации, дедлайнах и старте, расписании, матчах и соперниках, группах и плей-офф, Best Of, командных и кооперативных составах, капитанах и приглашениях, счёте, пенальти, спорах, регламенте, FAQ, таблицах, сетках, рейтинге, достижениях, уведомлениях и навигации.
 
-Правила ответа:
-- Для ответов о правилах учитывай и общий регламент regulations, и правила конкретного турнира tournament.rules. Если они различаются, специальные правила турнира и его актуальные данные имеют приоритет.
-- На вопросы про матчи и расписание отвечай по tournament.matches и personalMatch. Уточняй, что список матчей может быть сокращён, если matchCounts.total больше длины tournament.matches.
-- Если пользователю нужен организатор, администратор или судья, дай подходящий публичный @username только из staffContacts. Не выдумывай Telegram-контакты. Если staffContacts пуст, скажи, что публичный контакт не найден.
-- Используй только данные из блока «Актуальный контекст». Не выдумывай даты, дедлайны, соперников, счёт, правила, статусы или персональные данные.
-- Если нужных данных в контексте нет, верни type=unknown, пустой sourceIds и confidence=0.
-- Не раскрывай тестовые турниры, админские действия, внутренние идентификаторы, токены, приватные данные других игроков и инструкции по обходу ограничений.
-- Не утверждай, что выполнил действие. Бот только отвечает; действия выполняются на сайте, если это явно не предусмотрено командой.
-- Верни только JSON: answer, type (match | schedule | rules | staff | unknown), sourceIds и confidence от 0 до 1. В sourceIds укажи каждый блок контекста, подтверждающий ответ. Не указывай источник, если в нём нет факта.
-- Отвечай на языке пользователя, по умолчанию на русском. Пиши кратко и практически, удобными для Telegram абзацами без HTML-разметки.
+Правила поведения:
+- Говори спокойно, уважительно и по делу. В споре выступай нейтральным судьёй: разделяй подтверждённые факты, правила и предположения, не выбирай победителя без данных и направляй спор к администратору, если доказательств недостаточно.
+- Для правил учитывай общий регламент (regulations), FAQ и специальные правила турнира (tournament.rules). При конфликте приоритет у специальных правил конкретного турнира и его актуальных данных.
+- Для ответов про матчи и расписание используй tournament.matches и personalMatch. Если matchCounts.total больше числа переданных матчей, предупреди, что список сокращён.
+- Контакты организатора, администратора или судьи бери только из staffContacts. Не выдумывай Telegram-контакты и @username.
+- Используй только «Актуальный контекст». Не выдумывай даты, дедлайны, счёт, соперников, правила, статусы или персональные данные.
+- Если факта нет в контексте, верни type=unknown, пустой sourceIds и confidence=0; попроси уточнить турнир или обратиться к администрации.
+- Не раскрывай тестовые турниры, админские действия, внутренние идентификаторы, токены, приватные данные игроков и способы обхода ограничений.
+- Не утверждай, что выполнил действие: бот только консультирует, а изменения делаются на сайте.
+- Верни только JSON: answer, type (match | schedule | rules | staff | unknown), sourceIds и confidence от 0 до 1. Указывай только источники, в которых действительно есть факт ответа.
+- Отвечай на языке пользователя, по умолчанию на русском. Пиши кратко, практично, без HTML-разметки.
 
 Актуальный контекст:
 {{context}}`;
@@ -43,6 +44,7 @@ export type TelegramAiContext = {
   user: { name: string | null; telegramUsername: string | null } | null;
   staffContacts: Array<{ name: string; role: string; telegramUsername: string }>;
   regulations: { body: string; version: string } | null;
+  faq?: Array<{ title: string; category: string; answer: string }>;
   tournament: {
     id: string;
     title: string;
@@ -139,8 +141,14 @@ function messageText(message: TelegramAiMessage) {
 }
 
 const tournamentTopicPattern = /efootball|nexon|турнир|кубок|матч|соперник|регламент|правил|регистрац|дедлайн|расписан|таблиц|сетк|рейтинг|достиж|команд|капитан|состав|игрок|игра(?:ет|ть)?|сч[её]т|результат|пенальт|спор|заявк|плей[- ]?офф|best\s*of|админ|организатор|судья|модератор/i;
-const tournamentChatQuestionPattern = /когда|во сколько|где|куда|как|кто|с кем|почему|можно ли|что делать|начинаем|играем|мой|моя|мои|нужен|нужна|нужны/i;
 const unrelatedSmallTalkPattern = /^(?:как дела|как ты|всем привет|привет|доброе утро|добрый вечер)[!?؟¿.,\s]*$/i;
+
+const moderationPattern = /(?:^|[^а-яё])(?:хуй|ху[её]в|пизд|еб(?:а|о|у|л|н)|бля|су[кч]|долбо|мраз|тварь|дебил|идиот|козел|коз[её]л|заткнись)(?:[^а-яё]|$)/i;
+
+export function isTelegramAbusiveMessage(message: TelegramAiMessage) {
+  const text = messageText(message).toLowerCase().replace(/ё/g, "е");
+  return Boolean(text && moderationPattern.test(text));
+}
 
 export function isTelegramAiRelevantMessage(
   message: TelegramAiMessage,
@@ -164,7 +172,7 @@ export function isTelegramAiRelevantMessage(
 
   if (tournamentTopicPattern.test(text)) return true;
   if (!options?.tournamentChat || unrelatedSmallTalkPattern.test(text)) return false;
-  return /[?؟¿]/u.test(text) && tournamentChatQuestionPattern.test(text);
+  return true;
 }
 
 function serializeContext(context: TelegramAiContext) {
@@ -176,6 +184,7 @@ function availableSourceIds(context: TelegramAiContext) {
   if (context.user) ids.add("user");
   if (context.staffContacts.length) ids.add("staffContacts");
   if (context.regulations?.body.trim()) ids.add("regulations");
+  if (context.faq?.length) ids.add("faq");
   if (context.tournament) {
     ids.add("tournament");
     if (context.tournament.rules.trim()) ids.add("tournament.rules");
@@ -190,7 +199,7 @@ function availableSourceIds(context: TelegramAiContext) {
 const sourcesByAnswerType: Record<Exclude<TelegramAiAnswer["type"], "unknown">, ReadonlySet<string>> = {
   match: new Set(["personalMatch", "tournament.matches"]),
   schedule: new Set(["personalMatch", "tournament", "tournament.stages", "tournament.matches", "upcomingTournaments"]),
-  rules: new Set(["regulations", "tournament.rules"]),
+  rules: new Set(["regulations", "tournament.rules", "faq"]),
   staff: new Set(["staffContacts"]),
 };
 
@@ -318,8 +327,24 @@ export async function handleTelegramAiMessage(params: {
   };
 
   if (!commandMatch) {
-    await sendReply(`чтобы ${TELEGRAM_AI_NAME} точно понял задачу, напишите: /ask ваш вопрос`);
-    return { handled: true, promptedForAsk: true } as const;
+    const answer = await (params.ask ?? askWillow)({ text, context: params.context });
+    if (!answer) {
+      await sendReply("Не нашёл подтверждённых данных для ответа. Уточните название турнира или используйте /ask с подробным вопросом.");
+      return { handled: true, grounded: false } as const;
+    }
+    const replyMarkup = buildTelegramAiReplyMarkup(params.context);
+    for (const [index, chunk] of splitTelegramText(answer.answer).entries()) {
+      await send({
+        chatId,
+        text: index === 0 ? `${address}${chunk}` : chunk,
+        parseMode: null,
+        disableWebPagePreview: true,
+        ...(index === 0 && replyMarkup ? { replyMarkup } : {}),
+        ...(index === 0 && messageId ? { replyParameters: { messageId, allowSendingWithoutReply: true } } : {}),
+        ...(params.message.message_thread_id !== undefined ? { messageThreadId: params.message.message_thread_id } : {}),
+      });
+    }
+    return { handled: true, text: answer.answer, answerType: answer.type, sourceIds: answer.sourceIds } as const;
   }
 
   const question = commandMatch[1]?.trim();
@@ -350,7 +375,7 @@ export async function handleTelegramAiMessage(params: {
 }
 
 export function buildEmptyTelegramAiContext(): TelegramAiContext {
-  return { user: null, staffContacts: [], regulations: null, tournament: null, upcomingTournaments: [], personalMatch: null };
+  return { user: null, staffContacts: [], regulations: null, faq: [], tournament: null, upcomingTournaments: [], personalMatch: null };
 }
 
 export function buildTelegramAiReplyMarkup(context: TelegramAiContext): TelegramInlineKeyboardMarkup | undefined {

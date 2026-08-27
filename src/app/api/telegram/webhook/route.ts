@@ -15,6 +15,7 @@ import { handleTelegramCallbackAction } from "@/lib/services/telegram-callbacks"
 import {
   buildEmptyTelegramAiContext,
   handleTelegramAiMessage,
+  isTelegramAbusiveMessage,
   isTelegramAiRelevantMessage,
   TELEGRAM_AI_NAME,
   type TelegramAiContext,
@@ -24,6 +25,7 @@ import { tgEmoji, tgEmojiId } from "@/lib/telegram-emoji";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
 import { buildPersonalMatchMessage, type TelegramRichMessageDraft } from "@/lib/telegram-rich";
 import { getRegulationsDocument } from "@/lib/regulations";
+import { blocksToPlainText, resolveFaqBlocks } from "@/lib/faq/content";
 import { buildTournamentBulletin } from "@/lib/services/telegram-publications";
 import { claimTelegramUpdate, consumeTelegramAiRateLimit } from "@/lib/services/telegram-webhook-guard";
 
@@ -285,7 +287,7 @@ async function resolveCommandContext(message: TelegramWebhookMessage) {
 
 async function buildTelegramAiContext(message: TelegramWebhookMessage): Promise<TelegramAiContext> {
   const context = await resolveCommandContext(message);
-  const [upcomingTournaments, regulationsDocument] = await Promise.all([
+  const [upcomingTournaments, regulationsDocument, faqItems] = await Promise.all([
     db.tournament.findMany({
       where: {
         isTest: false,
@@ -296,14 +298,26 @@ async function buildTelegramAiContext(message: TelegramWebhookMessage): Promise<
       select: { id: true, title: true, status: true, startsAt: true, registrationEndsAt: true },
     }),
     getRegulationsDocument(),
+    db.faqItem.findMany({
+      where: { isPublished: true },
+      orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }],
+      take: 40,
+      select: { title: true, category: true, answer: true, contentJson: true, attachments: { orderBy: { sortOrder: "asc" }, select: { title: true, url: true, kind: true, mimeType: true } } },
+    }),
   ]);
   const regulations = { body: regulationsDocument.body, version: regulationsDocument.version };
+  const faq = faqItems.map((item) => ({
+    title: item.title,
+    category: item.category,
+    answer: blocksToPlainText(resolveFaqBlocks(item)).slice(0, 4_000),
+  })).filter((item) => item.answer.trim());
   const staffContacts = [founderContact];
   if (!context.user && !context.tournament) {
     return {
       ...buildEmptyTelegramAiContext(),
       staffContacts,
       regulations,
+      faq,
       upcomingTournaments: upcomingTournaments.map((tournament) => ({
         id: tournament.id,
         title: tournament.title,
@@ -460,6 +474,7 @@ async function buildTelegramAiContext(message: TelegramWebhookMessage): Promise<
     user: user ? { name: user.name?.trim() || null, telegramUsername: user.telegramUsername?.trim() || null } : null,
     staffContacts,
     regulations,
+    faq,
     tournament: tournamentDetails,
     upcomingTournaments: upcomingTournaments.map((tournament) => ({
       id: tournament.id,
@@ -485,6 +500,24 @@ async function isConfiguredTournamentChat(message: TelegramWebhookMessage) {
     select: { id: true },
   });
   return Boolean(tournament);
+}
+
+async function sendTournamentModerationWarning(message: TelegramWebhookMessage) {
+  const chatId = normalizeId(message.chat?.id);
+  const messageId = message.message_id;
+  if (!chatId || !messageId) return;
+
+  const username = normalizeTelegramUsername(message.from?.username);
+  const displayName = message.from?.first_name?.trim() || message.from?.username?.trim() || "Участник";
+  const target = username ? `@${username}` : displayName;
+  await sendTelegramMessage({
+    chatId,
+    text: `${target}, остановитесь. В сообщении обнаружены оскорбления или нецензурная лексика. Обсуждайте матч и спор по фактам и регламенту. Повторные нарушения передаются администрации: возможны мут или бан по правилам платформы.`,
+    parseMode: null,
+    disableWebPagePreview: true,
+    replyParameters: { messageId, allowSendingWithoutReply: true },
+    ...(message.message_thread_id !== undefined ? { messageThreadId: message.message_thread_id } : {}),
+  });
 }
 
 function telegramUserId(message: TelegramWebhookMessage) {
@@ -553,7 +586,7 @@ async function handleCommand(message: TelegramWebhookMessage) {
     const greeting = firstName ? `${firstName}, ` : "";
     const draft = infoMessage(
       `${TELEGRAM_AI_NAME} · команды`,
-      `${greeting}я отвечаю на турнирные вопросы только через /ask.\n\n/ask ваш вопрос — спросить ИИ\n/mymatches — мой ближайший матч\n/myresults — результаты турнира\n/schedule — расписание\n/table — таблица\n/rules — регламент\n/contacts — связь с основателем`,
+      `${greeting}я понимаю обычные сообщения о турнирах и отвечаю по актуальным данным. Для подробного вопроса используйте /ask ваш вопрос.\n\n/ask ваш вопрос — спросить Роки\n/mymatches — мой ближайший матч\n/myresults — результаты турнира\n/schedule — расписание\n/table — таблица\n/rules — регламент\n/contacts — связь с основателем`,
     );
     await deliverCommandMessage({ message, draft });
     return;
@@ -680,11 +713,23 @@ export async function POST(request: NextRequest) {
       const command = commandName(incomingMessage.text);
       if (!command || command === "ask") {
         const botUsername = process.env.TELEGRAM_BOT_USERNAME ?? process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
+        const configuredChat = isGroupMessage(incomingMessage)
+          ? await isConfiguredTournamentChat(incomingMessage).catch((error) => {
+              console.error("Failed to resolve configured tournament chat", error);
+              return false;
+            })
+          : false;
+        if (configuredChat && isTelegramAbusiveMessage(incomingMessage)) {
+          await sendTournamentModerationWarning(incomingMessage).catch((error) => {
+            if (!isTelegramRecipientUnavailableError(error)) console.error("Failed to send Telegram moderation warning", error);
+          });
+          return NextResponse.json({ ok: true, moderated: true });
+        }
         const initiallyRelevant = isTelegramAiRelevantMessage(incomingMessage, botUsername);
         const couldBeTournamentChatQuestion = !initiallyRelevant
           && isTelegramAiRelevantMessage(incomingMessage, botUsername, { tournamentChat: true });
         const tournamentChat = couldBeTournamentChatQuestion
-          ? await isConfiguredTournamentChat(incomingMessage)
+          ? configuredChat
           : false;
         if (initiallyRelevant || tournamentChat) {
           const userId = normalizeId(incomingMessage.from?.id);
@@ -705,12 +750,10 @@ export async function POST(request: NextRequest) {
             });
             return NextResponse.json({ ok: true, rateLimited: true });
           }
-          const context = command === "ask"
-            ? await buildTelegramAiContext(incomingMessage).catch((error) => {
-                console.error("Failed to build Telegram AI context", error);
-                return buildEmptyTelegramAiContext();
-              })
-            : buildEmptyTelegramAiContext();
+          const context = await buildTelegramAiContext(incomingMessage).catch((error) => {
+            console.error("Failed to build Telegram AI context", error);
+            return buildEmptyTelegramAiContext();
+          });
           await handleTelegramAiMessage({
             message: incomingMessage,
             context,
