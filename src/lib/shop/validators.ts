@@ -32,7 +32,7 @@ export const shopReviewSchema = z.object({
 export const shopCatalogQuerySchema = z.object({
   search: z.string().trim().max(80).optional(),
   category: z.string().trim().max(80).optional(),
-  type: z.enum(["IN_GAME", "PROMOTIONAL"]).optional(),
+  type: z.enum(["IN_GAME", "WEBSITE"]).optional(),
   minPriceMinor: z.coerce.number().int().min(0).optional(),
   maxPriceMinor: z.coerce.number().int().min(0).optional(),
   availableOnly: z.coerce.boolean().optional(),

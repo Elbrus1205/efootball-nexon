@@ -34,7 +34,7 @@ export function ProductCard({ product, currency = "RUB" }: ProductCardProps) {
       <span className={styles.productCardScrim} aria-hidden="true" />
       <Link href={`/shop/${product.slug}`} className={styles.productImage} aria-label={`Открыть товар ${product.title}`}>
         <span className={styles.badgeRow}>
-          <span className={styles.badge}>{product.type === "PROMOTIONAL" ? "Акционный" : "В игре"}</span>
+          <span className={styles.badge}>{product.type === "WEBSITE" ? "Через сайт" : "Внутриигровой"}</span>
           {percent > 0 ? <span className={styles.saleBadge}>−{percent}%</span> : null}
         </span>
       </Link>

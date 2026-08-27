@@ -12,7 +12,7 @@ type ProductInitial = {
   id: string;
   variantId: string;
   categoryId: string;
-  type: "IN_GAME" | "PROMOTIONAL";
+  type: "IN_GAME" | "WEBSITE";
   title: string;
   slug: string;
   sku: string;
@@ -77,7 +77,7 @@ export function ShopProductForm({ categories, initial }: { categories: CategoryO
 
     <div className={styles.formRow}>
       <label className={styles.fieldLabel}>Категория<select className={styles.select} name="categoryId" required defaultValue={initial?.categoryId}>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select><small className={styles.helper}>Раздел каталога, в котором покупатель увидит товар.</small></label>
-      <label className={styles.fieldLabel}>Тип товара<select className={styles.select} name="type" defaultValue={initial?.type ?? "IN_GAME"}><option value="IN_GAME">Внутриигровой</option><option value="PROMOTIONAL">Акционный</option></select><small className={styles.helper}>Тип используется в фильтрах каталога.</small></label>
+      <label className={styles.fieldLabel}>Тип товара<select className={styles.select} name="type" defaultValue={initial?.type ?? "IN_GAME"}><option value="IN_GAME">Внутриигровой</option><option value="WEBSITE">Через сайт</option></select><small className={styles.helper}>Как покупатель получает товар.</small></label>
     </div>
 
     <div className={styles.formRow}>

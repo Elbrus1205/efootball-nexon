@@ -237,7 +237,7 @@ enum DivisionSeasonStatus {
 
 enum ShopProductType {
   IN_GAME
-  PROMOTIONAL
+  WEBSITE
 }
 
 enum ShopStockMode {

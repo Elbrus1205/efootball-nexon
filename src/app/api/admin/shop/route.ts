@@ -104,7 +104,7 @@ export async function POST(request: Request) {
         data: {
           categoryId: text(form, "categoryId"),
           slug: text(form, "slug").toLowerCase(),
-          type: text(form, "type") === "PROMOTIONAL" ? ShopProductType.PROMOTIONAL : ShopProductType.IN_GAME,
+          type: text(form, "type") === "WEBSITE" ? ShopProductType.WEBSITE : ShopProductType.IN_GAME,
           title: text(form, "title"),
           shortDescription: "",
           description: "",
@@ -126,7 +126,7 @@ export async function POST(request: Request) {
       const stock = parseShopStockInput({ unlimited: form.get("unlimited") === "true", stockQuantity: text(form, "stockQuantity") || "0" });
       const imageUrl = text(form, "imageUrl");
       await db.$transaction(async (tx) => {
-        await tx.shopProduct.update({ where: { id }, data: { categoryId: text(form, "categoryId"), slug: text(form, "slug").toLowerCase(), type: text(form, "type") === "PROMOTIONAL" ? ShopProductType.PROMOTIONAL : ShopProductType.IN_GAME, title: text(form, "title"), shortDescription: "", description: "", fulfillmentTerms: "", estimatedMinutes: integer(form, "estimatedMinutes", 30), isActive: form.get("isActive") === "true", isFeatured: form.get("isFeatured") === "true", isPopular: form.get("isPopular") === "true", updatedById: session.user.id } });
+        await tx.shopProduct.update({ where: { id }, data: { categoryId: text(form, "categoryId"), slug: text(form, "slug").toLowerCase(), type: text(form, "type") === "WEBSITE" ? ShopProductType.WEBSITE : ShopProductType.IN_GAME, title: text(form, "title"), shortDescription: "", description: "", fulfillmentTerms: "", estimatedMinutes: integer(form, "estimatedMinutes", 30), isActive: form.get("isActive") === "true", isFeatured: form.get("isFeatured") === "true", isPopular: form.get("isPopular") === "true", updatedById: session.user.id } });
         await tx.shopProductVariant.update({ where: { id: variantId }, data: { sku: text(form, "sku").toUpperCase(), name: text(form, "variantName") || "Стандартный", priceMinor, ...stock, maxPerOrder: integer(form, "maxPerOrder", 10), quantityEnabled: form.get("quantityEnabled") === "true", estimatedMinutes: integer(form, "estimatedMinutes", 30), updatedById: session.user.id } });
         const currentImage = await tx.shopProductImage.findFirst({ where: { productId: id }, orderBy: { sortOrder: "asc" } });
         if (imageUrl && currentImage) await tx.shopProductImage.update({ where: { id: currentImage.id }, data: { url: imageUrl, alt: text(form, "title") } });
