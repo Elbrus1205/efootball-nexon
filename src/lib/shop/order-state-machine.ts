@@ -43,7 +43,8 @@ const rules: Record<ShopOrderStatusValue, readonly TransitionRule[]> = {
   ],
   IN_PROGRESS: [
     { to: "SELLER_COMPLETED", actors: ["SELLER", "ADMIN"] },
-    { to: "COMPLETED", actors: ["SYSTEM", "ADMIN"] },
+    // Исполнитель закрывает заказ одной кнопкой после выполнения.
+    { to: "COMPLETED", actors: ["SELLER", "SYSTEM", "ADMIN"] },
     { to: "DISPUTE", actors: ["BUYER", "SELLER", "SUPPORT", "ADMIN"] },
   ],
   SELLER_COMPLETED: [

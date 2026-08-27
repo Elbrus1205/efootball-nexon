@@ -15,7 +15,7 @@ import { ShopError } from "@/lib/shop/errors";
 import { formatShopMoney, shopOrderStatusLabels } from "@/lib/shop/format";
 import { assertOrderTransition, type ShopOrderActor, type ShopOrderStatusValue } from "@/lib/shop/order-state-machine";
 import { getShopPermissionIds } from "@/lib/shop/permissions";
-import { getShopComplaintExpiresAt, isShopComplaintOpen } from "@/lib/shop/order-policy";
+import { isShopComplaintOpen } from "@/lib/shop/order-policy";
 import { getShopSettings } from "@/lib/shop/config";
 import type { TelegramRichMessageDraft } from "@/lib/telegram-rich";
 
@@ -169,34 +169,15 @@ export function startShopOrder(orderId: string, sellerUserId: string) {
 export async function sellerCompleteShopOrder(orderId: string, sellerUserId: string, comment?: string) {
   const order = await db.$transaction(async (tx) => {
     const locked = await getLockedOrder(tx, orderId);
-    if (!locked) throw new ShopError("ORDER_NOT_FOUND", "Р вЂ”Р В°Р С”Р В°Р В· Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р….", 404);
+    if (!locked) throw new ShopError("ORDER_NOT_FOUND", "????? ?? ??????.", 404);
     await ensureAction(locked, sellerUserId, "MARK_SELLER_COMPLETED");
-    await transitionInTx(tx, {
-      order: locked,
-      to: ShopOrderStatus.SELLER_COMPLETED,
-      actor: "SELLER",
-      actorUserId: sellerUserId,
-      reason: "SELLER_MARKED_COMPLETED",
-      comment,
-    });
-    if (!locked.paidAt) throw new ShopError("ORDER_PAYMENT_NOT_CONFIRMED", "РћРїР»Р°С‚Р° Р·Р°РєР°Р·Р° РЅРµ РїРѕРґС‚РІРµСЂР¶РґРµРЅР°.", 409);
-    const complaintExpiresAt = getShopComplaintExpiresAt(locked.paidAt);
-    const updated = await transitionInTx(tx, {
-      order: locked,
-      to: ShopOrderStatus.WAITING_BUYER_CONFIRMATION,
-      actor: "SYSTEM",
-      reason: "BUYER_REVIEW_STARTED",
-      extraData: { buyerConfirmationExpiresAt: complaintExpiresAt },
-    });
-    await tx.shopJob.createMany({
-      data: [{
-        type: "AUTO_COMPLETE_ORDER",
-        dedupeKey: `auto-complete:${locked.id}`,
-        payload: { orderId: locked.id },
-        availableAt: updated.buyerConfirmationExpiresAt!,
-      }],
-      skipDuplicates: true,
-    });
+    if (!locked.paidAt) throw new ShopError("ORDER_PAYMENT_NOT_CONFIRMED", "?????? ?????? ?? ????????????.", 409);
+    const updated = await transitionInTx(tx, { order: locked, to: ShopOrderStatus.COMPLETED, actor: "SELLER", actorUserId: sellerUserId, reason: "SELLER_MARKED_COMPLETED", comment });
+    if (locked.sellerId) {
+      await tx.shopSeller.update({ where: { id: locked.sellerId }, data: { completedOrders: { increment: 1 } } });
+      await tx.shopPayout.upsert({ where: { orderId: locked.id }, create: { orderId: locked.id, sellerId: locked.sellerId, amountMinor: locked.sellerEarningMinor, currency: locked.currency, status: ShopPayoutStatus.AVAILABLE, availableAt: new Date() }, update: { status: ShopPayoutStatus.AVAILABLE, availableAt: new Date() } });
+    }
+    for (const item of locked.items) await tx.shopProduct.update({ where: { id: item.productId }, data: { purchaseCount: { increment: item.quantity } } });
     return updated;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 15_000 });
   await notifyShopOrderStatus(order.id).catch((error) => console.error("Failed to notify completed shop order", error));
@@ -337,28 +318,16 @@ export async function resolveShopDispute(input: {
 
 async function shopButtons(order: Awaited<ReturnType<typeof loadNotificationOrder>>, recipient: "buyer" | "seller") {
   if (!order) return [];
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://efootball-nexon.com";
-  const buttons: NonNullable<TelegramRichMessageDraft["buttons"]> = [
-    { text: "РћС‚РєСЂС‹С‚СЊ Р·Р°РєР°Р·", url: `${appUrl}/shop/orders/${order.id}`, row: 1 },
-  ];
+  const buttons: NonNullable<TelegramRichMessageDraft["buttons"]> = [];
   const contactUsername = recipient === "buyer" ? order.seller?.user.telegramUsername : order.buyer.telegramUsername;
-  if (contactUsername && order.paidAt) {
-    buttons.push({ text: recipient === "buyer" ? "РЎРІСЏР·Р°С‚СЊСЃСЏ СЃ РёСЃРїРѕР»РЅРёС‚РµР»РµРј" : "РЎРІСЏР·Р°С‚СЊСЃСЏ СЃ РїРѕРєСѓРїР°С‚РµР»РµРј", url: `https://t.me/${contactUsername.replace(/^@/, "")}`, row: 2 });
-  }
-  const tokenActions: Array<[string, string]> = [];
-  if (recipient === "buyer" && (order.status === ShopOrderStatus.IN_PROGRESS || order.status === ShopOrderStatus.WAITING_BUYER_CONFIRMATION) && isShopComplaintOpen(order.paidAt)) {
-    tokenActions.push(["РџРѕР¶Р°Р»РѕРІР°С‚СЊСЃСЏ", "SHOP_OPEN_DISPUTE"]);
-  }
+  if (contactUsername && order.paidAt && order.status === ShopOrderStatus.IN_PROGRESS) buttons.push({ text: recipient === "buyer" ? "????????? ? ????????????" : "????????? ? ???????????", url: `https://t.me/${contactUsername.replace(/^@/, "")}`, row: 1 });
   if (recipient === "seller" && order.status === ShopOrderStatus.IN_PROGRESS) {
-    tokenActions.push(["Р—Р°РєР°Р· РІС‹РїРѕР»РЅРµРЅ", "SHOP_SELLER_COMPLETE"]);
+    const token = await createCallbackToken({ userId: order.seller!.userId, action: sellerCompleteAction, shopOrderId: order.id });
+    buttons.push({ text: "????? ????????", callbackData: tokenCallback(token), row: 2 });
   }
-  for (const [index, [text, action]] of tokenActions.entries()) {
-    const token = await createCallbackToken({ userId: recipient === "buyer" ? order.buyerId : order.seller!.userId, action, shopOrderId: order.id });
-    buttons.push({ text, callbackData: tokenCallback(token), row: index + 3 });
-  }
-  if (recipient === "buyer" && (order.status === ShopOrderStatus.WAITING_BUYER_CONFIRMATION || order.status === ShopOrderStatus.COMPLETED)) {
+  if (recipient === "buyer" && order.status === ShopOrderStatus.COMPLETED) {
     const settings = await getShopSettings();
-    if (settings.reviewsTelegramUrl) buttons.push({ text: "РћСЃС‚Р°РІРёС‚СЊ РѕС‚Р·С‹РІ", url: settings.reviewsTelegramUrl, row: 3 });
+    if (settings.reviewsTelegramUrl) buttons.push({ text: "???????? ?????", url: settings.reviewsTelegramUrl, row: 1 });
   }
   return buttons;
 }
