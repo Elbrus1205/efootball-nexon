@@ -23,13 +23,13 @@ const europeanDivisions = [
   ["ucl-league", "Лига чемпионов"],
   ["uel-league", "Лига Европы"],
   ["uecl-league", "Лига конференций"],
-].map(([id, name]) => ({ id, name, participantsCount: 20, roundsCount: 19, matchesPerOpponent: 1 }));
+].map(([id, name]) => ({ id, name, participantsCount: 20, roundsCount: 8, matchesPerOpponent: 1 }));
 
 const transitions: Array<Record<string, unknown>> = [];
 for (const division of nationalDivisions) {
-  transitions.push({ id: `${division.id}-ucl`, fromStageId: "national", fromDivisionId: division.id, toStageId: "europe", toDivisionId: "ucl-league", result: "RANK", fromRank: 1, toRank: 4 });
-  transitions.push({ id: `${division.id}-uel`, fromStageId: "national", fromDivisionId: division.id, toStageId: "europe", toDivisionId: "uel-league", result: "RANK", fromRank: 5, toRank: 8 });
-  transitions.push({ id: `${division.id}-uecl`, fromStageId: "national", fromDivisionId: division.id, toStageId: "europe", toDivisionId: "uecl-league", result: "RANK", fromRank: 9, toRank: 12 });
+  transitions.push({ id: `${division.id}-ucl`, fromStageId: "national", fromDivisionId: division.id, toStageId: "europe", toDivisionId: "ucl-league", result: "RANK", fromRank: 1, toRank: 6 });
+  transitions.push({ id: `${division.id}-uel`, fromStageId: "national", fromDivisionId: division.id, toStageId: "europe", toDivisionId: "uel-league", result: "RANK", fromRank: 7, toRank: 12 });
+  transitions.push({ id: `${division.id}-uecl`, fromStageId: "national", fromDivisionId: division.id, toStageId: "europe", toDivisionId: "uecl-league", result: "RANK", fromRank: 13, toRank: 18 });
 }
 for (const [source, target] of [["ucl-league", "ucl-playoff"], ["uel-league", "uel-playoff"], ["uecl-league", "uecl-playoff"]]) {
   transitions.push({ id: `${source}-top8`, fromStageId: "europe", fromDivisionId: source, toStageId: target, result: "RANK", fromRank: 1, toRank: 8 });
@@ -61,7 +61,7 @@ async function main(): Promise<void> {
     title: "Европейский клубный сезон — тест",
     slug: `european-club-season-test-${Date.now()}`,
     description: "",
-    rules: "Тестовый многоэтапный турнир: пять национальных лиг, три еврокубка, отдельные плей-офф и Суперкубок.",
+    rules: "Из каждой национальной лиги места 1–6 выходят в Лигу чемпионов, места 7–12 — в Лигу Европы, места 13–18 — в Лигу конференций, места 19–20 завершают турнир. В каждой еврокубковой лиге проводится 8 туров. Далее без изменений: из каждой евролиги места 1–8 выходят в отдельный плей-офф (четвертьфинал, полуфинал, финал). Суперкубок разыгрывают победители Лиги чемпионов и Лиги Европы.",
     startsAt,
     registrationEndsAt: startsAt,
     maxParticipants: 100,
