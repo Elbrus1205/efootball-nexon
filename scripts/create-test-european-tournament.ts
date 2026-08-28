@@ -32,7 +32,7 @@ for (const division of nationalDivisions) {
   transitions.push({ id: `${division.id}-uecl`, fromStageId: "national", fromDivisionId: division.id, toStageId: "europe", toDivisionId: "uecl-league", result: "RANK", fromRank: 13, toRank: 18 });
 }
 for (const [source, target] of [["ucl-league", "ucl-playoff"], ["uel-league", "uel-playoff"], ["uecl-league", "uecl-playoff"]]) {
-  transitions.push({ id: `${source}-top8`, fromStageId: "europe", fromDivisionId: source, toStageId: target, result: "RANK", fromRank: 1, toRank: 8 });
+  transitions.push({ id: `${source}-top8`, fromStageId: "europe", fromDivisionId: source, toStageId: target, result: "RANK", fromRank: 1, toRank: 8, toSlotStart: 1, toSlotStep: 2 });`r`n  transitions.push({ id: `${source}-9-24`, fromStageId: "europe", fromDivisionId: source, toStageId: target, result: "RANK", fromRank: 9, toRank: 24, toSlotStart: 17 });
 }
 
 const graph = normalizeStageGraph({
@@ -40,9 +40,9 @@ const graph = normalizeStageGraph({
   stages: [
     { id: "national", name: "Национальные лиги", type: "LEAGUE", divisions: nationalDivisions, divisionsCount: 5 },
     { id: "europe", name: "Еврокубки — этап лиг", type: "LEAGUE", divisions: europeanDivisions, divisionsCount: 3 },
-    { id: "ucl-playoff", name: "Плей-офф ЛЧ", type: "PLAYOFF", bracketSize: 8 },
-    { id: "uel-playoff", name: "Плей-офф ЛЕ", type: "PLAYOFF", bracketSize: 8 },
-    { id: "uecl-playoff", name: "Плей-офф ЛК", type: "PLAYOFF", bracketSize: 8 },
+    { id: "ucl-playoff", name: "Плей-офф ЛЧ", type: "PLAYOFF", bracketSize: 32 },
+    { id: "uel-playoff", name: "Плей-офф ЛЕ", type: "PLAYOFF", bracketSize: 32 },
+    { id: "uecl-playoff", name: "Плей-офф ЛК", type: "PLAYOFF", bracketSize: 32 },
   ],
   transitions,
   superCup: { enabled: true, stageId: "supercup", name: "Суперкубок", sourcePlayoffIds: ["ucl-playoff", "uel-playoff"], result: "WINNER", bracketSize: 2 },
