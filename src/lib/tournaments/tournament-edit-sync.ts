@@ -107,7 +107,11 @@ export function deriveExpectedCustomStructure(blueprint: FormatBlueprint, maxPar
       const upperEntriesCount = selectionEntries(playoff, "upper");
       const lowerEntriesCount = selectionEntries(playoff, "lower");
       const directEntriesCount = hasOpeningStage ? 0 : maxParticipants;
-      const size = nextPowerOfTwo(Math.max(upperEntriesCount, lowerEntriesCount, directEntriesCount, 2));
+      // A custom playoff can receive participants through several transitions
+      // (for example ranks 1–8 plus ranks 9–24). The bracket must fit the
+      // combined field, not only the largest individual range.
+      const configuredEntriesCount = upperEntriesCount + lowerEntriesCount;
+      const size = nextPowerOfTwo(Math.max(configuredEntriesCount, directEntriesCount, 2));
 
       return {
         blueprintId: playoff.id,

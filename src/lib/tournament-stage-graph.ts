@@ -53,6 +53,8 @@ export type StageGraphTransition = {
   toDivisionIndex: number | null;
   targetBracket: StageGraphTargetBracket;
   toSlotStart: number | null;
+  /** Optional spacing between target slots (1 = contiguous). */
+  toSlotStep?: number;
   distribution: StageGraphDistribution;
   allowMerge: boolean;
 };
@@ -178,6 +180,7 @@ function normalizeTransition(raw: unknown, index: number): StageGraphTransition 
     toDivisionIndex: value.toDivisionIndex == null ? null : integer(value.toDivisionIndex, 1, 1, 32),
     targetBracket: value.targetBracket === "lower" ? "lower" : "upper",
     toSlotStart: optionalInteger(value.toSlotStart, 1, 256),
+    toSlotStep: integer(value.toSlotStep, 1, 1, 256),
     distribution: value.distribution === "SEED" || value.distribution === "SNAKE" || value.distribution === "RANDOM" || value.distribution === "MANUAL" ? value.distribution : "SOURCE_ORDER",
     allowMerge: value.allowMerge !== false,
   };
@@ -227,7 +230,7 @@ export function transitionParticipantCount(graph: StageGraphBlueprint, transitio
 }
 
 function transitionSignature(transition: StageGraphTransition) {
-  return [transition.fromStageId, transition.fromDivisionId ?? transition.fromDivisionIndex ?? "*", transition.toStageId, transition.toDivisionId ?? transition.toDivisionIndex ?? "*", transition.result, transition.fromRank, transition.toRank, transition.targetBracket, transition.toSlotStart].join(":");
+  return [transition.fromStageId, transition.fromDivisionId ?? transition.fromDivisionIndex ?? "*", transition.toStageId, transition.toDivisionId ?? transition.toDivisionIndex ?? "*", transition.result, transition.fromRank, transition.toRank, transition.targetBracket, transition.toSlotStart, transition.toSlotStep ?? 1].join(":");
 }
 
 export function validateStageGraph(graph: StageGraphBlueprint): StageGraphValidationIssue[] {
@@ -267,7 +270,8 @@ export function validateStageGraph(graph: StageGraphBlueprint): StageGraphValida
     if (signatures.has(signature)) issue("", "Этот переход дублирует уже настроенный переход.");
     signatures.add(signature);
     const count = transitionParticipantCount(graph, transition);
-    if (transition.toSlotStart !== null) for (let slot = transition.toSlotStart; slot < transition.toSlotStart + count; slot += 1) {
+    if (transition.toSlotStart !== null) for (let index = 0; index < count; index += 1) {
+      const slot = transition.toSlotStart + index * (transition.toSlotStep ?? 1);
       const key = `${transition.toStageId}:${transition.targetBracket}:${slot}`;
       if (occupiedSlots.has(key)) issue(".toSlotStart", `Слот ${slot} этапа «${target?.name ?? transition.toStageId}» уже занят другим переходом.`); else occupiedSlots.set(key, transition.id);
     }
@@ -339,7 +343,7 @@ export function resolveStageGraphAssignments(params: { graph: StageGraphBlueprin
       const snakeCycle = Math.floor(index / targetDivisionCount);
       const distributedIndex = transition.distribution === "SNAKE" && snakeCycle % 2 === 1 ? targetDivisionCount - (index % targetDivisionCount) : (index % targetDivisionCount) + 1;
       const toDivisionIndex = transition.toDivisionId || transition.toDivisionIndex ? transition.toDivisionIndex ?? 1 : distributedIndex;
-      assignments.push({ registrationId: candidate.registrationId, toStageId: transition.toStageId, toDivisionIndex, toDivisionId: transition.toDivisionId, targetBracket: transition.targetBracket, toSlot: transition.toSlotStart === null ? null : transition.toSlotStart + index, sourceTransitionId: transition.id });
+      assignments.push({ registrationId: candidate.registrationId, toStageId: transition.toStageId, toDivisionIndex, toDivisionId: transition.toDivisionId, targetBracket: transition.targetBracket, toSlot: transition.toSlotStart === null ? null : transition.toSlotStart + index * (transition.toSlotStep ?? 1), sourceTransitionId: transition.id });
     }
   }
   return assignments;

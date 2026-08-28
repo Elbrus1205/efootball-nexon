@@ -187,6 +187,19 @@ function nextPowerOfTwo(value: number) {
 
 function createFirstRoundSlotEntries<T>(entries: T[], bracketSize: number): (T | null)[] {
   const slotEntries: (T | null)[] = Array.from({ length: bracketSize }, () => null);
+  // Advanced stage transitions may provide an explicit first-round slot
+  // (stored as the entry seed). Honour those sparse slots so, for example,
+  // ranks 1–8 can occupy odd slots and ranks 9–24 the matching even slots.
+  const explicit = entries.filter((entry) => {
+    const seed = entry && typeof entry === "object" && "seed" in entry ? Number((entry as { seed?: unknown }).seed) : NaN;
+    return Number.isInteger(seed) && seed >= 1 && seed <= bracketSize;
+  });
+  const explicitSeeds = explicit.map((entry) => Number((entry as { seed: number }).seed));
+  const usesSparseSlots = explicitSeeds.some((seed) => seed > entries.length) || Math.min(...explicitSeeds, 1) !== 1;
+  if (explicit.length === entries.length && usesSparseSlots && new Set(explicitSeeds).size === entries.length) {
+    for (const entry of explicit) slotEntries[Number((entry as { seed: number }).seed) - 1] = entry;
+    return slotEntries;
+  }
   const byeCount = Math.max(0, bracketSize - entries.length);
   const directMatchCount = bracketSize / 2;
 
@@ -2691,7 +2704,7 @@ async function ensureCustomPlayoffMatchesGenerated(tournamentId: string) {
       type: stage.bracket.type,
       legsCount: stage.bracket.legsCount,
       thirdPlaceMatch: stage.bracket.thirdPlaceMatch,
-      sizeOverride: nextPowerOfTwo(Math.max(customSettings.upperEntriesCount, customSettings.lowerEntriesCount, 2)),
+      sizeOverride: nextPowerOfTwo(Math.max(customSettings.upperEntriesCount + customSettings.lowerEntriesCount, 2)),
       matchupFormat: tournament.matchupFormat,
       bestOfWins: tournament.bestOfWins,
     });
@@ -4905,7 +4918,9 @@ async function advanceAdvancedGraphStage(tournamentId: string, tournament: { for
         await ensureGroupStandings(group.id, members.map((member) => member.id));
       }
       if (target.bracket && target.bracket.matches.length === 0) {
-        const stageEntries = await db.tournamentStageEntry.findMany({ where: { stageId: target.id }, select: { registrationId: true, resultJson: true } });
+        // Preserve transition order: this is significant for automatic bye
+        // placement (the first N entries in a 32-slot bracket receive byes).
+        const stageEntries = await db.tournamentStageEntry.findMany({ where: { stageId: target.id }, orderBy: { createdAt: "asc" }, select: { registrationId: true, resultJson: true } });
         const entries = stageEntries.map((entry, index) => {
           const result = entry.resultJson && typeof entry.resultJson === "object" && !Array.isArray(entry.resultJson) ? entry.resultJson as { toSlot?: unknown } : null;
           return { id: entry.registrationId, userId: "", seed: typeof result?.toSlot === "number" ? result.toSlot : index + 1 };
