@@ -32,7 +32,8 @@ for (const division of nationalDivisions) {
   transitions.push({ id: `${division.id}-uecl`, fromStageId: "national", fromDivisionId: division.id, toStageId: "europe", toDivisionId: "uecl-league", result: "RANK", fromRank: 13, toRank: 18 });
 }
 for (const [source, target] of [["ucl-league", "ucl-playoff"], ["uel-league", "uel-playoff"], ["uecl-league", "uecl-playoff"]]) {
-  transitions.push({ id: `${source}-top8`, fromStageId: "europe", fromDivisionId: source, toStageId: target, result: "RANK", fromRank: 1, toRank: 8, toSlotStart: 1, toSlotStep: 2 });`r`n  transitions.push({ id: `${source}-9-24`, fromStageId: "europe", fromDivisionId: source, toStageId: target, result: "RANK", fromRank: 9, toRank: 24, toSlotStart: 17 });
+  transitions.push({ id: `${source}-top8`, fromStageId: "europe", fromDivisionId: source, toStageId: target, result: "RANK", fromRank: 1, toRank: 8, toSlotStart: 1, toSlotStep: 2 });
+  transitions.push({ id: `${source}-9-24`, fromStageId: "europe", fromDivisionId: source, toStageId: target, result: "RANK", fromRank: 9, toRank: 24, toSlotStart: 17 });
 }
 
 const graph = normalizeStageGraph({
