@@ -36,10 +36,15 @@ const TOP_FIVE_CLUB_LEAGUES: Record<string, string> = {
   liverpool: "premier-league", "manchester-city": "premier-league", "manchester-united": "premier-league", "newcastle-united-big-768x774": "premier-league",
   "nottingham-forest-big": "premier-league", "southampton-big": "premier-league", "sunderland-big-768x640 (1)": "premier-league", "tottenham-hotspur": "premier-league",
   "west-ham-united": "premier-league", "wolverhampton-wanderers-big-768x666": "premier-league",
+  "bournemouth-big": "premier-league", "brentford-big-768x768": "premier-league", "everton-big-768x786": "premier-league",
   barcelona: "la-liga", "athletic-club-big-2013 (1)": "la-liga", "atletico-madrid": "la-liga", "real-betis": "la-liga", "real-madrid": "la-liga", "real-sociedad-big": "la-liga", "sevilla-big": "la-liga", valencia: "la-liga", "villarreal-big": "la-liga", "girona-big-768x768": "la-liga", "celta-vigo-big": "la-liga", "espanyol-big": "la-liga",
+  "getafe-big": "la-liga", "osasuna-big": "la-liga", "huesca-big": "la-liga", "rayo-vallecano-big-768x682": "la-liga", "mallorca-big": "la-liga", "real-valladolid-big-2022": "la-liga", "Deportivo-La-Coruna (1)": "la-liga", "Real_Zaragoza_logo.svg": "la-liga",
   "psg-big-768x768": "ligue-1", lyon: "ligue-1", marseille: "ligue-1", monaco: "ligue-1", lille: "ligue-1", nice: "ligue-1", rennes: "ligue-1", lens: "ligue-1", "bordeaux-big": "ligue-1", "saint-etienne-big-2022": "ligue-1", nantes: "ligue-1", "montpellier-big-768x768": "ligue-1", strasbourg: "ligue-1",
+  "lille-big-768x731": "ligue-1", "nice-big": "ligue-1", "rennes-big": "ligue-1", "lens-big": "ligue-1", "nantes-big-2020": "ligue-1", "strasbourg-big-768x768": "ligue-1", "auxerre-big": "ligue-1", "brest-big": "ligue-1", "clermont-big": "ligue-1", "lorient-big": "ligue-1", "metz-big-2021": "ligue-1", "reims-big-2020": "ligue-1", "toulouse-big-768x768": "ligue-1",
   "bayern-munich-big-768x768": "bundesliga", "borussia-dortmund": "bundesliga", "bayer-04-leverkusen": "bundesliga", "rb-leipzig-big-587x300": "bundesliga", "eintracht-frankfurt-big-768x768": "bundesliga", "borussia-monchengladbach-big": "bundesliga", stuttgart: "bundesliga", wolfsburg: "bundesliga", "werder-bremen-big": "bundesliga", "hamburger-big-405x300": "bundesliga", "schalke-04-big-768x768": "bundesliga", "koln-big": "bundesliga", "hertha-big-768x715": "bundesliga",
+  "stuttgart-big": "bundesliga", "wolfsburg-big-768x768": "bundesliga", "augsburg-big": "bundesliga", "freiburg-big": "bundesliga", "hoffenheim-big": "bundesliga", "mainz-05-big-768x715": "bundesliga", "union-berlin-big-768x280": "bundesliga", "hannover-96-big-768x677": "bundesliga", "1._FC_Nürnberg_logo.svg": "bundesliga",
   atalanta: "serie-a", bologna: "serie-a", "como-1907-big-768x794": "serie-a", fiorentina: "serie-a", "inter-milan": "serie-a", juventus: "serie-a", lazio: "serie-a", milan: "serie-a", napoli: "serie-a", "roma-big (1)": "serie-a", torino: "serie-a", "genoa-big-2022": "serie-a", sampdoria: "serie-a", parma: "serie-a", "udinese-big-768x765": "serie-a",
+  "bologna-big": "serie-a", "fiorentina-big-2022-768x768": "serie-a", "lazio-big-443x300": "serie-a", "napoli-big-2024-768x768": "serie-a", "torino-big": "serie-a", "sampdoria-big": "serie-a", "parma-big": "serie-a", "sassuolo-big": "serie-a", "cagliari-big": "serie-a", "lecce-big-2023": "serie-a", "empoli-big-2021": "serie-a", "Hellas_verona_logo_3": "serie-a",
 };
 
 const CLUBS: ClubDefinition[] = [
@@ -171,7 +176,35 @@ const CLUBS: ClubDefinition[] = [
   { fileName: "kobenhavn-big-768x768.png", name: "Копенгаген" },
   { fileName: "malmo-big.png", name: "Мальмё" },
   { fileName: "ludogorets-big.png", name: "Лудогорец" },
-];
+  // Recently uploaded badges for the expanded top-five leagues
+  { fileName: "everton-big-768x786.png", name: "Эвертон" },
+  { fileName: "getafe-big.png", name: "Хетафе" },
+  { fileName: "osasuna-big.png", name: "Осасуна" },
+  { fileName: "rayo-vallecano-big-768x682.png", name: "Райо Вальекано" },
+  { fileName: "mallorca-big.png", name: "Мальорка" },
+  { fileName: "real-valladolid-big-2022.png", name: "Реал Вальядолид" },
+  { fileName: "Deportivo-La-Coruna (1).png", name: "Депортиво Ла-Корунья" },
+  { fileName: "Real_Zaragoza_logo.svg.webp", name: "Реал Сарагоса" },
+  { fileName: "valencia-big (1).png", name: "Валенсия" },
+  { fileName: "auxerre-big.png", name: "Осер" },
+  { fileName: "brest-big.png", name: "Брест" },
+  { fileName: "clermont-big.png", name: "Клермон" },
+  { fileName: "lorient-big.png", name: "Лорьян" },
+  { fileName: "metz-big-2021.png", name: "Мец" },
+  { fileName: "reims-big-2020.png", name: "Реймс" },
+  { fileName: "toulouse-big-768x768.png", name: "Тулуза" },
+  { fileName: "augsburg-big.png", name: "Аугсбург" },
+  { fileName: "freiburg-big.png", name: "Фрайбург" },
+  { fileName: "hoffenheim-big.png", name: "Хоффенхайм" },
+  { fileName: "mainz-05-big-768x715.png", name: "Майнц 05" },
+  { fileName: "union-berlin-big-768x280.png", name: "Унион Берлин" },
+  { fileName: "hannover-96-big-768x677.png", name: "Ганновер 96" },
+  { fileName: "1._FC_Nürnberg_logo.svg.webp", name: "Нюрнберг" },
+  { fileName: "sassuolo-big.png", name: "Сассуоло" },
+  { fileName: "cagliari-big.png", name: "Кальяри" },
+  { fileName: "lecce-big-2023.png", name: "Лечче" },
+  { fileName: "empoli-big-2021.png", name: "Эмполи" },
+  { fileName: "Hellas_verona_logo_3.png", name: "Верона" },];
 
 function sortClubs(clubs: ClubOption[]) {
   return clubs.sort((a, b) => a.name.localeCompare(b.name, "ru"));
