@@ -36,7 +36,6 @@ import {
 } from "@/lib/admin-display";
 import { db } from "@/lib/db";
 import { normalizeFormatBlueprint } from "@/lib/format-blueprint";
-import { describeStageGraphTransition } from "@/lib/tournament-stage-graph";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { RELIABILITY_REGISTRATION_THRESHOLD } from "@/lib/services/reliability";
 import { getTelegramProfileLinks, hasPublicTelegramUsername, hasTelegramRegistrationContact } from "@/lib/social-links";
@@ -87,19 +86,6 @@ type EmptyGroupSlot = {
 
 function TournamentTabContent({ children }: { children: React.ReactNode }) {
   return <div className="mt-6">{children}</div>;
-}
-
-function StageGraphSummary({ graph }: { graph: ReturnType<typeof normalizeFormatBlueprint>["stageGraph"] }) {
-  if (!graph || graph.stages.length < 2) return null;
-  return (
-    <Card className="mb-5 overflow-hidden border-primary/15 bg-primary/[0.04] p-4 sm:p-5">
-      <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-sm font-semibold text-white">Схема турнира</h2>{graph.superCup.enabled ? <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-2.5 py-1 text-[10px] font-semibold text-amber-100">Суперкубок</span> : null}</div>
-      <div className="grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {graph.stages.map((stage, index) => <div key={stage.id} className="min-w-0 rounded-lg border border-white/10 bg-black/20 px-3 py-3"><div className="flex items-center gap-2"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-primary/20 bg-primary/10 text-[10px] font-bold text-primary">{index + 1}</span><div className="min-w-0 truncate text-xs font-semibold text-white">{stage.name}</div></div><div className="mt-1.5 pl-8 text-[10px] text-zinc-500">{stage.type === "SUPERCUP" ? "Суперкубок" : stage.type === "PLAYOFF" ? "Плей-офф" : stage.type === "LEAGUE" ? `${stage.divisionsCount} лиг` : `${stage.divisionsCount} групп`}</div></div>)}
-      </div>
-      {graph.transitions.length ? <div className="mt-3 grid gap-2 sm:grid-cols-2">{graph.transitions.map((transition) => <span key={transition.id} className="min-w-0 break-words rounded-lg border border-white/10 bg-black/15 px-3 py-2 text-[11px] leading-5 text-zinc-400">{describeStageGraphTransition(graph, transition)}</span>)}</div> : null}
-    </Card>
-  );
 }
 
 const CUSTOM_STANDING_HIGHLIGHT_STYLES = [
@@ -1148,7 +1134,6 @@ export default async function TournamentDetailsPage(
       <TournamentNavigation tabs={tournamentTabs} initialValue={defaultTournamentTab}>
 
         {defaultTournamentTab === "structure" ? <TournamentTabContent>
-          <StageGraphSummary graph={tournament.format === TournamentFormat.CUSTOM ? normalizeFormatBlueprint(tournament.formatBlueprintJson).stageGraph ?? undefined : undefined} />
           {structureOptions.length ? (
             <TournamentStageSwitcher options={structureOptions}>
               {tournament.stages.map((stage) => {
