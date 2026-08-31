@@ -39,13 +39,17 @@ const TOP_FIVE_CLUB_LEAGUES: Record<string, string> = {
   "bournemouth-big": "premier-league", "brentford-big-768x768": "premier-league", "everton-big-768x786": "premier-league",
   barcelona: "la-liga", "athletic-club-big-2013 (1)": "la-liga", "atletico-madrid": "la-liga", "real-betis": "la-liga", "real-madrid": "la-liga", "real-sociedad-big": "la-liga", "sevilla-big": "la-liga", valencia: "la-liga", "villarreal-big": "la-liga", "girona-big-768x768": "la-liga", "celta-vigo-big": "la-liga", "espanyol-big": "la-liga",
   "getafe-big": "la-liga", "osasuna-big": "la-liga", "huesca-big": "la-liga", "rayo-vallecano-big-768x682": "la-liga", "mallorca-big": "la-liga", "real-valladolid-big-2022": "la-liga", "Deportivo-La-Coruna (1)": "la-liga", "Real_Zaragoza_logo.svg": "la-liga",
-  "psg-big-768x768": "ligue-1", lyon: "ligue-1", marseille: "ligue-1", monaco: "ligue-1", lille: "ligue-1", nice: "ligue-1", rennes: "ligue-1", lens: "ligue-1", "bordeaux-big": "ligue-1", "saint-etienne-big-2022": "ligue-1", nantes: "ligue-1", "montpellier-big-768x768": "ligue-1", strasbourg: "ligue-1",
+  "psg-big-768x768": "ligue-1", lyon: "ligue-1", "lyon-big-2022": "ligue-1", marseille: "ligue-1", monaco: "ligue-1", lille: "ligue-1", nice: "ligue-1", rennes: "ligue-1", lens: "ligue-1", "bordeaux-big": "ligue-1", "saint-etienne-big-2022": "ligue-1", nantes: "ligue-1", "montpellier-big-768x768": "ligue-1", strasbourg: "ligue-1",
   "lille-big-768x731": "ligue-1", "nice-big": "ligue-1", "rennes-big": "ligue-1", "lens-big": "ligue-1", "nantes-big-2020": "ligue-1", "strasbourg-big-768x768": "ligue-1", "auxerre-big": "ligue-1", "brest-big": "ligue-1", "clermont-big": "ligue-1", "lorient-big": "ligue-1", "metz-big-2021": "ligue-1", "reims-big-2020": "ligue-1", "toulouse-big-768x768": "ligue-1",
   "bayern-munich-big-768x768": "bundesliga", "borussia-dortmund": "bundesliga", "bayer-04-leverkusen": "bundesliga", "rb-leipzig-big-587x300": "bundesliga", "eintracht-frankfurt-big-768x768": "bundesliga", "borussia-monchengladbach-big": "bundesliga", stuttgart: "bundesliga", wolfsburg: "bundesliga", "werder-bremen-big": "bundesliga", "hamburger-big-405x300": "bundesliga", "schalke-04-big-768x768": "bundesliga", "koln-big": "bundesliga", "hertha-big-768x715": "bundesliga",
   "stuttgart-big": "bundesliga", "wolfsburg-big-768x768": "bundesliga", "augsburg-big": "bundesliga", "freiburg-big": "bundesliga", "hoffenheim-big": "bundesliga", "mainz-05-big-768x715": "bundesliga", "union-berlin-big-768x280": "bundesliga", "hannover-96-big-768x677": "bundesliga", "1._FC_Nürnberg_logo.svg": "bundesliga",
   atalanta: "serie-a", bologna: "serie-a", "como-1907-big-768x794": "serie-a", fiorentina: "serie-a", "inter-milan": "serie-a", juventus: "serie-a", lazio: "serie-a", milan: "serie-a", napoli: "serie-a", "roma-big (1)": "serie-a", torino: "serie-a", "genoa-big-2022": "serie-a", sampdoria: "serie-a", parma: "serie-a", "udinese-big-768x765": "serie-a",
   "bologna-big": "serie-a", "fiorentina-big-2022-768x768": "serie-a", "lazio-big-443x300": "serie-a", "napoli-big-2024-768x768": "serie-a", "torino-big": "serie-a", "sampdoria-big": "serie-a", "parma-big": "serie-a", "sassuolo-big": "serie-a", "cagliari-big": "serie-a", "lecce-big-2023": "serie-a", "empoli-big-2021": "serie-a", "Hellas_verona_logo_3": "serie-a",
 };
+
+export function getBundledClubLeagueSlug(slug: string) {
+  return TOP_FIVE_CLUB_LEAGUES[slug] ?? null;
+}
 
 const CLUBS: ClubDefinition[] = [
   { fileName: "ajax-amsterdam-big-768x773.png", name: "Аякс" },
@@ -292,7 +296,7 @@ const getCachedAvailableClubs = unstable_cache(
         const slug = path.basename(club.fileName, path.extname(club.fileName));
         const thumbFileName = `${slug}.webp`;
 
-        const leagueSlug = TOP_FIVE_CLUB_LEAGUES[slug] ?? null;
+        const leagueSlug = getBundledClubLeagueSlug(slug);
         const league = TOP_FIVE_LEAGUES.find((item) => item.slug === leagueSlug);
         return {
           slug,
