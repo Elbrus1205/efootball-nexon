@@ -39,7 +39,11 @@ export default async function AdminTournamentDeadlinesPage(props: { params: Prom
     .map((stage) => {
       const stageMatches = tournament.matches.filter((match) => match.stageId === stage.id);
       const roundsFromMatches = Array.from(new Set(stageMatches.map((match) => match.round))).sort((a, b) => a - b);
-      const roundsCount = stage.roundsCount && stage.roundsCount > 0 ? stage.roundsCount : (roundsFromMatches.at(-1) ?? 0);
+      // A stage's configured roundsCount may describe one cycle (e.g. 19)
+      // while generated home/away fixtures span multiple cycles (e.g. 38).
+      // Always expose every round present in matches, even when the stage
+      // metadata is lower.
+      const roundsCount = Math.max(stage.roundsCount ?? 0, roundsFromMatches.at(-1) ?? 0);
 
       return {
         id: stage.id,

@@ -3722,7 +3722,10 @@ export async function generateTournamentMatches(tournamentId: string) {
         entries: stageEntries,
         roundsCount: stage.roundsCount,
         matchesPerOpponent: getCustomStageMatchesPerOpponent(stage, tournament.formatBlueprintJson),
-        roundsMode: isCustomTourCountStage(stage) ? "series" : "cycles",
+        // Round-robin legs must occupy distinct tours.  In particular, a
+        // double round-robin (matchesPerOpponent = 2) yields 2 × (N − 1)
+        // rounds rather than putting home/away fixtures into one round.
+        roundsMode: "cycles",
         matchupFormat: tournament.matchupFormat,
         bestOfWins: tournament.bestOfWins,
       });
@@ -3745,7 +3748,9 @@ export async function generateTournamentMatches(tournamentId: string) {
           entries: members,
           roundsCount: graphDivision?.roundsCount ?? stage.roundsCount,
           matchesPerOpponent: graphDivision?.matchesPerOpponent ?? getCustomStageMatchesPerOpponent(stage, tournament.formatBlueprintJson),
-          roundsMode: isCustomTourCountStage(stage) ? "series" : "cycles",
+          // Keep home and away legs in separate rounds for all league/group
+          // stages so schedules and deadlines expose every tour.
+          roundsMode: "cycles",
           matchupFormat: tournament.matchupFormat,
           bestOfWins: tournament.bestOfWins,
         });
