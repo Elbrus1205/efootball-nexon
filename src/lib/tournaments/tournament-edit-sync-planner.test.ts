@@ -7,6 +7,7 @@ import {
   findCustomStructureDrift,
   getCustomOpeningGroupName,
   planTournamentEditSynchronization,
+  isAdvancedStageGraphBlueprint,
   type TournamentMatchShape,
 } from "./tournament-edit-sync";
 
@@ -164,4 +165,104 @@ test("stage metadata changes use the same names for its generated groups", () =>
   assert.ok(groups);
   assert.equal(getCustomOpeningGroupName(groups, 0), "Группа A");
   assert.equal(getCustomOpeningGroupName(groups, 1), "Группа B");
+});
+
+function europeanGraphBlueprint(roundsCount = 8): FormatBlueprint {
+  const blueprint = teamLeague(16);
+  blueprint.stageGraph = {
+    version: 3,
+    mode: "VISUAL",
+    stages: [
+      {
+        id: "national",
+        name: "Национальные лиги",
+        description: "",
+        type: "LEAGUE",
+        order: 1,
+        divisionsCount: 5,
+        participantsPerDivision: null,
+        roundsCount: 19,
+        matchesPerOpponent: 2,
+        divisions: [],
+        participantCalculation: "AUTO",
+        allowIncompleteDivisions: false,
+        points: { win: 3, draw: 1, loss: 0 },
+        sortRules: [],
+      },
+      {
+        id: "europe",
+        name: "Еврокубки",
+        description: "",
+        type: "LEAGUE",
+        order: 2,
+        divisionsCount: 3,
+        participantsPerDivision: null,
+        roundsCount,
+        matchesPerOpponent: 1,
+        divisions: [
+          { id: "ucl", name: "ЛЧ", participantsCount: 30, roundsCount, matchesPerOpponent: 1, advancingRanks: [] },
+          { id: "uel", name: "ЛЕ", participantsCount: 30, roundsCount, matchesPerOpponent: 1, advancingRanks: [] },
+          { id: "uecl", name: "ЛК", participantsCount: 32, roundsCount, matchesPerOpponent: 1, advancingRanks: [] },
+        ],
+        participantCalculation: "AUTO",
+        allowIncompleteDivisions: false,
+        points: { win: 3, draw: 1, loss: 0 },
+        sortRules: [],
+      },
+    ],
+    transitions: [],
+    superCup: {
+      enabled: false,
+      stageId: "supercup",
+      name: "Суперкубок",
+      sourcePlayoffIds: [],
+      result: "WINNER",
+      playoffType: PlayoffType.SINGLE,
+      bracketSize: null,
+      bestOfWins: 1,
+      legsCount: 1,
+      thirdPlaceMatch: false,
+      penaltyRule: "REQUIRED_ON_DRAW",
+      seedingMethod: "GROUP_RESULTS",
+    },
+  };
+  return blueprint;
+}
+
+test("visual graph saves do not look like legacy opening-stage drift", () => {
+  const graph = europeanGraphBlueprint();
+  assert.equal(isAdvancedStageGraphBlueprint(graph.stageGraph), true);
+  const plan = planTournamentEditSynchronization({
+    previousBlueprint: graph,
+    nextBlueprint: europeanGraphBlueprint(),
+    previousMaxParticipants: 100,
+    nextMaxParticipants: 100,
+    previousMatchShape: matchShape,
+    nextMatchShape: matchShape,
+    previousScoringShape: scoringShape,
+    nextScoringShape: scoringShape,
+    previousStartsAt: startsAt,
+    nextStartsAt: startsAt,
+  });
+
+  assert.equal(plan.rebuildOpening, false);
+  assert.equal(plan.rebuildPlayoffs, false);
+});
+
+test("changing a visual graph league round count requires a protected rebuild", () => {
+  const plan = planTournamentEditSynchronization({
+    previousBlueprint: europeanGraphBlueprint(),
+    nextBlueprint: europeanGraphBlueprint(7),
+    previousMaxParticipants: 100,
+    nextMaxParticipants: 100,
+    previousMatchShape: matchShape,
+    nextMatchShape: matchShape,
+    previousScoringShape: scoringShape,
+    nextScoringShape: scoringShape,
+    previousStartsAt: startsAt,
+    nextStartsAt: startsAt,
+  });
+
+  assert.equal(plan.rebuildOpening, true);
+  assert.equal(plan.rebuildPlayoffs, true);
 });

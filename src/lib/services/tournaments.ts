@@ -36,6 +36,7 @@ import {
   deriveExpectedCustomStructure,
   findCustomStructureDrift,
   getCustomOpeningGroupName,
+  isAdvancedStageGraphBlueprint,
   planTournamentEditSynchronization,
   type TournamentMatchShape,
 } from "@/lib/tournaments/tournament-edit-sync";
@@ -2774,7 +2775,8 @@ export async function assertTournamentEditAllowed(input: {
   const openingSettings = openingStage?.settingsJson && typeof openingStage.settingsJson === "object" && !Array.isArray(openingStage.settingsJson)
     ? openingStage.settingsJson as { mode?: unknown; matchesPerOpponent?: unknown }
     : null;
-  const drift = findCustomStructureDrift(plan.expected, {
+  const advancedGraph = isAdvancedStageGraphBlueprint(normalizeFormatBlueprint(input.nextBlueprint).stageGraph);
+  const drift = advancedGraph ? { openingDrift: false, playoffDrift: false } : findCustomStructureDrift(plan.expected, {
     opening: openingStage
       ? {
           divisionsCount: openingStage.groupsCount,
@@ -2876,6 +2878,7 @@ export async function synchronizeTournamentAfterEdit(input: {
 
   const previousBlueprint = normalizeFormatBlueprint(input.previousBlueprintJson);
   const nextBlueprint = normalizeFormatBlueprint(tournament.formatBlueprintJson);
+  const advancedGraph = isAdvancedStageGraphBlueprint(nextBlueprint.stageGraph);
   const plan = planTournamentEditSynchronization({
     previousBlueprint,
     nextBlueprint,
@@ -2897,7 +2900,7 @@ export async function synchronizeTournamentAfterEdit(input: {
   if (!tournament.stages.length) {
     await generateTournamentStages(tournament.id);
     if (tournament.status === TournamentStatus.IN_PROGRESS) {
-      if (plan.expected.opening) await assignParticipantsToGroups(tournament.id, { mode: "auto" });
+      if (plan.expected.opening && !advancedGraph) await assignParticipantsToGroups(tournament.id, { mode: "auto" });
       await generateTournamentMatches(tournament.id);
     }
     return;
@@ -2907,7 +2910,7 @@ export async function synchronizeTournamentAfterEdit(input: {
   const openingSettings = openingStage?.settingsJson && typeof openingStage.settingsJson === "object" && !Array.isArray(openingStage.settingsJson)
     ? openingStage.settingsJson as { mode?: unknown; matchesPerOpponent?: unknown }
     : null;
-  const actualStructureDrift = findCustomStructureDrift(plan.expected, {
+  const actualStructureDrift = advancedGraph ? { openingDrift: false, playoffDrift: false } : findCustomStructureDrift(plan.expected, {
     opening: openingStage
       ? {
           divisionsCount: openingStage.groupsCount,
@@ -3010,12 +3013,68 @@ export async function synchronizeTournamentAfterEdit(input: {
     });
     await generateTournamentStages(tournament.id);
     if (tournament.status === TournamentStatus.IN_PROGRESS) {
-      if (plan.expected.opening) {
+      if (plan.expected.opening && !advancedGraph) {
         await assignParticipantsToGroups(tournament.id, { mode: "auto" });
       }
       await generateTournamentMatches(tournament.id);
     }
     return;
+  }
+
+  if (advancedGraph) {
+    const graph = nextBlueprint.stageGraph;
+    if (graph) {
+      for (const stage of tournament.stages) {
+        const settings = stage.settingsJson && typeof stage.settingsJson === "object" && !Array.isArray(stage.settingsJson)
+          ? stage.settingsJson as { graphId?: unknown }
+          : null;
+        const graphId = typeof settings?.graphId === "string" ? settings.graphId : null;
+        const node = graphId ? graph.stages.find((item) => item.id === graphId) : undefined;
+        if (!node) continue;
+        const isBracket = node.type === "PLAYOFF" || node.type === "SUPERCUP";
+        await db.tournamentStage.update({
+          where: { id: stage.id },
+          data: {
+            name: node.name,
+            groupsCount: isBracket ? null : node.divisionsCount,
+            participantsPerGroup: isBracket ? null : node.participantsPerDivision,
+            roundsCount: isBracket ? null : node.roundsCount,
+            pointsForWin: node.points.win,
+            pointsForDraw: node.points.draw,
+            pointsForLoss: node.points.loss,
+            sortRules: node.sortRules,
+            settingsJson: {
+              ...settings,
+              mode: "custom-graph",
+              graphId: node.id,
+              graphType: node.type,
+              divisionsCount: node.divisionsCount,
+              participantsPerDivision: node.participantsPerDivision,
+              roundsCount: node.roundsCount,
+              matchesPerOpponent: node.matchesPerOpponent,
+              divisions: node.divisions,
+              transitions: graph.transitions.filter((transition) => transition.fromStageId === node.id || transition.toStageId === node.id),
+              bestOfWins: node.bestOfWins,
+              bracketFill: node.bracketFill,
+              penaltyRule: node.penaltyRule,
+              seedingMethod: node.seedingMethod,
+            } as Prisma.InputJsonValue,
+          },
+        });
+        if (!isBracket) {
+          const groups = await db.tournamentGroup.findMany({ where: { stageId: stage.id }, orderBy: { orderIndex: "asc" } });
+          await Promise.all(groups.map((group, index) => {
+            const division = node.divisions[index];
+            return db.tournamentGroup.update({
+              where: { id: group.id },
+              data: { name: division?.name ?? group.name, capacity: division?.participantsCount ?? node.participantsPerDivision },
+            });
+          }));
+        }
+      }
+    }
+    if (plan.recalculateStandings) await recalculateGroupStandings(tournament.id);
+    if (!rebuildOpening && !rebuildPlayoffs) return;
   }
 
   if (openingStage && plan.expected.opening) {

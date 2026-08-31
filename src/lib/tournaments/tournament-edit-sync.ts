@@ -1,4 +1,5 @@
 import type { FormatBlueprint, PlayoffStageBlueprint } from "@/lib/format-blueprint";
+import type { StageGraphBlueprint } from "@/lib/tournament-stage-graph";
 
 export type TournamentMatchShape = {
   participantMode: "SINGLE" | "COOP" | "TEAM";
@@ -70,6 +71,49 @@ export type ActualCustomStructure = {
     lowerEntriesCount: number | null;
   }>;
 };
+
+export function isAdvancedStageGraphBlueprint(graph: StageGraphBlueprint | undefined) {
+  if (!graph) return false;
+  return graph.mode === "VISUAL" ||
+    graph.stages.filter((stage) => stage.type !== "PLAYOFF").length > 1 ||
+    graph.superCup.enabled ||
+    graph.transitions.some((transition) => transition.result !== "RANK");
+}
+
+function advancedGraphStructureSignature(graph: StageGraphBlueprint | undefined) {
+  if (!graph) return null;
+  return JSON.stringify({
+    mode: graph.mode,
+    stages: graph.stages.map((stage) => ({
+      id: stage.id,
+      type: stage.type,
+      order: stage.order,
+      divisionsCount: stage.divisionsCount,
+      participantsPerDivision: stage.participantsPerDivision,
+      roundsCount: stage.roundsCount,
+      matchesPerOpponent: stage.matchesPerOpponent,
+      participantCalculation: stage.participantCalculation,
+      allowIncompleteDivisions: stage.allowIncompleteDivisions,
+      divisions: stage.divisions.map((division) => ({
+        id: division.id,
+        participantsCount: division.participantsCount,
+        roundsCount: division.roundsCount,
+        matchesPerOpponent: division.matchesPerOpponent,
+        advancingRanks: division.advancingRanks,
+      })),
+      playoffType: stage.playoffType,
+      bracketSize: stage.bracketSize,
+      bracketFill: stage.bracketFill,
+      bestOfWins: stage.bestOfWins,
+      legsCount: stage.legsCount,
+      thirdPlaceMatch: stage.thirdPlaceMatch,
+      penaltyRule: stage.penaltyRule,
+      seedingMethod: stage.seedingMethod,
+    })),
+    transitions: graph.transitions,
+    superCup: graph.superCup,
+  });
+}
 
 function nextPowerOfTwo(value: number) {
   return 2 ** Math.ceil(Math.log2(Math.max(value, 2)));
@@ -197,6 +241,12 @@ export function planTournamentEditSynchronization(input: {
 }) {
   const previous = deriveExpectedCustomStructure(input.previousBlueprint, input.previousMaxParticipants);
   const next = deriveExpectedCustomStructure(input.nextBlueprint, input.nextMaxParticipants);
+  const advancedGraph = isAdvancedStageGraphBlueprint(input.nextBlueprint.stageGraph);
+  const previousAdvancedGraph = isAdvancedStageGraphBlueprint(input.previousBlueprint.stageGraph);
+  const usesAdvancedGraph = advancedGraph || previousAdvancedGraph;
+  const advancedGraphStructureChanged = usesAdvancedGraph
+    ? advancedGraphStructureSignature(input.previousBlueprint.stageGraph) !== advancedGraphStructureSignature(input.nextBlueprint.stageGraph)
+    : false;
   const matchShapeChanged = JSON.stringify(input.previousMatchShape) !== JSON.stringify(input.nextMatchShape);
   const scoringChanged = JSON.stringify(input.previousScoringShape) !== JSON.stringify(input.nextScoringShape);
   const openingShapeChanged = JSON.stringify(openingShape(previous)) !== JSON.stringify(openingShape(next));
@@ -204,9 +254,9 @@ export function planTournamentEditSynchronization(input: {
 
   return {
     expected: next,
-    rebuildOpening: openingShapeChanged || matchShapeChanged,
-    rebuildPlayoffs: openingShapeChanged || playoffShapeChanged || matchShapeChanged,
-    refreshMetadata: JSON.stringify(previous) !== JSON.stringify(next),
+    rebuildOpening: usesAdvancedGraph ? advancedGraphStructureChanged : openingShapeChanged || matchShapeChanged,
+    rebuildPlayoffs: usesAdvancedGraph ? advancedGraphStructureChanged : openingShapeChanged || playoffShapeChanged || matchShapeChanged,
+    refreshMetadata: usesAdvancedGraph ? JSON.stringify(input.previousBlueprint.stageGraph) !== JSON.stringify(input.nextBlueprint.stageGraph) : JSON.stringify(previous) !== JSON.stringify(next),
     recalculateStandings: scoringChanged,
     scheduleShiftMs: input.nextStartsAt.getTime() - input.previousStartsAt.getTime(),
   };
