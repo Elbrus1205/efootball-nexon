@@ -40,6 +40,7 @@ test("redesigned tournament builder keeps the complete server submission contrac
     "telegramGroupId",
     "telegramAutoPublish",
     "clubSelectionMode",
+    "participantDistributionByLeague",
     "sortRules",
   ];
 

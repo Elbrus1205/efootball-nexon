@@ -54,6 +54,8 @@ import {
 } from "@/lib/tournament-cache";
 import {
   assignParticipantsByGroupCapacity,
+  assignParticipantsByLeague,
+  resolveRoundRobinScheduleShape,
   orderParticipantsByRating,
   shuffleParticipants,
 } from "@/lib/tournament-participant-assignment";
@@ -1938,9 +1940,10 @@ async function createRoundRobinMatchesForEntries({
   const requestedMatchesPerOpponent = Math.max(matchesPerOpponent ?? requestedCount, 1);
   const seriesWinsRequired = matchupFormat === MatchupFormat.BEST_OF ? Math.max(2, Math.min(bestOfWins, 9)) : null;
   const bestOfMatchesPerPair = seriesWinsRequired ? seriesWinsRequired * 2 - 1 : null;
-  const matchesPerPair = bestOfMatchesPerPair ?? (roundsMode === "series" ? Math.min(requestedMatchesPerOpponent, 6) : 1);
-  const totalTours = roundsMode === "series" ? requestedCount : requestedCount * roundsPerCycle;
-  const maxMatchesPerPair = bestOfMatchesPerPair ?? (roundsMode === "series" ? matchesPerPair : requestedCount);
+  const scheduleShape = resolveRoundRobinScheduleShape({ participantsCount: entries.length, roundsCount, matchesPerOpponent, roundsMode });
+  const matchesPerPair = bestOfMatchesPerPair ?? scheduleShape.matchesPerPair;
+  const totalTours = scheduleShape.totalTours;
+  const maxMatchesPerPair = bestOfMatchesPerPair ?? (roundsMode === "series" ? matchesPerPair : requestedMatchesPerOpponent);
   const pairMatchesCount = new Map<string, number>();
 
   for (let tourIndex = 0; tourIndex < totalTours; tourIndex += 1) {
@@ -3649,13 +3652,19 @@ export async function generateTournamentMatches(tournamentId: string) {
       participantOffset += rootCapacities[rootIndex]!;
     }
     for (const stage of activeRoots) {
+      const groups = stage.type === StageType.LEAGUE
+        ? await db.tournamentGroup.findMany({ where: { stageId: stage.id }, orderBy: { orderIndex: "asc" } })
+        : [];
+      if (tournament.participantDistributionByLeague && stage.type === StageType.LEAGUE) {
+        await assignParticipantsToLeagueDivisions(tournamentId, { id: stage.id, groups });
+        continue;
+      }
       const existingCount = await db.tournamentStageEntry.count({ where: { stageId: stage.id } });
       if (existingCount > 0) continue;
       const assigned = rootAssignments.get(stage.id) ?? [];
       if (stage.type === StageType.PLAYOFF || stage.type === StageType.SUPER_CUP) {
         await db.tournamentStageEntry.createMany({ data: assigned.map((entry, index) => ({ stageId: stage.id, registrationId: entry.id, resultJson: { seed: entry.seed ?? index + 1 } })) });
       } else {
-        const groups = await db.tournamentGroup.findMany({ where: { stageId: stage.id }, orderBy: { orderIndex: "asc" } });
         if (!groups.length) continue;
         const groupCapacities = groups.map((group) => Math.max(0, group.capacity ?? Math.ceil(assigned.length / groups.length)));
         if (assigned.length > groupCapacities.reduce((sum, capacity) => sum + capacity, 0)) {
@@ -3679,6 +3688,18 @@ export async function generateTournamentMatches(tournamentId: string) {
     if (stageSettings?.mode === "custom-graph" && stage.status !== StageStatus.ACTIVE) continue;
     if (stage.type === StageType.LEAGUE) {
       if (stageSettings?.mode === "custom-graph" && stage.groups.length) {
+        if (tournament.participantDistributionByLeague && stage.orderIndex === 1) {
+          await assignParticipantsToLeagueDivisions(tournamentId, stage);
+          const refreshedGroups = await db.tournamentGroup.findMany({ where: { stageId: stage.id }, orderBy: { orderIndex: "asc" } });
+          for (const group of refreshedGroups) {
+            const currentEntries = await db.tournamentStageEntry.findMany({ where: { stageId: stage.id, groupId: group.id, registration: { status: ParticipantStatus.CONFIRMED } }, select: { registration: { select: { id: true, userId: true } } } });
+            const members = currentEntries.map((entry) => entry.registration);
+            if (members.length < 2 || await db.match.count({ where: { groupId: group.id } })) continue;
+            const graphDivision = getPersistedGraphStage(advancedGraph, stage)?.divisions[group.orderIndex - 1];
+            await createRoundRobinMatchesForEntries({ tournamentId, stageId: stage.id, groupId: group.id, entries: members, roundsCount: graphDivision?.roundsCount ?? stage.roundsCount, matchesPerOpponent: graphDivision?.matchesPerOpponent ?? getCustomStageMatchesPerOpponent(stage, tournament.formatBlueprintJson), roundsMode: "cycles", matchupFormat: tournament.matchupFormat, bestOfWins: tournament.bestOfWins });
+          }
+          continue;
+        }
         for (const group of stage.groups) {
           const currentEntries = await db.tournamentStageEntry.findMany({ where: { stageId: stage.id, groupId: group.id, registration: { status: ParticipantStatus.CONFIRMED } }, select: { registration: { select: { id: true, userId: true } } } });
           const currentMembers = currentEntries.map((entry) => entry.registration);
@@ -4846,6 +4867,57 @@ async function removeIncompleteRosterRegistrations(tournamentId: string) {
   await syncTournamentPreviewGroups(tournamentId).catch(() => null);
 
   return { removedCount: incompleteRegistrations.length };
+}
+
+async function assignParticipantsToLeagueDivisions(
+  tournamentId: string,
+  stage: { id: string; groups: Array<{ id: string; name: string; capacity: number | null; orderIndex: number }> },
+) {
+  const participants = await db.tournamentRegistration.findMany({
+    where: { tournamentId, status: ParticipantStatus.CONFIRMED },
+    select: { id: true, groupId: true, clubSlug: true, clubName: true },
+    orderBy: [{ seed: "asc" }, { createdAt: "asc" }],
+  });
+  const clubs = await db.club.findMany({
+    where: { slug: { in: participants.flatMap((participant) => participant.clubSlug ? [participant.clubSlug] : []) } },
+    select: { slug: true, league: { select: { slug: true } } },
+  });
+  const leagueByClubSlug = new Map(clubs.map((club) => [club.slug, club.league?.slug ?? null]));
+  const groups = stage.groups.map((group) => ({
+    id: group.id,
+    leagueSlug: group.name === "АПЛ" ? "premier-league" : group.name === "Ла Лига" ? "la-liga" : group.name === "Бундеслига" ? "bundesliga" : group.name === "Серия А" ? "serie-a" : group.name === "Лига 1" ? "ligue-1" : "",
+    capacity: group.capacity ?? participants.length,
+  }));
+  const assignments = assignParticipantsByLeague(participants.map((participant) => ({ ...participant, clubLeagueSlug: participant.clubSlug ? leagueByClubSlug.get(participant.clubSlug) : null })), groups);
+  const targetGroupByRegistrationId = new Map(assignments.map((assignment) => [assignment.participant.id, assignment.groupId]));
+  const existingEntries = await db.tournamentStageEntry.findMany({ where: { stageId: stage.id }, select: { registrationId: true, groupId: true } });
+  const assignmentsChanged = participants.some((participant) => participant.groupId !== targetGroupByRegistrationId.get(participant.id)) ||
+    existingEntries.length !== assignments.length ||
+    existingEntries.some((entry) => entry.groupId !== targetGroupByRegistrationId.get(entry.registrationId));
+  if (!assignmentsChanged) return;
+
+  const protectedMatch = await db.match.findFirst({
+    where: {
+      stageId: stage.id,
+      OR: [
+        { status: { in: [...PLAYED_MATCH_STATUSES] } },
+        { player1Score: { not: null } },
+        { player2Score: { not: null } },
+        { lineupPlayers: { some: {} } },
+        { submissions: { some: {} } },
+      ],
+    },
+    select: { id: true },
+  });
+  if (protectedMatch) {
+    throw new TournamentEditConflictError("Нельзя перераспределить лиги: в этапе уже есть результаты или исторические составы матчей.");
+  }
+
+  await Promise.all(assignments.map((assignment) => db.tournamentRegistration.update({ where: { id: assignment.participant.id }, data: { groupId: assignment.groupId, seed: assignment.seed } })));
+  await db.tournamentStageEntry.deleteMany({ where: { stageId: stage.id } });
+  await db.tournamentStageEntry.createMany({ data: assignments.map((assignment) => ({ stageId: stage.id, registrationId: assignment.participant.id, groupId: assignment.groupId, resultJson: { seed: assignment.seed } })) });
+  await db.groupStanding.deleteMany({ where: { groupId: { in: stage.groups.map((group) => group.id) } } });
+  await Promise.all(stage.groups.map((group) => ensureGroupStandings(group.id, assignments.filter((assignment) => assignment.groupId === group.id).map((assignment) => assignment.participant.id))));
 }
 
 async function advanceAdvancedGraphStage(tournamentId: string, tournament: { formatBlueprintJson: unknown; matchupFormat: MatchupFormat; bestOfWins: number }) {

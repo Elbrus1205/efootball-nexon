@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   assignParticipantsByGroupCapacity,
+  assignParticipantsByLeague,
   orderParticipantsByRating,
   resolveParticipantClub,
+  resolveRoundRobinScheduleShape,
   shuffleParticipants,
 } from "./tournament-participant-assignment";
 
@@ -86,6 +88,42 @@ test("manual seeding preserves valid group choices and fills only empty slots", 
       { id: "manual-a", groupId: "group-a" },
     ],
   );
+});
+
+test("league-based seeding keeps every club in its national league division", () => {
+  const participants = [
+    { id: "psg", groupId: null, clubLeagueSlug: "ligue-1" },
+    { id: "arsenal", groupId: null, clubLeagueSlug: "premier-league" },
+  ];
+  const assignments = assignParticipantsByLeague(participants, [
+    { id: "france", leagueSlug: "ligue-1", capacity: 1 },
+    { id: "england", leagueSlug: "premier-league", capacity: 1 },
+  ]);
+  assert.deepEqual(assignments.map(({ participant, groupId }) => ({ id: participant.id, groupId })), [
+    { id: "psg", groupId: "france" },
+    { id: "arsenal", groupId: "england" },
+  ]);
+});
+
+test("league-based seeding rejects missing league mappings instead of falling back to random groups", () => {
+  assert.throws(
+    () => assignParticipantsByLeague([{ id: "unknown", groupId: null, clubLeagueSlug: "serie-b" }], [{ id: "england", leagueSlug: "premier-league", capacity: 1 }]),
+    /не настроен дивизион/,
+  );
+});
+
+test("round-robin shape treats matchesPerOpponent as the number of cycles", () => {
+  assert.deepEqual(resolveRoundRobinScheduleShape({ participantsCount: 20, roundsCount: 19, matchesPerOpponent: 2, roundsMode: "cycles" }), {
+    totalTours: 38,
+    matchesPerPair: 1,
+  });
+});
+
+test("round-robin shape still supports legacy cycle counts when matchesPerOpponent is absent", () => {
+  assert.deepEqual(resolveRoundRobinScheduleShape({ participantsCount: 4, roundsCount: 2, roundsMode: "cycles" }), {
+    totalTours: 6,
+    matchesPerPair: 1,
+  });
 });
 
 test("random seeding uses a Fisher-Yates shuffle without mutating registration order", () => {

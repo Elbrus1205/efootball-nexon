@@ -78,6 +78,7 @@ export default async function AdminTournamentEditPage(props: {
           telegramAutoPublish: tournament.telegramAutoPublish,
           clubSelectionMode: tournament.clubSelectionMode,
           clubSelectionByLeague: tournament.clubSelectionByLeague,
+          participantDistributionByLeague: tournament.participantDistributionByLeague,
           clubSelectionInGameOnly: tournament.clubSelectionInGameOnly,
           selectedLeagueSlugs: tournament.selectedLeagues.map((item) => item.league.slug),
           sortRules: tournament.sortRules,

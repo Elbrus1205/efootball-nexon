@@ -106,6 +106,7 @@ type BuilderValues = {
   telegramAutoPublish?: boolean;
   clubSelectionMode?: ClubSelectionMode;
   clubSelectionByLeague?: boolean;
+  participantDistributionByLeague?: boolean;
   clubSelectionInGameOnly?: boolean;
   selectedLeagueSlugs?: string[];
   sortRules?: SortRule[];
@@ -187,6 +188,7 @@ export function TournamentBuilderForm({
   const [captainsCreateTeamMatches, setCaptainsCreateTeamMatches] = useState(initialValues?.captainsCreateTeamMatches ?? false);
   const [matchupFormat, setMatchupFormat] = useState(initialValues?.matchupFormat ?? MatchupFormat.SINGLE_MATCH);
   const [clubSelectionByLeague, setClubSelectionByLeague] = useState(initialValues?.clubSelectionByLeague ?? false);
+  const [participantDistributionByLeague, setParticipantDistributionByLeague] = useState(initialValues?.participantDistributionByLeague ?? false);
   const [clubSelectionInGameOnly, setClubSelectionInGameOnly] = useState(initialValues?.clubSelectionInGameOnly ?? true);
   const [selectedLeagueSlugs, setSelectedLeagueSlugs] = useState<string[]>(initialValues?.selectedLeagueSlugs ?? TOP_FIVE_LEAGUES.map((league) => league.slug));
   const [submitting, setSubmitting] = useState(false);
@@ -239,6 +241,7 @@ export function TournamentBuilderForm({
     setCaptainsCreateTeamMatches(draft.fields.captainsCreateTeamMatches?.includes("on") ?? false);
     setMatchupFormat((draft.fields.matchupFormat?.[0] as MatchupFormat | undefined) ?? MatchupFormat.SINGLE_MATCH);
     setClubSelectionByLeague(draft.fields.clubSelectionByLeague?.[0] === "true");
+    setParticipantDistributionByLeague(draft.fields.participantDistributionByLeague?.[0] === "true");
     setClubSelectionInGameOnly(draft.fields.clubSelectionInGameOnly?.[0] !== "false");
     setSelectedLeagueSlugs(draft.fields.selectedLeagueSlugs ?? []);
   }, [isEditing, restoreDraft]);
@@ -342,6 +345,7 @@ export function TournamentBuilderForm({
       <input type="hidden" name="telegramGroupId" value={initialValues?.telegramGroupId ?? ""} />
       <input type="hidden" name="telegramAutoPublish" value={String(initialValues?.telegramAutoPublish ?? false)} />
       <input type="hidden" name="clubSelectionByLeague" value={String(clubSelectionByLeague)} />
+      <input type="hidden" name="participantDistributionByLeague" value={String(participantDistributionByLeague)} />
       <input type="hidden" name="clubSelectionInGameOnly" value={String(clubSelectionInGameOnly)} />
       {selectedLeagueSlugs.map((slug) => <input key={slug} type="hidden" name="selectedLeagueSlugs" value={slug} />)}
 
@@ -641,6 +645,14 @@ export function TournamentBuilderForm({
                       })}
                     </div>
                   ) : null}
+                  <TournamentBuilderToggle
+                    name="participantDistributionByLeagueToggle"
+                    title="Распределять участников по лигам клубов"
+                    description="В лигах АПЛ, Ла Лига, Бундеслига, Серия А и Лига 1 участник попадёт в дивизион своей выбранной лиги, а не в случайный дивизион."
+                    checked={participantDistributionByLeague}
+                    onChange={(event) => setParticipantDistributionByLeague(event.target.checked)}
+                    tone="primary"
+                  />
                   <TournamentBuilderToggle
                     name="clubSelectionInGameOnlyToggle"
                     title="Показывать только клубы из игры"

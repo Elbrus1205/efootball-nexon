@@ -223,6 +223,7 @@ export const tournamentBuilderSchema = z.object({
   telegramAutoPublish: z.coerce.boolean().default(false),
   clubSelectionMode: z.nativeEnum(ClubSelectionMode).default(ClubSelectionMode.ADMIN_RANDOM),
   clubSelectionByLeague: z.coerce.boolean().default(false),
+  participantDistributionByLeague: z.coerce.boolean().default(false),
   clubSelectionInGameOnly: z.coerce.boolean().default(true),
   selectedLeagueSlugs: z.array(z.string().trim().min(1)).default([]),
   sortRules: z.array(z.nativeEnum(SortRule)).default([SortRule.POINTS, SortRule.GOAL_DIFFERENCE, SortRule.GOALS_FOR, SortRule.WINS]),

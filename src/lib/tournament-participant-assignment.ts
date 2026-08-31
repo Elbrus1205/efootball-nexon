@@ -53,6 +53,46 @@ type SeedGroup = {
   capacity: number;
 };
 
+export function resolveRoundRobinScheduleShape(params: {
+  participantsCount: number;
+  roundsCount?: number | null;
+  matchesPerOpponent?: number | null;
+  roundsMode?: "cycles" | "series";
+}) {
+  const slotsCount = params.participantsCount % 2 === 0 ? params.participantsCount : params.participantsCount + 1;
+  const roundsPerCycle = Math.max(slotsCount - 1, 1);
+  const requestedCount = Math.max(params.roundsCount ?? 1, 1);
+  const requestedMatchesPerOpponent = Math.max(params.matchesPerOpponent ?? requestedCount, 1);
+  if (params.roundsMode === "series") {
+    return { totalTours: requestedCount, matchesPerPair: Math.min(requestedMatchesPerOpponent, 6) };
+  }
+  const cycleCount = params.matchesPerOpponent == null ? requestedCount : requestedMatchesPerOpponent;
+  return { totalTours: cycleCount * roundsPerCycle, matchesPerPair: 1 };
+}
+
+type LeagueSeedParticipant = SeededParticipant & { clubLeagueSlug?: string | null };
+type LeagueSeedGroup = SeedGroup & { leagueSlug: string };
+
+/** Assigns each participant to the division representing their club's league. */
+export function assignParticipantsByLeague<T extends LeagueSeedParticipant>(
+  participants: readonly T[],
+  groups: readonly LeagueSeedGroup[],
+) {
+  const groupByLeague = new Map(groups.map((group) => [group.leagueSlug, group]));
+  const assignedCounts = new Map(groups.map((group) => [group.id, 0]));
+
+  return participants.map((participant, index) => {
+    const leagueSlug = participant.clubLeagueSlug?.trim();
+    if (!leagueSlug) throw new Error("Участнику не назначена лига клуба.");
+    const group = groupByLeague.get(leagueSlug);
+    if (!group) throw new Error(`Для лиги клуба «${leagueSlug}» не настроен дивизион.`);
+    const assignedCount = assignedCounts.get(group.id) ?? 0;
+    if (assignedCount >= group.capacity) throw new Error(`В дивизионе лиги «${leagueSlug}» недостаточно мест.`);
+    assignedCounts.set(group.id, assignedCount + 1);
+    return { participant, groupId: group.id, seed: index + 1 };
+  });
+}
+
 export function assignParticipantsByGroupCapacity<T extends SeededParticipant>(
   participants: readonly T[],
   groups: readonly SeedGroup[],

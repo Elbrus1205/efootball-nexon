@@ -819,6 +819,7 @@ model Tournament {
   manualPlayoffSelection         Boolean                             @default(false)
   clubSelectionMode              ClubSelectionMode                   @default(ADMIN_RANDOM)
   clubSelectionByLeague          Boolean                             @default(false)
+  participantDistributionByLeague Boolean                             @default(false)
   clubSelectionInGameOnly        Boolean                             @default(true)
   maxParticipants                Int
   pointsForWin                   Int                                 @default(3)
