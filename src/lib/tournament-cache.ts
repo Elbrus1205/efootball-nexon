@@ -7,6 +7,11 @@ import { db } from "@/lib/db";
 // safety net: if a mutation site ever forgets to invalidate, the data
 // self-heals within the hour instead of staying stale forever.
 const CACHE_TTL_SECONDS = 60 * 60;
+// Bump this when data was repaired outside an application request. The new
+// namespace guarantees that a persistent Next Data Cache cannot serve the
+// pre-repair empty tournament slices while the regular tag invalidation is
+// unavailable to one-off database maintenance scripts.
+const CACHE_KEY_VERSION = "v2";
 
 export function tournamentRulesTag(tournamentId: string) {
   return `tournament-rules:${tournamentId}`;
@@ -195,25 +200,25 @@ export type TournamentStructureSlice = Awaited<ReturnType<typeof loadStructureSl
 // Each wrapper keys on the tournament id (Next folds the fn args into the cache
 // key) and is tagged so mutations can bust exactly one domain.
 export function getCachedTournamentRules(tournamentId: string) {
-  return unstable_cache(loadRulesSlice, ["tournament-rules"], {
+  return unstable_cache(loadRulesSlice, ["tournament-rules", CACHE_KEY_VERSION], {
     revalidate: CACHE_TTL_SECONDS,
     tags: [tournamentRulesTag(tournamentId)],
   })(tournamentId);
 }
 export function getCachedTournamentParticipants(tournamentId: string) {
-  return unstable_cache(loadParticipantsSlice, ["tournament-participants"], {
+  return unstable_cache(loadParticipantsSlice, ["tournament-participants", CACHE_KEY_VERSION], {
     revalidate: CACHE_TTL_SECONDS,
     tags: [tournamentParticipantsTag(tournamentId)],
   })(tournamentId);
 }
 export function getCachedTournamentSchedule(tournamentId: string) {
-  return unstable_cache(loadScheduleSlice, ["tournament-schedule"], {
+  return unstable_cache(loadScheduleSlice, ["tournament-schedule", CACHE_KEY_VERSION], {
     revalidate: CACHE_TTL_SECONDS,
     tags: [tournamentScheduleTag(tournamentId)],
   })(tournamentId);
 }
 export function getCachedTournamentStructure(tournamentId: string) {
-  return unstable_cache(loadStructureSlice, ["tournament-structure"], {
+  return unstable_cache(loadStructureSlice, ["tournament-structure", CACHE_KEY_VERSION], {
     revalidate: CACHE_TTL_SECONDS,
     tags: [tournamentStructureTag(tournamentId)],
   })(tournamentId);
