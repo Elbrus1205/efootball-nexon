@@ -14,7 +14,7 @@ import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { getSelectedProfileStatusWhere } from "@/lib/profile-status-query";
-import { selectTournamentBonusMatches } from "@/lib/rating-bonus-matches";
+import { selectTournamentBonusMatches, selectTournamentBonusPlayerIds } from "@/lib/rating-bonus-matches";
 import { invalidatePlayerRatings, PLAYER_RATINGS_CACHE_TAG } from "@/lib/ratings-cache";
 
 const INITIAL_RATING = 500;
@@ -43,9 +43,9 @@ type RatingMatchSideSource = {
   tournament: { participantMode: TournamentParticipantMode };
   player1: RatingPlayer | null;
   player2: RatingPlayer | null;
-  lineupPlayers: Array<{ side: number; user: RatingPlayer }>;
-  participant1Entry: { rosterMembers: Array<{ user: RatingPlayer }> } | null;
-  participant2Entry: { rosterMembers: Array<{ user: RatingPlayer }> } | null;
+  lineupPlayers: Array<{ side: number; registrationId: string | null; user: RatingPlayer }>;
+  participant1Entry: { id: string; user: RatingPlayer; rosterMembers: Array<{ user: RatingPlayer }> } | null;
+  participant2Entry: { id: string; user: RatingPlayer; rosterMembers: Array<{ user: RatingPlayer }> } | null;
 };
 
 const ratingPlayerSelect = {
@@ -221,12 +221,15 @@ async function computePlayerRatings(options: PlayerRatingOptions = {}) {
         lineupPlayers: {
           select: {
             side: true,
+            registrationId: true,
             user: { select: ratingPlayerSelect },
           },
           orderBy: [{ side: "asc" }, { createdAt: "asc" }],
         },
         participant1Entry: {
           select: {
+            id: true,
+            user: { select: ratingPlayerSelect },
             rosterMembers: {
               where: { status: TeamInviteStatus.ACCEPTED },
               select: { user: { select: ratingPlayerSelect } },
@@ -236,6 +239,8 @@ async function computePlayerRatings(options: PlayerRatingOptions = {}) {
         },
         participant2Entry: {
           select: {
+            id: true,
+            user: { select: ratingPlayerSelect },
             rosterMembers: {
               where: { status: TeamInviteStatus.ACCEPTED },
               select: { user: { select: ratingPlayerSelect } },
@@ -349,6 +354,38 @@ async function computePlayerRatings(options: PlayerRatingOptions = {}) {
     });
   }
 
+  function getTournamentBonusSidePlayers(match: (typeof matches)[number], side: 1 | 2) {
+    const sidePlayers = getRatingMatchSidePlayers(match, side);
+    if (match.tournament.participantMode !== TournamentParticipantMode.TEAM) {
+      return sidePlayers;
+    }
+
+    const entry = side === 1 ? match.participant1Entry : match.participant2Entry;
+    const historicalPlayers = entry
+      ? matches
+        .filter((item) => item.seriesKey && item.seriesKey === match.seriesKey)
+        .flatMap((item) => item.lineupPlayers.filter((lineupPlayer) => lineupPlayer.registrationId === entry.id).map((lineupPlayer) => lineupPlayer.user))
+      : [];
+    const playersById = new Map(
+      [
+        ...sidePlayers,
+        entry?.user,
+        ...(entry?.rosterMembers.map((member) => member.user) ?? []),
+        ...historicalPlayers,
+      ]
+        .filter((player): player is RatingPlayer => Boolean(player))
+        .map((player) => [player.id, player] as const),
+    );
+    const playerIds = selectTournamentBonusPlayerIds({
+      participantMode: match.tournament.participantMode,
+      captainId: entry?.user.id ?? null,
+      rosterMemberIds: entry?.rosterMembers.map((member) => member.user.id) ?? [],
+      sidePlayerIds: sidePlayers.map((player) => player.id),
+      historicalPlayerIds: historicalPlayers.map((player) => player.id),
+    });
+    return playerIds.map((playerId) => playersById.get(playerId)).filter((player): player is RatingPlayer => Boolean(player));
+  }
+
   const ratingEvents: Array<
     | { type: "match"; date: Date; order: number; match: (typeof matches)[number] }
     | { type: "bonus"; date: Date; order: number; player: RatingPlayer; bonus: number }
@@ -381,7 +418,7 @@ async function computePlayerRatings(options: PlayerRatingOptions = {}) {
       const finalistSide = championSide === 1 ? 2 : championSide === 2 ? 1 : null;
 
       if (championSide) {
-        getRatingMatchSidePlayers(finalMatch, championSide).forEach((player) => {
+        getTournamentBonusSidePlayers(finalMatch, championSide).forEach((player) => {
           ratingEvents.push({
             type: "bonus",
             date: bonusDate,
@@ -401,7 +438,7 @@ async function computePlayerRatings(options: PlayerRatingOptions = {}) {
       }
 
       if (finalistSide) {
-        getRatingMatchSidePlayers(finalMatch, finalistSide).forEach((player) => {
+        getTournamentBonusSidePlayers(finalMatch, finalistSide).forEach((player) => {
           ratingEvents.push({
             type: "bonus",
             date: bonusDate,
@@ -424,7 +461,7 @@ async function computePlayerRatings(options: PlayerRatingOptions = {}) {
     if (thirdPlaceMatch && thirdPlaceWinner) {
       const thirdPlaceSide = thirdPlaceMatch.winnerId === thirdPlaceMatch.player1Id ? 1 : thirdPlaceMatch.winnerId === thirdPlaceMatch.player2Id ? 2 : null;
       if (thirdPlaceSide) {
-        getRatingMatchSidePlayers(thirdPlaceMatch, thirdPlaceSide).forEach((player) => {
+        getTournamentBonusSidePlayers(thirdPlaceMatch, thirdPlaceSide).forEach((player) => {
           ratingEvents.push({
             type: "bonus",
             date: bonusDate,

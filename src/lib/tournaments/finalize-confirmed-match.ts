@@ -4,7 +4,7 @@ import { ensureMatchLineupSnapshot } from "@/lib/services/match-lineups";
 import { createNotification } from "@/lib/services/notifications";
 import { recordConfirmedMatchReliability } from "@/lib/services/reliability";
 import { publishTournamentResult, syncTournamentBulletin } from "@/lib/services/telegram-publications";
-import { recalculateGroupStandings, resolveConfirmedMatch } from "@/lib/services/tournaments";
+import { recalculateGroupStandings, resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { invalidateTournamentRules, invalidateTournamentSchedule, invalidateTournamentStructure } from "@/lib/tournament-cache";
 
 type FinalizeMatch = {
@@ -64,6 +64,10 @@ export async function finalizeConfirmedMatch(params: {
   await recalculateGroupStandings(match.tournamentId);
   await ensureMatchLineupSnapshot(match.id);
   await resolveConfirmedMatch(match.id);
+  // A concurrent final/third-place confirmation can observe the other result
+  // before its transaction commits. Re-read lifecycle state after resolution
+  // so a completed team tournament cannot remain IN_PROGRESS.
+  await syncTournamentLifecycleStatus(match.tournamentId);
   await recordConfirmedMatchReliability({
     userIds: [match.player1Id, match.player2Id],
     matchId: match.id,
