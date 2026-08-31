@@ -7,6 +7,7 @@ import { logAdminAction } from "@/lib/services/admin-actions";
 import { notifyActiveTournamentRoundsStarted } from "@/lib/services/tournaments";
 import { syncTournamentBulletin } from "@/lib/services/telegram-publications";
 import { invalidateTournamentSchedule } from "@/lib/tournament-cache";
+import { resolveStageDeadlineRoundsCount } from "@/lib/tournament-deadlines";
 import { roundDeadlineSchema } from "@/lib/validators";
 
 const staffRoles = [UserRole.FOUNDER, UserRole.ORGANIZER, UserRole.ADMIN, UserRole.JUDGE, UserRole.TRAINEE];
@@ -44,6 +45,9 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       matches: {
         select: { round: true },
       },
+      deadlines: {
+        select: { round: true },
+      },
     },
   });
 
@@ -51,8 +55,11 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     return NextResponse.json({ error: "Этап турнира не найден." }, { status: 404 });
   }
 
-  const maxRoundFromMatches = stage.matches.reduce((max, match) => Math.max(max, match.round), 0);
-  const maxRound = Math.max(stage.roundsCount ?? 0, maxRoundFromMatches);
+  const maxRound = resolveStageDeadlineRoundsCount(
+    stage.roundsCount,
+    stage.matches.map((match) => match.round),
+    stage.deadlines.map((deadline) => deadline.round),
+  );
 
   if (maxRound > 0 && round > maxRound) {
     return NextResponse.json({ error: `Для этого этапа доступно только ${maxRound} туров/раундов.` }, { status: 400 });

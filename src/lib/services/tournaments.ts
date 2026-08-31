@@ -3696,7 +3696,7 @@ export async function generateTournamentMatches(tournamentId: string) {
             const members = currentEntries.map((entry) => entry.registration);
             if (members.length < 2 || await db.match.count({ where: { groupId: group.id } })) continue;
             const graphDivision = getPersistedGraphStage(advancedGraph, stage)?.divisions[group.orderIndex - 1];
-            await createRoundRobinMatchesForEntries({ tournamentId, stageId: stage.id, groupId: group.id, entries: members, roundsCount: graphDivision?.roundsCount ?? stage.roundsCount, matchesPerOpponent: graphDivision?.matchesPerOpponent ?? getCustomStageMatchesPerOpponent(stage, tournament.formatBlueprintJson), roundsMode: "cycles", matchupFormat: tournament.matchupFormat, bestOfWins: tournament.bestOfWins });
+            await createRoundRobinMatchesForEntries({ tournamentId, stageId: stage.id, groupId: group.id, entries: members, roundsCount: graphDivision?.roundsCount ?? stage.roundsCount, matchesPerOpponent: graphDivision?.matchesPerOpponent ?? getCustomStageMatchesPerOpponent(stage, tournament.formatBlueprintJson), roundsMode: "series", matchupFormat: tournament.matchupFormat, bestOfWins: tournament.bestOfWins });
           }
           continue;
         }
@@ -3706,7 +3706,7 @@ export async function generateTournamentMatches(tournamentId: string) {
           const members = currentMembers.map((entry) => ({ id: entry.id, userId: entry.userId }));
           if (members.length < 2 || await db.match.count({ where: { groupId: group.id } })) continue;
           const graphDivision = getPersistedGraphStage(advancedGraph, stage)?.divisions[group.orderIndex - 1];
-          await createRoundRobinMatchesForEntries({ tournamentId, stageId: stage.id, groupId: group.id, entries: members, roundsCount: graphDivision?.roundsCount ?? stage.roundsCount, matchesPerOpponent: graphDivision?.matchesPerOpponent ?? getCustomStageMatchesPerOpponent(stage, tournament.formatBlueprintJson), roundsMode: "cycles", matchupFormat: tournament.matchupFormat, bestOfWins: tournament.bestOfWins });
+          await createRoundRobinMatchesForEntries({ tournamentId, stageId: stage.id, groupId: group.id, entries: members, roundsCount: graphDivision?.roundsCount ?? stage.roundsCount, matchesPerOpponent: graphDivision?.matchesPerOpponent ?? getCustomStageMatchesPerOpponent(stage, tournament.formatBlueprintJson), roundsMode: "series", matchupFormat: tournament.matchupFormat, bestOfWins: tournament.bestOfWins });
         }
         continue;
       }
@@ -3722,10 +3722,9 @@ export async function generateTournamentMatches(tournamentId: string) {
         entries: stageEntries,
         roundsCount: stage.roundsCount,
         matchesPerOpponent: getCustomStageMatchesPerOpponent(stage, tournament.formatBlueprintJson),
-        // Round-robin legs must occupy distinct tours.  In particular, a
-        // double round-robin (matchesPerOpponent = 2) yields 2 × (N − 1)
-        // rounds rather than putting home/away fixtures into one round.
-        roundsMode: "cycles",
+        // eFootball opponents play all configured home/away fixtures during
+        // the same tour, so both legs share one deadline and schedule block.
+        roundsMode: "series",
         matchupFormat: tournament.matchupFormat,
         bestOfWins: tournament.bestOfWins,
       });
@@ -3748,9 +3747,9 @@ export async function generateTournamentMatches(tournamentId: string) {
           entries: members,
           roundsCount: graphDivision?.roundsCount ?? stage.roundsCount,
           matchesPerOpponent: graphDivision?.matchesPerOpponent ?? getCustomStageMatchesPerOpponent(stage, tournament.formatBlueprintJson),
-          // Keep home and away legs in separate rounds for all league/group
-          // stages so schedules and deadlines expose every tour.
-          roundsMode: "cycles",
+          // Keep every configured fixture against the same opponent in one
+          // tour for league, group and European custom-graph stages.
+          roundsMode: "series",
           matchupFormat: tournament.matchupFormat,
           bestOfWins: tournament.bestOfWins,
         });

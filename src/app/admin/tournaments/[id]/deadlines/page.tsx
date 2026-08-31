@@ -7,6 +7,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { getAdminTournamentAccessWhere } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { resolveStageDeadlineRoundsCount } from "@/lib/tournament-deadlines";
 
 export default async function AdminTournamentDeadlinesPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -38,12 +39,11 @@ export default async function AdminTournamentDeadlinesPage(props: { params: Prom
   const deadlineStages = tournament.stages
     .map((stage) => {
       const stageMatches = tournament.matches.filter((match) => match.stageId === stage.id);
-      const roundsFromMatches = Array.from(new Set(stageMatches.map((match) => match.round))).sort((a, b) => a - b);
-      // A stage's configured roundsCount may describe one cycle (e.g. 19)
-      // while generated home/away fixtures span multiple cycles (e.g. 38).
-      // Always expose every round present in matches, even when the stage
-      // metadata is lower.
-      const roundsCount = Math.max(stage.roundsCount ?? 0, roundsFromMatches.at(-1) ?? 0);
+      const roundsCount = resolveStageDeadlineRoundsCount(
+        stage.roundsCount,
+        stageMatches.map((match) => match.round),
+        stage.deadlines.map((deadline) => deadline.round),
+      );
 
       return {
         id: stage.id,
