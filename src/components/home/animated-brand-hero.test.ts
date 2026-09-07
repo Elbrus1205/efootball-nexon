@@ -10,7 +10,12 @@ test("uses an Apple-style system font stack for the hero wordmark", () => {
 
 test("keeps the mobile brand scene compact instead of filling the viewport", () => {
   assert.match(css, /min-height: clamp\(170px, 52vw, 220px\)/);
-  assert.doesNotMatch(css, /min-height: calc\(100svh - 4rem\)/);
+  assert.match(css, /\.hero \{ min-height: auto; padding: 1rem 0/);
+});
+
+test("does not keep image zoom active on touch devices", () => {
+  assert.match(css, /@media \(hover: none\), \(pointer: coarse\)/);
+  assert.match(css, /\.tournamentCard:hover \.tournamentImage,[\s\S]*\.tournamentCard:active \.tournamentImage \{ transform: none/);
 });
 
 test("renders platform statistics as one bordered panel", () => {
