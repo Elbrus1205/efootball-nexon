@@ -58,11 +58,15 @@ const legalLinks = [
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-[#77F8CB]/15 bg-[#111111]">
-      <div className="page-shell py-4 sm:py-12">
-        <div className="grid gap-4 border border-[#77F8CB]/15 bg-[#1D1D1D] p-4 sm:gap-6 sm:p-8 lg:grid-cols-[1.2fr_0.8fr_0.9fr]">
+    <footer className="site-footer border-t border-[#77F8CB]/15 bg-[#0A0D0C]">
+      <div className="page-shell py-8 sm:py-14">
+        <div className="site-footer-panel relative grid gap-8 overflow-hidden rounded-[28px] border border-white/10 bg-[#101513] p-5 sm:gap-10 sm:p-9 lg:grid-cols-[1.2fr_0.8fr_0.9fr]">
+          <svg className="site-footer-pitch" viewBox="0 0 420 220" fill="none" aria-hidden="true">
+            <path d="M12 110h396M210 12v196M104 12v196M316 12v196M12 36h92v148H12M408 36h-92v148h92" />
+            <circle cx="210" cy="110" r="42" />
+          </svg>
           <div className="space-y-3 sm:space-y-5">
-            <div className="flex items-center gap-3">
+            <div className="relative flex items-center gap-3">
               <SiteLogoMark className="h-9 w-9 sm:h-12 sm:w-12" />
               <div>
                 <div className="font-display text-base font-thin text-white sm:text-xl">eFootball Nexon</div>
@@ -90,7 +94,7 @@ export function SiteFooter() {
             </div>
           </div>
 
-          <div className="hidden space-y-2 sm:block sm:space-y-4">
+          <div className="relative hidden space-y-2 sm:block sm:space-y-4">
             <div className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">Навигация</div>
             <div className="flex flex-wrap gap-x-4 gap-y-2 sm:grid sm:gap-3">
               {navigationLinks.map((link) => (
@@ -101,7 +105,7 @@ export function SiteFooter() {
             </div>
           </div>
 
-          <div className="space-y-2 sm:space-y-4">
+          <div className="relative space-y-2 sm:space-y-4">
             <div className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">Документы</div>
             <div className="flex flex-wrap gap-x-4 gap-y-2 sm:grid sm:gap-3">
               {legalLinks.map((link, index) => (
@@ -123,10 +127,11 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="mt-3 space-y-3 text-xs text-zinc-500 sm:mt-6 sm:text-sm">
+        <div className="mt-4 flex flex-col gap-3 text-xs text-zinc-500 sm:mt-6 sm:flex-row sm:items-center sm:justify-between sm:text-sm">
           <div className="sm:flex sm:flex-row sm:items-center sm:justify-between sm:gap-3">
             <p>eFootball Nexon © 2026. Турниры по eFootball Mobile в мобильном формате.</p>
           </div>
+          <span className="footer-edition">NEX / 2026</span>
         </div>
       </div>
     </footer>

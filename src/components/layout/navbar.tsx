@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { MobileMenu } from "@/components/layout/mobile-menu";
 import { AuthNav } from "@/components/layout/auth-nav";
 import { DesktopNav } from "@/components/layout/desktop-nav";
@@ -10,15 +13,25 @@ const links = [
   { href: "/shop", label: "Магазин" },
   { href: "/players", label: "Пользователи" },
   { href: "/ratings", label: "Рейтинги" },
+  { href: "/#how-title", label: "Как это работает" },
   { href: "/faq", label: "FAQ" },
   { href: "/contacts", label: "Контакты" },
 ];
 
 export function Navbar() {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const update = () => setScrolled(window.scrollY > 24);
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, []);
+
   return (
-    <header className="mobile-premium-header sticky top-0 z-40 overflow-visible border-b border-[#77F8CB]/15 bg-[#171717]/95 backdrop-blur-xl">
-      <div className="pointer-events-none absolute inset-x-4 bottom-0 h-px bg-gradient-to-r from-transparent via-[#21F1A8]/70 to-transparent" />
-      <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-3 sm:h-[72px] sm:gap-3 sm:px-6 lg:h-20 lg:px-8">
+    <header className={`mobile-premium-header sticky top-0 z-40 overflow-visible px-2 pt-[max(.5rem,env(safe-area-inset-top))] transition-all duration-300 sm:px-4 ${scrolled ? "is-scrolled" : ""}`}>
+      <div className="pointer-events-none absolute inset-x-12 bottom-0 h-px bg-gradient-to-r from-transparent via-[#21F1A8]/50 to-transparent" />
+      <div className="relative mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 rounded-[22px] border border-white/10 bg-[#0A0D0C]/72 px-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_18px_55px_rgba(0,0,0,0.3)] backdrop-blur-2xl transition-all duration-300 sm:h-16 sm:gap-3 sm:px-4 lg:h-[68px] lg:px-5">
         <div className="min-w-0 flex flex-1 items-center gap-2 sm:gap-3 lg:flex-none">
           <MobileMenu links={links} />
           <Link href="/" prefetch={false} aria-label="eFootball Nexon" className="brand-link group min-w-0 items-center rounded-lg px-1.5 py-1 outline-none transition duration-200 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[#77F8CB] lg:flex-none lg:pr-2">

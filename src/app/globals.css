@@ -36,6 +36,51 @@ body {
   color: var(--classic-white);
 }
 
+.mobile-premium-header.is-scrolled {
+  padding-top: max(.25rem, env(safe-area-inset-top));
+}
+
+.mobile-premium-header.is-scrolled > div:last-child {
+  height: 54px;
+  background-color: rgba(10, 13, 12, .9);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 14px 42px rgba(0,0,0,.38);
+}
+
+.site-footer-panel {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 24px 80px rgba(0,0,0,.22);
+}
+
+.site-footer-pitch {
+  position: absolute;
+  right: -2rem;
+  bottom: -3rem;
+  width: min(34rem, 58vw);
+  opacity: .12;
+  stroke: #19e6a5;
+  stroke-width: 1;
+  transform: rotate(-8deg);
+  pointer-events: none;
+}
+
+.footer-edition {
+  color: rgba(122,245,202,.62);
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .18em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-footer-pitch { transform: none; }
+}
+
+@media (min-width: 640px) {
+  .mobile-premium-header.is-scrolled > div:last-child { height: 60px; }
+}
+
+@media (min-width: 1024px) {
+  .mobile-premium-header.is-scrolled > div:last-child { height: 64px; }
+}
+
 /* iOS zooms focused controls rendered below 16px. Preserve normal page zoom
    and keep form controls readable instead of locking viewport scaling. */
 @media (max-width: 767px) {
@@ -206,6 +251,14 @@ body footer,
 body header {
   background-color: var(--classic-black) !important;
   color: var(--classic-white);
+}
+
+body header.mobile-premium-header {
+  background-color: transparent !important;
+}
+
+body footer.site-footer {
+  background-color: #0a0d0c !important;
 }
 
 body {

@@ -131,8 +131,8 @@ export default async function HomePage() {
   const reviewsChatHref = shop?.reviewsTelegramUrl ?? telegramHref;
   const stats = [
     { value: data.playersCount, suffix: "", label: "игроков" },
-    { value: data.tournamentsCount, suffix: "", label: "турниров завершено" },
     { value: data.matchesCount, suffix: "", label: "матчей сыграно" },
+    { value: data.tournamentsCount, suffix: "", label: "турниров завершено" },
     { value: data.awardedPrizePool, suffix: " ₽", label: "выдано призами" },
   ];
 
@@ -161,7 +161,7 @@ export default async function HomePage() {
         <div className={s.shell}>
           <Reveal>
             <div className={s.sectionHead}>
-              <div><p className={s.kicker}><span /> Турнирный центр</p><h2 id="tournaments-title">Игра начинается<br />до первого свистка</h2></div>
+              <div><p className={s.kicker}><span /> Турнирный центр</p><h2 id="tournaments-title">Сетка уже ждёт<br />твоего имени</h2></div>
               <Link href="/tournaments" className={s.textButton}>Все турниры <ArrowUpRight aria-hidden="true" /></Link>
             </div>
           </Reveal>
@@ -170,7 +170,7 @@ export default async function HomePage() {
             <div className={s.tournamentList}>
               {data.tournaments.map((tournament, index) => (
                 <Reveal key={tournament.id}>
-                  <Link href={`/tournaments/${tournament.id}`} className={s.tournamentCard}>
+                  <Link href={`/tournaments/${tournament.id}`} className={`${s.tournamentCard} ${index === 0 ? s.liveEvent : ""}`}>
                     <div className={s.tournamentMedia}>
                       {tournament.coverImage ? (
                         <Image src={tournament.coverImage} alt="" fill unoptimized loading="lazy" sizes="(min-width: 900px) 34vw, 100vw" className={s.tournamentImage} />
@@ -180,13 +180,14 @@ export default async function HomePage() {
                       <span className={s.cardIndex}>{String(index + 1).padStart(2, "0")}</span>
                     </div>
                     <div className={s.tournamentBody}>
-                      <span className={s.status}><i />{statusLabels[tournament.status]}</span>
+                      <div className={s.cardTopline}><span className={s.status}><i />{index === 0 ? "LIVE EVENT" : statusLabels[tournament.status]}</span><span className={s.cardCode}>NEX / {String(index + 1).padStart(2, "0")}</span></div>
                       <h3>{tournament.title}</h3>
                       <div className={s.tournamentMeta}>
                         <span><CalendarDays aria-hidden="true" />{formatDate(tournament.startsAt)}</span>
                         <span><Users aria-hidden="true" />{tournament.participantsCount} / {tournament.maxParticipants}</span>
                         {tournament.prizePool ? <span><Trophy aria-hidden="true" />{tournament.prizePool}</span> : null}
                       </div>
+                      <div className={s.progressTrack} aria-label={`Заполнено ${tournament.participantsCount} из ${tournament.maxParticipants} мест`}><span style={{ width: `${Math.min((tournament.participantsCount / Math.max(tournament.maxParticipants, 1)) * 100, 100)}%` }} /></div>
                       <span className={s.cardAction}>Открыть турнир <ChevronRight aria-hidden="true" /></span>
                     </div>
                   </Link>
@@ -249,15 +250,19 @@ export default async function HomePage() {
           <Reveal>
             <div className={s.howIntro}>
               <p className={s.kicker}><span /> Как это работает</p>
-              <h2 id="how-title">От заявки<br />до результата</h2>
-              <p>Платформа ведёт игрока по настоящему турнирному процессу — без лишних экранов и потерянных сообщений.</p>
+              <h2 id="how-title">Один путь.<br />Четыре шага.</h2>
+              <p>От первой заявки до финального свистка — все ключевые действия собраны в одном прозрачном маршруте.</p>
             </div>
           </Reveal>
-          <div className={s.steps}>
-            <article><span>Заявка</span><Swords aria-hidden="true" /><h3>Выбери турнир</h3><p>Открой событие, проверь формат и зарегистрируйся.</p></article>
-            <article><span>Игра</span><Gamepad2 aria-hidden="true" /><h3>Сыграй матч</h3><p>Узнай соперника и расписание прямо в турнирной сетке.</p></article>
-            <article><span>Результат</span><ShieldCheck aria-hidden="true" /><h3>Зафиксируй счёт</h3><p>Отправь результат на подтверждение и двигайся дальше.</p></article>
-          </div>
+          <Reveal className={s.stepsReveal}>
+            <div className={s.steps}>
+              <span className={s.stepsPath} aria-hidden="true" />
+              <article><span>01 / REGISTER</span><Swords aria-hidden="true" /><h3>Войди в сетку</h3><p>Выбери событие, проверь формат и зарегистрируйся.</p></article>
+              <article><span>02 / PLAY</span><Gamepad2 aria-hidden="true" /><h3>Сыграй матч</h3><p>Получи соперника и расписание в одной турнирной сетке.</p></article>
+              <article><span>03 / SUBMIT</span><ShieldCheck aria-hidden="true" /><h3>Зафиксируй счёт</h3><p>Подтверди результат и открой следующий раунд.</p></article>
+              <article><span>04 / FINAL</span><Trophy aria-hidden="true" /><h3>Дойди до финала</h3><p>Собери серию побед, рейтинг и место в истории.</p></article>
+            </div>
+          </Reveal>
         </div>
       </section>
 
