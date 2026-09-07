@@ -13,7 +13,6 @@ const links = [
   { href: "/shop", label: "Магазин" },
   { href: "/players", label: "Пользователи" },
   { href: "/ratings", label: "Рейтинги" },
-  { href: "/#how-title", label: "Как это работает" },
   { href: "/faq", label: "FAQ" },
   { href: "/contacts", label: "Контакты" },
 ];
