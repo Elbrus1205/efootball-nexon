@@ -1,11 +1,10 @@
 import { PlayerProfileView } from "@/components/players/player-profile-view";
 import { requireAuth } from "@/lib/auth/session";
-import { getUserAchievementProgress, syncUserAchievements } from "@/lib/achievements";
+import { getUserAchievementProgress } from "@/lib/achievements";
 import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
 import { getPlayerCareerStats } from "@/lib/player-stats";
 import { getActiveProfileStatusWhere } from "@/lib/profile-status-query";
-import { notifyExpiredProfileStatuses } from "@/lib/profile-statuses";
 import { getPlayerRatings } from "@/lib/ratings";
 import { getReliabilitySummary } from "@/lib/services/reliability";
 
@@ -16,8 +15,6 @@ export default async function DashboardPage(
 ) {
   const searchParams = await props.searchParams;
   const session = await requireAuth();
-  await syncUserAchievements(session.user.id);
-  await notifyExpiredProfileStatuses({ userId: session.user.id });
   const [user, clubs, seasons] = await Promise.all([
     db.user.findUnique({
       where: { id: session.user.id },

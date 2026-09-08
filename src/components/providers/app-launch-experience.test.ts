@@ -13,7 +13,7 @@ test("installed Android app gets a bounded, non-blocking branded startup screen"
   const appProviders = read("src", "components", "providers", "app-providers.tsx");
 
   assert.match(provider, /Promise\.race\(\[essentialsReady, maximumWait\]\)/);
-  assert.match(provider, /delay\(reducedMotion \? 100 : 700\)/);
+  assert.match(provider, /delay\(reducedMotion \? 80 : 250\)/);
   assert.doesNotMatch(provider, /document\.fonts|1050|4500|\bpriority\b/);
   assert.match(provider, /display-mode: standalone/);
   assert.doesNotMatch(provider, /source\) === "android"|source=android|localStorage/);

@@ -14,8 +14,8 @@ type TelegramWebApp = {
   setBackgroundColor?: (color: string) => void;
 };
 
-const TELEGRAM_WEB_APP_WAIT_ATTEMPTS = 20;
-const TELEGRAM_WEB_APP_WAIT_DELAY_MS = 150;
+const TELEGRAM_WEB_APP_WAIT_ATTEMPTS = 10;
+const TELEGRAM_WEB_APP_WAIT_DELAY_MS = 100;
 
 function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));

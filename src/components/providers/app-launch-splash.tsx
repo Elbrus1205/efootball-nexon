@@ -34,7 +34,7 @@ export function AppLaunchSplash() {
     let leaveTimer: number | undefined;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const essentialsReady = pageLoaded();
-    const maximumWait = delay(reducedMotion ? 100 : 700);
+    const maximumWait = delay(reducedMotion ? 80 : 250);
 
     Promise.race([essentialsReady, maximumWait]).then(() => {
       if (cancelled) return;

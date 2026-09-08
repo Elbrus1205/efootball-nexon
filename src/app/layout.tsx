@@ -101,7 +101,7 @@ export default function RootLayout({
   return (
     <html lang="ru" className="dark">
       <body className={`${eFootballSans.variable} ${eFootballStencil.variable} ${brandDisplay.variable} bg-background font-sans text-foreground antialiased`}>
-        <Script id="yandex-metrika" strategy="beforeInteractive">
+        <Script id="yandex-metrika" strategy="lazyOnload">
           {`
             (function(m,e,t,r,i,k,a){
               m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
