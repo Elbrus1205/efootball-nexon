@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { FileText, ShieldCheck } from "lucide-react";
 import { SiteLogoMark } from "@/components/brand/site-logo-mark";
 
@@ -57,8 +60,10 @@ const legalLinks = [
 ];
 
 export function SiteFooter() {
+  const pathname = usePathname();
+  const isHome = pathname === "/";
   return (
-    <footer className="site-footer border-t border-[#77F8CB]/15 bg-[#0A0D0C]">
+    <footer className={`site-footer ${isHome ? "home-footer" : ""} border-t border-[#77F8CB]/15 bg-[#0A0D0C]`}>
       <div className="page-shell py-8 sm:py-14">
         <div className="site-footer-panel relative grid gap-8 overflow-hidden rounded-[28px] border border-white/10 bg-[#101513] p-5 sm:gap-10 sm:p-9 lg:grid-cols-[1.2fr_0.8fr_0.9fr]">
           <svg className="site-footer-pitch" viewBox="0 0 420 220" fill="none" aria-hidden="true">

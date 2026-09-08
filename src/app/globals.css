@@ -62,6 +62,33 @@ body {
   pointer-events: none;
 }
 
+.home-nav > div {
+  border: 1px solid rgba(255,255,255,.12) !important;
+  border-radius: 10px !important;
+  background: rgba(13,17,16,.88) !important;
+  box-shadow: 0 16px 40px rgba(0,0,0,.18) !important;
+  backdrop-filter: none !important;
+}
+
+.home-nav .brand-wordmark,
+.home-nav .brand-wordmark::after,
+.home-nav .brand-logo-mark,
+.home-nav .brand-logo-scan { text-shadow: none !important; filter: none !important; animation: none !important; }
+.home-nav .brand-wordmark::after { display: none; }
+.home-nav .desktop-nav-active { background: rgba(145,187,165,.12) !important; box-shadow: none !important; }
+.home-nav .text-primary,
+.home-nav [class*="text-[#21F1A8]"],
+.home-nav [class*="text-primary"] { color: #91bba5 !important; }
+.home-nav [class*="bg-[#21F1A8]"],
+.home-nav [class*="border-[#21F1A8]"] { border-color: rgba(145,187,165,.42) !important; background-color: rgba(145,187,165,.1) !important; }
+.home-footer { border-top-color: rgba(255,255,255,.1) !important; background: #0c0f0e !important; }
+.home-footer .site-footer-panel { border-radius: 10px !important; background: #111614 !important; box-shadow: none !important; }
+.home-footer .site-footer-pitch { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .home-nav .mobile-premium-header { animation: none !important; }
+}
+
 .footer-edition {
   color: rgba(122,245,202,.62);
   font-size: .68rem;

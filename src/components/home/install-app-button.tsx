@@ -34,10 +34,15 @@ export function InstallAppButton() {
 
   const install = async () => {
     setPending(true);
-    await installPrompt.prompt();
-    await installPrompt.userChoice;
-    setInstallPrompt(null);
-    setPending(false);
+    try {
+      await installPrompt.prompt();
+      await installPrompt.userChoice;
+      setInstallPrompt(null);
+    } catch {
+      setInstallPrompt(null);
+    } finally {
+      setPending(false);
+    }
   };
 
   return (

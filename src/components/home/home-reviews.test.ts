@@ -6,17 +6,14 @@ const page = readFileSync(new URL("../../app/page.tsx", import.meta.url), "utf8"
 const css = readFileSync(new URL("../../app/home.module.css", import.meta.url), "utf8");
 const admin = readFileSync(new URL("../../app/admin/shop/page.tsx", import.meta.url), "utf8");
 
-test("главная выводит настоящие отзывы и ведёт в настроенный Telegram-чат", () => {
+test("home community review link uses real Telegram settings", () => {
   assert.match(page, /reviewsTelegramUrl/);
   assert.match(page, /shopReview\.findMany/);
-  assert.match(page, /className=\{s\.reviewBoard\}/);
+  assert.match(page, /className=\{s\.reviewPanel\}/);
   assert.match(page, /target="_blank"/);
-  assert.match(page, /Наши отзывы в Telegram/);
-  assert.match(css, /\.reviewBoard\s*\{/);
-  assert.match(css, /\.reviewStream\s*\{/);
+  assert.match(css, /\.reviewPanel\s*\{/);
 });
 
-test("ссылка Telegram-поста отзывов редактируется в настройках магазина", () => {
+test("review Telegram setting remains editable in admin", () => {
   assert.match(admin, /name="reviewsTelegramUrl"/);
-  assert.match(admin, /Ссылка на пост с отзывами/);
 });

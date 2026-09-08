@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { MobileMenu } from "@/components/layout/mobile-menu";
 import { AuthNav } from "@/components/layout/auth-nav";
 import { DesktopNav } from "@/components/layout/desktop-nav";
@@ -19,6 +20,8 @@ const links = [
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
+  const pathname = usePathname();
+  const isHome = pathname === "/";
 
   useEffect(() => {
     const update = () => setScrolled(window.scrollY > 24);
@@ -28,7 +31,7 @@ export function Navbar() {
   }, []);
 
   return (
-    <header className={`mobile-premium-header sticky top-0 z-40 overflow-visible px-2 pt-[max(.5rem,env(safe-area-inset-top))] transition-all duration-300 sm:px-4 ${scrolled ? "is-scrolled" : ""}`}>
+    <header className={`mobile-premium-header ${isHome ? "home-nav" : ""} sticky top-0 z-40 overflow-visible px-2 pt-[max(.5rem,env(safe-area-inset-top))] transition-all duration-300 sm:px-4 ${scrolled ? "is-scrolled" : ""}`}>
       <div className="pointer-events-none absolute inset-x-12 bottom-0 h-px bg-gradient-to-r from-transparent via-[#21F1A8]/50 to-transparent" />
       <div className="relative mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 rounded-[22px] border border-white/10 bg-[#0A0D0C]/72 px-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_18px_55px_rgba(0,0,0,0.3)] backdrop-blur-2xl transition-all duration-300 sm:h-16 sm:gap-3 sm:px-4 lg:h-[68px] lg:px-5">
         <div className="min-w-0 flex flex-1 items-center gap-2 sm:gap-3 lg:flex-none">
