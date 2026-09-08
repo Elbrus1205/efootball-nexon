@@ -25,13 +25,14 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Пользователь не найден." }, { status: 404 });
   }
 
-  if (!user.passwordHash) {
-    return NextResponse.json({ error: "Сначала задайте пароль для аккаунта." }, { status: 400 });
-  }
-
-  const isValidPassword = await compare(body.password, user.passwordHash);
-  if (!isValidPassword) {
-    return NextResponse.json({ error: "Пароль указан неверно." }, { status: 400 });
+  if (user.email) {
+    if (!user.passwordHash) {
+      return NextResponse.json({ error: "Сначала задайте пароль для аккаунта." }, { status: 400 });
+    }
+    const isValidPassword = await compare(body.password ?? "", user.passwordHash);
+    if (!isValidPassword) {
+      return NextResponse.json({ error: "Пароль указан неверно." }, { status: 400 });
+    }
   }
 
   let emailRecord: { id: string } | null = null;

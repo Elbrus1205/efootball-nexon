@@ -179,12 +179,12 @@ function DangerSection({
               <div className="mb-4 space-y-1">
                 <div className="text-sm font-semibold text-white">Подтвердите удаление аккаунта</div>
                 <div className="text-sm text-zinc-400">
-                  Пароль от аккаунта обязателен всегда. Коды с почты и из Telegram нужны только если эти привязки есть у аккаунта. После подтверждения профиль будет удалён навсегда.
+                  Пароль нужен только для аккаунта с привязанной почтой. Коды с почты и из Telegram запрашиваются только для активных привязок.
                 </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2 md:col-span-2">
+                {hasBoundEmail ? <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="dangerPassword">Пароль от аккаунта</Label>
                   <Input
                     id="dangerPassword"
@@ -193,7 +193,7 @@ function DangerSection({
                     value={confirmPassword}
                     onChange={(event) => onPasswordChange(event.target.value)}
                   />
-                </div>
+                </div> : null}
 
                 {hasBoundEmail ? (
                   <div className="space-y-2">
@@ -227,7 +227,7 @@ function DangerSection({
                     type="button"
                     variant="outline"
                     className="border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"
-                    disabled={codePending || !hasPassword}
+                    disabled={codePending || (hasBoundEmail && !hasPassword)}
                     onClick={onSendCodes}
                   >
                     {codePending ? "Отправляем коды..." : "Получить коды"}
@@ -237,11 +237,11 @@ function DangerSection({
 
               {!hasBoundEmail && !telegramLinked ? (
                 <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-300">
-                  У аккаунта нет привязанной почты и Telegram, поэтому для удаления нужен только пароль.
+                  У аккаунта нет привязок. Дополнительные коды и пароль не требуются.
                 </div>
               ) : null}
 
-              {!hasPassword ? (
+              {!hasPassword && hasBoundEmail ? (
                 <div className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
                   Без пароля удалить аккаунт нельзя. Сначала создайте пароль в разделе безопасности.
                 </div>
@@ -258,8 +258,7 @@ function DangerSection({
                 className="bg-red-500 text-white hover:bg-red-400"
                 disabled={
                   pending ||
-                  !hasPassword ||
-                  confirmPassword.trim().length === 0 ||
+                  (hasBoundEmail && (!hasPassword || confirmPassword.trim().length === 0)) ||
                   (hasBoundEmail && emailCode.trim().length < 6) ||
                   (telegramLinked && telegramCode.trim().length < 6)
                 }

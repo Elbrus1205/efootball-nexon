@@ -17,7 +17,6 @@ import {
   SlidersHorizontal,
   ShieldCheck,
   ShieldMinus,
-  Swords,
   Trophy,
   Users,
 } from "lucide-react";
@@ -32,7 +31,6 @@ const items = [
   { href: "/admin/clubs", label: "Клубы", icon: Badge },
   { href: "/admin/users", label: "Участники", icon: Users },
   { href: "/admin/role-permissions", label: "Права ролей", icon: SlidersHorizontal },
-  { href: "/admin/matches", label: "Матчи", icon: Swords },
   { href: "/admin/moderation", label: "Споры", icon: ShieldCheck },
   { href: "/admin/reliability", label: "Надежность", icon: ShieldMinus },
   { href: "/admin/divisions", label: "Дивизион", icon: Layers3 },

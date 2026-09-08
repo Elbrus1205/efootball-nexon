@@ -151,7 +151,7 @@ export const emailVerificationCodeSchema = z.object({
 });
 
 export const securityAccountDeletionSchema = z.object({
-  password: z.string().min(1, "Введите пароль от аккаунта."),
+  password: z.string().optional().or(z.literal("")),
   emailCode: z.string().trim().optional().or(z.literal("")),
   telegramCode: z.string().trim().optional().or(z.literal("")),
   telegramChallengeToken: z.string().optional().or(z.literal("")),

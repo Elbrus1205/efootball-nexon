@@ -29,7 +29,7 @@ export default async function AdminUsersPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  const session = await requireAnyPermission(["users.view", "users.ban", "users.changeLowerRoles"]);
+  const session = await requireAnyPermission(["users.view", "users.ban", "users.delete", "users.reset", "users.changeLowerRoles"]);
 
   const query = searchParams?.q?.trim() ?? "";
   const filter = resolveFilter(searchParams?.filter);
@@ -181,7 +181,7 @@ export default async function AdminUsersPage(
                       <div className="mt-1 text-xs text-zinc-500">После 3-го предупреждения игрок не сможет участвовать в турнирах 120 дней.</div>
                     </div>
                     <Input name="reason" placeholder="Причина" />
-                    <Button type="submit" variant="outline" className="w-full rounded-lg border-amber-400/30 bg-amber-500/10 text-amber-100" disabled={isCurrentUser || warningCount >= 3}>
+                    <Button type="submit" variant="outline" className="w-full rounded-lg border-primary/30 bg-primary/10 text-primary" disabled={isCurrentUser || warningCount >= 3}>
                       Выдать предупреждение
                     </Button>
                   </form>
@@ -206,7 +206,7 @@ export default async function AdminUsersPage(
                     )}
                   </div>
 
-                  <form action={`/api/admin/users/${user.id}/ban`} method="post" className="min-w-0 space-y-3 rounded-lg border border-rose-400/20 bg-rose-500/[0.06] p-4">
+                  <form action={`/api/admin/users/${user.id}/ban`} method="post" className="min-w-0 space-y-3 rounded-lg border border-primary/20 bg-primary/[0.06] p-4">
                     <input type="hidden" name="action" value="permanent" />
                     <input type="hidden" name="returnTo" value={returnTo} />
                     <div>
@@ -214,12 +214,12 @@ export default async function AdminUsersPage(
                       <div className="mt-1 text-xs text-zinc-500">Игрок не сможет войти и участвовать.</div>
                     </div>
                     <Input name="reason" placeholder="Причина" />
-                    <Button type="submit" className="w-full rounded-lg bg-rose-500 text-white hover:bg-rose-500/90" disabled={isCurrentUser}>
+                    <Button type="submit" className="w-full rounded-lg bg-primary text-[#07110d] hover:bg-primary/90" disabled={isCurrentUser}>
                       Забанить навсегда
                     </Button>
                   </form>
 
-                  <form action={`/api/admin/users/${user.id}/ban`} method="post" className="min-w-0 space-y-3 rounded-lg border border-amber-400/20 bg-amber-500/[0.06] p-4">
+                  <form action={`/api/admin/users/${user.id}/ban`} method="post" className="min-w-0 space-y-3 rounded-lg border border-primary/20 bg-primary/[0.06] p-4">
                     <input type="hidden" name="action" value="temporary" />
                     <input type="hidden" name="returnTo" value={returnTo} />
                     <div>
@@ -228,7 +228,7 @@ export default async function AdminUsersPage(
                     </div>
                     <Input name="bannedUntil" type="datetime-local" required className="[color-scheme:dark]" />
                     <Input name="reason" placeholder="Причина" />
-                    <Button type="submit" variant="outline" className="w-full rounded-lg border-amber-400/30 bg-amber-500/10 text-amber-100" disabled={isCurrentUser}>
+                    <Button type="submit" variant="outline" className="w-full rounded-lg border-primary/30 bg-primary/10 text-primary" disabled={isCurrentUser}>
                       Выдать временный бан
                     </Button>
                   </form>

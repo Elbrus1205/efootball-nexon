@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Пользователь не найден." }, { status: 404 });
   }
 
-  if (!user.passwordHash) {
+  if (user.email && !user.passwordHash) {
     return NextResponse.json({ error: "Сначала задайте пароль для аккаунта." }, { status: 400 });
   }
 

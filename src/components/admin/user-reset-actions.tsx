@@ -33,7 +33,7 @@ export function UserResetActions({ userId, returnTo, disabled = false }: UserRes
       action={`/api/admin/users/${userId}/reset`}
       method="post"
       onSubmit={handleSubmit}
-      className="min-w-0 space-y-3 rounded-lg border border-rose-300/20 bg-[linear-gradient(180deg,rgba(33,241,168,0.08),rgba(0,0,0,0.2))] p-4"
+      className="min-w-0 space-y-3 rounded-lg border border-primary/20 bg-[linear-gradient(180deg,rgba(33,241,168,0.08),rgba(0,0,0,0.2))] p-4"
     >
       <input type="hidden" name="returnTo" value={returnTo} />
       <div>
@@ -50,7 +50,7 @@ export function UserResetActions({ userId, returnTo, disabled = false }: UserRes
         <Button type="submit" name="action" value="statuses" variant="outline" className="h-10 rounded-lg px-2 text-[11px]" disabled={disabled}>
           Статусы
         </Button>
-        <Button type="submit" name="action" value="full" className="h-10 rounded-lg border-rose-400/40 bg-rose-500/15 px-2 text-[11px] text-rose-50 hover:bg-rose-500/25" disabled={disabled}>
+        <Button type="submit" name="action" value="full" className="h-10 rounded-lg border-primary/40 bg-primary/15 px-2 text-[11px] text-primary hover:bg-primary/25" disabled={disabled}>
           Полный сброс
         </Button>
       </div>
