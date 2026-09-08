@@ -6,7 +6,8 @@ const page = readFileSync(new URL("../../app/page.tsx", import.meta.url), "utf8"
 const css = readFileSync(new URL("../../app/home.module.css", import.meta.url), "utf8");
 
 test("home uses a new editorial product showcase", () => {
-  assert.match(page, /Твой следующий/);
+  assert.match(page, /EFOOTBALL[\s\S]*NEXON/);
+  assert.match(page, /Турниры\.<br \/><em>Матчи\. Победы\.<\/em>/);
   assert.match(page, /HomeCarousel/);
   assert.match(page, /TopPlayers/);
   assert.match(css, /\.productStage\s*\{/);

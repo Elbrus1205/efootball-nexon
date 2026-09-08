@@ -42,3 +42,29 @@
 @media (max-width: 900px) { .introLayout { grid-template-columns: 1fr; gap: 0; min-height: 0; }.introCopy { padding-bottom: 10px; }.productStage { min-height: 475px; max-width: 620px; margin: 0 auto; width: 100%; }.rankLayout, .processLayout { grid-template-columns: 1fr; gap: 55px; }.rankIntro { max-width: 520px; }.appPanel { grid-template-columns: 1fr 245px; }.phoneScreen { transform: scale(.82); } }
 @media (max-width: 640px) { .shell { width: min(100% - 24px, 1240px); }.intro { padding-top: 30px; }.introCopy h1 { font-size: clamp(3.4rem, 16vw, 5.2rem); }.introLead { margin-top: 24px; font-size: 14px; }.introActions { align-items: stretch; flex-direction: column; }.introActions a { width: 100%; }.introNote { margin-top: 27px; }.productStage { min-height: 390px; margin-top: 22px; }.stageRule, .stageLabel { right: 0; }.stageCardMain { top: 74px; left: 1%; width: 78%; min-height: 254px; padding: 17px; }.stageCardTop { font-size: 7px; }.stageDate { margin-top: 40px; font-size: 55px; }.stageCardMain h2 { margin-top: 16px; font-size: 18px; }.stageCardMain p { font-size: 10px; }.stageCardMain > a { right: 16px; bottom: 16px; font-size: 9px; }.stageCardSmall { right: 0; width: 136px; min-height: 108px; padding: 12px; }.stageMatch { top: 115px; }.stageRank { bottom: 2px; min-height: 124px; }.stageRank strong { font-size: 32px; }.introStats { grid-template-columns: repeat(2, 1fr); }.introStats div, .introStats div:not(:first-child) { padding: 17px 8px 5px 0; border-bottom: 1px solid var(--line); }.introStats div:nth-child(even) { padding-left: 12px; border-right: 0; }.introStats strong { font-size: 22px; }.introStats span { font-size: 8px; }.section { padding: 78px 0; }.sectionHeader { align-items: start; flex-direction: column; gap: 22px; margin-bottom: 30px; }.sectionHeader h2, .processLayout h2, .rankIntro h2, .appCopy h2, .communityPanel h2 { font-size: clamp(2.8rem, 14vw, 4.3rem); }.headerLink { font-size: 10px; }.eventCard { flex-basis: 82vw; }.eventMedia { height: 165px; }.eventBody h3 { font-size: 21px; }.processLayout { gap: 42px; }.step { grid-template-columns: 43px 1fr; gap: 12px; padding: 22px 0; }.step h3 { font-size: 18px; }.appSection, .communitySection { padding-top: 16px; }.appPanel { display: block; min-height: 0; }.appCopy { padding: 38px 25px 28px; }.phone { min-height: 210px; }.phoneScreen { transform: scale(.62); transform-origin: center bottom; margin-bottom: -70px; }.communityPanel { min-height: 440px; align-items: start; flex-direction: column; padding: 35px 25px; }.communityAside { align-items: start; margin-top: auto; }.reviewPanel { padding: 26px 0; }.reviewPanel h2 { font-size: 2.2rem; }.reviewArrow { width: 48px; height: 48px; flex: 0 0 auto; }.playerRow { grid-template-columns: 37px 1fr 61px 48px; gap: 7px; min-height: 72px; }.playerName { font-size: 14px; }.playerMetric strong { font-size: 13px; }.playerMetric small { font-size: 7px; } }
 @media (prefers-reduced-motion: reduce) { .primaryButton, .secondaryButton, .headerLink, .eventCard, .eventImage, .carouselArrows button, .reviewArrow { transition: none; }.eventCard:hover, .primaryButton:hover, .secondaryButton:hover, .headerLink:hover { transform: none; }.carouselTrack { scroll-behavior: auto; } }
+
+.heroBrand { margin: 0 0 18px; color: var(--green); font-size: clamp(1rem, 1.6vw, 1.35rem); font-weight: 700; letter-spacing: .16em; line-height: .95; }
+.heroBrand em { color: var(--ink); font-style: normal; letter-spacing: .08em; }
+.stadiumRail { position: absolute; right: 0; bottom: 15px; left: 0; display: flex; gap: 8px; overflow: hidden; padding: 0 12px; mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); }
+.stadiumRail span { flex: 0 0 auto; padding: 8px 10px; border: 1px solid rgba(145,187,165,.22); border-radius: 999px; color: #84958a; background: rgba(12,15,14,.7); font-size: 7px; font-weight: 700; letter-spacing: .1em; animation: stadiumFloat 9s ease-in-out infinite; animation-delay: calc(var(--stadium-index) * -1.2s); }
+@keyframes stadiumFloat { 0%, 100% { transform: translateY(0); opacity: .65; } 50% { transform: translateY(-4px); opacity: 1; } }
+@media (max-width: 640px) {
+  .intro { padding-top: 24px; }
+  .heroBrand { margin-bottom: 13px; font-size: 13px; }
+  .introCopy h1 { font-size: clamp(2.55rem, 12vw, 3.8rem); line-height: .94; letter-spacing: -.07em; }
+  .introLead { max-width: 31rem; margin-top: 16px; font-size: 12px; line-height: 1.5; }
+  .introActions { gap: 9px; margin-top: 20px; }
+  .introActions a { min-height: 44px; }
+  .introNote { margin-top: 18px; font-size: 9px; }
+  .productStage { min-height: 365px; margin-top: 12px; }
+  .stageCardMain { top: 62px; min-height: 230px; }
+  .stageDate { margin-top: 30px; font-size: 46px; }
+  .stadiumRail { bottom: 5px; padding: 0 4px; }
+  .stadiumRail span { padding: 7px 8px; font-size: 6px; }
+  .section { padding: 58px 0; }
+  .sectionHeader h2, .processLayout h2, .rankIntro h2, .appCopy h2, .communityPanel h2 { font-size: clamp(2.2rem, 11vw, 3.3rem); line-height: .98; }
+  .sectionHeader { margin-bottom: 22px; }
+  .eventBody h3 { font-size: 18px; }
+  .communityPanel { min-height: 360px; padding: 28px 22px; }
+}
+@media (prefers-reduced-motion: reduce) { .stadiumRail span { animation: none; } }

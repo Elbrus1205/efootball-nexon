@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
+import type { CSSProperties } from "react";
 import { unstable_cache } from "next/cache";
 import { ArrowUpRight, CalendarDays, Check, ChevronRight, CircleDot, MessageCircleMore, Users } from "lucide-react";
 import { MatchStatus, ParticipantStatus, TournamentStatus } from "@prisma/client";
@@ -95,8 +96,9 @@ export default async function HomePage() {
         <div className={s.introLayout}>
           <div className={s.introCopy}>
             <p className={s.eyebrow}><span /> NEX / COMPETITIVE PLATFORM / 2026</p>
-            <h1 id="hero-title">Твой следующий<br /><em>матч — здесь.</em></h1>
-            <p className={s.introLead}>Турниры, расписания и рейтинг игроков eFootball Mobile — в одном спокойном и понятном пространстве.</p>
+            <p className={s.heroBrand}>EFOOTBALL<br /><em>NEXON</em></p>
+            <h1 id="hero-title">Турниры.<br /><em>Матчи. Победы.</em></h1>
+            <p className={s.introLead}>Платформа для eFootball Mobile: выбирай турнир, играй матчи и поднимайся в рейтинге.</p>
             <div className={s.introActions}><Link href="/tournaments" className={s.primaryButton}>Смотреть турниры <ArrowUpRight aria-hidden="true" /></Link><Link href="/ratings" className={s.secondaryButton}>Открыть рейтинг <ChevronRight aria-hidden="true" /></Link></div>
             <div className={s.introNote}><span className={s.noteIcon}><Check /></span><span>Официальная платформа матчей<br />с прозрачной турнирной сеткой</span></div>
           </div>
@@ -105,6 +107,9 @@ export default async function HomePage() {
             <div className={s.stageCardMain}><div className={s.stageCardTop}><span className={s.stageLive}><i /> {featuredTournament ? statusLabels[featuredTournament.status] : "NEXON EVENTS"}</span><span>eFootball mobile</span></div><div className={s.stageDate}>{featuredDate.day} <small>{featuredDate.month}</small></div><h2>{featuredTournament?.title || "Новый турнир скоро"}</h2><p>{featuredTournament ? `${featuredTournament.participantsCount} / ${featuredTournament.maxParticipants} мест занято` : "Следи за анонсами и входи в новую сетку"}</p><Link href={featuredTournament ? `/tournaments/${featuredTournament.id}` : "/tournaments"}>Открыть событие <ArrowUpRight /></Link></div>
             <div className={`${s.stageCardSmall} ${s.stageMatch}`}><span>MATCH CENTER</span><strong>Твои матчи</strong><div className={s.stageMessage}>Расписание<br />всегда рядом</div></div>
             <div className={`${s.stageCardSmall} ${s.stageRank}`}><span>PLAYER RANKING</span><strong>TOP</strong><div>Рейтинг строится<br />по реальным матчам</div></div>
+            <div className={s.stadiumRail} aria-label="Стадионы футбольных финалов">
+              {["SANTIAGO BERNABÉU", "SPOTIFY CAMP NOU", "ETIHAD STADIUM", "ANFIELD", "OLD TRAFFORD"].map((stadium, index) => <span key={stadium} style={{ "--stadium-index": index } as CSSProperties}>{stadium}</span>)}
+            </div>
           </div>
         </div>
         <div className={s.introStats}>{stats.map((stat) => <div key={stat.label}><strong>{stat.value.toLocaleString("ru-RU")}{stat.suffix}</strong><span>{stat.label}</span></div>)}</div>
