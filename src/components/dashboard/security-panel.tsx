@@ -62,16 +62,16 @@ function SecuritySection({
   children: React.ReactNode;
 }) {
   return (
-    <Card className="rounded-2xl border border-white/10 bg-[#1D1D1D] p-0 sm:rounded-[28px]">
+    <Card className="rounded-[1.15rem] border border-white/[0.09] bg-[#121715] p-0 shadow-[0_18px_50px_rgba(0,0,0,0.14)] sm:rounded-[1.5rem]">
       <button
         type="button"
         onClick={() => onToggle(sectionId)}
-        className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-2 p-3 text-left transition hover:bg-white/[0.02] sm:flex sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:p-6"
+        className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-2 p-4 text-left transition hover:bg-white/[0.025] sm:flex sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:p-5"
       >
         <div className="flex items-start gap-2.5 sm:gap-3">
           <div
             className={cn(
-              "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border transition-colors duration-200 sm:h-11 sm:w-11 sm:rounded-2xl",
+              "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-colors duration-200 sm:h-10 sm:w-10 sm:rounded-xl",
               isOpen
                 ? "border-[#21F1A8]/35 bg-[#21F1A8]/12 text-[#77F8CB]"
                 : "border-white/10 bg-white/[0.04] text-white",
@@ -88,7 +88,7 @@ function SecuritySection({
           <div className="hidden sm:block sm:shrink-0">{status}</div>
           <div
             className={cn(
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-white transition-all duration-200 sm:h-11 sm:w-11",
+              "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-white transition-all duration-200 sm:h-10 sm:w-10",
               isOpen
                 ? "border-[#21F1A8]/40 bg-[#21F1A8]/15 text-[#77F8CB] shadow-[0_0_0_4px_rgba(33,241,168,0.08)]"
                 : "border-white/10 bg-white/[0.04] hover:bg-white/[0.07]",
@@ -100,7 +100,7 @@ function SecuritySection({
         <div className="col-span-2 flex pt-1 sm:hidden">{status ? status : <span />}</div>
       </button>
       {isOpen ? (
-        <div className="border-t border-white/10 px-4 pb-4 pt-3 sm:px-6 sm:pb-6 sm:pt-5">
+        <div className="border-t border-white/[0.08] px-4 pb-5 pt-4 sm:px-5 sm:pb-6 sm:pt-5">
           <div className="flex flex-col gap-3 sm:gap-5">{children}</div>
         </div>
       ) : null}

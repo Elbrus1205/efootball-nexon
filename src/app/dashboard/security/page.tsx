@@ -1,10 +1,10 @@
 import { headers } from "next/headers";
-import { Badge } from "@/components/ui/badge";
 import { SecurityPanel } from "@/components/dashboard/security-panel";
 import { resolveSecurityContext } from "@/lib/auth/security";
 import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
+import styles from "./security.module.css";
 
 function sessionIcon(platform: string | null): "laptop" | "phone" {
   const normalized = (platform ?? "").toLowerCase();
@@ -77,18 +77,18 @@ export default async function DashboardSecurityPage() {
   });
 
   return (
-    <div className="page-shell py-8">
-      <div className="mx-auto max-w-4xl space-y-6">
-        <div className="space-y-3">
-          <Badge variant="primary">Безопасность</Badge>
-          <div className="space-y-2">
-            <h1 className="text-2xl font-semibold text-white sm:text-3xl">Безопасность аккаунта</h1>
-            <p className="max-w-2xl text-xs text-zinc-400 sm:text-sm">
-              Управление паролем, email, защитой входа и устройствами аккаунта.
-            </p>
+    <div className={styles.page}>
+      <div className={styles.shell}>
+        <div className={styles.intro}>
+          <div>
+            <div className={styles.eyebrow}>Account protection</div>
+            <h1 className={styles.title}>Безопасность<br />аккаунта</h1>
+            <p className={styles.description}>Настройте вход, привязки и активные устройства в одном спокойном пространстве.</p>
           </div>
+          <div className={styles.status}><span className={styles.statusDot} /> Защита доступна</div>
         </div>
 
+        <div className={styles.panel}>
         <SecurityPanel
           currentEmail={user.email ?? ""}
           emailVerified={Boolean(user.emailVerified)}
@@ -102,6 +102,7 @@ export default async function DashboardSecurityPage() {
           vkLinked={Boolean(user.vkId)}
           sessions={sessions}
         />
+        </div>
       </div>
     </div>
   );
