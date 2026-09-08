@@ -327,7 +327,8 @@ function buildCustomStandingHighlights(tournament: {
     const targetStage = blueprint.stageGraph?.stages.find((stage) => stage.id === transition.toStageId);
     if (!sourceStage || !targetStage || (sourceStage.type !== "GROUPS" && sourceStage.type !== "LEAGUE")) continue;
 
-    const divisionIndex = transition.fromDivisionIndex ?? 1;
+    const divisionIndex = (transition.fromDivisionIndex
+      ?? (transition.fromDivisionId ? sourceStage.divisions.findIndex((division) => division.id === transition.fromDivisionId) + 1 : 0)) || 1;
     const targetKey = `${targetStage.id}:${transition.targetBracket}`;
     if (!styleByTarget.has(targetKey)) {
       styleByTarget.set(targetKey, CUSTOM_STANDING_HIGHLIGHT_STYLES[styleIndex % CUSTOM_STANDING_HIGHLIGHT_STYLES.length]);
