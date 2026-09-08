@@ -46,7 +46,7 @@ test("reviews are external Telegram links, never an in-site form", () => {
   assert.match(shop, /settings\.reviewsTelegramUrl/);
   assert.match(workflow, /reviewsTelegramUrl/);
   assert.match(read("src", "app", "shop", "reviews", "page.tsx"), /redirect\(settings\.reviewsTelegramUrl/);
-  assert.doesNotMatch(product, /product\.reviews|Отз��вы игроков|reviewStars/);
+  assert.doesNotMatch(product, /product\.reviews|Отзывы игроков|reviewStars/);
   assert.match(reviewRoute, /status:\s*410/);
 });
 

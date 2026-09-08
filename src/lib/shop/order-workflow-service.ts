@@ -60,7 +60,7 @@ async function ensureAction(order: LockedOrder, userId: string, action: ShopActi
     isActiveSeller: Boolean(order.seller),
     permissions,
   });
-  if (!allowed) throw new ShopError("SHOP_ACTION_FORBIDDEN", "Р Р€ Р Р†Р В°РЎРѓ Р Р…Р ВµРЎвЂљ Р С—РЎР‚Р В°Р Р† Р Р…Р В° РЎРЊРЎвЂљР С• Р Т‘Р ВµР в„–РЎРѓРЎвЂљР Р†Р С‘Р Вµ.", 403);
+  if (!allowed) throw new ShopError("SHOP_ACTION_FORBIDDEN", "У вас нет прав на это действие.", 403);
 }
 
 async function transitionInTx(tx: Prisma.TransactionClient, input: {
@@ -102,8 +102,8 @@ async function transitionInTx(tx: Prisma.TransactionClient, input: {
 export async function acceptShopOrder(orderId: string, sellerUserId: string) {
   const order = await db.$transaction(async (tx) => {
     const locked = await getLockedOrder(tx, orderId);
-    if (!locked) throw new ShopError("ORDER_NOT_FOUND", "Р вЂ”Р В°Р С”Р В°Р В· Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р….", 404);
-    if (locked.status !== ShopOrderStatus.WAITING_SELLER) throw new ShopError("ORDER_ALREADY_CLAIMED", "Р вЂ”Р В°Р С”Р В°Р В· РЎС“Р В¶Р Вµ Р С—РЎР‚Р С‘Р Р…РЎРЏРЎвЂљ Р С‘Р В»Р С‘ Р В±Р С•Р В»РЎРЉРЎв‚¬Р Вµ Р Р…Р ВµР Т‘Р С•РЎРѓРЎвЂљРЎС“Р С—Р ВµР Р….", 409);
+    if (!locked) throw new ShopError("ORDER_NOT_FOUND", "Заказ не найден.", 404);
+    if (locked.status !== ShopOrderStatus.WAITING_SELLER) throw new ShopError("ORDER_ALREADY_CLAIMED", "Заказ уже принят или больше недоступен.", 409);
     const seller = await tx.shopSeller.findFirst({
       where: {
         userId: sellerUserId,
@@ -111,8 +111,8 @@ export async function acceptShopOrder(orderId: string, sellerUserId: string) {
         user: { telegramUsername: { not: null } },
       },
     });
-    if (!seller) throw new ShopError("SELLER_NOT_ELIGIBLE", "Р СџРЎР‚Р С•Р Т‘Р В°Р Р†Р ВµРЎвЂ  Р Р…Р Вµ Р Р…Р В°Р В·Р Р…Р В°РЎвЂЎР ВµР Р… Р Р…Р В° РЎРЊРЎвЂљР С•РЎвЂљ РЎвЂљР С•Р Р†Р В°РЎР‚.", 403);
-    if (locked.sellerId && locked.sellerId !== seller.id) throw new ShopError("ORDER_ASSIGNED_TO_ANOTHER_SELLER", "Р вЂ”Р В°Р С”Р В°Р В· Р Р…Р В°Р В·Р Р…Р В°РЎвЂЎР ВµР Р… Р Т‘РЎР‚РЎС“Р С–Р С•Р СРЎС“ Р С—РЎР‚Р С•Р Т‘Р В°Р Р†РЎвЂ РЎС“.", 409);
+    if (!seller) throw new ShopError("SELLER_NOT_ELIGIBLE", "Продавец не назначен на этот товар.", 403);
+    if (locked.sellerId && locked.sellerId !== seller.id) throw new ShopError("ORDER_ASSIGNED_TO_ANOTHER_SELLER", "Заказ назначен другому продавцу.", 409);
 
     const updated = await transitionInTx(tx, {
       order: locked,
@@ -146,7 +146,7 @@ async function performActorTransition(input: {
 }) {
   const order = await db.$transaction(async (tx) => {
     const locked = await getLockedOrder(tx, input.orderId);
-    if (!locked) throw new ShopError("ORDER_NOT_FOUND", "Р вЂ”Р В°Р С”Р В°Р В· Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р….", 404);
+    if (!locked) throw new ShopError("ORDER_NOT_FOUND", "Заказ не найден.", 404);
     await ensureAction(locked, input.userId, input.action);
     return transitionInTx(tx, {
       order: locked,
@@ -169,9 +169,9 @@ export function startShopOrder(orderId: string, sellerUserId: string) {
 export async function sellerCompleteShopOrder(orderId: string, sellerUserId: string, comment?: string) {
   const order = await db.$transaction(async (tx) => {
     const locked = await getLockedOrder(tx, orderId);
-    if (!locked) throw new ShopError("ORDER_NOT_FOUND", "????? ?? ??????.", 404);
+    if (!locked) throw new ShopError("ORDER_NOT_FOUND", "Заказ не найден.", 404);
     await ensureAction(locked, sellerUserId, "MARK_SELLER_COMPLETED");
-    if (!locked.paidAt) throw new ShopError("ORDER_PAYMENT_NOT_CONFIRMED", "?????? ?????? ?? ????????????.", 409);
+    if (!locked.paidAt) throw new ShopError("ORDER_PAYMENT_NOT_CONFIRMED", "Оплата заказа не подтверждена.", 409);
     const updated = await transitionInTx(tx, { order: locked, to: ShopOrderStatus.COMPLETED, actor: "SELLER", actorUserId: sellerUserId, reason: "SELLER_MARKED_COMPLETED", comment });
     if (locked.sellerId) {
       await tx.shopSeller.update({ where: { id: locked.sellerId }, data: { completedOrders: { increment: 1 } } });
@@ -187,7 +187,7 @@ export async function sellerCompleteShopOrder(orderId: string, sellerUserId: str
 export async function confirmShopOrder(orderId: string, buyerUserId: string) {
   const order = await db.$transaction(async (tx) => {
     const locked = await getLockedOrder(tx, orderId);
-    if (!locked) throw new ShopError("ORDER_NOT_FOUND", "Р вЂ”Р В°Р С”Р В°Р В· Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р….", 404);
+    if (!locked) throw new ShopError("ORDER_NOT_FOUND", "Заказ не найден.", 404);
     await ensureAction(locked, buyerUserId, "CONFIRM_ORDER");
     const updated = await transitionInTx(tx, {
       order: locked,
@@ -216,7 +216,7 @@ export async function confirmShopOrder(orderId: string, buyerUserId: string) {
 export async function cancelShopOrder(orderId: string, userId: string, comment?: string, options?: { deleteUnpaid?: boolean }) {
   const order = await db.$transaction(async (tx) => {
     const locked = await getLockedOrder(tx, orderId);
-    if (!locked) throw new ShopError("ORDER_NOT_FOUND", "Р вЂ”Р В°Р С”Р В°Р В· Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р….", 404);
+    if (!locked) throw new ShopError("ORDER_NOT_FOUND", "Заказ не найден.", 404);
     await ensureAction(locked, userId, "VIEW_ORDER");
     const actor: ShopOrderActor = locked.buyerId === userId ? "BUYER" : "ADMIN";
     const previousStatus = locked.status;
@@ -242,10 +242,10 @@ export async function cancelShopOrder(orderId: string, userId: string, comment?:
 export async function openShopDispute(orderId: string, userId: string, input: { reason: string; description: string; desiredResolution?: string }) {
   const order = await db.$transaction(async (tx) => {
     const locked = await getLockedOrder(tx, orderId);
-    if (!locked) throw new ShopError("ORDER_NOT_FOUND", "Р—Р°РєР°Р· РЅРµ РЅР°Р№РґРµРЅ.", 404);
+    if (!locked) throw new ShopError("ORDER_NOT_FOUND", "Заказ не найден.", 404);
     await ensureAction(locked, userId, "OPEN_DISPUTE");
     if (locked.buyerId === userId && !isShopComplaintOpen(locked.paidAt)) {
-      throw new ShopError("SHOP_COMPLAINT_WINDOW_EXPIRED", "РЎСЂРѕРє РїРѕРґР°С‡Рё Р¶Р°Р»РѕР±С‹ РёСЃС‚С‘Рє. Р–Р°Р»РѕР±Сѓ РјРѕР¶РЅРѕ РѕС‚РїСЂР°РІРёС‚СЊ РІ С‚РµС‡РµРЅРёРµ 48 С‡Р°СЃРѕРІ РїРѕСЃР»Рµ РѕРїР»Р°С‚С‹.", 409);
+      throw new ShopError("SHOP_COMPLAINT_WINDOW_EXPIRED", "Срок подачи жалобы истёк. Жалобу можно отправить в течение 48 часов после оплаты.", 409);
     }
     const actor: ShopOrderActor = locked.buyerId === userId ? "BUYER" : locked.seller?.userId === userId ? "SELLER" : "SUPPORT";
     const updated = await transitionInTx(tx, { order: locked, to: ShopOrderStatus.DISPUTE, actor, actorUserId: userId, reason: "DISPUTE_OPENED", comment: input.description });
@@ -258,11 +258,11 @@ export async function openShopDispute(orderId: string, userId: string, input: { 
 
 export async function runShopTokenAction(action: string, orderId: string, userId: string) {
   if (action === "SHOP_OPEN_DISPUTE") {
-    return openShopDispute(orderId, userId, { reason: "OTHER", description: "РџРѕРєСѓРїР°С‚РµР»СЊ РѕС‚РїСЂР°РІРёР» Р¶Р°Р»РѕР±Сѓ С‡РµСЂРµР· Telegram." });
+    return openShopDispute(orderId, userId, { reason: "OTHER", description: "Покупатель отправил жалобу через Telegram." });
   }
   if (action === "SHOP_CANCEL_ORDER") return cancelShopOrder(orderId, userId);
   if (action === sellerCompleteAction) return sellerCompleteShopOrder(orderId, userId);
-  throw new ShopError("UNKNOWN_SHOP_ACTION", "РќРµРёР·РІРµСЃС‚РЅРѕРµ РґРµР№СЃС‚РІРёРµ РјР°РіР°Р·РёРЅР°.");
+  throw new ShopError("UNKNOWN_SHOP_ACTION", "Неизвестное действие магазина.");
 }
 
 export async function resolveShopDispute(input: {
@@ -274,13 +274,13 @@ export async function resolveShopDispute(input: {
 }) {
   const permissions = await getShopPermissionIds(input.userId);
   if (!permissions.includes("shop.support") && !permissions.includes("shop.manage")) {
-    throw new ShopError("SHOP_ACTION_FORBIDDEN", "Р СћР С•Р В»РЎРЉР С”Р С• Р С—Р С•Р Т‘Р Т‘Р ВµРЎР‚Р В¶Р С”Р В° Р СР С•Р В¶Р ВµРЎвЂљ РЎР‚Р В°Р В·РЎР‚Р ВµРЎв‚¬Р С‘РЎвЂљРЎРЉ РЎРѓР С—Р С•РЎР‚.", 403);
+    throw new ShopError("SHOP_ACTION_FORBIDDEN", "Только поддержка может разрешить спор.", 403);
   }
   const actor: ShopOrderActor = permissions.includes("shop.manage") ? "ADMIN" : "SUPPORT";
   const target = ShopOrderStatus[input.targetStatus];
   const order = await db.$transaction(async (tx) => {
     const locked = await getLockedOrder(tx, input.orderId);
-    if (!locked) throw new ShopError("ORDER_NOT_FOUND", "Р вЂ”Р В°Р С”Р В°Р В· Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р….", 404);
+    if (!locked) throw new ShopError("ORDER_NOT_FOUND", "Заказ не найден.", 404);
     const updated = await transitionInTx(tx, {
       order: locked,
       to: target,
@@ -295,9 +295,9 @@ export async function resolveShopDispute(input: {
     });
     if (target === ShopOrderStatus.REFUND_PENDING) {
       const payment = await tx.shopPayment.findFirst({ where: { orderId: locked.id, status: "SUCCEEDED" }, orderBy: { paidAt: "desc" } });
-      if (!payment) throw new ShopError("PAYMENT_NOT_FOUND", "Р вЂќР В»РЎРЏ Р Р†Р С•Р В·Р Р†РЎР‚Р В°РЎвЂљР В° Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р… Р С—Р С•Р Т‘РЎвЂљР Р†Р ВµРЎР‚Р В¶Р Т‘РЎвЂР Р…Р Р…РЎвЂ№Р в„– Р С—Р В»Р В°РЎвЂљРЎвЂР В¶.", 409);
+      if (!payment) throw new ShopError("PAYMENT_NOT_FOUND", "Для возврата не найден подтверждённый платёж.", 409);
       const amountMinor = input.refundAmountMinor ?? locked.totalMinor;
-      if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0 || amountMinor > locked.totalMinor) throw new ShopError("REFUND_AMOUNT_INVALID", "Р СњР ВµР С”Р С•РЎР‚РЎР‚Р ВµР С”РЎвЂљР Р…Р В°РЎРЏ РЎРѓРЎС“Р СР СР В° Р Р†Р С•Р В·Р Р†РЎР‚Р В°РЎвЂљР В°.");
+      if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0 || amountMinor > locked.totalMinor) throw new ShopError("REFUND_AMOUNT_INVALID", "Некорректная сумма возврата.");
       await tx.shopRefund.create({
         data: {
           orderId: locked.id,

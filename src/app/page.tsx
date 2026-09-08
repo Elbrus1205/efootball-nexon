@@ -47,11 +47,10 @@ const getHomeData = unstable_cache(async () => {
 const getHomeShopData = unstable_cache(async () => {
   try {
     const settings = await getShopSettings();
-    const [products, reviews] = await Promise.all([
+    const [products] = await Promise.all([
       settings.isEnabled && settings.showHomeBlock ? listShopProducts({ popularOnly: true, sort: "popular", pageSize: 3 }) : Promise.resolve({ items: [] }),
-      db.shopReview.findMany({ where: { status: "PUBLISHED", deletedAt: null }, orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }], take: 3, select: { id: true, rating: true, body: true, buyerName: true, product: { select: { title: true } } } }),
     ]);
-    return { items: products.items, currency: settings.currency, reviewsTelegramUrl: settings.reviewsTelegramUrl, reviews };
+    return { items: products.items, currency: settings.currency };
   } catch (error) {
     console.warn("Home shop block is unavailable until the shop migration is applied.", error);
     return null;

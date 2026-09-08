@@ -68,7 +68,7 @@ test("expanding Team League qualification from 8 to 16 rebuilds only the future 
 test("renaming a stage refreshes metadata without deleting its matches", () => {
   const next = teamLeague(16);
   next.leagueStageName = "Основная лига";
-  next.playoffs[0]!.name = "Финальная стади��";
+  next.playoffs[0]!.name = "Финальная стадия";
 
   const plan = planTournamentEditSynchronization({
     previousBlueprint: teamLeague(16),

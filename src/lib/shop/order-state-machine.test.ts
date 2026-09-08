@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { OrderTransitionError, assertOrderTransition } from "./order-state-machine";
 
-test("оплаченный заказ сразу назначает��я и запускается", () => {
+test("оплаченный заказ сразу назначается и запускается", () => {
   const flow = [
     ["PENDING_PAYMENT", "PAID", "SYSTEM"],
     ["PAID", "IN_PROGRESS", "SYSTEM"],
@@ -15,7 +15,8 @@ test("оплаченный заказ сразу назначает��я и �
   }
 });
 
-test("продавец не может сам завершить заказ", () => {
+test("продавец отмечает исполняемый заказ выполненным", () => {
+  assert.doesNotThrow(() => assertOrderTransition({ from: "IN_PROGRESS", to: "SELLER_COMPLETED", actor: "SELLER" }));
   assert.throws(
     () => assertOrderTransition({ from: "IN_PROGRESS", to: "COMPLETED", actor: "SELLER" }),
     (error: unknown) => error instanceof OrderTransitionError && error.code === "ACTOR_NOT_ALLOWED",
