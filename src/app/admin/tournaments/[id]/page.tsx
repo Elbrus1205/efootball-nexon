@@ -1,7 +1,7 @@
 ﻿import Link from "next/link";
 import { MatchStatus, ParticipantStatus, StageType, TournamentApplicationStatus, UserRole } from "@prisma/client";
 import { notFound } from "next/navigation";
-import { Activity, CalendarClock, ClipboardCheck, Dices, GitBranch, History, Pencil, Swords, Trash2, Trophy, Users } from "lucide-react";
+import { Activity, CalendarClock, ClipboardCheck, Dices, GitBranch, History, Pencil, Trash2, Trophy, Users } from "lucide-react";
 import { RandomScoresButton } from "@/components/admin/random-scores-button";
 import { TournamentImageExporterLazy, type ExportGroup, type ExportScheduleRound } from "@/components/admin/tournament-image-exporter-lazy";
 import { Badge } from "@/components/ui/badge";
@@ -411,10 +411,6 @@ export default async function AdminTournamentWorkspacePage(props: { params: Prom
             <Link href={`/admin/tournaments/${tournament.id}/bracket`} className={actionButtonClass}>
               <Trophy className="h-4 w-4" />
               Сетка
-            </Link>
-            <Link href={`/admin/tournaments/${tournament.id}/matches`} className={actionButtonClass}>
-              <Swords className="h-4 w-4" />
-              Матчи
             </Link>
             <Link href={`/admin/tournaments/${tournament.id}/deadlines`} className={actionButtonClass}>
               <CalendarClock className="h-4 w-4" />

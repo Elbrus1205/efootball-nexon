@@ -34,7 +34,7 @@ function redirectWithStatus(request: Request, returnTo: string, key: "updated" |
 
 export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  const session = await requirePermission("users.ban");
+  const session = await requirePermission("users.reset");
   const formData = await request.formData();
   const returnTo = getSafeReturnTo(formData.get("returnTo"));
   const action = parseResetAction(formData.get("action"));

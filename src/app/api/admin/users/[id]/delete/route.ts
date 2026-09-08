@@ -1,12 +1,12 @@
-import { AdminActionType, UserRole } from "@prisma/client";
+import { AdminActionType } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { getRequestBaseUrl } from "@/lib/affiliate";
-import { requireRole } from "@/lib/auth/session";
+import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
 export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  const session = await requireRole([UserRole.FOUNDER]);
+  const session = await requirePermission("users.delete");
   const formData = await request.formData();
   const confirmed = formData.get("confirmDelete") === "true";
 

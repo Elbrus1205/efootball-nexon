@@ -35,7 +35,7 @@ export default function ContactsPage() {
         <section className="rounded-xl border border-white/10 bg-zinc-950/70 px-4 py-4 shadow-[0_18px_48px_rgba(0,0,0,0.18)] sm:px-5">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <div className="mb-2 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-300">
+              <div className="mb-2 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
                 <Trophy className="h-3.5 w-3.5" />
                 eFootball Nexon
               </div>
@@ -44,7 +44,7 @@ export default function ContactsPage() {
                 Нужна помощь по турниру, результату матча, аккаунту или работе сайта? Напишите администратору в Telegram и кратко опишите проблему.
               </p>
             </div>
-            <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-sky-300/20 bg-sky-400/10 text-sky-200 sm:flex">
+            <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary sm:flex">
               <Headphones className="h-4 w-4" />
             </div>
           </div>
@@ -53,7 +53,7 @@ export default function ContactsPage() {
             href={adminTelegramHref}
             target="_blank"
             rel="noreferrer"
-            className="mt-4 inline-flex h-10 items-center gap-2 rounded-lg bg-sky-500 px-3.5 text-sm font-semibold text-white transition hover:bg-sky-400"
+            className="mt-4 inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-3.5 text-sm font-semibold text-white transition hover:bg-primary/90"
           >
             <MessageCircle className="h-4 w-4" />
             Написать в Telegram
@@ -64,7 +64,7 @@ export default function ContactsPage() {
         <section className="grid gap-3 md:grid-cols-[1.05fr_0.95fr]">
           <div className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-white">
-              <ShieldCheck className="h-4 w-4 text-emerald-300" />
+              <ShieldCheck className="h-4 w-4 text-primary" />
               Контакт администратора
             </div>
             <div className="mt-3 divide-y divide-white/10">
@@ -79,7 +79,7 @@ export default function ContactsPage() {
 
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-white">
-              <Wrench className="h-4 w-4 text-sky-300" />
+              <Wrench className="h-4 w-4 text-primary" />
               Техническая поддержка
             </div>
             <p className="mt-2 text-sm leading-6 text-zinc-400">Если проблема связана с сайтом, укажите устройство, браузер и приложите скриншот, если он есть.</p>
@@ -103,7 +103,7 @@ export default function ContactsPage() {
                 href={link.href}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs font-semibold text-zinc-300 transition hover:border-sky-300/30 hover:text-white"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs font-semibold text-zinc-300 transition hover:border-primary/30 hover:text-white"
               >
                 <Send className="h-3.5 w-3.5" />
                 {link.label}

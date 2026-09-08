@@ -783,6 +783,16 @@ export function ParticipantManager({
 
                           {renderReplacementPenaltySelect(participant.id)}
 
+                          {replacementUserId && selectedReplacement ? (
+                            <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/10 px-3 py-2">
+                              <div className="min-w-0">
+                                <div className="text-[11px] uppercase tracking-wide text-primary/80">Выбранный игрок</div>
+                                <div className="truncate text-sm font-medium text-white">{userLabel(selectedReplacement)}</div>
+                              </div>
+                              <Badge variant="primary">Выбран</Badge>
+                            </div>
+                          ) : null}
+
                           {normalizedReplacementQuery ? (
                             <div className="max-h-48 overflow-y-auto rounded-lg border border-white/10 bg-black/20 p-1">
                               {replacementMatches.length ? (

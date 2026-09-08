@@ -84,7 +84,6 @@ function showcaseDate(tournament: Awaited<ReturnType<typeof getHomeData>>["tourn
 
 export default async function HomePage() {
   const [data, shop] = await Promise.all([getHomeData(), getHomeShopData()]);
-  const reviewsHref = shop?.reviewsTelegramUrl || homeLinks.telegram;
   const featuredTournament = data.tournaments[0];
   const featuredDate = showcaseDate(featuredTournament);
   const stats = [{ value: data.matchesCount, label: "матчей сыграно" }, { value: data.playersCount, label: "игроков в системе" }, { value: data.tournamentsCount, label: "турниров завершено" }, { value: data.awardedPrizePool, label: "выдано призами", suffix: " ₽" }];
@@ -94,11 +93,10 @@ export default async function HomePage() {
       <div className={s.shell}>
         <div className={s.introLayout}>
           <div className={s.introCopy}>
-            <p className={s.eyebrow}><span /> NEX / COMPETITIVE PLATFORM / 2026</p>
             <p className={s.heroBrand}>EFOOTBALL<br /><em>NEXON</em></p>
             <h1 id="hero-title">Турниры.<br /><em>Матчи. Победы.</em></h1>
             <p className={s.introLead}>Платформа для eFootball Mobile: выбирай турнир, играй матчи и поднимайся в рейтинге.</p>
-            <div className={s.introActions}><Link href="/tournaments" className={s.primaryButton}>Смотреть турниры <ArrowUpRight aria-hidden="true" /></Link><Link href="/ratings" className={s.secondaryButton}>Открыть рейтинг <ChevronRight aria-hidden="true" /></Link></div>
+            <div className={s.introActions}><Link href="/tournaments" className={s.primaryButton}>Смотреть турниры <ArrowUpRight aria-hidden="true" /></Link><Link href={homeLinks.telegram} target="_blank" rel="noreferrer" className={s.secondaryButton}>Telegram-канал <ArrowUpRight aria-hidden="true" /></Link></div>
             <div className={s.introNote}><span className={s.noteIcon}><Check /></span><span>Официальная платформа матчей<br />с прозрачной турнирной сеткой</span></div>
           </div>
           <div className={s.productStage} aria-label="Обзор турнирной платформы">
@@ -123,7 +121,5 @@ export default async function HomePage() {
     {shop?.items.length ? <section className={s.section} aria-labelledby="shop-title"><div className={s.shell}><div className={s.sectionHeader}><div><p className={s.eyebrow}><span /> Nexon market</p><h2 id="shop-title">Полезное<br /><em>для игры.</em></h2></div><Link href="/shop" className={s.headerLink}>Открыть магазин <ArrowUpRight /></Link></div><div className={shopStyles.grid}>{shop.items.map((product) => <ProductCard key={product.id} product={product} currency={shop.currency} />)}</div></div></section> : null}
 
     <section className={`${s.section} ${s.communitySection}`} aria-labelledby="community-title"><div className={s.shell}><div className={s.communityPanel}><div><p className={s.eyebrow}><span /> Сообщество Nexon</p><h2 id="community-title">Игра продолжается<br /><em>вне поля.</em></h2><p>Анонсы турниров, расписания и новости сезона — в официальном Telegram.</p><Link href={homeLinks.telegram} target="_blank" rel="noreferrer" className={s.primaryButton}>Telegram community <ArrowUpRight /></Link></div><div className={s.communityAside}><MessageCircleMore /><span>OFFICIAL<br />CHANNEL</span><strong>@efootball_nexon</strong></div></div></div></section>
-
-    <section className={`${s.section} ${s.reviewSection}`} aria-labelledby="reviews-title"><div className={s.shell}><Link href={reviewsHref} target="_blank" rel="noreferrer" className={s.reviewPanel}><div><p className={s.eyebrow}><span /> Голоса сообщества</p><h2 id="reviews-title">Реальные люди.<br /><em>Реальная игра.</em></h2></div><div className={s.reviewArrow}><ArrowUpRight /></div></Link></div></section>
   </div>;
 }

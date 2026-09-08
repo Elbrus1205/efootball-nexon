@@ -93,8 +93,27 @@ export async function DELETE(request: Request) {
       });
     }
 
-    await tx.user.delete({
+    await tx.account.deleteMany({ where: { userId: user.id } });
+    await tx.session.deleteMany({ where: { userId: user.id } });
+    await tx.user.update({
       where: { id: user.id },
+      data: {
+        name: null,
+        email: null,
+        emailVerified: null,
+        image: null,
+        bannerImage: null,
+        bio: null,
+        passwordHash: null,
+        telegramId: null,
+        telegramUsername: null,
+        telegram2faEnabled: false,
+        telegram2faEnabledAt: null,
+        vkId: null,
+        isBanned: false,
+        banReason: null,
+        bannedUntil: null,
+      },
     });
   });
 
