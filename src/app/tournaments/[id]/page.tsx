@@ -320,12 +320,36 @@ function buildCustomStandingHighlights(tournament: {
   const styleByTarget = new Map<string, (typeof CUSTOM_STANDING_HIGHLIGHT_STYLES)[number]>();
   let styleIndex = 0;
 
+  const nationalStage = blueprint.stageGraph?.stages.find((stage) =>
+    (stage.type === "GROUPS" || stage.type === "LEAGUE") && /национал|national/i.test(stage.name),
+  );
+  const nationalStageIsFiveLeagues = Boolean(nationalStage && nationalStage.divisions.length === 5);
+  const nationalZones = [
+    { fromRank: 1, toRank: 6, label: "ЛЧ" },
+    { fromRank: 7, toRank: 12, label: "ЛЕ" },
+    { fromRank: 13, toRank: 18, label: "ЛК" },
+    { fromRank: 19, toRank: 20, label: "Вылет" },
+  ];
+
+  if (nationalStageIsFiveLeagues && nationalStage) {
+    for (let divisionIndex = 1; divisionIndex <= nationalStage.divisions.length; divisionIndex += 1) {
+      const bucket = byDivision.get(divisionIndex) ?? [];
+      for (const zone of nationalZones) {
+        const style = CUSTOM_STANDING_HIGHLIGHT_STYLES[styleIndex % CUSTOM_STANDING_HIGHLIGHT_STYLES.length];
+        styleIndex += 1;
+        bucket.push({ ...zone, rowClass: style.rowClass, badgeClass: style.badgeClass });
+      }
+      byDivision.set(divisionIndex, bucket);
+    }
+  }
+
   for (const transition of blueprint.stageGraph?.transitions ?? []) {
     if (transition.result !== "RANK" || transition.fromRank === null || transition.toRank === null) continue;
 
     const sourceStage = blueprint.stageGraph?.stages.find((stage) => stage.id === transition.fromStageId);
     const targetStage = blueprint.stageGraph?.stages.find((stage) => stage.id === transition.toStageId);
     if (!sourceStage || !targetStage || (sourceStage.type !== "GROUPS" && sourceStage.type !== "LEAGUE")) continue;
+    if (nationalStageIsFiveLeagues && sourceStage.id === nationalStage?.id) continue;
 
     const divisionIndex = (transition.fromDivisionIndex
       ?? (transition.fromDivisionId ? sourceStage.divisions.findIndex((division) => division.id === transition.fromDivisionId) + 1 : 0)) || 1;
