@@ -1,6 +1,5 @@
 import { CalendarDays, Clock3, Coins, Flag, Trophy, Users } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -22,7 +21,6 @@ export function TournamentHero({
   coverUrl,
   primaryAction,
   secondaryAction,
-  tournamentId,
 }: {
   title: string;
   description?: string | null;
@@ -38,7 +36,6 @@ export function TournamentHero({
   coverUrl?: string | null;
   primaryAction: ReactNode;
   secondaryAction?: ReactNode;
-  tournamentId: string;
 }) {
   const facts: HeroFact[] = [
     { label: "Старт", value: startLabel, icon: CalendarDays },
@@ -71,9 +68,6 @@ export function TournamentHero({
 
           <div className="mt-auto flex flex-col gap-3 pt-6 sm:flex-row sm:items-center">
             <div className="[&_button]:min-h-12 [&_button]:w-full [&_button]:bg-primary [&_button]:font-bold [&_button]:text-[#06110d] [&_button:hover]:bg-[#58f5bd] sm:[&_button]:w-auto">{primaryAction}</div>
-            <Link href={`/tournaments/${tournamentId}?tab=rules`} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-5 text-sm font-semibold text-zinc-200 transition duration-200 hover:border-white/20 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 motion-reduce:transition-none">
-              <Trophy className="h-4 w-4" /> Правила
-            </Link>
             {secondaryAction}
           </div>
           <div className="mt-3 flex items-center gap-2 text-xs text-zinc-500"><Clock3 className="h-3.5 w-3.5" />Регистрация до {registrationDeadlineLabel}</div>

@@ -1174,7 +1174,6 @@ export default async function TournamentDetailsPage(
           coverUrl={tournament.coverImage ? `/api/tournaments/${tournament.id}/cover?w=1280&h=720&q=86` : null}
           primaryAction={primaryAction}
           secondaryAction={null}
-          tournamentId={tournament.id}
         />
       </div>
 
