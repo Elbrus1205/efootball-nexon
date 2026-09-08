@@ -321,7 +321,7 @@ function buildCustomStandingHighlights(tournament: {
   let styleIndex = 0;
 
   const nationalStage = blueprint.stageGraph?.stages.find((stage) =>
-    (stage.type === "GROUPS" || stage.type === "LEAGUE") && /национал|national/i.test(stage.name),
+    (stage.type === "GROUPS" || stage.type === "LEAGUE") && stage.divisions.length === 5,
   );
   const nationalStageIsFiveLeagues = Boolean(nationalStage && nationalStage.divisions.length === 5);
   const nationalZones = [
