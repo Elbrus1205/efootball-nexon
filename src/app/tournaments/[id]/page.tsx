@@ -310,12 +310,16 @@ function resolveReplacementRegistrationId(entryId: string, replacements: Map<str
 function buildCustomStandingHighlights(tournament: {
   format: TournamentFormat;
   formatBlueprintJson: unknown;
-}) {
+}, stageSettingsJson?: unknown) {
   if (tournament.format !== TournamentFormat.CUSTOM) {
     return new Map<number, StandingHighlight[]>();
   }
 
   const blueprint = normalizeFormatBlueprint(tournament.formatBlueprintJson);
+  const graphStageId = stageSettingsJson && typeof stageSettingsJson === "object" && !Array.isArray(stageSettingsJson)
+    ? (stageSettingsJson as { graphId?: unknown }).graphId
+    : null;
+  const selectedGraphStageId = typeof graphStageId === "string" && graphStageId ? graphStageId : null;
   const byDivision = new Map<number, StandingHighlight[]>();
   const styleByTarget = new Map<string, (typeof CUSTOM_STANDING_HIGHLIGHT_STYLES)[number]>();
   let styleIndex = 0;
@@ -324,6 +328,7 @@ function buildCustomStandingHighlights(tournament: {
     (stage.type === "GROUPS" || stage.type === "LEAGUE") && stage.divisions.length === 5,
   );
   const nationalStageIsFiveLeagues = Boolean(nationalStage && nationalStage.divisions.length === 5);
+  const selectedStage = selectedGraphStageId ? blueprint.stageGraph?.stages.find((stage) => stage.id === selectedGraphStageId) : null;
   const nationalZones = [
     { fromRank: 1, toRank: 6, label: "ЛЧ" },
     { fromRank: 7, toRank: 12, label: "ЛЕ" },
@@ -331,7 +336,7 @@ function buildCustomStandingHighlights(tournament: {
     { fromRank: 19, toRank: 20, label: "Вылет" },
   ];
 
-  if (nationalStageIsFiveLeagues && nationalStage) {
+  if (nationalStageIsFiveLeagues && nationalStage && (!selectedStage || selectedStage.id === nationalStage.id)) {
     for (let divisionIndex = 1; divisionIndex <= nationalStage.divisions.length; divisionIndex += 1) {
       const bucket = byDivision.get(divisionIndex) ?? [];
       for (const zone of nationalZones) {
@@ -348,7 +353,7 @@ function buildCustomStandingHighlights(tournament: {
 
     const sourceStage = blueprint.stageGraph?.stages.find((stage) => stage.id === transition.fromStageId);
     const targetStage = blueprint.stageGraph?.stages.find((stage) => stage.id === transition.toStageId);
-    if (!sourceStage || !targetStage || (sourceStage.type !== "GROUPS" && sourceStage.type !== "LEAGUE")) continue;
+    if (!sourceStage || !targetStage || (sourceStage.type !== "GROUPS" && sourceStage.type !== "LEAGUE") || (selectedStage && sourceStage.id !== selectedStage.id)) continue;
     if (nationalStageIsFiveLeagues && sourceStage.id === nationalStage?.id) continue;
 
     const divisionIndex = (transition.fromDivisionIndex
@@ -950,7 +955,6 @@ export default async function TournamentDetailsPage(
       .filter((application) => application.status === TournamentApplicationStatus.PENDING)
       .map((application) => application.clubSlug),
   ].filter(Boolean) as string[];
-  const customStandingHighlights = buildCustomStandingHighlights(tournament);
   const structureOptions: TournamentStageOption[] = tournament.stages.map((stage) => ({
     id: stage.id,
     title: stage.name?.trim() || (stage.type === StageType.SUPER_CUP ? "Суперкубок" : stage.type === StageType.PLAYOFF ? "Плей-офф" : stage.type === StageType.LEAGUE ? "Лига" : "Групповой этап"),
@@ -1189,6 +1193,7 @@ export default async function TournamentDetailsPage(
           {structureOptions.length ? (
             <TournamentStageSwitcher options={structureOptions}>
               {tournament.stages.map((stage) => {
+                const stageStandingHighlights = buildCustomStandingHighlights(tournament, stage.settingsJson);
                 if (stage.type === StageType.PLAYOFF || stage.type === StageType.SUPER_CUP) {
                   return (
                     <BracketView key={stage.id} matches={activePublicMatches.filter((match) => match.stageId === stage.id)} clubsByUserId={participantClubMap} currentUserId={currentUserId} />
@@ -1229,7 +1234,7 @@ export default async function TournamentDetailsPage(
                           <span className="text-xs text-zinc-500">{groupRows.length} / {groupCapacity || "—"}</span>
                         </div>
                         <div className="p-3 sm:p-4">
-                          {groupRows.length ? <StandingsTable rows={groupRows} highlights={customStandingHighlights.get(group.orderIndex) ?? []} /> : <TournamentEmptyState title="Группа ещё не сформирована" description="Участники появятся после распределения по группам." />}
+                          {groupRows.length ? <StandingsTable rows={groupRows} highlights={stageStandingHighlights.get(group.orderIndex) ?? []} /> : <TournamentEmptyState title="Группа ещё не сформирована" description="Участники появятся после распределения по группам." />}
                         </div>
                         <EmptyGroupSlots slots={emptySlots} />
                       </Card>

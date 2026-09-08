@@ -173,6 +173,7 @@ async function loadStructureSlice(tournamentId: string) {
     orderBy: { orderIndex: "asc" },
     select: {
       id: true,
+      settingsJson: true,
       name: true,
       type: true,
       status: true,
