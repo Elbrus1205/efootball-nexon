@@ -320,7 +320,35 @@ function buildCustomStandingHighlights(tournament: {
   const styleByTarget = new Map<string, (typeof CUSTOM_STANDING_HIGHLIGHT_STYLES)[number]>();
   let styleIndex = 0;
 
-  for (const playoff of blueprint.playoffs) {
+  for (const transition of blueprint.stageGraph?.transitions ?? []) {
+    if (transition.result !== "RANK" || transition.fromRank === null || transition.toRank === null) continue;
+
+    const sourceStage = blueprint.stageGraph?.stages.find((stage) => stage.id === transition.fromStageId);
+    const targetStage = blueprint.stageGraph?.stages.find((stage) => stage.id === transition.toStageId);
+    if (!sourceStage || !targetStage || (sourceStage.type !== "GROUPS" && sourceStage.type !== "LEAGUE")) continue;
+
+    const divisionIndex = transition.fromDivisionIndex ?? 1;
+    const targetKey = `${targetStage.id}:${transition.targetBracket}`;
+    if (!styleByTarget.has(targetKey)) {
+      styleByTarget.set(targetKey, CUSTOM_STANDING_HIGHLIGHT_STYLES[styleIndex % CUSTOM_STANDING_HIGHLIGHT_STYLES.length]);
+      styleIndex += 1;
+    }
+
+    const style = styleByTarget.get(targetKey)!;
+    const bucket = byDivision.get(divisionIndex) ?? [];
+    bucket.push({
+      fromRank: transition.fromRank,
+      toRank: transition.toRank,
+      label: transition.targetBracket === "lower" ? `${targetStage.name} • Нижняя сетка` : targetStage.name,
+      rowClass: style.rowClass,
+      badgeClass: style.badgeClass,
+    });
+    byDivision.set(divisionIndex, bucket);
+  }
+
+  const hasGraphRankTransitions = (blueprint.stageGraph?.transitions ?? []).some((transition) => transition.result === "RANK" && transition.fromRank !== null && transition.toRank !== null);
+
+  for (const playoff of hasGraphRankTransitions ? [] : blueprint.playoffs) {
     for (const selection of playoff.selections) {
       const targetKey = playoff.type === "SINGLE" ? `${playoff.id}:main` : `${playoff.id}:${selection.targetBracket}`;
 

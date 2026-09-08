@@ -7,7 +7,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { getAdminTournamentAccessWhere } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { resolveStageDeadlineRoundsCount } from "@/lib/tournament-deadlines";
+import { resolveConfiguredStageRoundsCount, resolveStageDeadlineRoundsCount } from "@/lib/tournament-deadlines";
 
 export default async function AdminTournamentDeadlinesPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -40,7 +40,7 @@ export default async function AdminTournamentDeadlinesPage(props: { params: Prom
     .map((stage) => {
       const stageMatches = tournament.matches.filter((match) => match.stageId === stage.id);
       const roundsCount = resolveStageDeadlineRoundsCount(
-        stage.roundsCount,
+        resolveConfiguredStageRoundsCount(stage.roundsCount, stage.name, stage.orderIndex, tournament.formatBlueprintJson),
         stageMatches.map((match) => match.round),
         stage.deadlines.map((deadline) => deadline.round),
       );
