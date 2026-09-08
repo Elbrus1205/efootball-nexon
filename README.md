@@ -23,6 +23,7 @@ npm run build
 
 - `DATABASE_URL` должен указывать на Supabase Transaction Pooler, расположенный рядом с БД. Runtime-код по умолчанию использует 5 соединений на экземпляр приложения; значение задаётся через `PRISMA_CONNECTION_LIMIT`.
 - `DIRECT_URL` используется только Prisma CLI для миграций.
+- `REDIS_URL` — необязательный ускоритель очереди уведомлений; PostgreSQL outbox остаётся источником истины при ошибках или переполнении Redis.
 - Перед этой версией выполните read-only запрос [preflight-notification-outbox.sql](deploy/sql/preflight-notification-outbox.sql) через Supabase SQL Editor или `psql`. Он должен вернуть 0 строк; найденные дубли pending-заявок нужно вручную разрешить до миграции.
 - В существующей production-БД 60 старых миграций уже зарегистрированы без начального baseline. Перед первым deploy этой версии один раз отметьте восстановленный baseline как применённый: `npx prisma migrate resolve --applied 20260425000000_baseline`. Эта команда не создаёт таблицы повторно.
 - После baseline выполните `npm run prisma:deploy`. На совершенно новой пустой БД `resolve` не нужен: `prisma:deploy` сам применит baseline и все последующие миграции.

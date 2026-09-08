@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
+import { getOrSetRedisJson } from "@/lib/redis-cache";
+import { redisKey } from "@/lib/redis";
 
 const statusVariant: Partial<Record<MatchStatus, "primary" | "accent" | "neutral" | "success" | "danger">> = {
   PENDING: "neutral",
@@ -26,22 +28,26 @@ function matchRoundLabel(match: { round: number; stage?: { type: StageType } | n
 export default async function DashboardMatchesPage() {
   const session = await requireAuth();
 
-  const matches = await db.match.findMany({
-    where: {
-      OR: [{ player1Id: session.user.id }, { player2Id: session.user.id }],
-    },
-    include: {
-      tournament: true,
-      stage: {
-        include: {
-          deadlines: true,
-        },
+  const matches = await getOrSetRedisJson(
+    redisKey(`matches:mine:${session.user.id}`),
+    () => db.match.findMany({
+      where: {
+        OR: [{ player1Id: session.user.id }, { player2Id: session.user.id }],
       },
-      player1: true,
-      player2: true,
-    },
-    orderBy: [{ scheduledAt: "asc" }, { createdAt: "desc" }],
-  });
+      include: {
+        tournament: true,
+        stage: {
+          include: {
+            deadlines: true,
+          },
+        },
+        player1: true,
+        player2: true,
+      },
+      orderBy: [{ scheduledAt: "asc" }, { createdAt: "desc" }],
+    }),
+    10,
+  );
 
   return (
     <div className="page-shell space-y-6">

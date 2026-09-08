@@ -14,6 +14,7 @@ import {
   getTelegramNotificationTypeLabel,
 } from "@/lib/services/notifications";
 import { sendWebPushNotification } from "@/lib/services/web-push";
+import { drainNotificationDeliveryQueue } from "@/lib/redis-notification-queue";
 
 const LOCK_TIMEOUT_MS = 5 * 60_000;
 const DELIVERY_CONCURRENCY = 8;
@@ -178,6 +179,21 @@ async function deliverClaimedNotifications(limit: number, notificationIds?: stri
 
 export function deliverNotificationOutbox(limit = DEFAULT_DELIVERY_LIMIT) {
   return deliverClaimedNotifications(limit);
+}
+
+export async function deliverQueuedNotifications() {
+  const notificationIds = await drainNotificationDeliveryQueue(DEFAULT_DELIVERY_LIMIT);
+  if (notificationIds === null) return deliverNotificationOutbox();
+
+  const queued = notificationIds.length
+    ? await deliverNotificationsImmediately(notificationIds)
+    : { claimed: 0, delivered: 0, failed: 0 };
+  const database = await deliverClaimedNotifications(Math.max(0, DEFAULT_DELIVERY_LIMIT - queued.claimed));
+  return {
+    claimed: queued.claimed + database.claimed,
+    delivered: queued.delivered + database.delivered,
+    failed: queued.failed + database.failed,
+  };
 }
 
 export async function deliverNotificationsImmediately(notificationIds: string[]) {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { deliverNotificationOutbox } from "@/lib/notifications/delivery-worker";
+import { deliverQueuedNotifications } from "@/lib/notifications/delivery-worker";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,7 @@ async function handleDeliveryCron(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  return NextResponse.json({ ok: true, ...(await deliverNotificationOutbox()) });
+  return NextResponse.json({ ok: true, ...(await deliverQueuedNotifications()) });
 }
 
 export async function GET(request: Request) {

@@ -3,6 +3,8 @@ import { unstable_cache } from "next/cache";
 import { DivisionPreviewCard } from "@/components/divisions/division-preview-card";
 import { TournamentCard } from "@/components/tournaments/tournament-card";
 import { db } from "@/lib/db";
+import { getOrSetRedisJson } from "@/lib/redis-cache";
+import { redisKey } from "@/lib/redis";
 
 export const revalidate = 10;
 
@@ -57,10 +59,16 @@ function loadTournamentList(showTestTournaments: boolean) {
   `);
 }
 
-const getCachedTournamentList = unstable_cache(loadTournamentList, ["public-tournament-list"], {
+const getNextCachedTournamentList = unstable_cache(loadTournamentList, ["public-tournament-list"], {
   revalidate: 10,
   tags: ["public-tournaments"],
 });
+
+const getCachedTournamentList = (showTestTournaments: boolean) => getOrSetRedisJson(
+  redisKey(`tournaments:list:${showTestTournaments ? "tests" : "public"}`),
+  () => getNextCachedTournamentList(showTestTournaments),
+  10,
+);
 const tournamentListLoads = new Map<string, Promise<TournamentListRow[]>>();
 const tournamentListValues = new Map<string, { expiresAt: number; value: TournamentListRow[] }>();
 

@@ -3,6 +3,8 @@ import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
 import type { TelegramRichMessageDraft } from "@/lib/telegram-rich";
 import { repairMojibake } from "@/lib/text-encoding";
+import { enqueueNotificationDelivery } from "@/lib/redis-notification-queue";
+import { after } from "next/server";
 
 export async function createNotification({
   userId,
@@ -51,6 +53,7 @@ export async function createNotification({
   }
 
   let notification = null;
+  let deliveryCreated = false;
   const storedTelegramPayload = telegramRichMessage
     ? (JSON.parse(JSON.stringify(telegramRichMessage)) as Prisma.InputJsonValue)
     : undefined;
@@ -71,6 +74,7 @@ export async function createNotification({
       });
       if (created.count > 0 && stored) {
         await tx.notificationDelivery.create({ data: { notificationId: stored.id, ...deliveryData } });
+        deliveryCreated = true;
       }
       return stored;
     });
@@ -80,12 +84,32 @@ export async function createNotification({
         data: { userId, title: safeTitle, body: safeBody, type, link, dedupeKey },
       });
       await tx.notificationDelivery.create({ data: { notificationId: stored.id, ...deliveryData } });
+      deliveryCreated = true;
       return stored;
     });
   }
 
   if (!notification) {
     throw new Error("Failed to create or load notification");
+  }
+
+  if (deliveryCreated) {
+    const queued = await enqueueNotificationDelivery(notification.id, deliveryData.availableAt?.getTime());
+    if (!queued && process.env.REDIS_URL?.trim() && !deliveryData.availableAt) {
+      const notificationId = notification.id;
+      try {
+        after(async () => {
+          try {
+            const { deliverNotificationsImmediately } = await import("@/lib/notifications/delivery-worker");
+            await deliverNotificationsImmediately([notificationId]);
+          } catch {
+            console.warn("[notifications] immediate delivery deferred to PostgreSQL outbox");
+          }
+        });
+      } catch {
+        console.warn("[notifications] no request context; PostgreSQL outbox will deliver");
+      }
+    }
   }
 
   const payload = {

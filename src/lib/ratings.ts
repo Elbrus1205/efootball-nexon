@@ -16,6 +16,8 @@ import { getPlayerDisplayName } from "@/lib/player-name";
 import { getSelectedProfileStatusWhere } from "@/lib/profile-status-query";
 import { selectTournamentBonusMatches, selectTournamentBonusPlayerIds } from "@/lib/rating-bonus-matches";
 import { invalidatePlayerRatings, PLAYER_RATINGS_CACHE_TAG } from "@/lib/ratings-cache";
+import { getOrSetRedisJson } from "@/lib/redis-cache";
+import { redisKey } from "@/lib/redis";
 
 const INITIAL_RATING = 500;
 const K_FACTOR = 30;
@@ -84,10 +86,16 @@ export type PlayerRatingRow = {
   selectedStatuses: Array<{ id: string; title: string; tone: ProfileStatusTone; type: ProfileStatusType }>;
 };
 
-const getCachedPlayerRatings = unstable_cache(
+const getNextCachedPlayerRatings = unstable_cache(
   async (seasonId: string | null) => computePlayerRatings({ seasonId }),
   ["player-ratings"],
   { revalidate: 60, tags: [PLAYER_RATINGS_CACHE_TAG] },
+);
+
+const getCachedPlayerRatings = (seasonId: string | null) => getOrSetRedisJson(
+  redisKey(`ratings:players:${seasonId ?? "all"}`),
+  () => getNextCachedPlayerRatings(seasonId),
+  60,
 );
 
 function expectedScore(playerRating: number, opponentRating: number) {
