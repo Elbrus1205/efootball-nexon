@@ -8,6 +8,7 @@ import { logAdminAction } from "@/lib/services/admin-actions";
 import { createNotification } from "@/lib/services/notifications";
 import { applyConfiguredReliabilityPenaltyToUsers, formatReliabilityRegistrationRestriction, syncReliabilityRestriction } from "@/lib/services/reliability";
 import { getAcceptedRosterPenaltyUserIds, uniqueReliabilityPenaltyUserIds } from "@/lib/services/reliability-penalty-targets";
+import { snapshotRegistrationMatchesBeforeReplacement } from "@/lib/services/match-lineups";
 import { recalculateGroupStandings } from "@/lib/services/tournaments";
 import { invalidateTournamentAll } from "@/lib/tournament-cache";
 import { hasTelegramRegistrationContact } from "@/lib/social-links";
@@ -392,6 +393,7 @@ async function handleParticipantMutation(request: Request, params: { id: string 
         },
       });
 
+      await snapshotRegistrationMatchesBeforeReplacement(lockedBefore.id, tx);
       const replacedAt = new Date();
       const removedNotes = [
         lockedBefore.notes?.trim(),
@@ -406,9 +408,6 @@ async function handleParticipantMutation(request: Request, params: { id: string 
           status: ParticipantStatus.REMOVED,
           seed: null,
           stageSeed: null,
-          clubSlug: null,
-          clubName: null,
-          clubBadgePath: null,
           notes: removedNotes,
         },
       });
@@ -421,6 +420,8 @@ async function handleParticipantMutation(request: Request, params: { id: string 
           groupId: lockedBefore.groupId,
           seed: lockedBefore.seed,
           stageSeed: lockedBefore.stageSeed,
+          teamName: lockedBefore.teamName,
+          teamLogo: lockedBefore.teamLogo,
           ...clubAssignment,
           approvedAt: replacedAt,
           checkedInAt: lockedBefore.checkedInAt,
@@ -680,6 +681,7 @@ async function handleParticipantMutation(request: Request, params: { id: string 
     const registrationId = member.registration.id;
 
     const result = await db.$transaction(async (tx) => {
+      await snapshotRegistrationMatchesBeforeReplacement(registrationId, tx);
       if (duplicateRegistrationAbsorption.registration) {
         const absorbedAt = new Date();
         const removedNotes = [

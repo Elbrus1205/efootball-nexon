@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Search, SearchX, X } from "lucide-react";
 import type { FaqBlock } from "@/lib/faq/content";
@@ -24,6 +24,16 @@ export function FaqSearch({ entries }: { entries: FaqSearchEntry[] }) {
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>(ALL_CATEGORIES);
   const deferredQuery = useDeferredValue(query);
+
+  useEffect(() => {
+    const mobile = window.matchMedia("(max-width: 639px)");
+    const resetHiddenCategory = () => {
+      if (mobile.matches) setActiveCategory(ALL_CATEGORIES);
+    };
+    resetHiddenCategory();
+    mobile.addEventListener("change", resetHiddenCategory);
+    return () => mobile.removeEventListener("change", resetHiddenCategory);
+  }, []);
 
   const categories = useMemo(() => {
     const ordered: string[] = [];
@@ -78,7 +88,7 @@ export function FaqSearch({ entries }: { entries: FaqSearchEntry[] }) {
         </div>
 
         {categories.length > 1 ? (
-          <div className="flex flex-wrap gap-2">
+          <div className="hidden flex-wrap gap-2 sm:flex">
             <CategoryChip active={activeCategory === ALL_CATEGORIES} onClick={() => setActiveCategory(ALL_CATEGORIES)}>
               Все
             </CategoryChip>

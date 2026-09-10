@@ -152,6 +152,7 @@ export function ParticipantManager({
   const normalizedParticipantQuery = normalizeSearch(participantQuery);
   const visibleParticipants = normalizedParticipantQuery
     ? participants.filter((participant) => participantSearchText(participant).includes(normalizedParticipantQuery))
+      .sort((left, right) => Number(left.status === ParticipantStatus.REMOVED) - Number(right.status === ParticipantStatus.REMOVED))
     : [];
   const takenClubSlugs = useMemo(
     () => new Set(participants.filter((participant) => participant.status !== ParticipantStatus.REMOVED).map((participant) => participant.clubSlug).filter(Boolean)),
@@ -251,6 +252,10 @@ export function ParticipantManager({
       // Сбрасываем состояние поиска замены, чтобы следующую замену можно было сделать сразу
       // (иначе остаётся прежний выбранный игрок/запрос, и кандидаты не подгружаются заново).
       setOpenReplacementTargetId(null);
+      if (body.action === "replace" && typeof payload?.registration?.id === "string") {
+        setOpenParticipantId(payload.registration.id);
+        setParticipantQuery(payload.registration.clubName ?? "");
+      }
       setReplacementByParticipant({});
       setReplacementClubByParticipant({});
       setReplacementSearchByParticipant({});

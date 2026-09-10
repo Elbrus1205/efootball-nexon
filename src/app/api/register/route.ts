@@ -4,7 +4,7 @@ import { getActiveProfileStatusWhere } from "@/lib/profile-status-query";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth/session";
 import { generateVerificationCode, hashVerificationCode, sendEmailVerificationCode } from "@/lib/email";
-import { getRegistrationAge, getRegistrationConsentData, LEGAL_ACCEPTANCE_REQUIRED_MESSAGE } from "@/lib/legal-acceptance";
+import { getRegistrationConsentData, LEGAL_ACCEPTANCE_REQUIRED_MESSAGE } from "@/lib/legal-acceptance";
 import { generateUniquePublicPlayerId } from "@/lib/public-player-id";
 import { enforceRateLimit } from "@/lib/request-rate-limit";
 import { resolveRequestTimeZone } from "@/lib/time-zone";
@@ -27,8 +27,7 @@ export async function POST(request: Request) {
       fieldErrors.termsAccepted?.[0] ??
       fieldErrors.personalDataConsent?.[0] ??
       fieldErrors.publicDataConsent?.[0] ??
-      fieldErrors.dateOfBirth?.[0] ??
-      fieldErrors.guardianConsent?.[0] ??
+      fieldErrors.crossBorderConsent?.[0] ??
       fieldErrors.email?.[0] ??
       fieldErrors.password?.[0] ??
       fieldErrors.name?.[0] ??
@@ -43,7 +42,6 @@ export async function POST(request: Request) {
   if (limited) return limited;
   const normalizedName = normalizeDisplayName(body.name);
   const emailCode = String((rawBody as { emailCode?: unknown }).emailCode ?? "").trim();
-  const registrationAge = getRegistrationAge(body.dateOfBirth)!;
   const requestTimeZone = resolveRequestTimeZone(request.headers);
   const existing = await db.user.findFirst({
     where: {
@@ -123,9 +121,7 @@ export async function POST(request: Request) {
           name: normalizedName,
           timeZone: requestTimeZone,
           timeZoneUpdatedAt: requestTimeZone ? new Date() : null,
-          ...getRegistrationConsentData(request.headers, {
-            dateOfBirth: registrationAge.dateOfBirth,
-          }),
+          ...getRegistrationConsentData(request.headers),
         },
       });
 

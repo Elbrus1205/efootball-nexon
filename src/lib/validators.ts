@@ -14,7 +14,6 @@ import {
 import { z } from "zod";
 import { PROFILE_BIO_MAX_LENGTH } from "@/lib/profile";
 import { MAX_SELECTED_PROFILE_STATUSES } from "@/lib/profile-status-style";
-import { ADULT_AGE, getRegistrationAge, MINIMUM_REGISTRATION_AGE } from "@/lib/legal-acceptance";
 
 const optionalIntField = (minimum: number, maximum: number, message?: string) =>
   z.preprocess(
@@ -45,7 +44,6 @@ export const registerSchema = z
     email: z.string().email(),
     password: z.string().min(8),
     name: playerNameSchema,
-    dateOfBirth: z.string(),
     termsAccepted: z.boolean().refine(Boolean, {
       message: "Необходимо принять пользовательское соглашение.",
     }),
@@ -55,26 +53,9 @@ export const registerSchema = z
     publicDataConsent: z.boolean().refine(Boolean, {
       message: "Для публичного турнирного профиля необходимо отдельное согласие на распространение данных.",
     }),
-    guardianConsent: z.boolean().optional(),
-  })
-  .superRefine((value, context) => {
-    const registrationAge = getRegistrationAge(value.dateOfBirth);
-    if (!registrationAge) {
-      context.addIssue({ code: z.ZodIssueCode.custom, path: ["dateOfBirth"], message: "Укажите корректную дату рождения." });
-      return;
-    }
-
-    if (registrationAge.age < MINIMUM_REGISTRATION_AGE) {
-      context.addIssue({ code: z.ZodIssueCode.custom, path: ["dateOfBirth"], message: "Регистрация доступна с 12 лет." });
-    }
-
-    if (registrationAge.age < ADULT_AGE && !value.guardianConsent) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["guardianConsent"],
-        message: "Необходимо согласие законного представителя.",
-      });
-    }
+    crossBorderConsent: z.boolean().refine(Boolean, {
+      message: "Необходимо отдельно дать согласие на трансграничную передачу данных.",
+    }),
   });
 
 export const loginSchema = z.object({

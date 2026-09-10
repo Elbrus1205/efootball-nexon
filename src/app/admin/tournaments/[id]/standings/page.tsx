@@ -46,7 +46,7 @@ export default async function AdminTournamentStandingsPage(props: { params: Prom
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Standings Manager</CardTitle>
+          <CardTitle>Управление таблицей</CardTitle>
           <CardDescription>Живые таблицы групп с ручной правкой мест, очков, разницы мячей и статистики.</CardDescription>
         </CardHeader>
       </Card>

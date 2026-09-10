@@ -56,6 +56,7 @@ const legalLinks = [
   { href: "/privacy", label: "Политика конфиденциальности" },
   { href: "/terms", label: "Пользовательское соглашение" },
   { href: "/consent", label: "Согласие на обработку данных" },
+  { href: "/legal/cross-border", label: "Трансграничная передача данных" },
   { href: "/cookies", label: "Политика cookie" },
 ];
 

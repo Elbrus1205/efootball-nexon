@@ -14,17 +14,6 @@ import { Label } from "@/components/ui/label";
 import { getDeviceFingerprint } from "@/lib/device-fingerprint";
 import { startVkIdAuth } from "@/lib/vkid-client";
 
-function calculateAge(dateValue: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) return null;
-  const date = new Date(`${dateValue}T00:00:00Z`);
-  if (Number.isNaN(date.getTime()) || date > new Date()) return null;
-  const now = new Date();
-  let age = now.getUTCFullYear() - date.getUTCFullYear();
-  const monthDelta = now.getUTCMonth() - date.getUTCMonth();
-  if (monthDelta < 0 || (monthDelta === 0 && now.getUTCDate() < date.getUTCDate())) age -= 1;
-  return age;
-}
-
 function ConsentCheckbox({
   id,
   checked,
@@ -84,27 +73,20 @@ export function AuthForm({
   const [challengeToken, setChallengeToken] = useState("");
   const [registrationVerificationStep, setRegistrationVerificationStep] = useState(false);
   const [emailCode, setEmailCode] = useState("");
-  const [dateOfBirth, setDateOfBirth] = useState("");
-  const [guardianConsent, setGuardianConsent] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [personalDataConsent, setPersonalDataConsent] = useState(false);
   const [publicDataConsent, setPublicDataConsent] = useState(false);
+  const [crossBorderConsent, setCrossBorderConsent] = useState(false);
   const router = useRouter();
   const requiresLegalAcceptance = type === "register";
-  const registrationAge = requiresLegalAcceptance ? calculateAge(dateOfBirth) : null;
-  const isMinor = registrationAge !== null && registrationAge < 18;
-  const separateConsentsAccepted = termsAccepted && personalDataConsent && publicDataConsent;
-  const registrationDetailsValid =
-    registrationAge !== null &&
-    registrationAge >= 12 &&
-    separateConsentsAccepted &&
-    (!isMinor || guardianConsent);
+  const separateConsentsAccepted = termsAccepted && personalDataConsent && publicDataConsent && crossBorderConsent;
+  const registrationDetailsValid = separateConsentsAccepted;
   const externalRegistrationAllowed = !requiresLegalAcceptance || registrationDetailsValid;
 
   const ensureLegalAccepted = () => {
     if (!requiresLegalAcceptance || registrationDetailsValid) return true;
 
-    toast.error("Укажите дату рождения и примите каждое необходимое согласие.");
+    toast.error("Примите каждое необходимое согласие.");
     return false;
   };
 
@@ -116,7 +98,7 @@ export function AuthForm({
         if (typeof window === "undefined") return;
 
         if (requiresLegalAcceptance && !externalRegistrationAllowed) {
-          toast.error("Заполните дату рождения и отдельные согласия.");
+          toast.error("Примите отдельные согласия.");
           return;
         }
 
@@ -126,8 +108,7 @@ export function AuthForm({
           termsAccepted,
           personalDataConsent,
           publicDataConsent,
-          guardianConsent: isMinor ? guardianConsent : undefined,
-          dateOfBirth,
+          crossBorderConsent,
         }, vkAppId);
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Не удалось запустить вход через VK.");
@@ -150,11 +131,10 @@ export function AuthForm({
               email: normalizedEmail,
               password,
               name,
-              dateOfBirth,
               termsAccepted,
               personalDataConsent,
               publicDataConsent,
-              guardianConsent: isMinor ? guardianConsent : undefined,
+              crossBorderConsent,
               emailCode: registrationVerificationStep ? emailCode : undefined,
             }),
           });
@@ -264,27 +244,6 @@ export function AuthForm({
                 onChange={(event) => setName(event.target.value)}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="dateOfBirth" className="text-xs">Дата рождения</Label>
-              <Input
-                id="dateOfBirth"
-                type="date"
-                className="h-10 rounded-lg px-3"
-                value={dateOfBirth}
-                onChange={(event) => setDateOfBirth(event.target.value)}
-              />
-              {registrationAge !== null && registrationAge < 12 ? <p className="text-xs text-rose-300">Регистрация доступна с 12 лет.</p> : null}
-            </div>
-            {isMinor ? (
-              <ConsentCheckbox
-                id="guardianConsent"
-                checked={guardianConsent}
-                onChange={setGuardianConsent}
-                title="Законный представитель даёт согласие"
-              >
-                Подтверждаю, что законный представитель ознакомился с документами сайта и согласен на регистрацию, обработку персональных данных несовершеннолетнего и публикацию его турнирного профиля.
-              </ConsentCheckbox>
-            ) : null}
           </div>
         ) : null}
 
@@ -342,6 +301,10 @@ export function AuthForm({
             </ConsentCheckbox>
             <ConsentCheckbox id="publicDataConsent" checked={publicDataConsent} onChange={setPublicDataConsent} title="Отдельно разрешаю публикацию турнирного профиля">
               Разрешаю публиковать игровое имя, публичный ID, аватар и bio; турнирную историю, результаты, рейтинг и статистику; привязанные социальные ссылки; часовой пояс и дату регистрации. Согласие можно отозвать обращением оператору.
+            </ConsentCheckbox>
+            <ConsentCheckbox id="crossBorderConsent" checked={crossBorderConsent} onChange={setCrossBorderConsent} title="Даю согласие на трансграничную передачу данных">
+              База данных Supabase и Redis AWS размещены в Ирландии. Прочитал и принимаю{" "}
+              <Link className="text-primary transition hover:text-white" href="/legal/cross-border" target="_blank" rel="noopener noreferrer">отдельное согласие на передачу данных</Link>.
             </ConsentCheckbox>
             <p className="px-1 text-[11px] leading-4 text-zinc-500">
               На сайте используются только обязательные cookie. Подробнее —{" "}
@@ -405,11 +368,10 @@ export function AuthForm({
                 clientId={telegramClientId}
                 requireLegalAcceptance={requiresLegalAcceptance}
                 registrationAllowed={externalRegistrationAllowed}
-                dateOfBirth={dateOfBirth}
                 termsAccepted={termsAccepted}
                 personalDataConsent={personalDataConsent}
                 publicDataConsent={publicDataConsent}
-                guardianConsent={guardianConsent}
+                crossBorderConsent={crossBorderConsent}
               />
             </div>
 

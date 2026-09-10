@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { SecurityPanel } from "@/components/dashboard/security-panel";
-import { resolveSecurityContext } from "@/lib/auth/security";
+import { deleteExpiredSecuritySessions, resolveSecurityContext } from "@/lib/auth/security";
 import { requireAuth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
@@ -13,6 +13,7 @@ function sessionIcon(platform: string | null): "laptop" | "phone" {
 
 export default async function DashboardSecurityPage() {
   const session = await requireAuth();
+  await deleteExpiredSecuritySessions(session.user.id);
   const currentContext = await resolveSecurityContext(await headers());
   const telegramClientId = process.env.TELEGRAM_CLIENT_ID;
   const telegramEnabled = Boolean(telegramClientId);
@@ -31,6 +32,7 @@ export default async function DashboardSecurityPage() {
       securitySessions: {
         where: {
           revokedAt: null,
+          expiresAt: { gt: new Date() },
         },
         orderBy: {
           lastActiveAt: "desc",
@@ -81,7 +83,6 @@ export default async function DashboardSecurityPage() {
       <div className={styles.shell}>
         <div className={styles.intro}>
           <div>
-            <div className={styles.eyebrow}>Account protection</div>
             <h1 className={styles.title}>Безопасность<br />аккаунта</h1>
             <p className={styles.description}>Настройте вход, привязки и активные устройства в одном спокойном пространстве.</p>
           </div>

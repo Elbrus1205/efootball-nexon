@@ -89,6 +89,26 @@ export async function ensureMatchLineupSnapshot(matchId: string, client: MatchLi
   return lineup.map((item) => ({ userId: item.userId, side: item.side }));
 }
 
+// Freeze submitted/played rosters before membership changes. Existing snapshots
+// are immutable; an empty, unplayed fixture receives its lineup after replacement.
+export async function snapshotRegistrationMatchesBeforeReplacement(registrationId: string, client: MatchLineupClient = db) {
+  const matches = await client.match.findMany({
+    where: {
+      AND: [
+        { OR: [{ participant1EntryId: registrationId }, { participant2EntryId: registrationId }] },
+        { OR: [
+          { status: { in: [MatchStatus.CONFIRMED, MatchStatus.FINISHED, MatchStatus.DISPUTED, MatchStatus.RESULT_SUBMITTED, MatchStatus.FORFEIT] } },
+          { player1Score: { not: null } },
+          { player2Score: { not: null } },
+        ] },
+      ],
+      lineupPlayers: { none: {} },
+    },
+    select: { id: true },
+  });
+  for (const match of matches) await ensureMatchLineupSnapshot(match.id, client);
+}
+
 export async function replaceMatchLineupSnapshotPlayer(params: {
   client: MatchLineupTransactionClient;
   matchId: string;

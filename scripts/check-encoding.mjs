@@ -25,6 +25,9 @@ export function checkTextEncoding(bytes) {
   }
   if (text.includes("\0")) return "Unexpected NUL bytes (possibly UTF-16)";
   if (text.includes("\uFFFD")) return "Replacement character U+FFFD: text has already been corrupted";
+  if (/(?:[\u0420\u0421][\u0080-\u00ff\u0400-\u04ff\u2000-\u2122]){3,}/u.test(text)) {
+    return "Mojibake: UTF-8 Cyrillic was decoded as Windows-1251";
+  }
   return null;
 }
 

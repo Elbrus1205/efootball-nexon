@@ -98,7 +98,7 @@ export default async function AdminTournamentBracketPage(props: { params: Promis
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Bracket Editor</CardTitle>
+          <CardTitle>Редактор турнирной сетки</CardTitle>
           <CardDescription>
             Ручная расстановка участников по слотам плей-офф, настройка схемы выхода из групп и автозаполнение сетки по
             актуальным таблицам.

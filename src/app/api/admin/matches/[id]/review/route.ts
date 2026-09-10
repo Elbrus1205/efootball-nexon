@@ -46,8 +46,9 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
 
   const formData = await request.formData();
   const rawReturnTo = String(formData.get("returnTo") || `/admin/matches/${params.id}`);
-  // Only allow same-origin relative paths to avoid open redirects; anything else falls back to the match page.
-  const returnTo = rawReturnTo.startsWith("/") && !rawReturnTo.startsWith("//")
+  // Accept only existing review pages. Relative Location survives reverse proxies.
+  const allowedReturnPaths = ["/admin/moderation", `/admin/moderation/${params.id}`, `/admin/matches/${params.id}`];
+  const returnTo = allowedReturnPaths.includes(rawReturnTo)
     ? rawReturnTo
     : `/admin/matches/${params.id}`;
   const body = reviewSchema.parse({
@@ -167,10 +168,5 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     },
   });
 
-  // 303 See Other forces the browser to follow the redirect with GET.
-  // Without an explicit status, NextResponse.redirect defaults to 307, which
-  // preserves the POST method and re-submits it to a GET-only page route,
-  // producing a 405/blank page. Build the URL from the current request origin
-  // so the redirect stays same-origin instead of jumping to the configured base URL.
-  return NextResponse.redirect(new URL(returnTo, request.url), 303);
+  return new NextResponse(null, { status: 303, headers: { Location: returnTo } });
 }

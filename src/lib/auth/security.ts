@@ -1,8 +1,10 @@
 import { createHash, randomUUID } from "crypto";
 import { LoginAttemptStatus } from "@prisma/client";
+import { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 import { getTrustedClientAddress } from "@/lib/client-address";
 import { db } from "@/lib/db";
-import { getSessionActivityCutoff } from "@/lib/auth/session-activity";
+import { getSessionActivityCutoff, getSessionExpiry } from "@/lib/auth/session-activity";
 
 type HeaderLike =
   | Headers
@@ -129,24 +131,44 @@ export async function createLoginHistory(params: {
   });
 }
 
+export async function readPreviousSecuritySession(headers: HeaderLike) {
+  const cookie = getHeader(headers, "cookie");
+  if (!cookie) return null;
+  const token = await getToken({ req: new NextRequest(process.env.NEXTAUTH_URL ?? "http://localhost", { headers: { cookie } }) });
+  return typeof token?.sub === "string" && typeof token.authSessionId === "string"
+    ? { userId: token.sub, authSessionId: token.authSessionId }
+    : null;
+}
+
 export async function createSecuritySession(params: {
   userId: string;
   authSessionId?: string;
   context: SecurityContext;
+  previousSession?: { userId: string; authSessionId: string } | null;
 }) {
   const authSessionId = params.authSessionId ?? randomUUID();
 
-  await db.securitySession.create({
-    data: {
-      authSessionId,
-      userId: params.userId,
-      device: params.context.device,
-      platform: params.context.platform,
-      location: params.context.location,
-      ipAddress: params.context.ipAddress,
-      userAgent: params.context.userAgent,
-      deviceFingerprint: params.context.deviceFingerprint,
-    },
+  await deleteExpiredSecuritySessions(params.userId);
+
+  await db.$transaction(async (tx) => {
+    // A successful sign-in replaces this browser's old cookie. Remove only
+    // the session identified by that signed cookie, never by a fingerprint.
+    if (params.previousSession) {
+      await tx.securitySession.deleteMany({ where: params.previousSession });
+    }
+    await tx.securitySession.create({
+      data: {
+        authSessionId,
+        expiresAt: getSessionExpiry(),
+        userId: params.userId,
+        device: params.context.device,
+        platform: params.context.platform,
+        location: params.context.location,
+        ipAddress: params.context.ipAddress,
+        userAgent: params.context.userAgent,
+        deviceFingerprint: params.context.deviceFingerprint,
+      },
+    });
   });
 
   return authSessionId;
@@ -157,11 +179,19 @@ export async function touchSecuritySession(authSessionId: string, now = new Date
     where: {
       authSessionId,
       revokedAt: null,
+      expiresAt: { gt: now },
       lastActiveAt: { lt: getSessionActivityCutoff(now) },
     },
     data: {
       lastActiveAt: now,
+      expiresAt: getSessionExpiry(now),
     },
+  });
+}
+
+export async function deleteExpiredSecuritySessions(userId: string, now = new Date()) {
+  await db.securitySession.deleteMany({
+    where: { userId, OR: [{ revokedAt: { not: null } }, { expiresAt: { lte: now } }] },
   });
 }
 

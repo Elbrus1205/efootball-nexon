@@ -20,6 +20,11 @@ test("rejects Windows-1251 embedded in an otherwise UTF-8 component", () => {
   assert.match(checkTextEncoding(bytes), /Invalid UTF-8/);
 });
 
+test("rejects Cyrillic mojibake saved as valid UTF-8", () => {
+  const corrupted = new TextDecoder("windows-1251").decode(Buffer.from("Профиль"));
+  assert.match(checkTextEncoding(Buffer.from(corrupted)), /Mojibake/);
+});
+
 test("rejects UTF-16, truncated sequences and replacement characters", () => {
   assert.ok(checkTextEncoding(Buffer.from("source", "utf16le")));
   assert.ok(checkTextEncoding(Buffer.from([0xd0])));

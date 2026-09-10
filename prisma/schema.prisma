@@ -387,7 +387,10 @@ model User {
   legalAcceptedVersion                       String?
   legalAcceptedIp                            String?
   legalAcceptedUserAgent                     String?                             @db.Text
-  dateOfBirth                                DateTime?                           @db.Date
+  crossBorderConsentAt                       DateTime?
+  crossBorderConsentVersion                  String?
+  crossBorderConsentIp                       String?
+  crossBorderConsentUserAgent                String?                             @db.Text
   termsAcceptedAt                            DateTime?
   termsAcceptedVersion                       String?
   personalDataConsentAt                      DateTime?
@@ -399,12 +402,6 @@ model User {
   publicDataConsentIp                        String?
   publicDataConsentUserAgent                 String?                             @db.Text
   publicDataConsentCategories                String[]                            @default([])
-  guardianFullName                           String?
-  guardianEmail                              String?
-  guardianConsentAt                          DateTime?
-  guardianConsentVersion                     String?
-  guardianConsentIp                          String?
-  guardianConsentUserAgent                   String?                             @db.Text
   reliabilityScore                           Int                                 @default(100)
   reliabilityRestrictedUntil                 DateTime?
   reliabilityConfirmStreak                   Int                                 @default(0)
@@ -1050,8 +1047,8 @@ model TournamentRegistration {
   matchLineupEntries  MatchLineupPlayer[]
   stageEntries        TournamentStageEntry[]
 
-  @@unique([tournamentId, userId])
-  @@unique([tournamentId, clubSlug])
+  @@index([tournamentId, userId])
+  @@index([tournamentId, clubSlug])
   @@index([tournamentId, status])
   @@index([tournamentId, seed, createdAt])
   @@index([groupId])
@@ -1381,11 +1378,13 @@ model SecuritySession {
   userAgent         String?   @db.Text
   deviceFingerprint String?
   lastActiveAt      DateTime  @default(now())
+  expiresAt         DateTime
   createdAt         DateTime  @default(now())
   revokedAt         DateTime?
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, revokedAt, lastActiveAt])
+  @@index([userId, expiresAt])
 }
 
 model LoginHistory {

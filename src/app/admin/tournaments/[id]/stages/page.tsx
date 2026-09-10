@@ -24,7 +24,7 @@ export default async function AdminTournamentStagesPage(props: { params: Promise
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Stage Editor</CardTitle>
+          <CardTitle>Редактор этапов</CardTitle>
           <CardDescription>Управление порядком, статусом и visual pipeline этапов турнира: лига, группы и плей-офф.</CardDescription>
         </CardHeader>
       </Card>

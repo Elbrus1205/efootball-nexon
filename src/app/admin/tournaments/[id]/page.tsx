@@ -384,7 +384,6 @@ export default async function AdminTournamentWorkspacePage(props: { params: Prom
               {tournament.playoffType ? <Badge variant="neutral">{playoffTypeLabel[tournament.playoffType]}</Badge> : null}
             </div>
             <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Workspace турнира</div>
               <h1 className="mt-2 break-words font-display text-2xl font-thin leading-tight text-white sm:text-3xl">
                 {tournament.title}
               </h1>

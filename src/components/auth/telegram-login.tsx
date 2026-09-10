@@ -12,22 +12,20 @@ export function TelegramLogin({
   clientId,
   requireLegalAcceptance = false,
   registrationAllowed = true,
-  dateOfBirth = "",
   termsAccepted = false,
   personalDataConsent = false,
   publicDataConsent = false,
-  guardianConsent = false,
+  crossBorderConsent = false,
 }: {
   mode: "login" | "register";
   enabled: boolean;
   clientId?: string;
   requireLegalAcceptance?: boolean;
   registrationAllowed?: boolean;
-  dateOfBirth?: string;
   termsAccepted?: boolean;
   personalDataConsent?: boolean;
   publicDataConsent?: boolean;
-  guardianConsent?: boolean;
+  crossBorderConsent?: boolean;
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,11 +70,10 @@ export function TelegramLogin({
 
       const result = await signIn("telegram", {
         idToken,
-        dateOfBirth,
         termsAccepted: termsAccepted ? "true" : "false",
         personalDataConsent: personalDataConsent ? "true" : "false",
         publicDataConsent: publicDataConsent ? "true" : "false",
-        guardianConsent: guardianConsent ? "true" : "false",
+        crossBorderConsent: crossBorderConsent ? "true" : "false",
         callbackUrl: "/dashboard",
         fingerprint: await getDeviceFingerprint(),
         redirect: false,

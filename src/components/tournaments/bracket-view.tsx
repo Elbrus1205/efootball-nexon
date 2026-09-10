@@ -105,20 +105,20 @@ function resolveClubMeta(match: BracketMatch, slot: 1 | 2, clubsByUserId: Record
   if (slot === 1) {
     return {
       clubName: match.player1Id
-        ? clubsByUserId[match.player1Id]?.clubName ?? match.participant1Entry?.clubName
+        ? match.participant1Entry?.clubName ?? clubsByUserId[match.player1Id]?.clubName
         : match.participant1Entry?.clubName,
       clubBadgePath: match.player1Id
-        ? clubsByUserId[match.player1Id]?.clubBadgePath ?? match.participant1Entry?.clubBadgePath
+        ? match.participant1Entry?.clubBadgePath ?? clubsByUserId[match.player1Id]?.clubBadgePath
         : match.participant1Entry?.clubBadgePath,
     };
   }
 
   return {
     clubName: match.player2Id
-      ? clubsByUserId[match.player2Id]?.clubName ?? match.participant2Entry?.clubName
+      ? match.participant2Entry?.clubName ?? clubsByUserId[match.player2Id]?.clubName
       : match.participant2Entry?.clubName,
     clubBadgePath: match.player2Id
-      ? clubsByUserId[match.player2Id]?.clubBadgePath ?? match.participant2Entry?.clubBadgePath
+      ? match.participant2Entry?.clubBadgePath ?? clubsByUserId[match.player2Id]?.clubBadgePath
       : match.participant2Entry?.clubBadgePath,
   };
 }

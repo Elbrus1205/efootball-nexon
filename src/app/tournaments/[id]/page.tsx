@@ -291,22 +291,6 @@ function resolveClubBadgePath(
   return entry.clubSlug ? clubsBySlug.get(entry.clubSlug)?.imagePath ?? null : null;
 }
 
-function getReplacementRegistrationId(notes?: string | null) {
-  return notes?.match(/replacementRegistrationId:([A-Za-z0-9]+)/)?.[1] ?? null;
-}
-
-function resolveReplacementRegistrationId(entryId: string, replacements: Map<string, string>) {
-  let current = entryId;
-  const seen = new Set<string>();
-
-  while (replacements.has(current) && !seen.has(current)) {
-    seen.add(current);
-    current = replacements.get(current)!;
-  }
-
-  return current;
-}
-
 function buildCustomStandingHighlights(tournament: {
   format: TournamentFormat;
   formatBlueprintJson: unknown;
@@ -729,20 +713,11 @@ export default async function TournamentDetailsPage(
     notFound();
   }
 
-  const participantIds = new Set(tournament.participants.map((entry) => entry.id));
   const participantByEntryId = new Map(tournament.participants.map((entry) => [entry.id, entry]));
-  const replacementByEntryId = new Map(
-    tournament.participants
-      .filter((entry) => entry.status === ParticipantStatus.REMOVED)
-      .map((entry) => [entry.id, getReplacementRegistrationId(entry.notes)])
-      .filter((item): item is [string, string] => Boolean(item[1] && participantIds.has(item[1]))),
-  );
-  const resolveActiveEntryId = (entryId?: string | null) =>
-    entryId ? resolveReplacementRegistrationId(entryId, replacementByEntryId) : null;
   const resolveMatchEntry = (match: (typeof tournament.matches)[number], side: 1 | 2) => {
     const rawEntry = side === 1 ? match.participant1Entry : match.participant2Entry;
-    const activeEntryId = resolveActiveEntryId(side === 1 ? match.participant1EntryId : match.participant2EntryId);
-    return (activeEntryId ? participantByEntryId.get(activeEntryId) : null) ?? rawEntry;
+    const entryId = side === 1 ? match.participant1EntryId : match.participant2EntryId;
+    return (entryId ? participantByEntryId.get(entryId) : null) ?? rawEntry;
   };
   const resolveMatchUserId = (match: (typeof tournament.matches)[number], side: 1 | 2) =>
     (side === 1 ? match.player1Id : match.player2Id) ?? resolveMatchEntry(match, side)?.userId ?? null;
@@ -995,8 +970,8 @@ export default async function TournamentDetailsPage(
       playerId,
       playerName,
       showPlayerName: !isUnassignedCaptainMatch,
-      clubName: mappedClub?.clubName ?? (entry ? resolveClubName(entry, clubsBySlug, playerName) : null),
-      clubBadgePath: mappedClub?.clubBadgePath ?? (entry ? resolveClubBadgePath(entry, clubsBySlug) : null),
+      clubName: entry ? resolveClubName(entry, clubsBySlug, playerName) : mappedClub?.clubName ?? null,
+      clubBadgePath: (entry ? resolveClubBadgePath(entry, clubsBySlug) : null) ?? mappedClub?.clubBadgePath ?? null,
     };
   };
   const scheduleViewSections = scheduleSections.map((section) => ({

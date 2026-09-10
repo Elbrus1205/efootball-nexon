@@ -19,26 +19,6 @@
   margin-bottom: 2rem;
 }
 
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: .55rem;
-  color: #91bba5;
-  font-size: .68rem;
-  font-weight: 700;
-  letter-spacing: .18em;
-  text-transform: uppercase;
-}
-
-.eyebrow::before {
-  width: .42rem;
-  height: .42rem;
-  border-radius: 50%;
-  background: #91bba5;
-  box-shadow: 0 0 0 4px rgba(145, 187, 165, .1);
-  content: "";
-}
-
 .title {
   margin-top: .8rem;
   color: #eef2ed;

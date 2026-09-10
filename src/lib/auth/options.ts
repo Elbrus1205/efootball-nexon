@@ -1,15 +1,14 @@
-import { randomUUID } from "crypto";
 import { LoginAttemptStatus, UserRole } from "@prisma/client";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { compare, hash } from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { notifySuccessfulLogin } from "@/lib/auth/notifications";
-import { createLoginHistory, createSecuritySession, deleteSecuritySessions, resolveSecurityContext, touchSecuritySession, withDeviceFingerprint } from "@/lib/auth/security";
-import { shouldRefreshSessionActivity } from "@/lib/auth/session-activity";
+import { createLoginHistory, createSecuritySession, deleteSecuritySessions, readPreviousSecuritySession, resolveSecurityContext, touchSecuritySession, withDeviceFingerprint } from "@/lib/auth/security";
+import { AUTH_SESSION_MAX_AGE_SECONDS, shouldRefreshSessionActivity } from "@/lib/auth/session-activity";
 import { fetchVkUserProfile } from "@/lib/auth/vk";
 import { db } from "@/lib/db";
-import { ADULT_AGE, getRegistrationAge, getRegistrationConsentData, hasSeparateRegistrationConsents } from "@/lib/legal-acceptance";
+import { getRegistrationConsentData, hasSeparateRegistrationConsents } from "@/lib/legal-acceptance";
 import { maybeCacheTelegramAvatar } from "@/lib/media-processing";
 import { generateFallbackName } from "@/lib/player-name";
 import { generateUniquePublicPlayerId } from "@/lib/public-player-id";
@@ -21,15 +20,6 @@ import { generateUniqueDisplayName } from "@/lib/user-names";
 
 const TELEGRAM_ADMIN_ID = "6595067194";
 const MAX_SESSION_IMAGE_LENGTH = 2048;
-const FALLBACK_SECURITY_CONTEXT = {
-  device: "Текущее устройство",
-  platform: "Не определено",
-  location: "Не определено",
-  ipAddress: null,
-  userAgent: "Неизвестное устройство",
-  deviceFingerprint: null,
-};
-
 function toSessionImage(value?: string | null) {
   if (!value) return null;
   if (value.startsWith("data:")) return null;
@@ -39,16 +29,14 @@ function toSessionImage(value?: string | null) {
 
 function getSocialRegistrationConsent(credentials: Record<string, string> | undefined, headers: Headers | Record<string, string | string[] | undefined> | undefined) {
   if (!credentials || !hasSeparateRegistrationConsents(credentials)) return null;
-  const registrationAge = getRegistrationAge(credentials.dateOfBirth);
-  if (!registrationAge || registrationAge.age < 12) return null;
-  if (registrationAge.age < ADULT_AGE && credentials.guardianConsent !== "true") return null;
-  return getRegistrationConsentData(headers, { dateOfBirth: registrationAge.dateOfBirth });
+  return getRegistrationConsentData(headers);
 }
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db) as never,
   session: {
     strategy: "jwt",
+    maxAge: AUTH_SESSION_MAX_AGE_SECONDS,
   },
   pages: {
     signIn: "/login",
@@ -164,6 +152,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         const authSessionId = await createSecuritySession({
+          previousSession: await readPreviousSecuritySession(req.headers),
           userId: user.id,
           context,
         });
@@ -199,11 +188,10 @@ export const authOptions: NextAuthOptions = {
       name: "VK ID",
       credentials: {
         accessToken: { label: "VK Access Token", type: "text" },
-        dateOfBirth: { label: "Date of Birth", type: "text" },
         termsAccepted: { label: "Terms Accepted", type: "text" },
         personalDataConsent: { label: "Personal Data Consent", type: "text" },
         publicDataConsent: { label: "Public Data Consent", type: "text" },
-        guardianConsent: { label: "Guardian Consent", type: "text" },
+        crossBorderConsent: { label: "Cross Border Consent", type: "text" },
         fingerprint: { label: "Device Fingerprint", type: "text" },
       },
       async authorize(credentials, req) {
@@ -272,6 +260,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         const authSessionId = await createSecuritySession({
+          previousSession: await readPreviousSecuritySession(req.headers),
           userId: user.id,
           context,
         });
@@ -307,11 +296,10 @@ export const authOptions: NextAuthOptions = {
       name: "Telegram",
       credentials: {
         idToken: { label: "Telegram ID Token", type: "text" },
-        dateOfBirth: { label: "Date of Birth", type: "text" },
         termsAccepted: { label: "Terms Accepted", type: "text" },
         personalDataConsent: { label: "Personal Data Consent", type: "text" },
         publicDataConsent: { label: "Public Data Consent", type: "text" },
-        guardianConsent: { label: "Guardian Consent", type: "text" },
+        crossBorderConsent: { label: "Cross Border Consent", type: "text" },
         fingerprint: { label: "Device Fingerprint", type: "text" },
       },
       async authorize(credentials, req) {
@@ -414,6 +402,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         const authSessionId = await createSecuritySession({
+          previousSession: await readPreviousSecuritySession(req.headers),
           userId: user.id,
           context,
         });
@@ -516,6 +505,7 @@ export const authOptions: NextAuthOptions = {
         });
 
         const authSessionId = await createSecuritySession({
+          previousSession: await readPreviousSecuritySession(req.headers),
           userId: user.id,
           context,
         });
@@ -570,17 +560,9 @@ export const authOptions: NextAuthOptions = {
         let dbUser;
 
         if (!token.authSessionId) {
-          dbUser = await db.user.findUnique({ where: { id: token.sub } });
-
-          if (!dbUser || dbUser.isBanned) {
-            return {} as typeof token;
-          }
-
-          token.authSessionId = await createSecuritySession({
-            userId: token.sub,
-            authSessionId: randomUUID(),
-            context: FALLBACK_SECURITY_CONTEXT,
-          });
+          // Only an actual provider authorize() call may create a device
+          // session. Legacy JWTs without that proof must sign in again.
+          return {} as typeof token;
         }
 
         if (token.authSessionId) {
@@ -590,11 +572,12 @@ export const authOptions: NextAuthOptions = {
               userId: true,
               revokedAt: true,
               lastActiveAt: true,
+              expiresAt: true,
               user: true,
             },
           });
 
-          if (!activeSession || activeSession.revokedAt || activeSession.userId !== token.sub || activeSession.user.isBanned) {
+          if (!activeSession || activeSession.revokedAt || activeSession.expiresAt <= new Date() || activeSession.userId !== token.sub || activeSession.user.isBanned) {
             return {} as typeof token;
           }
 
@@ -641,4 +624,3 @@ export const authOptions: NextAuthOptions = {
     },
   },
 };
-
