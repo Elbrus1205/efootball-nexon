@@ -9,7 +9,7 @@ export default async function RegulationsPage() {
       <Card className="mx-auto max-w-4xl overflow-hidden rounded-2xl border-white/10 bg-[#121715] p-0 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
         <div className="border-b border-white/10 bg-gradient-to-r from-[#b99552]/15 via-transparent to-transparent px-5 py-6 sm:px-8 sm:py-8"><div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#d6b56d]">eFootball Nexon · официальный документ</div><h1 className="mt-3 font-display text-3xl font-thin text-white sm:text-4xl">Регламент</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">Правила участия в турнирах, матчах и рейтинговой системе.</p></div>
         <div lang="ru" className="space-y-2 break-words px-5 py-6 text-justify text-sm leading-6 text-zinc-300 [hyphens:auto] [overflow-wrap:anywhere] sm:px-8 sm:py-8">
-          {regulations.split(/\r?\n+/).map((paragraph, index) => paragraph.trim() ? <p key={index}>{paragraph.trim()}</p> : null)}
+          {regulations.split(/\r?\n+/).map((paragraph, index) => paragraph.trim() ? <p key={index} className="[text-indent:1cm]">{paragraph.trim()}</p> : null)}
         </div>
       </Card>
     </div>

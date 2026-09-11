@@ -396,7 +396,17 @@ export function RegisterTournamentButton({
 
           <div className="min-h-0 space-y-4 overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-5">
             <div className="max-h-[48vh] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-black/30 p-4 text-sm leading-7 text-zinc-200">
-              <div className="whitespace-pre-wrap">{regulations?.body ?? "Загрузка регламента..."}</div>
+              <div className="space-y-2">
+                {(regulations?.body ?? "Загрузка регламента...")
+                  .split(/\r?\n+/)
+                  .map((paragraph, index) =>
+                    paragraph.trim() ? (
+                      <p key={index} className="[text-indent:1cm]">
+                        {paragraph.trim()}
+                      </p>
+                    ) : null,
+                  )}
+              </div>
             </div>
 
             <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-primary/20 bg-primary/[0.07] p-4 text-sm leading-6 text-zinc-100 transition hover:border-primary/35">

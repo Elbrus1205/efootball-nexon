@@ -118,7 +118,7 @@ export function RegulationsUpdateModal() {
               <p
                 key={`${index}-${line.text.slice(0, 18)}`}
                 className={cn(
-                  "whitespace-pre-wrap rounded-md px-2 py-1",
+                  "[text-indent:1cm] whitespace-pre-wrap rounded-md px-2 py-1",
                   line.changed ? "border border-[#21F1A8]/25 bg-[#21F1A8]/10 text-[#C9FFF0]" : "text-zinc-300",
                 )}
               >

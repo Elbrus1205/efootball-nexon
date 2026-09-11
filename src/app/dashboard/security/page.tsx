@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { SecurityPanel } from "@/components/dashboard/security-panel";
 import { deleteExpiredSecuritySessions, resolveSecurityContext } from "@/lib/auth/security";
 import { requireAuth } from "@/lib/auth/session";
+import { getSessionActivityCutoff } from "@/lib/auth/session-activity";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 import styles from "./security.module.css";
@@ -13,7 +14,8 @@ function sessionIcon(platform: string | null): "laptop" | "phone" {
 
 export default async function DashboardSecurityPage() {
   const session = await requireAuth();
-  await deleteExpiredSecuritySessions(session.user.id);
+  const now = new Date();
+  await deleteExpiredSecuritySessions(session.user.id, now);
   const currentContext = await resolveSecurityContext(await headers());
   const telegramClientId = process.env.TELEGRAM_CLIENT_ID;
   const telegramEnabled = Boolean(telegramClientId);
@@ -32,7 +34,8 @@ export default async function DashboardSecurityPage() {
       securitySessions: {
         where: {
           revokedAt: null,
-          expiresAt: { gt: new Date() },
+          expiresAt: { gt: now },
+          lastActiveAt: { gt: getSessionActivityCutoff(now) },
         },
         orderBy: {
           lastActiveAt: "desc",
