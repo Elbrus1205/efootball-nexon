@@ -180,6 +180,7 @@ const CLUBS: ClubDefinition[] = [
   { fileName: "kobenhavn-big-768x768.png", name: "Копенгаген" },
   { fileName: "malmo-big.png", name: "Мальмё" },
   { fileName: "ludogorets-big.png", name: "Лудогорец" },
+  { fileName: "huesca-big.png", name: "\u0423\u044d\u0441\u043a\u0430" },
   // Recently uploaded badges for the expanded top-five leagues
   { fileName: "everton-big-768x786.png", name: "Эвертон" },
   { fileName: "getafe-big.png", name: "Хетафе" },
@@ -215,7 +216,8 @@ function sortClubs(clubs: ClubOption[]) {
 }
 
 export async function getAvailableClubs() {
-  return getCachedAvailableClubs();
+  const managedClubs = await getCachedManagedClubs();
+  return managedClubs.length ? managedClubs : getCachedAvailableClubs();
 }
 
 export async function getAvailableLeagues(): Promise<LeagueOption[]> {
@@ -255,7 +257,7 @@ export async function getTournamentClubs(tournamentId: string) {
 }
 
 export async function ensureManagedClubCatalog() {
-  const bundledClubs = await getAvailableClubs();
+  const bundledClubs = await getCachedAvailableClubs();
   try {
     const leagueIds = new Map<string, string>();
     for (const [index, league] of TOP_FIVE_LEAGUES.entries()) {
@@ -279,6 +281,41 @@ export async function ensureManagedClubCatalog() {
     return false;
   }
 }
+
+const getCachedManagedClubs = unstable_cache(
+  async () => {
+    try {
+      const clubs = await db.club.findMany({
+        where: { isRegistrationEnabled: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: {
+          slug: true,
+          name: true,
+          imagePath: true,
+          isRegistrationEnabled: true,
+          isInGameEnabled: true,
+          league: { select: { slug: true, name: true } },
+        },
+      });
+
+      return sortClubs(
+        clubs.map((club) => ({
+          slug: club.slug,
+          name: club.name,
+          imagePath: club.imagePath,
+          leagueSlug: club.league?.slug ?? null,
+          leagueName: club.league?.name ?? null,
+          isRegistrationEnabled: club.isRegistrationEnabled,
+          isInGameEnabled: club.isInGameEnabled,
+        })),
+      );
+    } catch {
+      return [];
+    }
+  },
+  ["available-clubs-managed"],
+  { revalidate: 300 },
+);
 
 const getCachedAvailableClubs = unstable_cache(
   async () => {
