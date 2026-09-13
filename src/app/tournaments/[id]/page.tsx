@@ -46,6 +46,7 @@ import {
 } from "@/lib/tournaments/captain-team-match-presentation";
 import { isSupersededCaptainTeamSeriesArchive } from "@/lib/tournaments/captain-team-series-assignment";
 import { isUserInactiveForMatch } from "@/lib/tournaments/inactive-participant";
+import { getStandingZoneStyle, isStandingEliminatedRank, relegationStyle } from "@/lib/tournament-standing-colors";
 import { cn, formatDate } from "@/lib/utils";
 import {
   buildLeagueTable as buildPublicLeagueTable,
@@ -80,6 +81,8 @@ type StandingHighlight = {
   label: string;
   rowClass: string;
   badgeClass: string;
+  rankClass: string;
+  dotClass: string;
 };
 
 type EmptyGroupSlot = {
@@ -90,33 +93,6 @@ type EmptyGroupSlot = {
 function TournamentTabContent({ children }: { children: React.ReactNode }) {
   return <div className="mt-6">{children}</div>;
 }
-
-const CUSTOM_STANDING_HIGHLIGHT_STYLES = [
-  {
-    rowClass: "border-t border-sky-400/20 bg-sky-400/8",
-    badgeClass: "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-sky-400/15 px-1 text-[10px] font-semibold text-sky-300",
-  },
-  {
-    rowClass: "border-t border-emerald-400/20 bg-emerald-400/8",
-    badgeClass: "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-400/15 px-1 text-[10px] font-semibold text-emerald-300",
-  },
-  {
-    rowClass: "border-t border-amber-400/20 bg-amber-400/8",
-    badgeClass: "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-400/15 px-1 text-[10px] font-semibold text-amber-300",
-  },
-  {
-    rowClass: "border-t border-violet-400/20 bg-violet-400/8",
-    badgeClass: "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-400/15 px-1 text-[10px] font-semibold text-violet-300",
-  },
-  {
-    rowClass: "border-t border-rose-400/20 bg-rose-400/8",
-    badgeClass: "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-400/15 px-1 text-[10px] font-semibold text-rose-300",
-  },
-  {
-    rowClass: "border-t border-cyan-400/20 bg-cyan-400/8",
-    badgeClass: "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-cyan-400/15 px-1 text-[10px] font-semibold text-cyan-300",
-  },
-] as const;
 
 function normalizeSearchText(value: string | null | undefined) {
   return (value ?? "").trim().toLowerCase();
@@ -308,7 +284,7 @@ function buildCustomStandingHighlights(tournament: {
     : null;
   const selectedGraphStageId = typeof graphStageId === "string" && graphStageId ? graphStageId : null;
   const byDivision = new Map<number, StandingHighlight[]>();
-  const styleByTarget = new Map<string, (typeof CUSTOM_STANDING_HIGHLIGHT_STYLES)[number]>();
+  const styleByTarget = new Map<string, ReturnType<typeof getStandingZoneStyle>>();
   let styleIndex = 0;
 
   const nationalStage = blueprint.stageGraph?.stages.find((stage) =>
@@ -320,16 +296,14 @@ function buildCustomStandingHighlights(tournament: {
     { fromRank: 1, toRank: 6, label: "ЛЧ" },
     { fromRank: 7, toRank: 12, label: "ЛЕ" },
     { fromRank: 13, toRank: 18, label: "ЛК" },
-    { fromRank: 19, toRank: 20, label: "Вылет" },
   ];
 
   if (nationalStageIsFiveLeagues && nationalStage && (!selectedStage || selectedStage.id === nationalStage.id)) {
     for (let divisionIndex = 1; divisionIndex <= nationalStage.divisions.length; divisionIndex += 1) {
       const bucket = byDivision.get(divisionIndex) ?? [];
-      for (const zone of nationalZones) {
-        const style = CUSTOM_STANDING_HIGHLIGHT_STYLES[styleIndex % CUSTOM_STANDING_HIGHLIGHT_STYLES.length];
-        styleIndex += 1;
-        bucket.push({ ...zone, rowClass: style.rowClass, badgeClass: style.badgeClass });
+      for (const [zoneIndex, zone] of nationalZones.entries()) {
+        const style = getStandingZoneStyle(zoneIndex);
+        bucket.push({ ...zone, rowClass: style.rowClass, badgeClass: style.badgeClass, rankClass: style.rankClass, dotClass: style.dotClass });
       }
       byDivision.set(divisionIndex, bucket);
     }
@@ -347,7 +321,7 @@ function buildCustomStandingHighlights(tournament: {
       ?? (transition.fromDivisionId ? sourceStage.divisions.findIndex((division) => division.id === transition.fromDivisionId) + 1 : 0)) || 1;
     const targetKey = `${targetStage.id}:${transition.targetBracket}`;
     if (!styleByTarget.has(targetKey)) {
-      styleByTarget.set(targetKey, CUSTOM_STANDING_HIGHLIGHT_STYLES[styleIndex % CUSTOM_STANDING_HIGHLIGHT_STYLES.length]);
+      styleByTarget.set(targetKey, getStandingZoneStyle(styleIndex));
       styleIndex += 1;
     }
 
@@ -359,6 +333,8 @@ function buildCustomStandingHighlights(tournament: {
       label: transition.targetBracket === "lower" ? `${targetStage.name} • Нижняя сетка` : targetStage.name,
       rowClass: style.rowClass,
       badgeClass: style.badgeClass,
+      rankClass: style.rankClass,
+      dotClass: style.dotClass,
     });
     byDivision.set(divisionIndex, bucket);
   }
@@ -370,7 +346,7 @@ function buildCustomStandingHighlights(tournament: {
       const targetKey = playoff.type === "SINGLE" ? `${playoff.id}:main` : `${playoff.id}:${selection.targetBracket}`;
 
       if (!styleByTarget.has(targetKey)) {
-        styleByTarget.set(targetKey, CUSTOM_STANDING_HIGHLIGHT_STYLES[styleIndex % CUSTOM_STANDING_HIGHLIGHT_STYLES.length]);
+        styleByTarget.set(targetKey, getStandingZoneStyle(styleIndex));
         styleIndex += 1;
       }
 
@@ -389,6 +365,8 @@ function buildCustomStandingHighlights(tournament: {
         label: targetLabel,
         rowClass: style.rowClass,
         badgeClass: style.badgeClass,
+        rankClass: style.rankClass,
+        dotClass: style.dotClass,
       });
       byDivision.set(selection.divisionIndex, bucket);
     }
@@ -513,6 +491,7 @@ function StandingsTable({
             {rows.map((row, index) => {
               const displayRank = index + 1;
               const highlight = orderedHighlights.find((item) => displayRank >= item.fromRank && displayRank <= item.toRank);
+              const visualStyle = highlight ?? (isStandingEliminatedRank(displayRank, orderedHighlights) ? relegationStyle : null);
               const isCurrentTeam = Boolean(row.isCurrentTeam);
 
               return (
@@ -520,15 +499,15 @@ function StandingsTable({
                   id={`standing-${row.id}`}
                   key={row.id}
                   className={cn(
-                    highlight?.rowClass ?? defaultRowHighlight(index),
+                    visualStyle?.rowClass ?? defaultRowHighlight(index),
                     isCurrentTeam && "font-medium",
                   )}
-                  title={highlight?.label}
+                  title={visualStyle ? highlight?.label ?? "Вылет" : undefined}
                 >
                   <td className="w-4 px-0 py-2 text-zinc-300 sm:w-5 sm:py-3">
                     <span
                       className={cn(
-                        highlight?.badgeClass ?? defaultRankBadge(index),
+                        visualStyle?.badgeClass ?? defaultRankBadge(index),
                         isCurrentTeam && "border border-primary/45 bg-primary/15 text-primary shadow-[0_0_0_2px_rgba(33,241,168,0.12)]",
                       )}
                     >
@@ -580,7 +559,7 @@ function StandingsTable({
                 key={`${highlight.label}-${highlight.fromRank}-${highlight.toRank}`}
                 className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-2 text-xs text-zinc-200"
               >
-                <span className={`h-2.5 w-2.5 rounded-full ${highlight.badgeClass.split(" ").find((item) => item.startsWith("bg-")) ?? "bg-primary/40"}`} />
+                <span className={cn("h-2.5 w-2.5 rounded-full", highlight.dotClass)} />
                 <span className="font-medium text-white">{formatRankRange(highlight.fromRank, highlight.toRank)}</span>
                 <span className="text-zinc-400">→ {highlight.label}</span>
               </div>
@@ -589,11 +568,11 @@ function StandingsTable({
             {eliminatedRanges.map((range) => (
               <div
                 key={`eliminated-${range.fromRank}-${range.toRank}`}
-                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-2 text-xs text-zinc-200"
+                className="inline-flex items-center gap-2 rounded-full border border-red-400/25 bg-red-500/[0.07] px-3 py-2 text-xs text-red-100"
               >
-                <span className="h-2.5 w-2.5 rounded-full bg-zinc-500/70" />
-                <span className="font-medium text-white">{formatRankRange(range.fromRank, range.toRank)}</span>
-                <span className="text-zinc-400">→ Вылет</span>
+                <span className={cn("h-2.5 w-2.5 rounded-full", relegationStyle.dotClass)} />
+                <span className="font-medium text-red-100">{formatRankRange(range.fromRank, range.toRank)}</span>
+                <span className="text-red-200/80">→ Вылет</span>
               </div>
             ))}
           </div>

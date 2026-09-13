@@ -57,6 +57,8 @@ export type StandingHighlight = {
   label: string;
   rowClass: string;
   badgeClass: string;
+  rankClass: string;
+  dotClass: string;
 };
 
 export function prioritizeCurrentGroup<T extends { id: string }>(groups: readonly T[], currentGroupId?: string | null) {

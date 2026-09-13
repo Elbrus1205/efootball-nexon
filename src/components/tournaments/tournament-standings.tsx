@@ -1,6 +1,7 @@
 import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
 import { TournamentMobileStandings } from "@/components/tournaments/tournament-mobile-standings";
 import type { LeagueRow, StandingHighlight } from "@/lib/tournament-public-view";
+import { isStandingEliminatedRank, relegationStyle } from "@/lib/tournament-standing-colors";
 import { cn } from "@/lib/utils";
 
 function rankRange(fromRank: number, toRank: number) {
@@ -42,9 +43,10 @@ export function TournamentStandings({ rows, highlights = [] }: { rows: LeagueRow
             {rows.map((row, index) => {
               const rank = index + 1;
               const highlight = ordered.find((item) => rank >= item.fromRank && rank <= item.toRank);
+              const visualStyle = highlight ?? (isStandingEliminatedRank(rank, ordered) ? relegationStyle : null);
               return (
-                <tr key={row.id} className={cn("border-t border-white/[0.07] transition-colors hover:bg-white/[0.025]", highlight && "bg-emerald-400/[0.045]")}>
-                  <td className="px-3 py-3 text-center"><span className={cn("inline-flex h-7 min-w-7 items-center justify-center rounded-lg border px-1 text-xs font-bold", highlight ? "border-emerald-300/30 bg-emerald-400/10 text-emerald-200" : "border-white/10 bg-black/20 text-zinc-300")}>{rank}</span></td>
+                <tr key={row.id} className={cn(visualStyle?.rowClass ?? "border-t border-white/[0.07]", "transition-colors hover:bg-white/[0.025]")}>
+                  <td className="px-3 py-3 text-center"><span className={cn("inline-flex h-7 min-w-7 items-center justify-center rounded-lg border px-1 text-xs font-bold", visualStyle?.rankClass ?? "border-white/10 bg-black/20 text-zinc-300")}>{rank}</span></td>
                   <td className="min-w-64 px-3 py-3"><ClubPlayerLine clubName={row.clubName} badgePath={row.clubBadgePath} playerId={row.playerId} playerName={row.playerName} isActive={row.isActive} inactiveFromRound={row.inactiveFromRound} compact /></td>
                   {[row.played, row.wins, row.draws, row.losses].map((value, cellIndex) => <td key={cellIndex} className="px-3 py-3 text-center text-zinc-300">{value}</td>)}
                   <td className={cn("px-3 py-3 text-center font-semibold", row.goalDifference > 0 ? "text-emerald-300" : row.goalDifference < 0 ? "text-rose-300" : "text-zinc-300")}>{row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}</td>
@@ -57,8 +59,8 @@ export function TournamentStandings({ rows, highlights = [] }: { rows: LeagueRow
       </div>
       {(ordered.length || eliminated.length) ? (
         <div className="flex flex-wrap gap-2 rounded-2xl border border-white/10 bg-white/[0.025] p-3" aria-label="Легенда турнирной таблицы">
-          {ordered.map((item) => <span key={`${item.label}-${item.fromRank}`} className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-400/[0.07] px-3 py-1.5 text-xs text-zinc-300"><span className="h-2 w-2 rounded-full bg-emerald-300" /><strong className="text-white">{rankRange(item.fromRank, item.toRank)}</strong> → {item.label}</span>)}
-          {eliminated.map((item) => <span key={`out-${item.fromRank}`} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs text-zinc-400"><span className="h-2 w-2 rounded-full bg-zinc-500" /><strong className="text-zinc-200">{rankRange(item.fromRank, item.toRank)}</strong> → Вылет</span>)}
+          {ordered.map((item) => <span key={`${item.label}-${item.fromRank}`} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs text-zinc-300"><span className={cn("h-2 w-2 rounded-full", item.dotClass)} /><strong className="text-white">{rankRange(item.fromRank, item.toRank)}</strong> → {item.label}</span>)}
+          {eliminated.map((item) => <span key={`out-${item.fromRank}`} className="inline-flex items-center gap-2 rounded-full border border-red-400/25 bg-red-500/[0.07] px-3 py-1.5 text-xs text-red-100"><span className={cn("h-2 w-2 rounded-full", relegationStyle.dotClass)} /><strong className="text-red-100">{rankRange(item.fromRank, item.toRank)}</strong> → Вылет</span>)}
         </div>
       ) : null}
     </div>

@@ -1,6 +1,7 @@
 import { ChevronDown, Trophy } from "lucide-react";
 import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
 import type { LeagueRow, StandingHighlight } from "@/lib/tournament-public-view";
+import { isStandingEliminatedRank, relegationStyle } from "@/lib/tournament-standing-colors";
 import { cn } from "@/lib/utils";
 
 function goalDifference(value: number) {
@@ -13,16 +14,17 @@ export function TournamentMobileStandings({ rows, highlights }: { rows: LeagueRo
       {rows.map((row, index) => {
         const rank = index + 1;
         const highlight = highlights.find((item) => rank >= item.fromRank && rank <= item.toRank);
+        const visualStyle = highlight ?? (isStandingEliminatedRank(rank, highlights) ? relegationStyle : null);
         return (
           <li key={row.id}>
-            <details className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025] open:border-primary/25 open:bg-white/[0.04]">
+            <details className={cn("group overflow-hidden rounded-2xl border bg-white/[0.025] open:border-primary/25 open:bg-white/[0.04]", visualStyle?.rowClass ?? "border-white/10")}>
               <summary className="flex min-h-20 cursor-pointer list-none items-center gap-3 p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/70 [&::-webkit-details-marker]:hidden">
-                <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border text-sm font-bold tabular-nums", highlight ? "border-primary/30 bg-primary/10 text-primary" : "border-white/10 bg-black/20 text-zinc-300")}>
+                <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border text-sm font-bold tabular-nums", visualStyle?.rankClass ?? "border-white/10 bg-black/20 text-zinc-300")}>
                   {rank}
                 </span>
                 <div className="min-w-0 flex-1">
                   <ClubPlayerLine clubName={row.clubName} badgePath={row.clubBadgePath} playerId={row.playerId} playerName={row.playerName} isActive={row.isActive} inactiveFromRound={row.inactiveFromRound} compact />
-                  {highlight ? <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-emerald-200"><Trophy className="h-3 w-3" />{highlight.label}</div> : null}
+                  {highlight ? <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-zinc-100"><Trophy className="h-3 w-3" />{highlight.label}</div> : visualStyle ? <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-red-200"><Trophy className="h-3 w-3" />Вылет</div> : null}
                 </div>
                 <div className="shrink-0 text-right tabular-nums">
                   <div className="text-lg font-black text-white">{row.points}</div>
