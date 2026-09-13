@@ -14,10 +14,13 @@ import {
 import { handleTelegramCallbackAction } from "@/lib/services/telegram-callbacks";
 import {
   buildEmptyTelegramAiContext,
+  extractTelegramRound,
   handleTelegramAiMessage,
   isTelegramAbusiveMessage,
   isTelegramAiRelevantMessage,
+  isTelegramPersonalMatchQuestion,
   TELEGRAM_AI_NAME,
+  type TelegramAiAnswer,
   type TelegramAiContext,
   type TelegramAiMessage,
 } from "@/lib/services/telegram-ai";
@@ -487,6 +490,149 @@ async function buildTelegramAiContext(message: TelegramWebhookMessage): Promise<
   };
 }
 
+function telegramParticipantName(
+  entry: {
+    teamName: string | null;
+    clubName: string | null;
+    user: { name: string | null; telegramUsername: string | null };
+  } | null,
+  player: { name: string | null; telegramUsername: string | null } | null,
+) {
+  return player?.name?.trim()
+    || (player?.telegramUsername ? `@${player.telegramUsername.replace(/^@/, "")}` : "")
+    || entry?.teamName?.trim()
+    || entry?.clubName?.trim()
+    || entry?.user.name?.trim()
+    || (entry?.user.telegramUsername ? `@${entry.user.telegramUsername.replace(/^@/, "")}` : "")
+    || "соперник не указан";
+}
+
+function telegramParticipantUsername(
+  entry: { user: { telegramUsername: string | null } } | null,
+  player: { telegramUsername: string | null } | null,
+) {
+  const username = player?.telegramUsername || entry?.user.telegramUsername;
+  return username ? `@${username.replace(/^@/, "")}` : null;
+}
+
+function formatTelegramMatchDate(value: Date | null) {
+  if (!value) return null;
+  return `${new Intl.DateTimeFormat("ru-RU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Moscow",
+  }).format(value)} МСК`;
+}
+
+async function resolveTelegramPersonalMatchQuestion(
+  message: TelegramWebhookMessage,
+  context: TelegramAiContext,
+  text: string,
+): Promise<TelegramAiAnswer | null> {
+  const round = extractTelegramRound(text);
+  if (!isTelegramPersonalMatchQuestion(text)) return null;
+
+  if (!context.user) {
+    return {
+      answer: "Telegram не привязан к аккаунту игрока. Войдите на платформу и подключите Telegram в настройках безопасности.",
+      type: "unknown",
+      sourceIds: [],
+      confidence: 1,
+    };
+  }
+  if (!context.tournament) {
+    return {
+      answer: "Для вашего аккаунта сейчас не найден активный турнир. Уточните название турнира или обратитесь к организатору.",
+      type: "unknown",
+      sourceIds: [],
+      confidence: 1,
+    };
+  }
+
+  const telegramId = telegramUserId(message);
+  if (!telegramId) return null;
+  const user = await db.user.findUnique({ where: { telegramId }, select: { id: true } });
+  if (!user) {
+    return {
+      answer: "Telegram не привязан к аккаунту игрока. Войдите на платформу и подключите Telegram в настройках безопасности.",
+      type: "unknown",
+      sourceIds: [],
+      confidence: 1,
+    };
+  }
+
+  const match = await db.match.findFirst({
+    where: {
+      tournamentId: context.tournament.id,
+      isPenaltyTiebreak: false,
+      ...(round === null
+        ? { status: { in: activeMatchStatuses } }
+        : { round, status: { notIn: [MatchStatus.CANCELLED, MatchStatus.REJECTED] } }),
+      OR: [
+        { player1Id: user.id },
+        { player2Id: user.id },
+        { participant1Entry: { userId: user.id } },
+        { participant2Entry: { userId: user.id } },
+        { participant1Entry: { rosterMembers: { some: { userId: user.id } } } },
+        { participant2Entry: { rosterMembers: { some: { userId: user.id } } } },
+      ],
+    },
+    orderBy: [{ scheduledAt: "asc" }, { round: "asc" }, { matchNumber: "asc" }],
+    include: {
+      player1: { select: { id: true, name: true, telegramUsername: true } },
+      player2: { select: { id: true, name: true, telegramUsername: true } },
+      participant1Entry: {
+        select: {
+          teamName: true,
+          clubName: true,
+          user: { select: { id: true, name: true, telegramUsername: true } },
+          rosterMembers: { select: { userId: true } },
+        },
+      },
+      participant2Entry: {
+        select: {
+          teamName: true,
+          clubName: true,
+          user: { select: { id: true, name: true, telegramUsername: true } },
+          rosterMembers: { select: { userId: true } },
+        },
+      },
+      tournament: { select: { title: true } },
+      schedules: { orderBy: { startsAt: "asc" }, take: 1, select: { startsAt: true } },
+    },
+  });
+
+  if (!match) {
+    const requestedRound = round === null ? "активный" : `${round}-м`;
+    return {
+      answer: `Для вашего аккаунта ${requestedRound} тур в турнире «${context.tournament.title}» не содержит подходящего матча.`,
+      type: "unknown",
+      sourceIds: [],
+      confidence: 1,
+    };
+  }
+
+  const isSideOne = match.player1Id === user.id
+    || match.participant1Entry?.user.id === user.id
+    || match.participant1Entry?.rosterMembers.some((member) => member.userId === user.id) === true;
+  const opponentEntry = isSideOne ? match.participant2Entry : match.participant1Entry;
+  const opponentPlayer = isSideOne ? match.player2 : match.player1;
+  const opponent = telegramParticipantName(opponentEntry, opponentPlayer);
+  const opponentUsername = telegramParticipantUsername(opponentEntry, opponentPlayer);
+  const scheduledAt = formatTelegramMatchDate(match.scheduledAt ?? match.startsAt ?? match.schedules[0]?.startsAt ?? null);
+  const opponentWithUsername = opponentUsername && !opponent.includes(opponentUsername) ? `${opponent} (${opponentUsername})` : opponent;
+
+  return {
+    answer: `Ваш соперник — ${opponentWithUsername}. Матч турнира «${match.tournament.title}», ${match.round}-й тур${scheduledAt ? `, запланирован на ${scheduledAt}` : ""}.`,
+    type: "match",
+    sourceIds: ["tournament.matches"],
+    confidence: 1,
+  };
+}
+
 async function isConfiguredTournamentChat(message: TelegramWebhookMessage) {
   if (!isGroupMessage(message)) return false;
   const chatId = normalizeId(message.chat?.id);
@@ -759,6 +905,10 @@ export async function POST(request: NextRequest) {
             context,
             botUsername,
             tournamentChat,
+            resolveQuestion: ({ text }) => resolveTelegramPersonalMatchQuestion(incomingMessage, context, text).catch((error) => {
+              console.error("Failed to resolve Telegram personal match question", error);
+              return null;
+            }),
           }).catch((error) => {
             if (isTelegramRecipientUnavailableError(error)) return;
             console.error("Failed to send Telegram AI reply", error);

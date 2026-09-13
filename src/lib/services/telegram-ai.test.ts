@@ -218,6 +218,52 @@ test("/ask without a question asks the user to enter one", async () => {
   assert.match(String(sent[0]?.text), /\/ask ваш вопрос/);
 });
 
+test("extracts a numeric tournament round from natural Russian questions", async () => {
+  const { extractTelegramRound } = await import("@/lib/services/telegram-ai");
+
+  assert.equal(extractTelegramRound("/ask 10 тур с кем у меня матч"), 10);
+  assert.equal(extractTelegramRound("кто соперник в туре 7?"), 7);
+  assert.equal(extractTelegramRound("round 12 opponent"), 12);
+  assert.equal(extractTelegramRound("с кем я играю"), null);
+});
+
+test("a deterministic personal-match resolver runs before Willow", async () => {
+  const sent: Array<Record<string, unknown>> = [];
+  let willowCalled = false;
+  let receivedQuestion = "";
+  const result = await handleTelegramAiMessage({
+    message: {
+      message_id: 6,
+      chat: { id: 9, type: "private" },
+      from: { first_name: "Анна" },
+      text: "/ask 10 тур с кем у меня матч",
+    },
+    context,
+    resolveQuestion: async ({ text }) => {
+      receivedQuestion = text;
+      return {
+        answer: "В 10-м туре вы играете с Koryun787.",
+        type: "match",
+        sourceIds: ["tournament.matches"],
+        confidence: 1,
+      };
+    },
+    ask: async () => {
+      willowCalled = true;
+      return null;
+    },
+    send: async (params) => {
+      sent.push(params as unknown as Record<string, unknown>);
+      return {};
+    },
+  });
+
+  assert.equal(receivedQuestion, "10 тур с кем у меня матч");
+  assert.equal(willowCalled, false);
+  assert.equal(result.handled, true);
+  assert.match(String(sent[0]?.text), /Koryun787/);
+});
+
 test("system prompt rejects unrelated topics and forbids invented facts", () => {
   assert.equal(TELEGRAM_AI_NAME, "Роки");
   assert.match(TELEGRAM_AI_SYSTEM_PROMPT, /только по eFootball Nexon/);

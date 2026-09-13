@@ -140,6 +140,25 @@ function messageText(message: TelegramAiMessage) {
   return message.text?.trim() || message.caption?.trim() || "";
 }
 
+export function extractTelegramRound(text: string) {
+  const patterns = [
+    /(?:^|[^\p{L}\p{N}])(\d{1,3})\s*(?:[-‑–]\s*)?(?:й|ый|ой)?\s*тур(?:а|е|ом)?(?=$|[^\p{L}\p{N}])/iu,
+    /(?:^|[^\p{L}\p{N}])тур(?:а|е|ом)?\s*№?\s*(\d{1,3})(?=$|[^\p{L}\p{N}])/iu,
+    /(?:^|[^\p{L}\p{N}])(?:round|раунд)\s*№?\s*(\d{1,3})(?=$|[^\p{L}\p{N}])/iu,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    const round = match?.[1] ? Number(match[1]) : NaN;
+    if (Number.isInteger(round) && round > 0) return round;
+  }
+  return null;
+}
+
+export function isTelegramPersonalMatchQuestion(text: string) {
+  return /с\s+кем|кто\s+(?:мой|у\s+меня)|мой(?:\s+ближайший)?\s+матч|у\s+меня\s+матч|соперник|против\s+кого|когда\s+я\s+играю/iu.test(text);
+}
+
 const tournamentTopicPattern = /efootball|nexon|турнир|кубок|матч|соперник|регламент|правил|регистрац|дедлайн|расписан|таблиц|сетк|рейтинг|достиж|команд|капитан|состав|игрок|игра(?:ет|ть)?|сч[её]т|результат|пенальт|спор|заявк|плей[- ]?офф|best\s*of|админ|организатор|судья|модератор/i;
 const unrelatedSmallTalkPattern = /^(?:как дела|как ты|всем привет|привет|доброе утро|добрый вечер)[!?؟¿.,\s]*$/i;
 
@@ -203,6 +222,13 @@ const sourcesByAnswerType: Record<Exclude<TelegramAiAnswer["type"], "unknown">, 
   staff: new Set(["staffContacts"]),
 };
 
+function rejectWillowAnswer(reason: string, details?: Record<string, unknown>): null {
+  if (process.env.NODE_ENV !== "test") {
+    console.warn("[telegram-ai] grounded answer rejected", { reason, ...details });
+  }
+  return null;
+}
+
 function extractContent(payload: WillowResponse) {
   const content = payload.choices?.[0]?.message?.content;
   if (typeof content === "string") return content.trim();
@@ -223,7 +249,7 @@ export async function askWillow(params: {
   fetchImpl?: typeof fetch;
 }) {
   const token = configuredToken();
-  if (!token) return null;
+  if (!token) return rejectWillowAnswer("missing_token");
 
   const fetchImpl = params.fetchImpl ?? fetch;
   const response = await fetchImpl(`${configuredBaseUrl()}/chat/completions`, {
@@ -265,16 +291,24 @@ export async function askWillow(params: {
   const payload = (await response.json().catch(() => null)) as WillowResponse | null;
   if (!response.ok) throw new Error(`Willow API returned HTTP ${response.status}`);
   const content = payload ? extractContent(payload) : "";
-  if (!content) return null;
+  if (!content) return rejectWillowAnswer("empty_response");
   const parsedJson = (() => {
     try { return JSON.parse(content) as unknown; } catch { return null; }
   })();
+  if (parsedJson === null) return rejectWillowAnswer("invalid_json");
   const parsed = telegramAiAnswerSchema.safeParse(parsedJson);
-  if (!parsed.success || parsed.data.type === "unknown" || parsed.data.confidence < 0.7 || parsed.data.sourceIds.length === 0) return null;
+  if (!parsed.success) return rejectWillowAnswer("schema_validation_failed");
+  if (parsed.data.type === "unknown") return rejectWillowAnswer("unknown_answer");
+  if (parsed.data.confidence < 0.7) return rejectWillowAnswer("low_confidence", { confidence: parsed.data.confidence });
+  if (parsed.data.sourceIds.length === 0) return rejectWillowAnswer("missing_sources");
   const groundedAnswer = parsed.data as TelegramAiAnswer & { type: Exclude<TelegramAiAnswer["type"], "unknown"> };
   const validSources = availableSourceIds(params.context);
-  if (groundedAnswer.sourceIds.some((sourceId) => !validSources.has(sourceId))) return null;
-  if (!groundedAnswer.sourceIds.some((sourceId) => sourcesByAnswerType[groundedAnswer.type].has(sourceId))) return null;
+  if (groundedAnswer.sourceIds.some((sourceId) => !validSources.has(sourceId))) {
+    return rejectWillowAnswer("unavailable_source", { sourceIds: groundedAnswer.sourceIds });
+  }
+  if (!groundedAnswer.sourceIds.some((sourceId) => sourcesByAnswerType[groundedAnswer.type].has(sourceId))) {
+    return rejectWillowAnswer("source_type_mismatch", { type: groundedAnswer.type, sourceIds: groundedAnswer.sourceIds });
+  }
   return groundedAnswer;
 }
 
@@ -297,6 +331,7 @@ export async function handleTelegramAiMessage(params: {
   botUsername?: string | null;
   tournamentChat?: boolean;
   ask?: typeof askWillow;
+  resolveQuestion?: (params: { text: string; context: TelegramAiContext }) => Promise<TelegramAiAnswer | null>;
   send?: (params: Parameters<typeof sendTelegramMessage>[0]) => Promise<TelegramSentMessage>;
 }) {
   const chatId = params.message.chat?.id == null ? null : String(params.message.chat.id);
@@ -327,7 +362,9 @@ export async function handleTelegramAiMessage(params: {
   };
 
   if (!commandMatch) {
-    const answer = await (params.ask ?? askWillow)({ text, context: params.context });
+    const answer = params.resolveQuestion
+      ? await params.resolveQuestion({ text, context: params.context })
+      : await (params.ask ?? askWillow)({ text, context: params.context });
     if (!answer) {
       await sendReply("Не нашёл подтверждённых данных для ответа. Уточните название турнира или используйте /ask с подробным вопросом.");
       return { handled: true, grounded: false } as const;
@@ -353,7 +390,9 @@ export async function handleTelegramAiMessage(params: {
     return { handled: true, promptedForQuestion: true } as const;
   }
 
-  const answer = await (params.ask ?? askWillow)({ text: question, context: params.context });
+  const answer = params.resolveQuestion
+    ? await params.resolveQuestion({ text: question, context: params.context })
+    : await (params.ask ?? askWillow)({ text: question, context: params.context });
   if (!answer) {
     await sendReply("данные не найдены. Уточните турнир или обратитесь к основателю Kumyk: @Kumyk007.");
     return { handled: true, grounded: false } as const;
