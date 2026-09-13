@@ -4094,7 +4094,7 @@ export async function recalculateGroupStandings(tournamentId: string) {
     const completedMatches = group.matches
       .filter((item) =>
         (item.status === MatchStatus.CONFIRMED || item.status === MatchStatus.FINISHED) &&
-        !item.excludeFromStatistics,
+        !item.excludeFromTournamentStandings,
       )
       .sort((a, b) => (a.round === b.round ? a.matchNumber - b.matchNumber : a.round - b.round));
     const countedSeriesKeys = new Set<string>();
@@ -4117,7 +4117,7 @@ export async function recalculateGroupStandings(tournamentId: string) {
           (item) =>
             item.seriesKey === match.seriesKey &&
             !item.isPenaltyTiebreak &&
-            !item.excludeFromStatistics &&
+            !item.excludeFromTournamentStandings &&
             item.participant1EntryId &&
             item.participant2EntryId &&
             item.player1Score != null &&

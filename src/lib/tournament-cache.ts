@@ -125,6 +125,7 @@ async function loadScheduleSlice(tournamentId: string) {
       player2Score: true,
       player1PenaltyScore: true,
       player2PenaltyScore: true,
+      excludeFromTournamentStandings: true,
       status: true,
       notes: true,
       playoffBracket: { select: { legsCount: true } },

@@ -70,6 +70,7 @@ function buildExportRows(
   matches: Array<{
     status: MatchStatus;
     excludeFromStatistics?: boolean;
+    excludeFromTournamentStandings?: boolean;
     player1Id: string | null;
     player2Id: string | null;
     player1Score: number | null;
@@ -101,7 +102,7 @@ function buildExportRows(
 
   for (const match of matches) {
     if (match.status !== MatchStatus.CONFIRMED && match.status !== MatchStatus.FINISHED) continue;
-    if (match.excludeFromStatistics) continue;
+    if (match.excludeFromTournamentStandings) continue;
     if (!match.player1Id || !match.player2Id) continue;
     if (match.player1Score === null || match.player2Score === null) continue;
 
@@ -191,6 +192,7 @@ export default async function AdminTournamentWorkspacePage(props: { params: Prom
             matchNumber: true,
             status: true,
             excludeFromStatistics: true,
+            excludeFromTournamentStandings: true,
             player1Id: true,
             player2Id: true,
             participant1EntryId: true,

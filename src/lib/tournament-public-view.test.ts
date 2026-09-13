@@ -99,6 +99,28 @@ test("calculates standings and preserves deterministic tie ordering", () => {
   assert.deepEqual(rows.map((row) => [row.wins, row.draws, row.losses]), [[1, 0, 0], [0, 1, 0], [0, 1, 1]]);
 });
 
+test("keeps inactive-opponent matches in tournament standings while excluding only personal statistics", () => {
+  const rows = buildLeagueTable(
+    [participant("active", "Active"), participant("inactive", "Inactive")],
+    [{
+      status: MatchStatus.CONFIRMED,
+      player1Id: "user-active",
+      player2Id: "user-inactive",
+      participant1EntryId: "active",
+      participant2EntryId: "inactive",
+      player1Score: 2,
+      player2Score: 0,
+      excludeFromStatistics: true,
+      excludeFromTournamentStandings: false,
+    }],
+    clubs,
+  );
+
+  assert.equal(rows.find((row) => row.clubName === "Active")?.points, 3);
+  assert.equal(rows.find((row) => row.clubName === "Active")?.wins, 1);
+  assert.equal(rows.find((row) => row.clubName === "Inactive")?.losses, 1);
+});
+
 test("attributes historical matches to a confirmed replacement entry", () => {
   const rows = buildLeagueTable(
     [

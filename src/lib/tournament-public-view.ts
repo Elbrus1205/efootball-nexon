@@ -172,6 +172,7 @@ export function buildLeagueTable(
     player1Score: number | null;
     player2Score: number | null;
     excludeFromStatistics?: boolean;
+    excludeFromTournamentStandings?: boolean;
   }>,
   clubsBySlug: Map<string, { name: string; imagePath: string }>,
   scoring: { pointsForWin?: number | null; pointsForDraw?: number | null; pointsForLoss?: number | null } = {},
@@ -211,7 +212,7 @@ export function buildLeagueTable(
 
   for (const match of matches) {
     if (match.status && match.status !== MatchStatus.CONFIRMED && match.status !== MatchStatus.FINISHED) continue;
-    if (match.excludeFromStatistics) continue;
+    if (match.excludeFromTournamentStandings) continue;
     if (!match.participant1EntryId || !match.participant2EntryId) continue;
     if (match.player1Score === null || match.player2Score === null) continue;
 
