@@ -1,7 +1,7 @@
 "use client";
 
 import type { MatchStatus } from "@prisma/client";
-import { ChevronLeft, ChevronRight, ChevronsRight, GitBranch, Trophy } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, ChevronsRight, GitBranch, Trophy } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
@@ -26,6 +26,8 @@ type BracketParticipantEntry = {
   userId: string;
   clubName: string | null;
   clubBadgePath: string | null;
+  isActive: boolean;
+  inactiveFromRound: number | null;
 };
 
 type BracketMatch = {
@@ -78,6 +80,8 @@ type BracketSide = {
   isChampion: boolean;
   isCurrentUser: boolean;
   isByeWinner: boolean;
+  isActive: boolean;
+  inactiveFromRound: number | null;
 };
 
 const RESOLVED_MATCH_STATUSES: MatchStatus[] = ["CONFIRMED", "FINISHED"];
@@ -324,6 +328,7 @@ function getPenaltyScores(series: BracketSeries) {
 function BracketTeamRow({ side }: { side: BracketSide }) {
   const isLoser = side.isResolved && !side.isWinner;
   const hasPenalty = Boolean(side.penaltyText);
+  const inactiveLabel = side.inactiveFromRound ? `Неактивен · с ${side.inactiveFromRound}-го тура` : "Неактивен";
 
   return (
     <div
@@ -367,7 +372,8 @@ function BracketTeamRow({ side }: { side: BracketSide }) {
       <div className="relative z-10 min-w-0">
         <div
           className={cn(
-            "truncate text-[13px] font-semibold leading-tight text-white",
+            "truncate text-[13px] font-semibold leading-tight",
+            side.isActive ? "text-white" : "text-rose-200",
             side.isChampion && "text-amber-100 drop-shadow-[0_0_10px_rgba(33,241,168,0.55)]",
             isLoser && "text-zinc-500",
           )}
@@ -378,7 +384,8 @@ function BracketTeamRow({ side }: { side: BracketSide }) {
           <Link
             href={`/players/${side.playerId}`}
             className={cn(
-              "mt-0.5 block truncate text-[10px] font-medium leading-tight text-zinc-400 underline-offset-4 transition hover:text-primary hover:underline",
+              "mt-0.5 block truncate text-[10px] font-medium leading-tight underline-offset-4 transition hover:underline",
+              side.isActive ? "text-zinc-400 hover:text-primary" : "text-rose-300/80 hover:text-rose-100",
               side.isChampion && "font-black text-amber-200 hover:text-amber-100",
               isLoser && "text-zinc-600 hover:text-zinc-400",
             )}
@@ -396,6 +403,12 @@ function BracketTeamRow({ side }: { side: BracketSide }) {
             {side.playerName}
           </div>
         )}
+        {!side.isActive ? (
+          <span title={inactiveLabel} className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full border border-rose-300/25 bg-rose-400/10 px-1.5 py-0.5 text-[9px] font-semibold leading-tight text-rose-200">
+            <AlertTriangle className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">{inactiveLabel}</span>
+          </span>
+        ) : null}
       </div>
 
       <div className="relative z-10 flex min-w-0 flex-col items-end justify-center gap-0.5 text-right">
@@ -471,6 +484,8 @@ function BracketMatchBox({
       isChampion: Boolean(isFinal && seriesWinnerId && seriesWinnerId === sideOneWinnerId),
       isCurrentUser: Boolean(currentUserId && sideOneUserId === currentUserId),
       isByeWinner: series.isAutoBye && seriesWinnerId === sideOneWinnerId,
+      isActive: match.participant1Entry?.isActive ?? true,
+      inactiveFromRound: match.participant1Entry?.inactiveFromRound ?? null,
     },
     {
       playerId: match.player2?.id,
@@ -484,6 +499,8 @@ function BracketMatchBox({
       isChampion: Boolean(isFinal && seriesWinnerId && seriesWinnerId === sideTwoWinnerId),
       isCurrentUser: Boolean(currentUserId && sideTwoUserId === currentUserId),
       isByeWinner: series.isAutoBye && seriesWinnerId === sideTwoWinnerId,
+      isActive: match.participant2Entry?.isActive ?? true,
+      inactiveFromRound: match.participant2Entry?.inactiveFromRound ?? null,
     },
   ];
 

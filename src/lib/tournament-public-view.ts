@@ -37,6 +37,8 @@ export type TournamentStagePresentationState = "completed" | "active" | "upcomin
 export type LeagueRow = {
   id: string;
   rank?: number | null;
+  isActive?: boolean;
+  inactiveFromRound?: number | null;
   clubName: string;
   clubBadgePath?: string | null;
   playerId?: string | null;
@@ -149,6 +151,8 @@ export function buildLeagueTable(
   participants: Array<{
     id: string;
     userId: string;
+    isActive?: boolean;
+    inactiveFromRound?: number | null;
     status?: ParticipantStatus;
     notes?: string | null;
     clubSlug: string | null;
@@ -190,6 +194,8 @@ export function buildLeagueTable(
       id: entry.user.id,
       playerId: entry.user.id,
       playerName,
+      isActive: entry.isActive,
+      inactiveFromRound: entry.inactiveFromRound,
       clubName: resolveClubName(entry, clubsBySlug, playerName),
       clubBadgePath: resolveClubBadgePath(entry, clubsBySlug),
       played: 0,

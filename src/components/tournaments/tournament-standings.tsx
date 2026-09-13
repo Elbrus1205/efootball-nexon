@@ -45,7 +45,7 @@ export function TournamentStandings({ rows, highlights = [] }: { rows: LeagueRow
               return (
                 <tr key={row.id} className={cn("border-t border-white/[0.07] transition-colors hover:bg-white/[0.025]", highlight && "bg-emerald-400/[0.045]")}>
                   <td className="px-3 py-3 text-center"><span className={cn("inline-flex h-7 min-w-7 items-center justify-center rounded-lg border px-1 text-xs font-bold", highlight ? "border-emerald-300/30 bg-emerald-400/10 text-emerald-200" : "border-white/10 bg-black/20 text-zinc-300")}>{rank}</span></td>
-                  <td className="min-w-64 px-3 py-3"><ClubPlayerLine clubName={row.clubName} badgePath={row.clubBadgePath} playerId={row.playerId} playerName={row.playerName} compact /></td>
+                  <td className="min-w-64 px-3 py-3"><ClubPlayerLine clubName={row.clubName} badgePath={row.clubBadgePath} playerId={row.playerId} playerName={row.playerName} isActive={row.isActive} inactiveFromRound={row.inactiveFromRound} compact /></td>
                   {[row.played, row.wins, row.draws, row.losses].map((value, cellIndex) => <td key={cellIndex} className="px-3 py-3 text-center text-zinc-300">{value}</td>)}
                   <td className={cn("px-3 py-3 text-center font-semibold", row.goalDifference > 0 ? "text-emerald-300" : row.goalDifference < 0 ? "text-rose-300" : "text-zinc-300")}>{row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}</td>
                   <td className="px-3 py-3 text-center text-base font-black text-white">{row.points}</td>

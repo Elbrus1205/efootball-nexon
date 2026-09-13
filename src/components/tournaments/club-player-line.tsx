@@ -1,5 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
+import { CircleAlert } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type ClubPlayerLineProps = {
   clubName?: string | null;
@@ -11,7 +13,13 @@ type ClubPlayerLineProps = {
   reverse?: boolean;
   stack?: boolean;
   showPlayerName?: boolean;
+  isActive?: boolean;
+  inactiveFromRound?: number | null;
 };
+
+function inactiveLabel(inactiveFromRound?: number | null) {
+  return inactiveFromRound ? `Неактивен · с ${inactiveFromRound}-го тура` : "Неактивен";
+}
 
 export function ClubPlayerLine({
   clubName,
@@ -23,9 +31,12 @@ export function ClubPlayerLine({
   reverse = false,
   stack = false,
   showPlayerName = true,
+  isActive = true,
+  inactiveFromRound = null,
 }: ClubPlayerLineProps) {
   const centered = align === "center";
   const rawName = clubName ?? "Клуб не назначен";
+  const activityLabel = inactiveLabel(inactiveFromRound);
 
   // Stacked layout: club badge sits on top, name + nickname below, all centered.
   // Text is ~1.2x smaller than the default horizontal layout.
@@ -38,18 +49,24 @@ export function ClubPlayerLine({
           </div>
         ) : null}
         <div className="min-w-0 max-w-full">
-          <div className="max-w-full break-words text-xs font-medium leading-[1.2] text-white line-clamp-2">{clubName ?? "Клуб не назначен"}</div>
+          <div className={cn("max-w-full break-words text-xs font-medium leading-[1.2] line-clamp-2", isActive ? "text-white" : "text-rose-200")}>{clubName ?? "Клуб не назначен"}</div>
           {showPlayerName ? (
             playerId ? (
               <Link
                 href={`/players/${playerId}`}
-                className="mt-0.5 block max-w-full truncate text-[10px] leading-tight text-zinc-400 underline-offset-4 transition hover:text-primary hover:underline"
+                className={cn("mt-0.5 block max-w-full truncate text-[10px] leading-tight underline-offset-4 transition hover:underline", isActive ? "text-zinc-400 hover:text-primary" : "text-rose-300/80 hover:text-rose-100")}
               >
                 {playerName}
               </Link>
             ) : (
-              <div className="mt-0.5 max-w-full truncate text-[10px] leading-tight text-zinc-400">{playerName}</div>
+              <div className={cn("mt-0.5 max-w-full truncate text-[10px] leading-tight", isActive ? "text-zinc-400" : "text-rose-300/80")}>{playerName}</div>
             )
+          ) : null}
+          {!isActive ? (
+            <span title={activityLabel} className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full border border-rose-300/25 bg-rose-400/10 px-1.5 py-0.5 text-[9px] font-semibold leading-tight text-rose-200">
+              <CircleAlert className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
+              <span className="truncate">{activityLabel}</span>
+            </span>
           ) : null}
         </div>
       </div>
@@ -78,18 +95,24 @@ export function ClubPlayerLine({
       ) : null}
 
       <div className={`min-w-0 flex-1 ${wrapperClass}`}>
-        <div className={`max-w-full font-medium leading-[1.25] text-white line-clamp-2 ${clubFontClass}`}>{rawName}</div>
+        <div className={cn("max-w-full font-medium leading-[1.25] line-clamp-2", clubFontClass, isActive ? "text-white" : "text-rose-200")}>{rawName}</div>
         {showPlayerName ? (
           playerId ? (
             <Link
               href={`/players/${playerId}`}
-              className="mt-0.5 block max-w-full truncate text-xs leading-tight text-zinc-400 underline-offset-4 transition hover:text-primary hover:underline"
+              className={cn("mt-0.5 block max-w-full truncate text-xs leading-tight underline-offset-4 transition hover:underline", isActive ? "text-zinc-400 hover:text-primary" : "text-rose-300/80 hover:text-rose-100")}
             >
               {playerName}
             </Link>
           ) : (
-            <div className="mt-0.5 max-w-full truncate text-xs leading-tight text-zinc-400">{playerName}</div>
+            <div className={cn("mt-0.5 max-w-full truncate text-xs leading-tight", isActive ? "text-zinc-400" : "text-rose-300/80")}>{playerName}</div>
           )
+        ) : null}
+        {!isActive ? (
+          <span title={activityLabel} className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full border border-rose-300/25 bg-rose-400/10 px-1.5 py-0.5 text-[9px] font-semibold leading-tight text-rose-200">
+            <CircleAlert className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">{activityLabel}</span>
+          </span>
         ) : null}
       </div>
     </div>

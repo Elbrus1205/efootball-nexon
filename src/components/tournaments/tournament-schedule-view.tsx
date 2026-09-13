@@ -14,6 +14,8 @@ type ScheduleSide = {
   showPlayerName: boolean;
   clubName: string | null;
   clubBadgePath: string | null;
+  isActive: boolean;
+  inactiveFromRound: number | null;
 };
 
 export type TournamentScheduleMatch = {
@@ -138,6 +140,8 @@ function ScheduleMatchCard({ match }: { match: TournamentScheduleMatch }) {
             showPlayerName={match.sideOne.showPlayerName}
             clubName={match.sideOne.clubName}
             badgePath={match.sideOne.clubBadgePath}
+            isActive={match.sideOne.isActive}
+            inactiveFromRound={match.sideOne.inactiveFromRound}
             compact
             stack
           />
@@ -154,6 +158,8 @@ function ScheduleMatchCard({ match }: { match: TournamentScheduleMatch }) {
             showPlayerName={match.sideTwo.showPlayerName}
             clubName={match.sideTwo.clubName}
             badgePath={match.sideTwo.clubBadgePath}
+            isActive={match.sideTwo.isActive}
+            inactiveFromRound={match.sideTwo.inactiveFromRound}
             compact
             stack
           />

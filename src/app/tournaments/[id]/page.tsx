@@ -1,5 +1,5 @@
 import { ClubSelectionMode, MatchStatus, ParticipantStatus, StageType, TournamentApplicationStatus, TournamentFormat, TournamentStatus } from "@prisma/client";
-import { Clock3, Search, Send } from "lucide-react";
+import { CircleAlert, Clock3, Search, Send } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -59,6 +59,8 @@ import {
 type LeagueRow = {
   id: string;
   isCurrentTeam?: boolean;
+  isActive?: boolean;
+  inactiveFromRound?: number | null;
   rank?: number | null;
   clubName: string;
   clubBadgePath?: string | null;
@@ -535,13 +537,15 @@ function StandingsTable({
                   </td>
                   <td className="px-2 py-2 sm:px-3 sm:py-3">
                     <div className="min-w-0">
-                      <ClubPlayerLine
-                        clubName={row.clubName}
-                        badgePath={row.clubBadgePath}
-                        playerId={row.playerId}
-                        playerName={row.playerName}
-                        compact
-                      />
+      <ClubPlayerLine
+        clubName={row.clubName}
+        badgePath={row.clubBadgePath}
+        playerId={row.playerId}
+        playerName={row.playerName}
+        isActive={row.isActive}
+        inactiveFromRound={row.inactiveFromRound}
+        compact
+      />
                     </div>
                   </td>
                   <td className="px-0.5 py-2 text-center text-zinc-300 sm:px-1 sm:py-3">{row.played}</td>
@@ -949,6 +953,8 @@ export default async function TournamentDetailsPage(
       {
         clubName: resolveClubName(entry, clubsBySlug, getPlayerDisplayName(entry.user)),
         clubBadgePath: resolveClubBadgePath(entry, clubsBySlug),
+        isActive: entry.isActive,
+        inactiveFromRound: entry.inactiveFromRound,
       },
     ]),
   );
@@ -973,6 +979,8 @@ export default async function TournamentDetailsPage(
       showPlayerName: !isUnassignedCaptainMatch,
       clubName: entry ? resolveClubName(entry, clubsBySlug, playerName) : mappedClub?.clubName ?? null,
       clubBadgePath: (entry ? resolveClubBadgePath(entry, clubsBySlug) : null) ?? mappedClub?.clubBadgePath ?? null,
+      isActive: entry?.isActive ?? mappedClub?.isActive ?? true,
+      inactiveFromRound: entry?.inactiveFromRound ?? mappedClub?.inactiveFromRound ?? null,
     };
   };
   const scheduleViewSections = scheduleSections.map((section) => ({
@@ -1038,7 +1046,15 @@ export default async function TournamentDetailsPage(
                 <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary">
                   {tournament.participantMode === "TEAM" ? "Команда" : "Состав"}
                 </div>
-                <div className="mt-1 max-w-full truncate text-lg font-semibold text-white">{rosterTitle}</div>
+                <div className="mt-1 flex max-w-full flex-wrap items-center gap-2">
+                  <div className={cn("max-w-full truncate text-lg font-semibold", entry.isActive ? "text-white" : "text-rose-200")}>{rosterTitle}</div>
+                  {!entry.isActive ? (
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-rose-300/25 bg-rose-400/10 px-2 py-1 text-[10px] font-semibold text-rose-200">
+                      <CircleAlert className="h-3 w-3" aria-hidden="true" />
+                      Неактивен{entry.inactiveFromRound ? ` · с ${entry.inactiveFromRound}-го тура` : ""}
+                    </span>
+                  ) : null}
+                </div>
                 <div className="mt-0.5 text-xs text-zinc-500">
                   {members.filter((member) => member.status === "ACCEPTED").length}/{tournament.rosterSize} игроков
                 </div>
@@ -1337,6 +1353,10 @@ export default async function TournamentDetailsPage(
                     player2ClubName={sideTwo.clubName}
                     player1ClubBadgePath={sideOne.clubBadgePath}
                     player2ClubBadgePath={sideTwo.clubBadgePath}
+                    player1IsActive={sideOne.isActive}
+                    player2IsActive={sideTwo.isActive}
+                    player1InactiveFromRound={sideOne.inactiveFromRound}
+                    player2InactiveFromRound={sideTwo.inactiveFromRound}
                     player1SubmissionState={getSubmissionState({
                       matchStatus: match.status,
                       latestSubmission: player1LatestSubmission
@@ -1460,6 +1480,8 @@ export default async function TournamentDetailsPage(
                       playerName={playerName}
                       clubName={resolveClubName(entry, clubsBySlug, playerName)}
                       badgePath={resolveClubBadgePath(entry, clubsBySlug)}
+                      isActive={entry.isActive}
+                      inactiveFromRound={entry.inactiveFromRound}
                     />
 
                     {telegramProfile ? (

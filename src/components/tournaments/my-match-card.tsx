@@ -45,6 +45,10 @@ type MyMatchCardProps = {
   player2ClubName?: string | null;
   player1ClubBadgePath?: string | null;
   player2ClubBadgePath?: string | null;
+  player1IsActive?: boolean;
+  player2IsActive?: boolean;
+  player1InactiveFromRound?: number | null;
+  player2InactiveFromRound?: number | null;
   player1SubmissionState: SubmissionState;
   player2SubmissionState: SubmissionState;
   player1SubmittedScore?: SubmittedScore;
@@ -122,6 +126,10 @@ export function MyMatchCard({
   player2ClubName,
   player1ClubBadgePath,
   player2ClubBadgePath,
+  player1IsActive = true,
+  player2IsActive = true,
+  player1InactiveFromRound = null,
+  player2InactiveFromRound = null,
   player1SubmissionState,
   player2SubmissionState,
   player1SubmittedScore,
@@ -224,6 +232,8 @@ export function MyMatchCard({
               showPlayerName={showPlayer1Name}
               clubName={player1ClubName}
               badgePath={player1ClubBadgePath}
+              isActive={player1IsActive}
+              inactiveFromRound={player1InactiveFromRound}
               stack
             />
             <SubmissionBadge state={player1SubmissionState} score={player1SubmittedScore} hidden={player1SubmissionState.tone === "success" && isConfirmed} />
@@ -298,6 +308,8 @@ export function MyMatchCard({
               showPlayerName={showPlayer2Name}
               clubName={player2ClubName}
               badgePath={player2ClubBadgePath}
+              isActive={player2IsActive}
+              inactiveFromRound={player2InactiveFromRound}
               stack
             />
             <SubmissionBadge state={player2SubmissionState} score={player2SubmittedScore} hidden={player2SubmissionState.tone === "success" && isConfirmed} />

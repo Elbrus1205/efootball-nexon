@@ -21,7 +21,7 @@ export function TournamentMobileStandings({ rows, highlights }: { rows: LeagueRo
                   {rank}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <ClubPlayerLine clubName={row.clubName} badgePath={row.clubBadgePath} playerId={row.playerId} playerName={row.playerName} compact />
+                  <ClubPlayerLine clubName={row.clubName} badgePath={row.clubBadgePath} playerId={row.playerId} playerName={row.playerName} isActive={row.isActive} inactiveFromRound={row.inactiveFromRound} compact />
                   {highlight ? <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-emerald-200"><Trophy className="h-3 w-3" />{highlight.label}</div> : null}
                 </div>
                 <div className="shrink-0 text-right tabular-nums">
