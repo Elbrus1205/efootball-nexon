@@ -1,7 +1,7 @@
 ﻿import Link from "next/link";
 import { MatchStatus, ParticipantStatus, StageType, TournamentApplicationStatus, UserRole } from "@prisma/client";
 import { notFound } from "next/navigation";
-import { Activity, CalendarClock, ClipboardCheck, Dices, GitBranch, History, Pencil, Swords, Trash2, Trophy, Users } from "lucide-react";
+import { Activity, CalendarClock, ClipboardCheck, Dices, GitBranch, History, Pencil, Swords, Trash2, Trophy, UserRoundX, Users } from "lucide-react";
 import { RandomScoresButton } from "@/components/admin/random-scores-button";
 import { TournamentImageExporterLazy, type ExportGroup, type ExportScheduleRound } from "@/components/admin/tournament-image-exporter-lazy";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +69,7 @@ function buildExportRows(
   }>,
   matches: Array<{
     status: MatchStatus;
+    excludeFromStatistics?: boolean;
     player1Id: string | null;
     player2Id: string | null;
     player1Score: number | null;
@@ -100,6 +101,7 @@ function buildExportRows(
 
   for (const match of matches) {
     if (match.status !== MatchStatus.CONFIRMED && match.status !== MatchStatus.FINISHED) continue;
+    if (match.excludeFromStatistics) continue;
     if (!match.player1Id || !match.player2Id) continue;
     if (match.player1Score === null || match.player2Score === null) continue;
 
@@ -188,6 +190,7 @@ export default async function AdminTournamentWorkspacePage(props: { params: Prom
             round: true,
             matchNumber: true,
             status: true,
+            excludeFromStatistics: true,
             player1Id: true,
             player2Id: true,
             participant1EntryId: true,
@@ -398,6 +401,10 @@ export default async function AdminTournamentWorkspacePage(props: { params: Prom
             <Link href={`/admin/tournaments/${tournament.id}/participants`} className={actionButtonClass}>
               <Users className="h-4 w-4" />
               Участники
+            </Link>
+            <Link href={`/admin/tournaments/${tournament.id}/inactive`} className={actionButtonClass}>
+              <UserRoundX className="h-4 w-4" />
+              Неактивные
             </Link>
             <Link href={`/admin/tournaments/${tournament.id}/applications`} className={actionButtonClass}>
               <ClipboardCheck className="h-4 w-4" />

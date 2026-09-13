@@ -65,6 +65,7 @@ import { createNotification, createNotificationsForUsers } from "@/lib/services/
 import { publishTournamentCompletion } from "@/lib/services/telegram-publications";
 import { buildPersonalMatchMessage } from "@/lib/telegram-rich";
 import { withRemindLaterButton } from "@/lib/services/telegram-callbacks";
+import { syncMatchStatisticsExclusion } from "@/lib/tournaments/inactive-match-statistics";
 
 function createGroupSourceRef(groupId: string, rank: number) {
   return `group:${groupId}:rank:${rank}`;
@@ -4091,7 +4092,10 @@ export async function recalculateGroupStandings(tournamentId: string) {
     );
 
     const completedMatches = group.matches
-      .filter((item) => item.status === MatchStatus.CONFIRMED || item.status === MatchStatus.FINISHED)
+      .filter((item) =>
+        (item.status === MatchStatus.CONFIRMED || item.status === MatchStatus.FINISHED) &&
+        !item.excludeFromStatistics,
+      )
       .sort((a, b) => (a.round === b.round ? a.matchNumber - b.matchNumber : a.round - b.round));
     const countedSeriesKeys = new Set<string>();
 
@@ -4113,6 +4117,7 @@ export async function recalculateGroupStandings(tournamentId: string) {
           (item) =>
             item.seriesKey === match.seriesKey &&
             !item.isPenaltyTiebreak &&
+            !item.excludeFromStatistics &&
             item.participant1EntryId &&
             item.participant2EntryId &&
             item.player1Score != null &&
@@ -5820,6 +5825,7 @@ export async function resolveConfirmedMatch(matchId: string) {
     },
   });
   if (!match) throw new Error("Match not found");
+  await syncMatchStatisticsExclusion(match.id);
   // Every confirmation path (including admin random scores and moderation)
   // reaches this resolver, so keep the historical lineup invariant here too.
   await ensureMatchLineupSnapshot(match.id);

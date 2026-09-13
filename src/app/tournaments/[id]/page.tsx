@@ -45,6 +45,7 @@ import {
   isCaptainTeamMatchVisibleToUser,
 } from "@/lib/tournaments/captain-team-match-presentation";
 import { isSupersededCaptainTeamSeriesArchive } from "@/lib/tournaments/captain-team-series-assignment";
+import { isUserInactiveForMatch } from "@/lib/tournaments/inactive-participant";
 import { cn, formatDate } from "@/lib/utils";
 import {
   buildLeagueTable as buildPublicLeagueTable,
@@ -1252,9 +1253,18 @@ export default async function TournamentDetailsPage(
                 const matchDeadline = getMatchDeadline(match);
                 const waitingForOpponent = match.submissions.some((submission) => submission.submittedById === currentUserId && submission.status === "PENDING");
                 const isMatchPlayer = sideOne.playerId === currentUserId || sideTwo.playerId === currentUserId;
-                const canSubmitScore = isMatchPlayer && isMatchOpenForScore(match) && !waitingForOpponent;
                 const homeEntry = resolveMatchEntry(match, 1);
                 const awayEntry = resolveMatchEntry(match, 2);
+                const inactiveForCurrentUser = Boolean(
+                  currentUserId &&
+                    isUserInactiveForMatch(
+                      currentUserId,
+                      match.round,
+                      { playerId: sideOne.playerId, entry: homeEntry },
+                      { playerId: sideTwo.playerId, entry: awayEntry },
+                    ),
+                );
+                const canSubmitScore = isMatchPlayer && isMatchOpenForScore(match) && !waitingForOpponent && !inactiveForCurrentUser;
                 const homeRosterEntry = homeEntry ? participantByEntryId.get(homeEntry.id) ?? null : null;
                 const awayRosterEntry = awayEntry ? participantByEntryId.get(awayEntry.id) ?? null : null;
                 const captainSlotLabel = captainMatchSlotLabels.get(match.id);
@@ -1294,6 +1304,7 @@ export default async function TournamentDetailsPage(
                     confirmedPlayer1PenaltyScore={match.player1PenaltyScore}
                     confirmedPlayer2PenaltyScore={match.player2PenaltyScore}
                     canSubmit={canSubmitScore}
+                    inactiveForCurrentUser={inactiveForCurrentUser}
                     requiresPenaltyOnDraw={
                       match.isTeamCaptainTiebreak || isTeamCaptainPlayoffMatch || isSingleLegPlayoffMatch
                     }
@@ -1308,7 +1319,9 @@ export default async function TournamentDetailsPage(
                         ),
                     )}
                     helperText={
-                      match.status === MatchStatus.DISPUTED
+                      inactiveForCurrentUser
+                        ? "Вы не можете подтвердить результат: вы неактивны в этом турнире с указанного тура."
+                        : match.status === MatchStatus.DISPUTED
                         ? "Матч переведён в спор. Теперь результат выставляет администрация."
                         : !matchDeadline
                           ? "Дедлайн для этого тура не задан. Счёт можно отправить только после назначения дедлайна."

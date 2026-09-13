@@ -1,4 +1,4 @@
-import { MatchStatus, TournamentStatus } from "@prisma/client";
+import { MatchStatus, TournamentStatus, UserRole } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { getConfiguredSiteBaseUrl } from "@/lib/affiliate";
 import { db } from "@/lib/db";
@@ -31,6 +31,10 @@ import { getRegulationsDocument } from "@/lib/regulations";
 import { blocksToPlainText, resolveFaqBlocks } from "@/lib/faq/content";
 import { buildTournamentBulletin } from "@/lib/services/telegram-publications";
 import { claimTelegramUpdate, consumeTelegramAiRateLimit } from "@/lib/services/telegram-webhook-guard";
+import {
+  setTournamentParticipantActivity,
+  TournamentParticipantActivityError,
+} from "@/lib/services/tournament-participant-activity";
 
 export const runtime = "nodejs";
 
@@ -490,6 +494,116 @@ async function buildTelegramAiContext(message: TelegramWebhookMessage): Promise<
   };
 }
 
+function isTelegramTournamentStaff(role: UserRole) {
+  return role === UserRole.FOUNDER || role === UserRole.ORGANIZER || role === UserRole.ADMIN || role === UserRole.JUDGE;
+}
+
+function inactiveParticipantLabel(participant: {
+  clubName: string | null;
+  user: { publicId: string; name: string | null; telegramUsername: string | null };
+}) {
+  const name = participant.user.name?.trim() || participant.user.publicId;
+  const telegram = participant.user.telegramUsername ? ` · @${participant.user.telegramUsername.replace(/^@/, "")}` : "";
+  return `${name}${participant.clubName ? ` · ${participant.clubName}` : ""}${telegram}`;
+}
+
+async function sendInactiveTournamentPicker(chatId: string) {
+  const tournaments = await db.tournament.findMany({
+    where: { isTest: false, participants: { some: { isActive: false, status: { not: "REMOVED" } } } },
+    orderBy: { updatedAt: "desc" },
+    take: 20,
+    select: { id: true, title: true },
+  });
+  await sendTelegramMessage({
+    chatId,
+    text: tournaments.length ? "<b>Выберите турнир</b>\nВ нём будут показаны неактивные участники." : "Сейчас нет турниров с неактивными участниками.",
+    replyMarkup: buildTelegramInlineKeyboard(tournaments.map((tournament, index) => ({
+      text: tournament.title,
+      callbackData: `inactive:t:${tournament.id}`,
+      row: index + 1,
+    }))),
+  });
+}
+
+async function sendInactiveParticipantList(chatId: string, tournamentId: string) {
+  const tournament = await db.tournament.findUnique({
+    where: { id: tournamentId, isTest: false },
+    select: {
+      title: true,
+      participants: {
+        where: { isActive: false, status: { not: "REMOVED" } },
+        orderBy: { inactiveSince: "desc" },
+        select: {
+          id: true,
+          inactiveFromRound: true,
+          clubName: true,
+          user: { select: { publicId: true, name: true, telegramUsername: true } },
+        },
+      },
+    },
+  });
+  if (!tournament) return false;
+
+  const buttons = tournament.participants.map((participant, index) => ({
+    text: `Выбрать · ${inactiveParticipantLabel(participant)}`,
+    callbackData: `inactive:confirm:${participant.id}`,
+    row: index + 1,
+  }));
+  buttons.push({ text: "Отмена", callbackData: "inactive:cancel", row: buttons.length + 1 });
+  await sendTelegramMessage({
+    chatId,
+    text: tournament.participants.length
+      ? `<b>${escapeTelegramHtml(tournament.title)}</b>\n\nВыберите участника для повторной активации. Изменение вступит в силу после подтверждения.`
+      : `<b>${escapeTelegramHtml(tournament.title)}</b>\n\nНеактивных участников нет.`,
+    replyMarkup: buildTelegramInlineKeyboard(buttons),
+  });
+  return true;
+}
+
+async function handleInactiveCallback(params: { data: string; chatId: string; userId: string }) {
+  if (!params.data.startsWith("inactive:")) return null;
+
+  if (params.data === "inactive:cancel") return { toast: "Действие отменено.", clearKeyboard: true };
+  if (params.data.startsWith("inactive:t:")) {
+    const tournamentId = params.data.slice("inactive:t:".length);
+    await sendInactiveParticipantList(params.chatId, tournamentId);
+    return { toast: "Список загружен." };
+  }
+  if (params.data.startsWith("inactive:confirm:")) {
+    const registrationId = params.data.slice("inactive:confirm:".length);
+    const registration = await db.tournamentRegistration.findUnique({
+      where: { id: registrationId },
+      select: { tournamentId: true, inactiveFromRound: true, clubName: true, user: { select: { publicId: true, name: true } }, tournament: { select: { isTest: true, title: true } } },
+    });
+    if (!registration || registration.tournament.isTest) return { toast: "Участник не найден.", clearKeyboard: true };
+    await sendTelegramMessage({
+      chatId: params.chatId,
+      text: `Активировать участника <b>${escapeTelegramHtml(registration.user.name?.trim() || registration.user.publicId)}</b>${registration.clubName ? ` · ${escapeTelegramHtml(registration.clubName)}` : ""}?\nОн снова сможет участвовать в новых матчах. Исторические матчи, исключенные из статистики, останутся без изменений.`,
+      replyMarkup: buildTelegramInlineKeyboard([
+        { text: "Подтвердить активацию", callbackData: `inactive:apply:${registrationId}`, row: 1 },
+        { text: "Отмена", callbackData: "inactive:cancel", row: 2 },
+      ]),
+    });
+    return { toast: "Проверьте действие и подтвердите." };
+  }
+  if (params.data.startsWith("inactive:apply:")) {
+    const registrationId = params.data.slice("inactive:apply:".length);
+    const registration = await db.tournamentRegistration.findUnique({
+      where: { id: registrationId },
+      select: { tournamentId: true, tournament: { select: { isTest: true } } },
+    });
+    if (!registration || registration.tournament.isTest) return { toast: "Участник не найден.", clearKeyboard: true };
+    try {
+      await setTournamentParticipantActivity({ registrationId, active: true, tournamentId: registration.tournamentId, actorId: params.userId });
+    } catch (error) {
+      if (error instanceof TournamentParticipantActivityError) return { toast: error.message, clearKeyboard: true };
+      throw error;
+    }
+    return { toast: "Участник снова активен.", clearKeyboard: true };
+  }
+  return { toast: "Действие недоступно.", clearKeyboard: true };
+}
+
 function telegramParticipantName(
   entry: {
     teamName: string | null;
@@ -707,8 +821,73 @@ async function buildMyMatchDraft(userId: string, tournamentId: string) {
   });
 }
 
+async function handleInactiveCommand(message: TelegramWebhookMessage) {
+  const command = commandName(message.text);
+  if (command !== "inactive" && command !== "inactivelist") return false;
+
+  const chatId = normalizeId(message.chat?.id ?? message.from?.id);
+  const telegramId = telegramUserId(message);
+  if (!chatId || !telegramId) return true;
+  const operator = await db.user.findUnique({ where: { telegramId }, select: { id: true, role: true } });
+  if (!operator || !isTelegramTournamentStaff(operator.role)) {
+    await sendTelegramMessage({ chatId, text: "Команда доступна только администрации турниров." });
+    return true;
+  }
+
+  const commandArguments = message.text?.trim().split(/\s+/).slice(1) ?? [];
+  if (command === "inactivelist" || commandArguments.length === 0) {
+    await sendInactiveTournamentPicker(chatId);
+    return true;
+  }
+
+  const publicId = commandArguments[0]?.replace(/^@/, "").trim();
+  if (!publicId || commandArguments.length > 1) {
+    await sendTelegramMessage({ chatId, text: "Формат команды: <code>/inactive ник_с_сайта</code>\nТур определяется автоматически по дедлайну: если до него не менее 12 часов — текущий тур, иначе следующий." });
+    return true;
+  }
+
+  const context = await resolveCommandContext(message);
+  if (!context.tournament) {
+    await sendTelegramMessage({ chatId, text: "Для изменения статуса откройте команду в чате нужного турнира или используйте админскую страницу турнира." });
+    return true;
+  }
+  const registration = await db.tournamentRegistration.findFirst({
+    where: {
+      tournamentId: context.tournament.id,
+      status: { not: "REMOVED" },
+      user: { publicId: { equals: publicId, mode: "insensitive" } },
+    },
+    select: { id: true, isActive: true, user: { select: { publicId: true, name: true } } },
+  });
+  if (!registration) {
+    await sendTelegramMessage({ chatId, text: `В турнире «${escapeTelegramHtml(context.tournament.title)}» участник с ником <code>${escapeTelegramHtml(publicId)}</code> не найден.` });
+    return true;
+  }
+  if (!registration.isActive) {
+    await sendTelegramMessage({ chatId, text: "Этот участник уже отмечен как неактивный." });
+    return true;
+  }
+
+  try {
+    await setTournamentParticipantActivity({
+      tournamentId: context.tournament.id,
+      registrationId: registration.id,
+      active: false,
+      actorId: operator.id,
+    });
+    await sendTelegramMessage({
+      chatId,
+      text: `Участник <b>${escapeTelegramHtml(registration.user.name?.trim() || registration.user.publicId)}</b> отмечен неактивным с рассчитанного эффективного тура в турнире «${escapeTelegramHtml(context.tournament.title)}».\nСистема выбрала текущий тур, если до дедлайна было не менее 12 часов, иначе следующий. Матчи с этого тура исключены из статистики, рейтинга и таблиц.`,
+    });
+  } catch (error) {
+    await sendTelegramMessage({ chatId, text: error instanceof Error ? escapeTelegramHtml(error.message) : "Не удалось изменить статус участника." });
+  }
+  return true;
+}
+
 async function handleCommand(message: TelegramWebhookMessage) {
   if (!process.env.TELEGRAM_BOT_TOKEN) return;
+  if (await handleInactiveCommand(message)) return;
   const command = commandName(message.text);
   if (!command || !["start", "help", "contacts", "mymatch", "mymatches", "myresults", "deadline", "table", "schedule", "rules"].includes(command)) return;
 
@@ -732,7 +911,7 @@ async function handleCommand(message: TelegramWebhookMessage) {
     const greeting = firstName ? `${firstName}, ` : "";
     const draft = infoMessage(
       `${TELEGRAM_AI_NAME} · команды`,
-      `${greeting}я понимаю обычные сообщения о турнирах и отвечаю по актуальным данным. Для подробного вопроса используйте /ask ваш вопрос.\n\n/ask ваш вопрос — спросить Роки\n/mymatches — мой ближайший матч\n/myresults — результаты турнира\n/schedule — расписание\n/table — таблица\n/rules — регламент\n/contacts — связь с основателем`,
+      `${greeting}я понимаю обычные сообщения о турнирах и отвечаю по актуальным данным. Для подробного вопроса используйте /ask ваш вопрос.\n\n/ask ваш вопрос — спросить Роки\n/mymatches — мой ближайший матч\n/myresults — результаты турнира\n/schedule — расписание\n/table — таблица\n/rules — регламент\n/inactive ник — отметить игрока неактивным с рассчитанного тура (админ)\n/inactivelist — список неактивных (админ)\n/contacts — связь с основателем`,
     );
     await deliverCommandMessage({ message, draft });
     return;
@@ -792,7 +971,7 @@ async function handleCallbackQuery(callbackQuery: NonNullable<TelegramWebhookUpd
 
   const telegramId = normalizeId(callbackQuery.from?.id);
   const user = telegramId && !telegramId.startsWith("-")
-    ? await db.user.findUnique({ where: { telegramId }, select: { id: true } })
+    ? await db.user.findUnique({ where: { telegramId }, select: { id: true, role: true } })
     : null;
 
   if (!user) {
@@ -801,6 +980,29 @@ async function handleCallbackQuery(callbackQuery: NonNullable<TelegramWebhookUpd
       text: "Аккаунт не привязан. Войдите на платформе через Telegram.",
       showAlert: true,
     }).catch(() => null);
+    return;
+  }
+
+  if (data.startsWith("inactive:")) {
+    if (!isTelegramTournamentStaff(user.role)) {
+      await answerTelegramCallbackQuery({ callbackQueryId, text: "Действие доступно только администрации турниров.", showAlert: true }).catch(() => null);
+      return;
+    }
+    const chatId = normalizeId(callbackQuery.message?.chat?.id ?? callbackQuery.from?.id);
+    if (!chatId) return;
+    try {
+      const result = await handleInactiveCallback({ data, chatId, userId: user.id });
+      if (result?.toast) {
+        await answerTelegramCallbackQuery({ callbackQueryId, text: result.toast }).catch(() => null);
+      }
+      if (result?.clearKeyboard) {
+        const messageId = callbackQuery.message?.message_id;
+        if (messageId) await editTelegramMessageReplyMarkup({ chatId, messageId: String(messageId) }).catch(() => null);
+      }
+    } catch (error) {
+      console.error("Failed to handle inactive participant callback", { data, error });
+      await answerTelegramCallbackQuery({ callbackQueryId, text: "Не удалось выполнить действие.", showAlert: true }).catch(() => null);
+    }
     return;
   }
 

@@ -1022,6 +1022,9 @@ model TournamentRegistration {
   tournamentId        String
   userId              String
   status              ParticipantStatus              @default(CONFIRMED)
+  isActive            Boolean                        @default(true)
+  inactiveFromRound   Int?
+  inactiveSince       DateTime?
   seed                Int?
   stageSeed           Int?
   groupId             String?
@@ -1166,6 +1169,7 @@ model Match {
   player2Score               Int?
   player1PenaltyScore        Int?
   player2PenaltyScore        Int?
+  excludeFromStatistics      Boolean                 @default(false)
   status                     MatchStatus             @default(PENDING)
   notes                      String?                 @db.Text
   locationLabel              String?

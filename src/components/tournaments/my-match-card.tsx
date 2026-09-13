@@ -30,6 +30,7 @@ type MyMatchCardProps = {
   confirmedPlayer1PenaltyScore?: number | null;
   confirmedPlayer2PenaltyScore?: number | null;
   canSubmit: boolean;
+  inactiveForCurrentUser?: boolean;
   requiresPenaltyOnDraw: boolean;
   waitingForOpponent: boolean;
   attemptsLeft: number;
@@ -106,6 +107,7 @@ export function MyMatchCard({
   confirmedPlayer1PenaltyScore,
   confirmedPlayer2PenaltyScore,
   canSubmit,
+  inactiveForCurrentUser = false,
   requiresPenaltyOnDraw,
   waitingForOpponent,
   attemptsLeft,
@@ -331,6 +333,11 @@ export function MyMatchCard({
                 </span>
               </div>
             ) : null}
+          </div>
+        ) : inactiveForCurrentUser ? (
+          <div className="mt-2.5 flex items-center gap-2 rounded-lg border border-amber-300/20 bg-amber-300/[0.07] px-2.5 py-2 text-[11px] leading-snug text-amber-100/85 sm:px-3">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-200" />
+            <span>Вы неактивны и не можете подтвердить результат этого матча.</span>
           </div>
         ) : waitingForOpponent ? (
           <div className="mt-2.5 flex items-center gap-2 rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-1.5 text-[11px] text-zinc-400 sm:px-3 sm:py-2">

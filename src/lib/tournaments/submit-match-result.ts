@@ -1,6 +1,7 @@
 import { MatchResultStatus, MatchStatus, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { decideSubmittedScores } from "@/lib/tournaments/match-result-decision";
+import { isUserInactiveForMatch } from "@/lib/tournaments/inactive-participant";
 
 const AUTO_MISMATCH_COMMENT = "AUTO_MISMATCH";
 const AUTO_CONFIRMED_COMMENT = "AUTO_CONFIRMED";
@@ -45,6 +46,21 @@ async function runSubmissionTransaction(matchId: string, userId: string, body: M
         player2Id: true,
         participant1EntryId: true,
         participant2EntryId: true,
+        round: true,
+        participant1Entry: {
+          select: {
+            isActive: true,
+            inactiveFromRound: true,
+            rosterMembers: { select: { userId: true, status: true } },
+          },
+        },
+        participant2Entry: {
+          select: {
+            isActive: true,
+            inactiveFromRound: true,
+            rosterMembers: { select: { userId: true, status: true } },
+          },
+        },
         player1Score: true,
         player2Score: true,
         winnerId: true,
@@ -68,6 +84,9 @@ async function runSubmissionTransaction(matchId: string, userId: string, body: M
     if (!match) throw new MatchSubmissionWriteError("Матч не найден.", 404);
     if (match.player1Id !== userId && match.player2Id !== userId) {
       throw new MatchSubmissionWriteError("Отправлять результат могут только участники матча.", 403);
+    }
+    if (isUserInactiveForMatch(userId, match.round, { playerId: match.player1Id, entry: match.participant1Entry }, { playerId: match.player2Id, entry: match.participant2Entry })) {
+      throw new MatchSubmissionWriteError("Вы не можете подтвердить результат: вы неактивны в этом турнире с указанного тура.", 403);
     }
     if (match.status === MatchStatus.DISPUTED) {
       throw new MatchSubmissionWriteError("Матч уже переведён в спор.");

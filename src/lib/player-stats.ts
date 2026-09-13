@@ -48,6 +48,7 @@ export async function getPlayerCareerStats(playerId: string, options: PlayerCare
 
   const where: Prisma.MatchWhereInput = {
     isPenaltyTiebreak: false,
+    excludeFromStatistics: false,
     status: { in: [MatchStatus.CONFIRMED, MatchStatus.FINISHED] },
     player1Score: { not: null },
     player2Score: { not: null },

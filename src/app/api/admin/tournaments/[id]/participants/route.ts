@@ -10,9 +10,14 @@ import { applyConfiguredReliabilityPenaltyToUsers, formatReliabilityRegistration
 import { getAcceptedRosterPenaltyUserIds, uniqueReliabilityPenaltyUserIds } from "@/lib/services/reliability-penalty-targets";
 import { snapshotRegistrationMatchesBeforeReplacement } from "@/lib/services/match-lineups";
 import { recalculateGroupStandings } from "@/lib/services/tournaments";
+import {
+  setTournamentParticipantActivity,
+  TournamentParticipantActivityError,
+} from "@/lib/services/tournament-participant-activity";
 import { invalidateTournamentAll } from "@/lib/tournament-cache";
 import { hasTelegramRegistrationContact } from "@/lib/social-links";
 import { resolveParticipantClub } from "@/lib/tournament-participant-assignment";
+import { getEffectiveParticipantRound } from "@/lib/tournaments/effective-participant-round";
 import { participantManageSchema } from "@/lib/validators";
 import { formatTournamentBanMessage } from "@/lib/user-ban";
 
@@ -101,6 +106,9 @@ export async function GET(_: Request, props: { params: Promise<{ id: string }> }
     select: {
       id: true,
       status: true,
+      isActive: true,
+      inactiveFromRound: true,
+      inactiveSince: true,
       seed: true,
       clubSlug: true,
       clubName: true,
@@ -142,6 +150,27 @@ async function handleParticipantMutation(request: Request, params: { id: string 
   const session = await requirePermission("tournaments.manageParticipants");
   await assertCanManageTournament(session, params.id);
   const body = participantManageSchema.parse(await request.json());
+
+  if (body.action === "setInactive" || body.action === "setActive") {
+    if (!body.registrationId) {
+      return NextResponse.json({ error: "Укажите участника турнира." }, { status: 400 });
+    }
+
+    try {
+      const registration = await setTournamentParticipantActivity({
+        tournamentId: params.id,
+        registrationId: body.registrationId,
+        active: body.action === "setActive",
+        actorId: session.user.id,
+      });
+      return NextResponse.json({ ok: true, registration });
+    } catch (error) {
+      if (error instanceof TournamentParticipantActivityError) {
+        return NextResponse.json({ error: error.message }, { status: error.status });
+      }
+      throw error;
+    }
+  }
 
   if (body.action === "add" && body.userId) {
     const participantUserId = body.userId;
@@ -277,7 +306,12 @@ async function handleParticipantMutation(request: Request, params: { id: string 
         id: body.registrationId,
         tournamentId: params.id,
       },
-      include: { user: true, group: true, rosterMembers: true },
+      include: {
+        user: true,
+        group: true,
+        rosterMembers: true,
+        tournament: { select: { participantMode: true } },
+      },
     });
 
     if (!before) {
@@ -352,6 +386,11 @@ async function handleParticipantMutation(request: Request, params: { id: string 
       return NextResponse.json({ error: "Этот игрок уже есть в турнире." }, { status: 400 });
     }
 
+    const effectiveParticipantRound =
+      (before.tournament?.participantMode ?? TournamentParticipantMode.SINGLE) === TournamentParticipantMode.SINGLE
+        ? await getEffectiveParticipantRound(params.id)
+        : null;
+
     let replacementResult;
     try {
       replacementResult = await db.$transaction(async (tx) => {
@@ -381,6 +420,7 @@ async function handleParticipantMutation(request: Request, params: { id: string 
         where: {
           tournamentId: params.id,
           OR: [{ participant1EntryId: lockedBefore.id }, { participant2EntryId: lockedBefore.id }],
+          ...(effectiveParticipantRound !== null ? { round: { gte: effectiveParticipantRound } } : {}),
           status: { in: replaceableMatchStatuses },
           player1Score: null,
           player2Score: null,
@@ -679,7 +719,6 @@ async function handleParticipantMutation(request: Request, params: { id: string 
 
     const isCaptain = member.isCaptain || member.userId === member.registration.userId;
     const registrationId = member.registration.id;
-
     const result = await db.$transaction(async (tx) => {
       await snapshotRegistrationMatchesBeforeReplacement(registrationId, tx);
       if (duplicateRegistrationAbsorption.registration) {

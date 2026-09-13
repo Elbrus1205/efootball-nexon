@@ -42,6 +42,7 @@ type RatingPlayer = Pick<User, "id" | "name" | "image"> & {
 };
 
 type RatingMatchSideSource = {
+  excludeFromStatistics: boolean;
   tournament: { participantMode: TournamentParticipantMode };
   player1: RatingPlayer | null;
   player2: RatingPlayer | null;
@@ -201,6 +202,7 @@ async function computePlayerRatings(options: PlayerRatingOptions = {}) {
     player1Score: { not: null },
     player2Score: { not: null },
     isPenaltyTiebreak: false,
+    excludeFromStatistics: false,
     tournament: { isTest: false },
   };
 
@@ -307,6 +309,7 @@ async function computePlayerRatings(options: PlayerRatingOptions = {}) {
   };
 
   function applyMatchRating(match: (typeof matches)[number]) {
+    if (match.excludeFromStatistics) return;
     if (!match.player1 || !match.player2 || match.player1Score === null || match.player2Score === null) return;
 
     const sideOnePlayers = getRatingMatchSidePlayers(match, 1);
