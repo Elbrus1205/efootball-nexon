@@ -35,7 +35,6 @@ import {
   tournamentStatusVariant,
 } from "@/lib/admin-display";
 import { db } from "@/lib/db";
-import { normalizeFormatBlueprint } from "@/lib/format-blueprint";
 import { getPlayerDisplayName } from "@/lib/player-name";
 import { RELIABILITY_REGISTRATION_THRESHOLD } from "@/lib/services/reliability";
 import { getTelegramProfileLinks, hasPublicTelegramUsername, hasTelegramRegistrationContact } from "@/lib/social-links";
@@ -46,7 +45,8 @@ import {
 } from "@/lib/tournaments/captain-team-match-presentation";
 import { isSupersededCaptainTeamSeriesArchive } from "@/lib/tournaments/captain-team-series-assignment";
 import { isUserInactiveForMatch } from "@/lib/tournaments/inactive-participant";
-import { getStandingZoneStyle, isStandingEliminatedRank, relegationStyle } from "@/lib/tournament-standing-colors";
+import { isStandingEliminatedRank, relegationStyle } from "@/lib/tournament-standing-colors";
+import { buildStandingHighlightsFromBlueprint } from "@/lib/tournament-standing-highlights";
 import { cn, formatDate } from "@/lib/utils";
 import {
   buildLeagueTable as buildPublicLeagueTable,
@@ -274,105 +274,8 @@ function buildCustomStandingHighlights(tournament: {
   format: TournamentFormat;
   formatBlueprintJson: unknown;
 }, stageSettingsJson?: unknown) {
-  if (tournament.format !== TournamentFormat.CUSTOM) {
-    return new Map<number, StandingHighlight[]>();
-  }
-
-  const blueprint = normalizeFormatBlueprint(tournament.formatBlueprintJson);
-  const graphStageId = stageSettingsJson && typeof stageSettingsJson === "object" && !Array.isArray(stageSettingsJson)
-    ? (stageSettingsJson as { graphId?: unknown }).graphId
-    : null;
-  const selectedGraphStageId = typeof graphStageId === "string" && graphStageId ? graphStageId : null;
-  const byDivision = new Map<number, StandingHighlight[]>();
-  const styleByTarget = new Map<string, ReturnType<typeof getStandingZoneStyle>>();
-  let styleIndex = 0;
-
-  const nationalStage = blueprint.stageGraph?.stages.find((stage) =>
-    (stage.type === "GROUPS" || stage.type === "LEAGUE") && stage.divisions.length === 5,
-  );
-  const nationalStageIsFiveLeagues = Boolean(nationalStage && nationalStage.divisions.length === 5);
-  const selectedStage = selectedGraphStageId ? blueprint.stageGraph?.stages.find((stage) => stage.id === selectedGraphStageId) : null;
-  const nationalZones = [
-    { fromRank: 1, toRank: 6, label: "ЛЧ" },
-    { fromRank: 7, toRank: 12, label: "ЛЕ" },
-    { fromRank: 13, toRank: 18, label: "ЛК" },
-  ];
-
-  if (nationalStageIsFiveLeagues && nationalStage && (!selectedStage || selectedStage.id === nationalStage.id)) {
-    for (let divisionIndex = 1; divisionIndex <= nationalStage.divisions.length; divisionIndex += 1) {
-      const bucket = byDivision.get(divisionIndex) ?? [];
-      for (const [zoneIndex, zone] of nationalZones.entries()) {
-        const style = getStandingZoneStyle(zoneIndex);
-        bucket.push({ ...zone, rowClass: style.rowClass, badgeClass: style.badgeClass, rankClass: style.rankClass, dotClass: style.dotClass });
-      }
-      byDivision.set(divisionIndex, bucket);
-    }
-  }
-
-  for (const transition of blueprint.stageGraph?.transitions ?? []) {
-    if (transition.result !== "RANK" || transition.fromRank === null || transition.toRank === null) continue;
-
-    const sourceStage = blueprint.stageGraph?.stages.find((stage) => stage.id === transition.fromStageId);
-    const targetStage = blueprint.stageGraph?.stages.find((stage) => stage.id === transition.toStageId);
-    if (!sourceStage || !targetStage || (sourceStage.type !== "GROUPS" && sourceStage.type !== "LEAGUE") || (selectedStage && sourceStage.id !== selectedStage.id)) continue;
-    if (nationalStageIsFiveLeagues && sourceStage.id === nationalStage?.id) continue;
-
-    const divisionIndex = (transition.fromDivisionIndex
-      ?? (transition.fromDivisionId ? sourceStage.divisions.findIndex((division) => division.id === transition.fromDivisionId) + 1 : 0)) || 1;
-    const targetKey = `${targetStage.id}:${transition.targetBracket}`;
-    if (!styleByTarget.has(targetKey)) {
-      styleByTarget.set(targetKey, getStandingZoneStyle(styleIndex));
-      styleIndex += 1;
-    }
-
-    const style = styleByTarget.get(targetKey)!;
-    const bucket = byDivision.get(divisionIndex) ?? [];
-    bucket.push({
-      fromRank: transition.fromRank,
-      toRank: transition.toRank,
-      label: transition.targetBracket === "lower" ? `${targetStage.name} • Нижняя сетка` : targetStage.name,
-      rowClass: style.rowClass,
-      badgeClass: style.badgeClass,
-      rankClass: style.rankClass,
-      dotClass: style.dotClass,
-    });
-    byDivision.set(divisionIndex, bucket);
-  }
-
-  const hasGraphRankTransitions = (blueprint.stageGraph?.transitions ?? []).some((transition) => transition.result === "RANK" && transition.fromRank !== null && transition.toRank !== null);
-
-  for (const playoff of hasGraphRankTransitions ? [] : blueprint.playoffs) {
-    for (const selection of playoff.selections) {
-      const targetKey = playoff.type === "SINGLE" ? `${playoff.id}:main` : `${playoff.id}:${selection.targetBracket}`;
-
-      if (!styleByTarget.has(targetKey)) {
-        styleByTarget.set(targetKey, getStandingZoneStyle(styleIndex));
-        styleIndex += 1;
-      }
-
-      const style = styleByTarget.get(targetKey)!;
-      const bucket = byDivision.get(selection.divisionIndex) ?? [];
-      const targetLabel =
-        playoff.type === "SINGLE"
-          ? playoff.name
-          : selection.targetBracket === "upper"
-            ? `${playoff.name} • Верхняя сетка`
-            : `${playoff.name} • Нижняя сетка`;
-
-      bucket.push({
-        fromRank: selection.fromRank,
-        toRank: selection.toRank,
-        label: targetLabel,
-        rowClass: style.rowClass,
-        badgeClass: style.badgeClass,
-        rankClass: style.rankClass,
-        dotClass: style.dotClass,
-      });
-      byDivision.set(selection.divisionIndex, bucket);
-    }
-  }
-
-  return byDivision;
+  if (tournament.format !== TournamentFormat.CUSTOM) return new Map<number, StandingHighlight[]>();
+  return buildStandingHighlightsFromBlueprint({ formatBlueprintJson: tournament.formatBlueprintJson, stageSettingsJson });
 }
 
 function defaultRowHighlight(index: number) {
