@@ -13,7 +13,7 @@ const CACHE_TTL_SECONDS = 60 * 60;
 // namespace guarantees that a persistent Next Data Cache cannot serve the
 // pre-repair empty tournament slices while the regular tag invalidation is
 // unavailable to one-off database maintenance scripts.
-const CACHE_KEY_VERSION = "v2";
+const CACHE_KEY_VERSION = "v3";
 
 export function tournamentRulesTag(tournamentId: string) {
   return `tournament-rules:${tournamentId}`;

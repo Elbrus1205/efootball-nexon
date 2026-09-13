@@ -21,6 +21,9 @@ function isRelegationTarget(stage: StageGraphStage) {
 }
 
 function transitionLabel(targetStage: StageGraphStage, transition: StageGraphTransition) {
+  const targetDivision = targetStage.divisions.find((division) => division.id === transition.toDivisionId)
+    ?? (transition.toDivisionIndex ? targetStage.divisions[transition.toDivisionIndex - 1] : null);
+  if (targetDivision) return targetDivision.name;
   if (transition.targetBracket === "lower" && targetStage.type === "PLAYOFF") return `${targetStage.name} • Нижняя сетка`;
   return targetStage.name;
 }
