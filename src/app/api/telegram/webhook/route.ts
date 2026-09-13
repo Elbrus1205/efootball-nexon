@@ -27,6 +27,7 @@ import {
 import { tgEmoji, tgEmojiId } from "@/lib/telegram-emoji";
 import { buildTelegramInlineKeyboard } from "@/lib/telegram-format";
 import { buildPersonalMatchMessage, type TelegramRichMessageDraft } from "@/lib/telegram-rich";
+import { buildTelegramAdminCommandsText, isTelegramAdminRole } from "@/lib/telegram-admin-commands";
 import { getRegulationsDocument } from "@/lib/regulations";
 import { blocksToPlainText, resolveFaqBlocks } from "@/lib/faq/content";
 import { buildTournamentBulletin } from "@/lib/services/telegram-publications";
@@ -885,8 +886,35 @@ async function handleInactiveCommand(message: TelegramWebhookMessage) {
   return true;
 }
 
+async function handleAdminCommand(message: TelegramWebhookMessage) {
+  if (commandName(message.text) !== "admin") return false;
+
+  const chatId = normalizeId(message.chat?.id ?? message.from?.id);
+  const telegramId = telegramUserId(message);
+  if (!chatId || !telegramId) return true;
+
+  const operator = await db.user.findUnique({ where: { telegramId }, select: { role: true } });
+  if (!operator || !isTelegramAdminRole(operator.role)) {
+    await sendTelegramMessage({
+      chatId,
+      text: "Команда /admin доступна только администраторам сайта.",
+      parseMode: null,
+      replyParameters: message.message_id ? { messageId: message.message_id, allowSendingWithoutReply: true } : undefined,
+      ...(message.message_thread_id !== undefined ? { messageThreadId: message.message_thread_id } : {}),
+    });
+    return true;
+  }
+
+  await deliverCommandMessage({
+    message,
+    draft: infoMessage("Админские команды", buildTelegramAdminCommandsText()),
+  });
+  return true;
+}
+
 async function handleCommand(message: TelegramWebhookMessage) {
   if (!process.env.TELEGRAM_BOT_TOKEN) return;
+  if (await handleAdminCommand(message)) return;
   if (await handleInactiveCommand(message)) return;
   const command = commandName(message.text);
   if (!command || !["start", "help", "contacts", "mymatch", "mymatches", "myresults", "deadline", "table", "schedule", "rules"].includes(command)) return;
