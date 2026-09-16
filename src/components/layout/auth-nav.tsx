@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { LogIn, LogOut, Shield, ShieldCheck, User2 } from "lucide-react";
+import { LogIn, LogOut, PencilLine, Shield, ShieldCheck, User2 } from "lucide-react";
+import styles from "./auth-nav.module.css";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -60,17 +61,17 @@ export function AuthNav() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="group relative flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.035] p-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_30px_rgba(0,0,0,0.26)] transition duration-300 hover:-translate-y-0.5 hover:border-[#21F1A8]/30 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#21F1A8]/60 sm:h-12 sm:w-12">
-            <span className="absolute inset-0 rounded-2xl bg-[#21F1A8]/10 opacity-0 blur-md transition duration-300 group-hover:opacity-100" />
+          <button className={styles.trigger} aria-label="Меню аккаунта">
             <Avatar className="relative h-9 w-9 rounded-xl border border-white/10 sm:h-10 sm:w-10">
               <AvatarImage src={session.user.image ?? undefined} alt={session.user.name ?? "Avatar"} />
               <AvatarFallback>{(session.user.name ?? "U").slice(0, 1)}</AvatarFallback>
             </Avatar>
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-72 rounded-3xl border-white/10 bg-[#1D1D1D]/95 p-2 text-white shadow-[0_24px_70px_rgba(2,6,23,0.48)] backdrop-blur-2xl">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3">
-            <div className="text-sm font-bold">{session.user.name}</div>
+        <DropdownMenuContent align="end" className={styles.menu}>
+          <div className={styles.identity}>
+            <span>Аккаунт</span>
+            <div>{session.user.name}</div>
           </div>
 
           <DropdownMenuItem asChild>
@@ -96,13 +97,20 @@ export function AuthNav() {
             </DropdownMenuItem>
           )}
 
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard/edit" className="flex items-center gap-2">
+              <PencilLine className="h-4 w-4" />
+              Редактировать профиль
+            </Link>
+          </DropdownMenuItem>
+
           <DropdownMenuItem
             onSelect={async () => {
               await signOut({ redirect: false });
               router.refresh();
               router.push("/");
             }}
-            className="flex items-center gap-2"
+            className={styles.signOut}
           >
             <LogOut className="h-4 w-4" />
             Выйти

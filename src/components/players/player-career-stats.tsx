@@ -23,6 +23,7 @@ export function PlayerCareerStatsPanel({ stats, periodLabel = "За всё вр�
     { label: "Забито", value: stats.goalsFor },
     { label: "Пропущено", value: stats.goalsAgainst },
     { label: "Разница мячей", value: formatGoalDifference(stats.goalDifference) },
+    { label: "Матчи без пропущенных", value: stats.cleanSheets },
   ];
 
   return (
@@ -37,6 +38,9 @@ export function PlayerCareerStatsPanel({ stats, periodLabel = "За всё вр�
           <div><dt>Матчей сыграно</dt><dd>{stats.played}</dd></div>
           <div><dt>Винрейт</dt><dd>{stats.winRate}<span>%</span></dd></div>
         </dl>
+        <div className={styles.resultBar} aria-hidden="true">
+          {results.map((item) => <span key={item.tone} data-tone={item.tone} style={{ flexGrow: item.value }} />)}
+        </div>
         <dl className={styles.results}>
           {results.map((item) => (
             <div key={item.label} className={styles.result} data-tone={item.tone}>

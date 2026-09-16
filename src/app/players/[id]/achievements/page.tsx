@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import styles from "@/components/players/player-profile.module.css";
 import { PlayerAchievementsPanel } from "@/components/players/player-achievements-panel";
 import { getUserAchievementProgress } from "@/lib/achievements";
 import { db } from "@/lib/db";
@@ -27,15 +27,15 @@ export default async function PlayerAchievementsPage(props: { params: Promise<{ 
   const displayName = getPlayerDisplayName(user);
 
   return (
-    <div className="page-shell space-y-5">
+    <div className={`page-shell space-y-5 ${styles.page}`}>
       <Link href={`/players/${user.publicId}`} className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition hover:text-white">
         <ArrowLeft className="h-4 w-4" />
         Назад в профиль
       </Link>
 
       <div className="space-y-2">
-        <Badge variant="primary">Профиль игрока</Badge>
-        <h1 className="font-display text-2xl font-semibold text-white sm:text-3xl">Достижения {displayName}</h1>
+        <p className={styles.caption}>Профиль игрока · {displayName}</p>
+        <h1 className={styles.name}>Достижения</h1>
       </div>
 
       <PlayerAchievementsPanel achievements={achievements} />

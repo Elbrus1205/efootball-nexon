@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ChangeEvent, useState, useTransition } from "react";
+import { ChangeEvent, useState } from "react";
 import { ArrowLeft, CalendarDays, Camera, Check, ChevronDown, ImagePlus, Loader2, Save, ShieldCheck } from "lucide-react";
 import type { ProfileStatusTone, ProfileStatusType } from "@prisma/client";
 import { toast } from "sonner";
@@ -50,7 +50,7 @@ export function ProfileForm({
   const [avatarPreview, setAvatarPreview] = useState(initialValues.image);
   const [bannerPreview, setBannerPreview] = useState(initialValues.bannerImage);
   const [uploadingImage, setUploadingImage] = useState<"avatar" | "banner" | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const bioCharactersLeft = PROFILE_BIO_MAX_LENGTH - draft.bio.length;
   const selectedStatusIds = draft.selectedStatusIds ?? [];
   const selectedStatuses = selectedStatusIds
@@ -126,7 +126,7 @@ export function ProfileForm({
     const file = event.target.files?.[0];
     // Позволяем выбрать тот же файл повторно после ошибки.
     event.target.value = "";
-    if (!file) return;
+    if (!file || pending || uploadingImage) return;
 
     if (!file.type.startsWith("image/")) {
       toast.error("Нужно выбрать изображение.");
@@ -157,8 +157,10 @@ export function ProfileForm({
     }
   };
 
-  const saveProfile = () => {
-    startTransition(async () => {
+  const saveProfile = async () => {
+    if (pending || uploadingImage) return;
+    setPending(true);
+    try {
       const res = await fetch("/api/register", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -173,14 +175,18 @@ export function ProfileForm({
       });
 
       if (!res.ok) {
-        const payload = await res.json().catch(() => null);
-        toast.error(payload?.error || "Не удалось сохранить изменения профиля.");
+        const payload: unknown = await res.json().catch(() => null);
+        toast.error(payload && typeof payload === "object" && "error" in payload && typeof payload.error === "string" ? payload.error : "Не удалось сохранить изменения профиля.");
         return;
       }
 
       toast.success("Профиль обновлён.");
       window.location.href = "/dashboard";
-    });
+    } catch {
+      toast.error("Нет связи с сервером. Проверьте интернет и попробуйте сохранить ещё раз.");
+    } finally {
+      setPending(false);
+    }
   };
 
   return (
@@ -201,14 +207,13 @@ export function ProfileForm({
               />
             ) : null}
             <div className="profile-editor-banner-overlay" />
-            <div className="profile-banner-grid absolute inset-0 opacity-20" />
           </div>
 
           <div className="profile-editor-banner-action">
-            <label className="profile-editor-media-button" aria-disabled={uploadingImage !== null}>
+            <label className="profile-editor-media-button" aria-disabled={uploadingImage !== null || pending}>
               {uploadingImage === "banner" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
               {uploadingImage === "banner" ? "Загрузка..." : "Изменить баннер"}
-              <input type="file" accept="image/*" className="hidden" disabled={uploadingImage !== null} onChange={(event) => onImageSelect(event, "banner")} />
+              <input aria-label="Загрузить баннер" aria-describedby="profile-banner-help" type="file" accept="image/*" className="sr-only" disabled={uploadingImage !== null || pending} onChange={(event) => onImageSelect(event, "banner")} />
             </label>
           </div>
 
@@ -218,9 +223,9 @@ export function ProfileForm({
                 <AvatarImage src={avatarPreview || undefined} alt="Аватар игрока" />
                 <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
-              <label className="profile-editor-avatar-button" aria-label="Изменить фото профиля" aria-disabled={uploadingImage !== null}>
+              <label className="profile-editor-avatar-button" aria-label="Изменить фото профиля" aria-disabled={uploadingImage !== null || pending}>
                 {uploadingImage === "avatar" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-                <input type="file" accept="image/*" className="hidden" disabled={uploadingImage !== null} onChange={(event) => onImageSelect(event, "avatar")} />
+                <input aria-label="Загрузить фото профиля" type="file" accept="image/*" className="sr-only" disabled={uploadingImage !== null || pending} onChange={(event) => onImageSelect(event, "avatar")} />
               </label>
             </div>
 
@@ -239,6 +244,11 @@ export function ProfileForm({
             </div>
           </div>
         </section>
+
+        <div id="profile-banner-help" className="profile-editor-upload-help">
+          <ImagePlus size={18} aria-hidden="true" />
+          <div><strong>Баннер · 1600 × 420 px</strong><p>Рекомендуем горизонтальное фото до 4 МБ. Главный объект расположите по центру: на телефоне края обрезаются. Для аватара — квадрат 512 × 512 px.</p></div>
+        </div>
 
         <div className="profile-editor-layout">
           <div className="profile-editor-main-column">
@@ -380,7 +390,7 @@ export function ProfileForm({
                 Назад
               </Link>
             </Button>
-            <Button onClick={saveProfile} disabled={pending} className="profile-editor-save-button">
+            <Button onClick={saveProfile} disabled={pending || uploadingImage !== null} className="profile-editor-save-button">
               {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               {pending ? "Сохранение..." : "Сохранить изменения"}
             </Button>

@@ -33,8 +33,6 @@
 .page .statusBadge { min-height: 28px; max-width: 100%; gap: 6px; padding: 5px 9px; border-radius: 8px; font-size: 11px; font-weight: 500; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; animation: none; box-shadow: none; text-shadow: none; }
 .statusBadge > span { min-width: 0; }
 .bio { max-width: 620px; margin-top: 12px; color: var(--profile-muted); font-size: 14px; line-height: 1.65; white-space: pre-line; overflow-wrap: anywhere; }
-.page .editButton { width: 100%; min-height: 44px; height: auto; gap: 8px; padding: 11px 16px; border: 1px solid var(--profile-line); border-radius: 12px; background: rgba(255, 255, 255, .04); color: var(--profile-text); font-size: 13px; font-weight: 500; }
-.editButton svg { flex-shrink: 0; }
 .metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--profile-line); }
 .metric { min-width: 0; padding: 20px; }
 .metric + .metric { border-left: 1px solid var(--profile-line); }
@@ -69,6 +67,10 @@
 .chevron { flex-shrink: 0; color: var(--profile-muted); }
 .progressTrack { height: 3px; overflow: hidden; margin-top: 13px; border-radius: 3px; background: rgba(255, 255, 255, .08); }
 .progressFill { height: 100%; border-radius: inherit; background: var(--profile-accent); }
+.resultBar { display: flex; gap: 3px; height: 4px; border-radius: 4px; overflow: hidden; background: #ffffff0a; }
+.resultBar span { flex-basis: 0; min-width: 0; border-radius: inherit; background: #98989f; }
+.resultBar [data-tone="win"] { background: #a6c6b2; }
+.resultBar [data-tone="loss"] { background: #b88f8f; }
 .statsSection { min-width: 0; }
 .page .statsPanel { padding: 20px 16px; }
 .statsHeading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
@@ -77,10 +79,12 @@
 .periodButton span { min-width: 0; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .periodButton svg { flex-shrink: 0; color: var(--profile-muted); }
 .statsSummary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 26px 0; }
+.statsSummary > div { min-width: 0; padding: 14px 12px; border-radius: 14px; background: #ffffff03; border: 1px solid #ffffff08; }
+.statsSummary > div:last-child dd { color: var(--profile-accent); }
 .statsSummary dt { color: var(--profile-muted); font-size: 13px; }
 .statsSummary dd { margin-top: 6px; font-size: clamp(30px, 4vw, 42px); font-weight: 600; letter-spacing: -.045em; line-height: 1.2; overflow-wrap: anywhere; }
 .statsSummary dd span { margin-left: 3px; color: var(--profile-muted); font-size: .5em; }
-.results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 20px 0; border-top: 1px solid var(--profile-line); border-bottom: 1px solid var(--profile-line); }
+.results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 20px 0; border-bottom: 1px solid var(--profile-line); }
 .result { min-width: 0; padding: 0 8px; }
 .result:first-child { padding-left: 0; }
 .result + .result { border-left: 1px solid var(--profile-line); }
@@ -93,6 +97,22 @@
 .goalList .detailRow { grid-template-columns: minmax(0, 1fr) auto; min-height: 52px; }
 .goalList dd { font-size: 16px; font-weight: 500; }
 .statsNote { margin-top: 16px; color: var(--profile-muted); font-size: 12px; line-height: 1.65; }
+.podiumList { padding: 0 16px; }
+.podiumList > li + li { border-top: 1px solid var(--profile-line); }
+.podiumRow { display: flex; align-items: center; gap: 12px; padding: 18px 0; transition: background-color 180ms; }
+.podiumRow:hover { background: #ffffff03; }
+.medal { flex-shrink: 0; width: 40px; height: 48px; color: #c8b58b; }
+.medal[data-place="2"], .podiumPlace[data-place="2"] { color: #b9c0cb; }
+.medal[data-place="3"], .podiumPlace[data-place="3"] { color: #bd967c; }
+.podiumCopy { flex: 1; min-width: 0; }
+.podiumPlace { display: block; color: var(--profile-accent); font-size: 10px; }
+.podiumCopy h3 { margin: 5px 0; font-size: 13px; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
+.podiumCopy time { color: var(--profile-muted); font-size: 11px; }
+.podiumStage { margin-bottom: 5px; color: var(--profile-muted); font-size: 11px; overflow-wrap: anywhere; }
+.podiumEmpty { display: flex; align-items: flex-start; gap: 12px; padding: 22px 18px; color: var(--profile-muted); font-size: 12px; line-height: 1.7; }
+.podiumEmpty svg { flex-shrink: 0; color: var(--profile-accent); margin-top: 2px; }
+.podiumPagination { display: flex; justify-content: space-between; gap: 12px; padding: 6px 16px; border-top: 1px solid var(--profile-line); }
+.podiumPagination a { display: flex; align-items: center; gap: 5px; min-height: 44px; color: var(--profile-muted); font-size: 12px; }
 .socialList { padding: 0 16px; }
 .socialLink { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 0; transition: background-color 180ms ease; }
 .socialLink + .socialLink { border-top: 1px solid var(--profile-line); }
@@ -101,10 +121,19 @@
 .socialLabel { display: block; font-size: 13px; font-weight: 500; }
 .socialHandle { display: block; margin-top: 2px; color: var(--profile-muted); font-size: 12px; overflow-wrap: anywhere; }
 .page :is(a, button):focus-visible { outline: 2px solid var(--profile-accent); outline-offset: 4px; box-shadow: none; }
-.page :is(.editButton, .achievementLink, .socialLink, .periodButton):active { background: rgba(255, 255, 255, .08); }
+.page :is(.achievementLink, .socialLink, .periodButton):active { background: rgba(255, 255, 255, .08); }
+
+@media (max-width: 639px) {
+  .page .roleBadge { min-height: 14px; padding: 2px 5px; font-size: 8px; letter-spacing: 0; }
+  .page .statusBadge { min-height: 16px; gap: 3px; padding: 2px 5px; border-radius: 5px; font-size: 9px; line-height: 1.25; }
+  .page .statusBadge svg { width: 10px; height: 10px; }
+  .page .statusBadge :global(.profile-status-youtube-icon) { width: 12px; height: 9px; border-radius: 3px; }
+  .page .statusBadge :global(.profile-status-youtube-icon) > span { border-top-width: 3px; border-bottom-width: 3px; border-left-width: 4px; }
+  .badges { gap: 5px; margin-top: 8px; }
+}
 
 @media (hover: hover) {
-  .page :is(.editButton, .achievementLink, .socialLink, .periodButton):hover { background: rgba(255, 255, 255, .06); }
+  .page :is(.achievementLink, .socialLink, .periodButton):hover { background: rgba(255, 255, 255, .06); }
 }
 
 @media (min-width: 640px) {
@@ -112,7 +141,6 @@
   .identity { gap: 20px; padding: 0 28px 26px; }
   .page .avatar { width: 96px; height: 96px; margin-top: -36px; }
   .identityCopy { flex: 1 1 280px; padding-top: 18px; }
-  .page .editButton { width: auto; margin-top: 20px; }
   .metric { padding: 22px 28px; }
   .contentGrid { grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: 24px; }
   .page .statsPanel { padding: 20px; }

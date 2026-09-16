@@ -7,11 +7,12 @@ import { getPlayerCareerStats } from "@/lib/player-stats";
 import { getActiveProfileStatusWhere } from "@/lib/profile-status-query";
 import { getPlayerRatings } from "@/lib/ratings";
 import { getReliabilitySummary } from "@/lib/services/reliability";
+import { getPlayerPodiumHistory, parsePodiumPage } from "@/lib/services/player-podium";
 
 export default async function PlayerProfilePage(
   props: {
     params: Promise<{ id: string }>;
-    searchParams?: Promise<{ season?: string }>;
+    searchParams?: Promise<{ season?: string; historyPage?: string }>;
   }
 ) {
   const searchParams = await props.searchParams;
@@ -68,11 +69,12 @@ export default async function PlayerProfilePage(
   const activeSeason = seasons.find((season) => season.isActive) ?? null;
   const ratingSeasonId = selectedSeason?.id ?? activeSeason?.id ?? null;
   const careerStatsPromise = getPlayerCareerStats(user.id, { seasonId: selectedSeason?.id ?? null });
-  const [careerStats, achievements, ratings, reliability] = await Promise.all([
+  const [careerStats, achievements, ratings, reliability, podiumHistory] = await Promise.all([
     careerStatsPromise,
     careerStatsPromise.then((stats) => getUserAchievementProgress(user.id, stats)),
     getPlayerRatings({ seasonId: ratingSeasonId }),
     getReliabilitySummary(user.id),
+    getPlayerPodiumHistory(user.id, parsePodiumPage(searchParams?.historyPage)),
   ]);
   const ratingIndex = ratings.findIndex((player) => player.playerId === user.id);
   const rating = ratingIndex >= 0 ? ratings[ratingIndex].rating : null;
@@ -89,6 +91,7 @@ export default async function PlayerProfilePage(
       careerStats={careerStats}
       achievements={achievements}
       reliability={reliability}
+      podiumHistory={podiumHistory}
       basePath={`/players/${user.publicId}`}
     />
   );

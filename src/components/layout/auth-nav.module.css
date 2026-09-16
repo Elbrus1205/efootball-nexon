@@ -1,0 +1,16 @@
+.trigger { display: flex; width: 44px; height: 44px; align-items: center; justify-content: center; border: 1px solid #ffffff14; border-radius: 14px; background: #ffffff05; transition: background 180ms, border-color 180ms; }
+.trigger:hover, .trigger[data-state="open"] { background: #ffffff0c; border-color: #c8b58b66; }
+.trigger:focus-visible { outline: 2px solid #c8b58b; outline-offset: 3px; }
+.menu { width: 280px; max-width: calc(100vw - 24px); padding: 6px; border-radius: 18px; border: 1px solid #ffffff1a; background: #222222f5; color: #f1f1f3; box-shadow: 0 16px 48px #0005; backdrop-filter: blur(20px); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; transform-origin: var(--radix-dropdown-menu-content-transform-origin); }
+.menu[data-state="open"] { animation: appear 160ms ease-out; }
+:global(body) .menu.menu { border-radius: 18px !important; background-color: #222222f5 !important; box-shadow: 0 16px 48px #0005 !important; }
+.identity { padding: 12px 12px 16px; margin-bottom: 4px; border-bottom: 1px solid #ffffff12; overflow-wrap: anywhere; }
+.identity > span { display: block; margin-bottom: 4px; font-size: 11px; color: #a3a3aa; }
+.identity > div { font-size: 15px; font-weight: 600; }
+.menu [role="menuitem"] { min-height: 44px; gap: 10px; border-radius: 10px; font-size: 13px; transition: background 160ms; }
+.menu [role="menuitem"] svg { flex-shrink: 0; color: #b5b5bb; stroke-width: 1.6; }
+.menu [role="menuitem"][data-highlighted] { background: #ffffff0d; }
+.menu .signOut { margin-top: 4px; border-top: 1px solid #ffffff12; border-radius: 0 0 10px 10px; color: #d7abab; }
+.menu .signOut svg { color: inherit; }
+@keyframes appear { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .trigger, .menu, .menu [role="menuitem"] { animation: none !important; transition: none !important; } }
