@@ -1,7 +1,8 @@
 ﻿import Link from "next/link";
 import { MatchStatus, ParticipantStatus, StageType, TournamentApplicationStatus, UserRole } from "@prisma/client";
 import { notFound } from "next/navigation";
-import { Activity, CalendarClock, ClipboardCheck, Dices, GitBranch, History, Pencil, Swords, Trash2, Trophy, UserRoundX, Users } from "lucide-react";
+import { Activity, CalendarClock, ClipboardCheck, Dices, GitBranch, History, Pencil, Swords, Trophy, UserRoundX, Users } from "lucide-react";
+import { DeleteTournamentButton } from "@/components/admin/delete-tournament-button";
 import { RandomScoresButton } from "@/components/admin/random-scores-button";
 import { TournamentImageExporterLazy, type ExportGroup, type ExportScheduleRound } from "@/components/admin/tournament-image-exporter-lazy";
 import { Badge } from "@/components/ui/badge";
@@ -433,16 +434,7 @@ export default async function AdminTournamentWorkspacePage(props: { params: Prom
               История
             </Link>
             {canDeleteTournament ? (
-            <form action={`/api/admin/tournaments/${tournament.id}`} method="post" className="contents">
-              <input type="hidden" name="_method" value="delete" />
-              <button
-                type="submit"
-                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-red-400/20 bg-red-500/10 px-3 text-[13px] font-medium text-red-200 transition hover:bg-red-500/20 hover:text-red-100 sm:text-sm"
-              >
-                <Trash2 className="h-4 w-4" />
-                Удалить
-              </button>
-            </form>
+              <DeleteTournamentButton tournamentId={tournament.id} tournamentTitle={tournament.title} />
             ) : null}
           </div>
         </CardContent>

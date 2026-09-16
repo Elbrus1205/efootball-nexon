@@ -1,5 +1,8 @@
 import { TelegramProfileLink } from "@/components/telegram-profile-link";
+import { ChevronRight } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import type { SocialLink } from "@/lib/social-links";
+import styles from "./player-profile.module.css";
 
 type PlayerSocialLink = SocialLink | {
   id: "youtube";
@@ -35,45 +38,41 @@ function YoutubeIcon({ className }: { className?: string }) {
 const socialStyles = {
   telegram: {
     label: "Telegram",
-    className: "border-sky-300/20 bg-sky-400/10 text-sky-100 hover:border-sky-300/45 hover:bg-sky-400/15",
-    iconClassName: "bg-sky-400 text-white shadow-[0_8px_20px_rgba(56,189,248,0.25)]",
     icon: TelegramIcon,
   },
   vk: {
     label: "VK",
-    className: "border-blue-300/20 bg-blue-500/10 text-blue-100 hover:border-blue-300/45 hover:bg-blue-500/15",
-    iconClassName: "bg-[#2787f5] text-white shadow-[0_8px_20px_rgba(39,135,245,0.25)]",
     icon: VkIcon,
   },
   youtube: {
     label: "YouTube",
-    className: "border-red-300/20 bg-red-500/10 text-red-50 hover:border-red-300/45 hover:bg-red-500/15",
-    iconClassName: "bg-red-500 text-white shadow-[0_8px_20px_rgba(239,68,68,0.24)]",
     icon: YoutubeIcon,
   },
-} satisfies Record<PlayerSocialLink["id"], { label: string; className: string; iconClassName: string; icon: typeof TelegramIcon }>;
+} satisfies Record<PlayerSocialLink["id"], { label: string; icon: typeof TelegramIcon }>;
 
 export function PlayerSocialLinks({ links }: { links: PlayerSocialLink[] }) {
   if (!links.length) return null;
 
   return (
-    <div>
-      <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Соцсети</div>
-      <div className="mt-2 grid grid-cols-2 gap-2">
+    <section aria-labelledby="profile-social-heading">
+      <h2 id="profile-social-heading" className={styles.groupTitle}>Соцсети</h2>
+      <Card className={styles.panel}>
+      <div className={styles.socialList}>
         {links.map((link) => {
           const style = socialStyles[link.id];
           const Icon = style.icon;
-          const className = `group flex min-w-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition ${link.id === "youtube" ? "col-span-2" : ""} ${style.className}`;
+          const className = styles.socialLink;
           const ariaLabel = `Открыть ${style.label}`;
           const content = (
             <>
-              <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${style.iconClassName}`}>
+              <span className={styles.socialIcon}>
                 <Icon className="h-4 w-4" />
               </span>
-              <span className="min-w-0 leading-tight">
-                <span className="block text-xs font-bold uppercase text-current/60">{style.label}</span>
-                <span className="block truncate text-white">{link.handle}</span>
+              <span className={styles.socialCopy}>
+                <span className={styles.socialLabel}>{style.label}</span>
+                <span className={styles.socialHandle}>{link.handle}</span>
               </span>
+              <ChevronRight className={styles.chevron} size={16} aria-hidden="true" />
             </>
           );
 
@@ -92,6 +91,7 @@ export function PlayerSocialLinks({ links }: { links: PlayerSocialLink[] }) {
           );
         })}
       </div>
-    </div>
+      </Card>
+    </section>
   );
 }

@@ -4,6 +4,7 @@ import { CalendarRange, ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn, formatDate } from "@/lib/utils";
+import styles from "./player-profile.module.css";
 
 type StatsPeriodSeason = {
   id: string;
@@ -34,14 +35,11 @@ export function StatsPeriodSwitcher({
         <button
           type="button"
           aria-label="Выбрать период статистики"
-          className={cn(
-            "inline-flex h-9 w-9 items-center justify-center gap-2 rounded-lg border text-xs font-bold text-white transition sm:w-auto sm:max-w-[16rem] sm:px-3",
-            "border-primary/25 bg-primary/10 hover:border-primary/45 hover:bg-primary/15",
-          )}
+          className={styles.periodButton}
         >
-          <CalendarRange className="h-4 w-4 shrink-0 text-primary" />
-          <span className="hidden min-w-0 truncate sm:inline">{selectedLabel}</span>
-          <ChevronDown className="hidden h-3.5 w-3.5 shrink-0 text-zinc-500 sm:block" />
+          <CalendarRange size={16} aria-hidden="true" />
+          <span>{selectedLabel}</span>
+          <ChevronDown size={14} aria-hidden="true" />
         </button>
       </DropdownMenuTrigger>
 
@@ -51,7 +49,7 @@ export function StatsPeriodSwitcher({
         className="max-h-[260px] w-[min(15.75rem,calc(100vw-2rem))] overflow-y-auto rounded-lg p-1.5 shadow-[0_18px_48px_rgba(0,0,0,0.45)]"
       >
         <DropdownMenuItem
-          className={cn("items-start rounded-md px-3 py-2", !selectedSeason ? "bg-white/10" : "")}
+          className={cn("min-h-11 items-start rounded-lg px-3 py-2 focus:bg-white/10", !selectedSeason ? "bg-white/10" : "")}
           onSelect={() => router.push(basePath)}
         >
           <div className="min-w-0">
@@ -63,7 +61,7 @@ export function StatsPeriodSwitcher({
         {seasons.map((season) => (
           <DropdownMenuItem
             key={season.id}
-            className={cn("items-start rounded-md px-3 py-2", selectedSeason?.id === season.id ? "bg-white/10" : "")}
+            className={cn("min-h-11 items-start rounded-lg px-3 py-2 focus:bg-white/10", selectedSeason?.id === season.id ? "bg-white/10" : "")}
             onSelect={() => router.push(`${basePath}?season=${season.id}`)}
           >
             <div className="min-w-0">
