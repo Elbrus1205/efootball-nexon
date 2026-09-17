@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ParticipantStatus, TournamentStatus, UserRole } from "@prisma/client";
+import { DeleteTournamentButton } from "@/components/admin/delete-tournament-button";
 import {
   Eye,
   GitBranch,
@@ -10,7 +11,6 @@ import {
   RefreshCw,
   Shuffle,
   Table2,
-  Trash2,
   Trophy,
   Users,
   XCircle,
@@ -241,24 +241,7 @@ export default async function AdminTournamentsPage(
                   </div>
 
                   {canDeleteTournaments ? (
-                  <form action={`/api/admin/tournaments/${tournament.id}`} method="post" className="grid gap-2 rounded-md border border-red-400/15 bg-red-500/[0.045] p-2.5 sm:grid-cols-[minmax(0,1fr)_180px] sm:items-center">
-                    <input type="hidden" name="_method" value="delete" />
-                    <label className="flex min-w-0 items-start gap-2 px-1 text-[11px] leading-4 text-zinc-400 sm:text-xs">
-                      <input
-                        type="checkbox"
-                        name="preserveHomeStats"
-                        className="mt-0.5 h-4 w-4 rounded border-white/15 bg-black/40 text-primary accent-primary"
-                      />
-                      <span>Сохранить турнир и призовой фонд в статистике главной</span>
-                    </label>
-                    <Button
-                      variant="outline"
-                      className="min-h-10 w-full gap-1.5 rounded-md border-red-400/20 bg-red-500/10 px-3 py-2 text-[12px] leading-tight text-red-200 hover:bg-red-500/20 hover:text-red-100 sm:text-sm"
-                    >
-                      <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      Удалить турнир
-                    </Button>
-                  </form>
+                  <DeleteTournamentButton tournamentId={tournament.id} tournamentTitle={tournament.title} showPreserveHomeStats />
                   ) : null}
                 </div>
               </div>

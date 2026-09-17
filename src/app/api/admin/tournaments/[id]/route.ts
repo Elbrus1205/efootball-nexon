@@ -1,9 +1,11 @@
 ﻿import { NextResponse } from "next/server";
 import { getRequestBaseUrl } from "@/lib/affiliate";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { addArchivedTournamentStats } from "@/lib/home-stats";
+import { addArchivedTournamentStats, HOME_STATS_CACHE_TAG } from "@/lib/home-stats";
+import { invalidatePlayerRatings } from "@/lib/ratings-cache";
 import { invalidateTournamentAll } from "@/lib/tournament-cache";
 import { MatchStatus, UserRole } from "@prisma/client";
 import {
@@ -34,11 +36,15 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       await db.$transaction(async (tx) => {
         const tournament = await tx.tournament.findUnique({
           where: { id: params.id },
-          select: { prizePool: true },
+          select: { title: true, prizePool: true },
         });
 
         if (!tournament) {
           throw new Error("Турнир не найден.");
+        }
+
+        if (formData.get("confirmationTitle") !== tournament.title) {
+          throw new Error("Удаление не подтверждено. Откройте окно подтверждения и повторите действие.");
         }
 
         if (preserveHomeStats) {
@@ -47,6 +53,12 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
 
         await tx.tournament.delete({ where: { id: params.id } });
       });
+      revalidateTag(HOME_STATS_CACHE_TAG);
+      revalidatePath("/");
+      invalidatePlayerRatings();
+      redirectUrl.searchParams.set("warning", preserveHomeStats
+        ? "Турнир удалён. Турнир и призовой фонд сохранены в статистике главной."
+        : "Турнир удалён.");
     }
 
     if (method === "close") {

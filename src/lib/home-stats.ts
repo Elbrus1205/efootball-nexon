@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 
 const HOME_STATS_KEY = "home-stats";
+export const HOME_STATS_CACHE_TAG = "home-stats";
 
 type HomeStatsStore = Pick<typeof db, "siteContent">;
 

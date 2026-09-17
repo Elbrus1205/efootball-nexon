@@ -11,7 +11,7 @@ import { ProductCard } from "@/components/shop/product-card";
 import { Reveal } from "@/components/shared/reveal";
 import { db } from "@/lib/db";
 import { getAndroidDownloadUrl, homeLinks } from "@/lib/home-links";
-import { getArchivedHomeStats, parsePrizePoolValue } from "@/lib/home-stats";
+import { getArchivedHomeStats, HOME_STATS_CACHE_TAG, parsePrizePoolValue } from "@/lib/home-stats";
 import { getShopSettings } from "@/lib/shop/config";
 import { listShopProducts } from "@/lib/shop/catalog";
 import { formatDate } from "@/lib/utils";
@@ -42,7 +42,7 @@ const getHomeData = unstable_cache(async () => {
     awardedPrizePool: archived.prizePool + prizes.reduce((sum, item) => sum + parsePrizePoolValue(item.prizePool), 0),
     tournaments: tournaments.map(({ _count, coverImage, ...tournament }) => ({ ...tournament, participantsCount: _count.participants, coverImage: coverImage ? `/api/tournaments/${tournament.id}/cover?w=1200&h=720&q=84&v=${tournament.updatedAt.getTime()}` : null })),
   };
-}, ["home-page-data-v6"], { revalidate: 60 });
+}, ["home-page-data-v6"], { revalidate: 60, tags: [HOME_STATS_CACHE_TAG] });
 
 const getHomeShopData = unstable_cache(async () => {
   try {
