@@ -135,20 +135,12 @@ export function ParticipantManager({
   const [participantQuery, setParticipantQuery] = useState("");
   const [openParticipantId, setOpenParticipantId] = useState<string | null>(null);
   const [openReplacementTargetId, setOpenReplacementTargetId] = useState<string | null>(null);
-  const [replacementByParticipant, setReplacementByParticipant] = useState<Record<string, string>>({});
+  // A selected player outlives the transient search results, including cleared queries.
+  const [replacementByParticipant, setReplacementByParticipant] = useState<Record<string, UserOption | undefined>>({});
   const [replacementClubByParticipant, setReplacementClubByParticipant] = useState<Record<string, string>>({});
   const [replacementSearchByParticipant, setReplacementSearchByParticipant] = useState<Record<string, string>>({});
   const [replacementOptionsByParticipant, setReplacementOptionsByParticipant] = useState<Record<string, UserOption[]>>({});
   const [replacementPenaltyByTarget, setReplacementPenaltyByTarget] = useState<Record<string, string>>({});
-  const allLoadedUsers = useMemo(() => {
-    const map = new Map<string, UserOption>();
-    for (const user of userOptions) map.set(user.id, user);
-    for (const options of Object.values(replacementOptionsByParticipant)) {
-      for (const user of options) map.set(user.id, user);
-    }
-    return Array.from(map.values());
-  }, [replacementOptionsByParticipant, userOptions]);
-  const usersById = useMemo(() => new Map(allLoadedUsers.map((user) => [user.id, user])), [allLoadedUsers]);
   const normalizedParticipantQuery = normalizeSearch(participantQuery);
   const visibleParticipants = normalizedParticipantQuery
     ? participants.filter((participant) => participantSearchText(participant).includes(normalizedParticipantQuery))
@@ -443,11 +435,11 @@ export function ParticipantManager({
           </div>
         ) : visibleParticipants.length ? (
           visibleParticipants.map((participant) => {
-            const replacementUserId = replacementByParticipant[participant.id] ?? "";
+            const selectedReplacement = replacementByParticipant[participant.id];
+            const replacementUserId = selectedReplacement?.id ?? "";
             const replacementClubSlug = replacementClubByParticipant[participant.id] ?? participant.clubSlug ?? "";
             const replacementQuery = replacementSearchByParticipant[participant.id] ?? "";
             const normalizedReplacementQuery = normalizeSearch(replacementQuery);
-            const selectedReplacement = usersById.get(replacementUserId);
             const replacementMatches = normalizedReplacementQuery ? replacementOptionsByParticipant[participant.id] ?? [] : [];
             const canReplace = participant.status !== ParticipantStatus.REMOVED;
             const isHistoryEntry = participant.status === ParticipantStatus.REMOVED;
@@ -554,11 +546,11 @@ export function ParticipantManager({
                           </label>
                           {rosterSlots.map((member, slotIndex) => {
                             const targetId = member ? `member:${member.id}` : `slot:${participant.id}:${slotIndex}`;
-                            const memberReplacementUserId = replacementByParticipant[targetId] ?? "";
+                            const selectedMemberReplacement = replacementByParticipant[targetId];
+                            const memberReplacementUserId = selectedMemberReplacement?.id ?? "";
                             const memberReplacementQuery = replacementSearchByParticipant[targetId] ?? "";
                             const normalizedMemberReplacementQuery = normalizeSearch(memberReplacementQuery);
                             const memberReplacementMatches = normalizedMemberReplacementQuery ? replacementOptionsByParticipant[targetId] ?? [] : [];
-                            const selectedMemberReplacement = usersById.get(memberReplacementUserId);
 
                             return (
                               <div key={targetId} className="rounded-lg border border-white/10 bg-black/20 p-2.5">
@@ -619,7 +611,8 @@ export function ParticipantManager({
                                     {selectedMemberReplacement ? (
                                       <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/25 bg-primary/[0.08] px-2.5 py-1.5">
                                         <div className="min-w-0">
-                                          <div className="truncate text-xs font-medium text-white">{userLabel(selectedMemberReplacement)}</div>
+                                          <div className="text-[11px] text-primary/80">Выбранный игрок</div>
+                                          <div className="break-words text-xs font-medium text-white">{userLabel(selectedMemberReplacement)}</div>
                                           <div className="mt-0.5 truncate text-[11px] text-zinc-400">{userSearchMeta(selectedMemberReplacement) || "Игрок выбран"}</div>
                                         </div>
                                         <button
@@ -628,7 +621,7 @@ export function ParticipantManager({
                                           onClick={() =>
                                             setReplacementByParticipant((current) => ({
                                               ...current,
-                                              [targetId]: "",
+                                              [targetId]: undefined,
                                             }))
                                           }
                                           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 transition hover:border-white/20 hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-50"
@@ -655,7 +648,7 @@ export function ParticipantManager({
                                                 onClick={() => {
                                                   setReplacementByParticipant((current) => ({
                                                     ...current,
-                                                    [targetId]: user.id,
+                                                    [targetId]: user,
                                                   }));
                                                   setReplacementSearchByParticipant((current) => ({
                                                     ...current,
@@ -751,7 +744,8 @@ export function ParticipantManager({
                           {selectedReplacement ? (
                             <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/[0.08] px-3 py-2">
                               <div className="min-w-0">
-                                <div className="truncate text-sm font-medium text-white">{userLabel(selectedReplacement)}</div>
+                                <div className="text-[11px] text-primary/80">Выбранный игрок</div>
+                                <div className="break-words text-sm font-medium text-white">{userLabel(selectedReplacement)}</div>
                                 <div className="mt-0.5 truncate text-xs text-zinc-400">{userSearchMeta(selectedReplacement) || "Игрок выбран"}</div>
                               </div>
                               <button
@@ -760,7 +754,7 @@ export function ParticipantManager({
                                 onClick={() =>
                                   setReplacementByParticipant((current) => ({
                                     ...current,
-                                    [participant.id]: "",
+                                    [participant.id]: undefined,
                                   }))
                                 }
                                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 transition hover:border-white/20 hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-50"
@@ -788,16 +782,6 @@ export function ParticipantManager({
 
                           {renderReplacementPenaltySelect(participant.id)}
 
-                          {replacementUserId && selectedReplacement ? (
-                            <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/10 px-3 py-2">
-                              <div className="min-w-0">
-                                <div className="text-[11px] uppercase tracking-wide text-primary/80">Выбранный игрок</div>
-                                <div className="truncate text-sm font-medium text-white">{userLabel(selectedReplacement)}</div>
-                              </div>
-                              <Badge variant="primary">Выбран</Badge>
-                            </div>
-                          ) : null}
-
                           {normalizedReplacementQuery ? (
                             <div className="max-h-48 overflow-y-auto rounded-lg border border-white/10 bg-black/20 p-1">
                               {replacementMatches.length ? (
@@ -812,7 +796,7 @@ export function ParticipantManager({
                                       onClick={() => {
                                         setReplacementByParticipant((current) => ({
                                           ...current,
-                                          [participant.id]: user.id,
+                                          [participant.id]: user,
                                         }));
                                         setReplacementSearchByParticipant((current) => ({
                                           ...current,
