@@ -1,12 +1,13 @@
 import { Prisma, TournamentStatus } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 import { DivisionPreviewCard } from "@/components/divisions/division-preview-card";
-import { TournamentCard } from "@/components/tournaments/tournament-card";
+import { TournamentCatalog } from "@/components/tournaments/tournament-catalog";
 import { db } from "@/lib/db";
 import { getOrSetRedisJson } from "@/lib/redis-cache";
 import { redisKey } from "@/lib/redis";
 
 export const revalidate = 10;
+const PAGE_SIZE = 12;
 
 function logTiming(label: string, start: number) {
   if (process.env.NODE_ENV === "production") return;
@@ -18,13 +19,11 @@ type TournamentListRow = {
   title: string;
   status: TournamentStatus;
   startsAt: Date | string;
+  endsAt: Date | string | null;
   maxParticipants: number;
   prizePool: string | null;
   hasCoverImage: boolean;
   updatedAt: Date | string;
-  isTest: boolean;
-  autoOpenRegistration: boolean;
-  registrationStartsAt: Date | null;
   participantsCount: number;
 };
 
@@ -32,8 +31,13 @@ function getTournamentCoverUrl(tournament: Pick<TournamentListRow, "id" | "hasCo
   return tournament.hasCoverImage ? `/api/tournaments/${tournament.id}/cover?w=720&h=405&q=84&v=${new Date(tournament.updatedAt).getTime()}` : null;
 }
 
-function loadTournamentList(showTestTournaments: boolean) {
-  const whereClause = showTestTournaments ? Prisma.empty : Prisma.sql`WHERE t."isTest" = false`;
+function loadTournamentList(archive: boolean, page: number) {
+  const statusClause = archive
+    ? Prisma.sql`t.status = 'COMPLETED'::"TournamentStatus"`
+    : Prisma.sql`t.status <> 'COMPLETED'::"TournamentStatus"`;
+  const orderClause = archive
+    ? Prisma.sql`t."endsAt" DESC NULLS LAST, t."startsAt" DESC, t.id DESC`
+    : Prisma.sql`t.status ASC, t."startsAt" ASC, t.id ASC`;
 
   return db.$queryRaw<TournamentListRow[]>(Prisma.sql`
     SELECT
@@ -41,79 +45,69 @@ function loadTournamentList(showTestTournaments: boolean) {
       t.title,
       t.status::text AS status,
       t."startsAt",
+      t."endsAt",
       t."maxParticipants",
       t."prizePool",
       (t."coverImage" IS NOT NULL AND t."coverImage" <> '') AS "hasCoverImage",
       t."updatedAt",
-      t."isTest",
-      t."autoOpenRegistration",
-      t."registrationStartsAt",
       (
         SELECT COUNT(*)::int
         FROM "TournamentRegistration" p
         WHERE p."tournamentId" = t.id AND p.status <> 'REMOVED'::"ParticipantStatus"
       ) AS "participantsCount"
     FROM "Tournament" t
-    ${whereClause}
-    ORDER BY t.status ASC, t."startsAt" ASC
+    WHERE t."isTest" = false AND ${statusClause}
+    ORDER BY ${orderClause}
+    LIMIT ${PAGE_SIZE + 1} OFFSET ${(page - 1) * PAGE_SIZE}
   `);
 }
 
-const getNextCachedTournamentList = unstable_cache(loadTournamentList, ["public-tournament-list"], {
+const getNextCachedTournamentList = unstable_cache(loadTournamentList, ["public-tournament-list", "catalog-v2"], {
   revalidate: 10,
   tags: ["public-tournaments"],
 });
 
-const getCachedTournamentList = (showTestTournaments: boolean) => getOrSetRedisJson(
-  redisKey(`tournaments:list:${showTestTournaments ? "tests" : "public"}`),
-  () => getNextCachedTournamentList(showTestTournaments),
+const getCachedTournamentList = (archive: boolean, page: number) => getOrSetRedisJson(
+  redisKey(`tournaments:list:catalog-v2:${archive ? "archive" : "current"}:${page}`),
+  () => getNextCachedTournamentList(archive, page),
   10,
 );
 const tournamentListLoads = new Map<string, Promise<TournamentListRow[]>>();
-const tournamentListValues = new Map<string, { expiresAt: number; value: TournamentListRow[] }>();
 
-function getTournamentList(showTestTournaments: boolean) {
-  const key = showTestTournaments ? "with-tests" : "public";
-  const cached = tournamentListValues.get(key);
-  if (cached && cached.expiresAt > Date.now()) return Promise.resolve(cached.value);
-  if (cached) tournamentListValues.delete(key);
+function getTournamentList(archive: boolean, page: number) {
+  const key = `${archive ? "archive" : "current"}:${page}`;
   const existing = tournamentListLoads.get(key);
   if (existing) return existing;
-  const pending = getCachedTournamentList(showTestTournaments)
-    .then((value) => {
-      tournamentListValues.set(key, { expiresAt: Date.now() + 10_000, value });
-      return value;
-    })
+  const pending = getCachedTournamentList(archive, page)
     .finally(() => tournamentListLoads.delete(key));
   tournamentListLoads.set(key, pending);
   return pending;
 }
 
-export default async function TournamentsPage() {
+export default async function TournamentsPage({ searchParams }: {
+  searchParams: Promise<{ view?: string | string[]; page?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const archive = params.view === "archive";
+  const requestedPage = typeof params.page === "string" && /^\d{1,6}$/.test(params.page) ? Number(params.page) : 1;
+  const page = Math.max(1, requestedPage);
   const pageStart = performance.now();
   const tournamentsStart = performance.now();
   const tournamentListStart = performance.now();
-  const tournamentList = await getTournamentList(false).finally(() => logTiming("load-tournament-list", tournamentListStart));
+  const tournamentList = await getTournamentList(archive, page).finally(() => logTiming("load-tournament-list", tournamentListStart));
 
   logTiming("load-tournaments", tournamentsStart);
   logTiming("tournaments-page", pageStart);
 
   return (
     <div className="page-shell space-y-8">
-      <div className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Турниры</div>
-
-      <DivisionPreviewCard canOpen={false} coverImage={null} />
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {tournamentList.map((tournament, index) => (
-          <TournamentCard
-            key={tournament.id}
-            tournament={{ ...tournament, startsAt: new Date(tournament.startsAt), coverImage: getTournamentCoverUrl(tournament) }}
-            participantsCount={tournament.participantsCount}
-            priorityImage={index === 0}
-          />
-        ))}
-      </div>
+      <TournamentCatalog
+        tournaments={tournamentList.slice(0, PAGE_SIZE).map((tournament) => ({ ...tournament, coverImage: getTournamentCoverUrl(tournament) }))}
+        archive={archive}
+        page={page}
+        hasNext={tournamentList.length > PAGE_SIZE}
+      />
+      {!archive && page === 1 ? <DivisionPreviewCard canOpen={false} coverImage={null} /> : null}
     </div>
   );
 }
