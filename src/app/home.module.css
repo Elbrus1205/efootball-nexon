@@ -1,4 +1,4 @@
-.home { --ink: #f4f2ec; --muted: #9da39e; --line: rgba(255,255,255,.12); --soft: #151917; --surface: #1b201d; --green: #91bba5; --green-deep: #345f4b; --paper: #e7e9e3; --paper-ink: #18201b; background: #0c0f0e; color: var(--ink); overflow: hidden; }
+.home { --ink: var(--site-text); --muted: var(--site-muted); --line: var(--site-line); --soft: var(--site-surface-soft); --surface: var(--site-surface); --green: var(--site-accent); --green-deep: #345f4b; --paper: #e7e9e3; --paper-ink: #18201b; background: var(--site-background); color: var(--ink); overflow: hidden; }
 .shell { width: min(100% - 32px, 1240px); margin: 0 auto; }
 .intro { position: relative; padding: 62px 0 36px; background: #0d1110; }
 .introGrid { position: absolute; inset: 0; opacity: .22; pointer-events: none; background-image: linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px); background-size: 72px 72px; mask-image: linear-gradient(to bottom, #000, transparent 90%); }

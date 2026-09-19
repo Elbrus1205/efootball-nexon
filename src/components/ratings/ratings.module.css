@@ -1,4 +1,12 @@
-.page.page { --profile-accent: #a8c5e8; }
+.surface { --classic-black: var(--site-background); --classic-white: var(--site-text); background: var(--site-background); }
+.page.page {
+  --profile-accent: var(--site-accent);
+  --profile-text: var(--site-text);
+  --profile-muted: var(--site-muted);
+  --profile-line: var(--site-line);
+  --profile-surface: var(--site-surface);
+  --classic-panel: var(--site-surface);
+}
 .page { padding-top: 28px; padding-bottom: 48px; }
 .page :is(a, summary, button):focus-visible { outline: 2px solid var(--profile-accent); outline-offset: 4px; }
 .heading { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px 24px; }
@@ -13,7 +21,7 @@
 .periodLinks { flex: 1 1 100%; }
 .seasonLink { display: inline-flex; min-height: 44px; max-width: 100%; align-items: center; flex-wrap: wrap; gap: 7px; padding: 10px 14px; border: 1px solid transparent; border-radius: 11px; background: #ffffff04; color: var(--profile-muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .seasonLink span { min-width: 0; }
-.seasonLink[aria-current="page"] { border-color: #a8c5e833; background: #a8c5e80d; color: var(--profile-accent); }
+.seasonLink[aria-current="page"] { border-color: color-mix(in srgb, var(--site-accent) 20%, transparent); background: color-mix(in srgb, var(--site-accent) 5%, transparent); color: var(--profile-accent); }
 .seasonLink:hover { color: var(--profile-text); background: #ffffff08; }
 .seasonLink time { color: var(--profile-muted); font-size: 11px; }
 .activeDot { width: 5px; height: 5px; flex-shrink: 0; border-radius: 50%; background: var(--profile-accent); }
@@ -23,8 +31,8 @@
 .archive[open] { flex-basis: 100%; }
 .archive[open] summary > svg:last-child { transform: rotate(180deg); }
 .archiveLinks { padding-top: 6px; }
-.page .avatar { width: 36px; height: 36px; border: 1px solid var(--profile-line); border-radius: 50%; background: #252b34; }
-.page .avatarFallback { background: #293443; color: var(--profile-accent); font-size: 12px; font-weight: 500; }
+.page .avatar { width: 36px; height: 36px; border: 1px solid var(--profile-line); border-radius: 50%; background: var(--site-surface-soft); }
+.page .avatarFallback { background: var(--site-surface-soft); color: var(--profile-accent); font-size: 12px; font-weight: 500; }
 .tableSection { min-width: 0; margin-top: 16px; }
 .page .panel { overflow: hidden; border-radius: 18px; }
 .tableHeading { display: flex; align-items: start; justify-content: space-between; gap: 12px; padding: 20px 16px; }
@@ -43,13 +51,13 @@
 .table tr > :last-child { padding-right: 12px; text-align: right; }
 .table tbody tr:not(.separator) { border-bottom: 1px solid var(--profile-line); }
 .table tbody tr:last-child { border-bottom: 0; }
-.table tbody tr[data-own="true"] { background: #a8c5e809; }
+.table tbody tr[data-own="true"] { background: color-mix(in srgb, var(--site-accent) 4%, transparent); }
 .table tbody tr:hover { background: #ffffff03; }
 .table tbody td, .table tbody th { padding-block: 14px; vertical-align: middle; }
 .rank { color: var(--profile-muted); font-size: 11px; font-weight: 500; }
 .rank[data-place="1"] { color: var(--profile-accent); }
-.rank[data-place="2"] { color: #b9c0cb; }
-.rank[data-place="3"] { color: #91a7bf; }
+.rank[data-place="2"] { color: var(--profile-muted); }
+.rank[data-place="3"] { color: var(--profile-muted); }
 .playerIdentity { display: flex; align-items: center; gap: 9px; min-width: 0; padding-right: 8px; }
 .playerCopy { min-width: 0; }
 .playerLink { display: inline-flex; align-items: center; min-height: 44px; max-width: 100%; color: var(--profile-text); font-size: 12px; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
@@ -70,8 +78,8 @@
 .pageSummary { color: var(--profile-muted); font-size: 10px; line-height: 1.6; }
 .pageLinks { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px; min-width: 0; font-variant-numeric: tabular-nums; }
 .pageLinks a, .disabledPage { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; min-height: 44px; padding: 0 5px; border: 1px solid transparent; border-radius: 8px; color: var(--profile-muted); font-size: 11px; }
-.pageLinks a:hover { color: var(--profile-text); background: #a8c5e808; }
-.pageLinks a[aria-current="page"] { border-color: #a8c5e833; background: #a8c5e812; color: var(--profile-accent); }
+.pageLinks a:hover { color: var(--profile-text); background: color-mix(in srgb, var(--site-accent) 3%, transparent); }
+.pageLinks a[aria-current="page"] { border-color: color-mix(in srgb, var(--site-accent) 20%, transparent); background: color-mix(in srgb, var(--site-accent) 7%, transparent); color: var(--profile-accent); }
 .pageLinks .disabledPage { opacity: .3; }
 .pageGap { width: 10px; text-align: center; color: var(--profile-muted); font-size: 10px; }
 .sideHeading { display: flex; align-items: center; gap: 8px; }
@@ -82,8 +90,8 @@
 .prizeValue { min-width: 0; margin: 0; color: var(--profile-accent); font-size: clamp(22px, 3vw, 30px); font-weight: 500; line-height: 1.2; letter-spacing: -.04em; overflow-wrap: anywhere; }
 .prizeValue > span { margin-left: 7px; font-size: .65em; }
 .sideCaption { margin-top: 5px; color: var(--profile-muted); font-size: 10px; line-height: 1.5; }
-.actionLink { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; margin-top: 14px; padding: 10px 12px; border: 1px solid #a8c5e826; border-radius: 10px; background: #a8c5e808; color: var(--profile-accent); font-size: 12px; }
-.actionLink:hover { background: #a8c5e812; }
+.actionLink { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; margin-top: 14px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--site-accent) 15%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--site-accent) 3%, transparent); color: var(--profile-accent); font-size: 12px; }
+.actionLink:hover { background: color-mix(in srgb, var(--site-accent) 7%, transparent); }
 .actionLink svg { flex-shrink: 0; }
 .note { display: flex; align-items: start; gap: 10px; margin-top: 18px; padding: 4px 6px; color: var(--profile-muted); }
 .note svg { flex-shrink: 0; margin-top: 3px; }

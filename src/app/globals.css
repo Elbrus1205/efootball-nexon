@@ -4,6 +4,13 @@
 
 :root {
   color-scheme: dark;
+  --site-background: #0c0f0e;
+  --site-surface: #1b201d;
+  --site-surface-soft: #151917;
+  --site-text: #f4f2ec;
+  --site-muted: #9da39e;
+  --site-line: rgba(255, 255, 255, .12);
+  --site-accent: #91bba5;
   --classic-black: #171717;
   --classic-true-black: #101010;
   --classic-panel: #1D1D1D;
