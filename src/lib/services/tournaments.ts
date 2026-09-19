@@ -794,7 +794,13 @@ async function assignParticipantToSeries(params: SeriesParticipantAssignment) {
   await Promise.all(Array.from(matchReadyIds, (matchId) => notifyMatchReady(matchId)));
 }
 
-async function advanceResolvedWinnerForMatch(matchId: string, winnerId: string, loserId?: string | null, winnerEntryId?: string | null, loserEntryId?: string | null) {
+type MatchResolutionOptions = {
+  // Batch callers must recalculate standings, prepare team slots and sync the
+  // lifecycle once after all match/series resolutions have completed.
+  deferTournamentSync?: boolean;
+};
+
+async function advanceResolvedWinnerForMatch(matchId: string, winnerId: string, loserId?: string | null, winnerEntryId?: string | null, loserEntryId?: string | null, options: MatchResolutionOptions = {}) {
   const match = await db.match.findUnique({
     where: { id: matchId },
     select: {
@@ -829,9 +835,10 @@ async function advanceResolvedWinnerForMatch(matchId: string, winnerId: string, 
     });
   }
 
-  await prepareCaptainAssignedTeamMatchSlots(match.tournamentId);
-
-  await syncTournamentLifecycleStatus(match.tournamentId);
+  if (!options.deferTournamentSync) {
+    await prepareCaptainAssignedTeamMatchSlots(match.tournamentId);
+    await syncTournamentLifecycleStatus(match.tournamentId);
+  }
 }
 
 async function clearAutoByeAdvance(match: {
@@ -5462,7 +5469,7 @@ async function resolveCaptainTeamPlayoffSeriesIfCompleted(match: {
     participantMode: TournamentParticipantMode;
     captainsCreateTeamMatches: boolean;
   };
-}) {
+}, options: MatchResolutionOptions = {}) {
   if (
     !match.bracketId ||
     !match.seriesKey ||
@@ -5526,6 +5533,7 @@ async function resolveCaptainTeamPlayoffSeriesIfCompleted(match: {
         loserId,
         winnerEntryId,
         loserEntryId,
+        options,
       );
     }
     return true;
@@ -5624,6 +5632,7 @@ async function resolveCaptainTeamPlayoffSeriesIfCompleted(match: {
       loserId,
       resolution.winnerEntryId,
       resolution.loserEntryId,
+      options,
     );
   }
 
@@ -5636,7 +5645,7 @@ async function resolveBestOfSeriesIfCompleted(match: {
   bracketId: string | null;
   seriesKey: string | null;
   seriesWinsRequired: number | null;
-}) {
+}, options: MatchResolutionOptions = {}) {
   if (!match.seriesKey || !match.seriesWinsRequired || match.seriesWinsRequired <= 1) {
     return false;
   }
@@ -5746,7 +5755,7 @@ async function resolveBestOfSeriesIfCompleted(match: {
     }
 
     if (!match.bracketId) {
-      await recalculateGroupStandings(match.tournamentId);
+      if (!options.deferTournamentSync) await recalculateGroupStandings(match.tournamentId);
     }
     return true;
   }
@@ -5762,14 +5771,14 @@ async function resolveBestOfSeriesIfCompleted(match: {
   const winnerEntryId = Array.from(winsByEntryId.entries()).find(([, wins]) => wins >= winsRequired)?.[0] ?? null;
   if (!winnerEntryId) {
     if (!match.bracketId) {
-      await recalculateGroupStandings(match.tournamentId);
+      if (!options.deferTournamentSync) await recalculateGroupStandings(match.tournamentId);
     }
     return true;
   }
 
   const winnerMatch = confirmedMatches.find((item) => item.participant1EntryId === winnerEntryId || item.participant2EntryId === winnerEntryId);
   if (!winnerMatch) {
-    await syncTournamentLifecycleStatus(match.tournamentId);
+    if (!options.deferTournamentSync) await syncTournamentLifecycleStatus(match.tournamentId);
     return true;
   }
 
@@ -5802,16 +5811,16 @@ async function resolveBestOfSeriesIfCompleted(match: {
       seriesMatches.find((item) => item.nextMatchId && item.nextMatchSlot) ??
       confirmedMatches.find((item) => item.nextMatchId && item.nextMatchSlot) ??
       winnerMatch;
-    await advanceResolvedWinnerForMatch(advancementSource.id, winnerId, loserId, winnerEntryId, loserEntryId);
+    await advanceResolvedWinnerForMatch(advancementSource.id, winnerId, loserId, winnerEntryId, loserEntryId, options);
   } else {
-    await recalculateGroupStandings(match.tournamentId);
-    await syncTournamentLifecycleStatus(match.tournamentId);
+    if (!options.deferTournamentSync) await recalculateGroupStandings(match.tournamentId);
+    if (!options.deferTournamentSync) await syncTournamentLifecycleStatus(match.tournamentId);
   }
 
   return true;
 }
 
-export async function resolveConfirmedMatch(matchId: string) {
+export async function resolveConfirmedMatch(matchId: string, options: MatchResolutionOptions = {}) {
   const match = await db.match.findUnique({
     where: { id: matchId },
     include: {
@@ -5837,20 +5846,20 @@ export async function resolveConfirmedMatch(matchId: string) {
   invalidateTournamentSchedule(match.tournamentId);
   invalidateTournamentStructure(match.tournamentId);
 
-  if (await resolveCaptainTeamPlayoffSeriesIfCompleted(match)) {
+  if (await resolveCaptainTeamPlayoffSeriesIfCompleted(match, options)) {
     return;
   }
 
-  if (await resolveBestOfSeriesIfCompleted(match)) {
+  if (await resolveBestOfSeriesIfCompleted(match, options)) {
     return;
   }
 
   if (!match.bracketId || !match.seriesKey) {
     if (match.winnerId) {
       const { winnerEntryId, loserId, loserEntryId } = getMatchWinnerAndLoser(match);
-      await advanceResolvedWinnerForMatch(match.id, match.winnerId, loserId, winnerEntryId, loserEntryId);
+      await advanceResolvedWinnerForMatch(match.id, match.winnerId, loserId, winnerEntryId, loserEntryId, options);
     } else {
-      await syncTournamentLifecycleStatus(match.tournamentId);
+      if (!options.deferTournamentSync) await syncTournamentLifecycleStatus(match.tournamentId);
     }
 
     return;
@@ -5859,9 +5868,9 @@ export async function resolveConfirmedMatch(matchId: string) {
   if (match.isPenaltyTiebreak) {
     if (match.winnerId) {
       const { winnerEntryId, loserId, loserEntryId } = getMatchWinnerAndLoser(match);
-      await advanceResolvedWinnerForMatch(match.id, match.winnerId, loserId, winnerEntryId, loserEntryId);
+      await advanceResolvedWinnerForMatch(match.id, match.winnerId, loserId, winnerEntryId, loserEntryId, options);
     } else {
-      await syncTournamentLifecycleStatus(match.tournamentId);
+      if (!options.deferTournamentSync) await syncTournamentLifecycleStatus(match.tournamentId);
     }
 
     return;
@@ -5886,7 +5895,7 @@ export async function resolveConfirmedMatch(matchId: string) {
 
     if (firstMatch.winnerId) {
       const { winnerEntryId, loserId, loserEntryId } = getMatchWinnerAndLoser(firstMatch);
-      await advanceResolvedWinnerForMatch(firstMatch.id, firstMatch.winnerId, loserId, winnerEntryId, loserEntryId);
+      await advanceResolvedWinnerForMatch(firstMatch.id, firstMatch.winnerId, loserId, winnerEntryId, loserEntryId, options);
       return;
     }
 
@@ -5894,7 +5903,7 @@ export async function resolveConfirmedMatch(matchId: string) {
       await createPenaltyMatch(firstMatch);
     }
 
-    await syncTournamentLifecycleStatus(firstMatch.tournamentId);
+    if (!options.deferTournamentSync) await syncTournamentLifecycleStatus(firstMatch.tournamentId);
     return;
   }
 
@@ -5917,14 +5926,14 @@ export async function resolveConfirmedMatch(matchId: string) {
       match.player1PenaltyScore !== match.player2PenaltyScore
     ) {
       const { loserId, loserEntryId } = getMatchWinnerAndLoser(match);
-      await advanceResolvedWinnerForMatch(match.id, match.winnerId, loserId, match.winnerEntryId, loserEntryId);
+      await advanceResolvedWinnerForMatch(match.id, match.winnerId, loserId, match.winnerEntryId, loserEntryId, options);
       return;
     }
 
     if (!penaltyMatch) {
       await createPenaltyMatch(match);
     }
-    await syncTournamentLifecycleStatus(match.tournamentId);
+    if (!options.deferTournamentSync) await syncTournamentLifecycleStatus(match.tournamentId);
     return;
   }
 
@@ -5934,9 +5943,9 @@ export async function resolveConfirmedMatch(matchId: string) {
   const aggregateLoserEntryId = aggregateWinnerId === match.player1Id ? match.participant2EntryId : match.participant1EntryId;
 
   if (aggregateWinnerId) {
-    await advanceResolvedWinnerForMatch(match.id, aggregateWinnerId, aggregateLoserId, aggregateWinnerEntryId, aggregateLoserEntryId);
+    await advanceResolvedWinnerForMatch(match.id, aggregateWinnerId, aggregateLoserId, aggregateWinnerEntryId, aggregateLoserEntryId, options);
   } else {
-    await syncTournamentLifecycleStatus(match.tournamentId);
+    if (!options.deferTournamentSync) await syncTournamentLifecycleStatus(match.tournamentId);
   }
 }
 

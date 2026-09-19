@@ -1,11 +1,12 @@
 import { AdminActionType, MatchStatus, StageType } from "@prisma/client";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { syncUserAchievementsForUsers } from "@/lib/achievements";
 import { db } from "@/lib/db";
 import { recalculateGroupStandings, resolveConfirmedMatch, syncTournamentLifecycleStatus } from "@/lib/services/tournaments";
 import { invalidateTournamentSchedule } from "@/lib/tournament-cache";
+import { prepareCaptainAssignedTeamMatchSlots } from "@/lib/tournaments/captain-team-matches";
 
 const UNPLAYED_STATUSES = new Set<MatchStatus>([
   MatchStatus.PENDING,
@@ -95,6 +96,7 @@ async function fallbackAdvancePlayoffWinner(matchId: string) {
     : [nextMatch];
 
   for (const targetMatch of targetMatches) {
+    if (!UNPLAYED_STATUSES.has(targetMatch.status)) continue;
     const nextPlayer1Id = slot === 1 ? match.winnerId : targetMatch.player1Id;
     const nextPlayer2Id = slot === 2 ? match.winnerId : targetMatch.player2Id;
 
@@ -115,33 +117,62 @@ async function fallbackAdvancePlayoffWinner(matchId: string) {
   }
 }
 
-export async function POST(_request: Request, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
-  const session = await requirePermission("matches.generate");
-  await assertCanManageTournament(session, params.id);
-  const tournament = await db.tournament.findUnique({
-    where: { id: params.id },
-    include: {
+function getRandomScoreTournament(tournamentId: string) {
+  return db.tournament.findUnique({
+    where: { id: tournamentId },
+    select: {
+      id: true,
+      notificationsEnabled: true,
       stages: {
         orderBy: { orderIndex: "asc" },
+        select: { id: true, status: true, type: true },
       },
       matches: {
-        include: { stage: true },
+        where: {
+          player1Id: { not: null },
+          player2Id: { not: null },
+          participant1EntryId: { not: null },
+          participant2EntryId: { not: null },
+          status: { in: Array.from(UNPLAYED_STATUSES) },
+          OR: [{ player1Score: null }, { player2Score: null }],
+        },
+        select: {
+          id: true, stageId: true, round: true, matchNumber: true,
+          player1Id: true, player2Id: true, participant1EntryId: true, participant2EntryId: true,
+          player1Score: true, player2Score: true, status: true, notes: true,
+          bracketId: true, isPenaltyTiebreak: true, isCaptainAssignedTeamMatch: true, isTeamCaptainTiebreak: true,
+          stage: { select: { type: true } },
+        },
         orderBy: [{ round: "asc" }, { matchNumber: "asc" }],
       },
     },
   });
+}
+
+export async function POST(_request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  const session = await requirePermission("matches.generate");
+  await assertCanManageTournament(session, params.id);
+  let tournament = await getRandomScoreTournament(params.id);
 
   if (!tournament) {
     return NextResponse.json({ error: "Турнир не найден." }, { status: 404 });
   }
 
-  const confirmedPlayoffMatches = tournament.matches.filter(
-    (match) => match.bracketId && match.winnerId && match.status === MatchStatus.CONFIRMED,
-  );
-
-  for (const match of confirmedPlayoffMatches) {
-    await fallbackAdvancePlayoffWinner(match.id);
+  // Legacy bracket repair is only needed when no playable fixtures remain.
+  // Replaying the entire playoff history on every round costs O(history) writes.
+  if (!tournament.matches.length) {
+    const confirmedPlayoffMatches = await db.match.findMany({
+      where: { tournamentId: params.id, bracketId: { not: null }, winnerId: { not: null }, status: MatchStatus.CONFIRMED },
+      select: { id: true },
+      orderBy: [{ round: "asc" }, { matchNumber: "asc" }],
+    });
+    for (const match of confirmedPlayoffMatches) {
+      await fallbackAdvancePlayoffWinner(match.id);
+    }
+    // Repair may have filled previously empty slots; don't use a stale snapshot.
+    tournament = await getRandomScoreTournament(params.id);
+    if (!tournament) return NextResponse.json({ error: "Турнир не найден." }, { status: 404 });
   }
 
   const playableMatches = tournament.matches.filter(
@@ -156,6 +187,7 @@ export async function POST(_request: Request, props: { params: Promise<{ id: str
 
   if (!playableMatches.length) {
     await syncTournamentLifecycleStatus(params.id);
+    invalidateTournamentSchedule(params.id);
     return NextResponse.json({ message: "Матчей без результата нет, статусы турнира обновлены." });
   }
 
@@ -247,31 +279,52 @@ export async function POST(_request: Request, props: { params: Promise<{ id: str
   // lost (they're already committed).  We isolate per-match errors so a single
   // failing match doesn't block the rest, and we catch the final lifecycle sync
   // so a transient playoff-generation error never surfaces as a client error.
+  let finalizationFailed = false;
   for (const match of updatedMatches) {
     try {
-      await resolveConfirmedMatch(match.id);
-      await fallbackAdvancePlayoffWinner(match.id);
+      await resolveConfirmedMatch(match.id, { deferTournamentSync: true });
+      if (match.bracketId && !match.nextMatchId) await fallbackAdvancePlayoffWinner(match.id);
     } catch (err) {
+      finalizationFailed = true;
       console.error("[random-scores] resolveConfirmedMatch failed for match", match.id, err);
     }
   }
 
-  await syncUserAchievementsForUsers(updatedMatches.flatMap((match) => [match.player1Id, match.player2Id]));
-
   try {
-    if (!stageWithMatches || stageWithMatches.type === StageType.GROUP_STAGE || stageWithMatches.type === StageType.LEAGUE) {
-      await recalculateGroupStandings(params.id);
-    }
-
+    await recalculateGroupStandings(params.id);
+    await prepareCaptainAssignedTeamMatchSlots(params.id);
     await syncTournamentLifecycleStatus(params.id);
   } catch (err) {
+    finalizationFailed = true;
     console.error("[random-scores] lifecycle sync failed (scores are committed):", err);
   }
 
   invalidateTournamentSchedule(params.id);
 
+  // Achievements may read career history and deliver notifications. They must
+  // neither delay the response nor report committed scores as a failed save.
+  if (tournament.notificationsEnabled !== false) {
+    after(async () => {
+      try {
+        const lineup = await db.matchLineupPlayer.findMany({
+          where: { matchId: { in: updatedMatches.map((match) => match.id) } },
+          select: { userId: true },
+          distinct: ["userId"],
+        });
+        const userIds = Array.from(new Set(lineup.map((player) => player.userId)));
+        // Bound career-stat queries so a large round cannot exhaust the pool.
+        for (let offset = 0; offset < userIds.length; offset += 4) {
+          await syncUserAchievementsForUsers(userIds.slice(offset, offset + 4));
+        }
+      } catch (error) {
+        console.error("[random-scores] achievements sync failed (scores are committed):", error);
+      }
+    });
+  }
+
   return NextResponse.json({
     message: `Рандомный счет выставлен для ${updatedMatches.length} матчей.`,
     updatedCount: updatedMatches.length,
+    ...(finalizationFailed ? { warning: "Счёт сохранён, но не удалось полностью обновить таблицу или сетку турнира. Проверьте результаты в админке." } : {}),
   });
 }

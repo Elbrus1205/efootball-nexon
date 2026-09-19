@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { Dices } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -13,28 +13,40 @@ type RandomScoresButtonProps = {
 
 export function RandomScoresButton({ tournamentId, disabled = false }: RandomScoresButtonProps) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [refreshing, startTransition] = useTransition();
+  const [saving, setSaving] = useState(false);
+  const requestInFlight = useRef(false);
+  const pending = saving || refreshing;
 
-  function handleClick() {
-    startTransition(async () => {
-      try {
-        const response = await fetch(`/api/admin/tournaments/${tournamentId}/matches/random-scores`, {
-          method: "POST",
-          headers: { Accept: "application/json" },
-        });
-        const payload = await response.json().catch(() => null);
+  async function handleClick() {
+    if (requestInFlight.current || pending) return;
+    requestInFlight.current = true;
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/admin/tournaments/${tournamentId}/matches/random-scores`, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+      });
+      const payload: unknown = await response.json().catch(() => null);
+      const result = payload && typeof payload === "object" ? payload : {};
 
-        if (!response.ok) {
-          toast.error(payload?.error ?? "Не удалось выставить рандомный счет.");
-          return;
-        }
-
-        toast.success(payload?.message ?? "Рандомный счет выставлен.");
-        router.refresh();
-      } catch {
-        toast.error("Не удалось выставить рандомный счет.");
+      if (!response.ok) {
+        toast.error("error" in result && typeof result.error === "string" ? result.error : "Не удалось выставить рандомный счет. Обновите страницу и проверьте результаты перед повторной попыткой.");
+        return;
       }
-    });
+
+      if ("warning" in result && typeof result.warning === "string") {
+        toast.warning(result.warning);
+      } else {
+        toast.success("message" in result && typeof result.message === "string" ? result.message : "Рандомный счет выставлен.");
+      }
+      startTransition(() => router.refresh());
+    } catch {
+      toast.error("Связь с сервером прервалась. Обновите страницу и проверьте результаты перед повторной попыткой.");
+    } finally {
+      requestInFlight.current = false;
+      setSaving(false);
+    }
   }
 
   return (
