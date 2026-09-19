@@ -125,15 +125,20 @@ test("small talk is ignored while tournament messages are understood without /as
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "private" }, text: "Привет" }, "nexon_bot"), false);
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "private" }, text: "Как дела?" }, "nexon_bot"), false);
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "private" }, text: "Когда мой матч?" }, "nexon_bot"), true);
+  assert.equal(isTelegramAiRelevantMessage({ chat: { type: "private" }, text: "Как зарегистрироваться на сайте?" }, "nexon_bot"), true);
+  assert.equal(isTelegramAiRelevantMessage({ chat: { type: "private" }, text: "Где изменить профиль?" }, "nexon_bot"), true);
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "Кто сегодня играет?" }, "nexon_bot"), true);
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "Как дела?" }, "nexon_bot"), false);
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "Как дела" }, "nexon_bot"), false);
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "Когда начинаем?" }, "nexon_bot"), false);
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "Когда начинаем?" }, "nexon_bot", { tournamentChat: true }), true);
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "Как дела?" }, "nexon_bot", { tournamentChat: true }), false);
+  assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "Как приготовить пасту?" }, "nexon_bot", { tournamentChat: true }), false);
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "Где админ?" }, "nexon_bot"), true);
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "@nexon_bot привет" }, "nexon_bot"), false);
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "@nexon_bot кто мой соперник?" }, "nexon_bot"), true);
+  assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "@nexon_bot какая погода?" }, "nexon_bot", { tournamentChat: true }), false);
+  assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "/ask рецепт пасты" }, "nexon_bot", { tournamentChat: true }), false);
 });
 
 test("moderation detects abusive messages without flagging ordinary tournament speech", () => {
@@ -206,6 +211,71 @@ test("a tournament question without /ask is sent to Willow", async () => {
   assert.equal(asked, true);
   assert.match(String(sent[0]?.text), /Анна/);
   assert.match(String(sent[0]?.text), /Турнир начинается завтра/);
+});
+
+test("Willow accepts a grounded site answer from FAQ", async () => {
+  process.env.WILLOW_API_TOKEN = "test-token";
+  const answer = await askWillow({
+    text: "Как зарегистрироваться на сайте?",
+    context: { ...context, faq: [{ title: "Регистрация", category: "Аккаунт", answer: "Откройте страницу регистрации." }] },
+    fetchImpl: async () => new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
+      answer: "Откройте страницу регистрации.",
+      type: "site",
+      sourceIds: ["faq"],
+      confidence: 0.98,
+    }) } }] }), { status: 200 }),
+  });
+
+  assert.equal(answer?.type, "site");
+  assert.deepEqual(answer?.sourceIds, ["faq"]);
+});
+
+test("falls back to Willow after the personal resolver has no answer", async () => {
+  const sent: Array<Record<string, unknown>> = [];
+  let willowCalled = false;
+  const result = await handleTelegramAiMessage({
+    message: { message_id: 41, chat: { id: 9, type: "private" }, from: { first_name: "Анна" }, text: "Как зарегистрироваться на сайте?" },
+    context,
+    resolveQuestion: async () => null,
+    ask: async () => {
+      willowCalled = true;
+      return { answer: "Откройте страницу турниров и выберите «Участвовать».", type: "site", sourceIds: ["faq"], confidence: 0.95 };
+    },
+    send: async (params) => { sent.push(params as unknown as Record<string, unknown>); return {}; },
+  });
+
+  assert.equal(willowCalled, true);
+  assert.equal(result.handled, true);
+  assert.match(String(sent[0]?.text), /выберите «Участвовать»/);
+});
+
+test("unrelated messages stay silent", async () => {
+  let asked = false;
+  let sent = false;
+  const result = await handleTelegramAiMessage({
+    message: { message_id: 42, chat: { id: 9, type: "private" }, from: { first_name: "Анна" }, text: "Как приготовить пасту?" },
+    context,
+    ask: async () => { asked = true; return null; },
+    send: async () => { sent = true; return {}; },
+  });
+
+  assert.equal(result.handled, false);
+  assert.equal(asked, false);
+  assert.equal(sent, false);
+});
+
+test("a relevant message stays silent when the platform has no confirmed answer", async () => {
+  let sent = false;
+  const result = await handleTelegramAiMessage({
+    message: { message_id: 43, chat: { id: 9, type: "private" }, from: { first_name: "Анна" }, text: "Где найти старый регламент?" },
+    context,
+    ask: async () => null,
+    send: async () => { sent = true; return {}; },
+  });
+
+  assert.equal(result.handled, true);
+  assert.equal(result.grounded, false);
+  assert.equal(sent, false);
 });
 
 test("/ask without a question asks the user to enter one", async () => {

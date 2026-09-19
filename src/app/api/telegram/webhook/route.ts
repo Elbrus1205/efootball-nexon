@@ -259,7 +259,54 @@ async function resolveCommandContext(message: TelegramWebhookMessage) {
       })
     : null;
 
-  const userTournament = !communityTournament && user
+  const publicTournaments = await db.tournament.findMany({
+    where: { isTest: false },
+    orderBy: { updatedAt: "desc" },
+    take: 50,
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      startsAt: true,
+      endsAt: true,
+      registrationEndsAt: true,
+      prizePool: true,
+    },
+  });
+  const messageText = (message.text ?? message.caption ?? "").toLocaleLowerCase("ru-RU");
+  const mentionedTournamentSummary = !communityTournament
+    ? [...publicTournaments]
+        .filter((tournament) => tournament.title.trim().length >= 3)
+        .sort((left, right) => right.title.length - left.title.length)
+        .find((tournament) => messageText.includes(tournament.title.toLocaleLowerCase("ru-RU")))
+    : null;
+  const mentionedTournament = mentionedTournamentSummary
+    ? await db.tournament.findUnique({
+        where: { id: mentionedTournamentSummary.id },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          rules: true,
+          status: true,
+          startsAt: true,
+          registrationStartsAt: true,
+          registrationEndsAt: true,
+          format: true,
+          participantMode: true,
+          rosterSize: true,
+          matchupFormat: true,
+          bestOfWins: true,
+          playoffType: true,
+          playoffLegs: true,
+          pointsForWin: true,
+          pointsForDraw: true,
+          pointsForLoss: true,
+        },
+      })
+    : null;
+
+  const userTournament = !communityTournament && !mentionedTournament && user
     ? await db.tournament.findFirst({
         where: {
           isTest: false,
@@ -290,7 +337,7 @@ async function resolveCommandContext(message: TelegramWebhookMessage) {
       })
     : null;
 
-  return { user, tournament: communityTournament ?? userTournament };
+  return { user, tournament: communityTournament ?? mentionedTournament ?? userTournament, publicTournaments };
 }
 
 async function buildTelegramAiContext(message: TelegramWebhookMessage): Promise<TelegramAiContext> {
@@ -332,6 +379,15 @@ async function buildTelegramAiContext(message: TelegramWebhookMessage): Promise<
         status: tournament.status,
         startsAt: tournament.startsAt.toISOString(),
         registrationEndsAt: tournament.registrationEndsAt.toISOString(),
+      })),
+      publicTournaments: context.publicTournaments.map((tournament) => ({
+        id: tournament.id,
+        title: tournament.title,
+        status: tournament.status,
+        startsAt: tournament.startsAt.toISOString(),
+        endsAt: tournament.endsAt?.toISOString() ?? null,
+        registrationEndsAt: tournament.registrationEndsAt.toISOString(),
+        prizePool: tournament.prizePool,
       })),
     };
   }
@@ -490,6 +546,15 @@ async function buildTelegramAiContext(message: TelegramWebhookMessage): Promise<
       status: tournament.status,
       startsAt: tournament.startsAt.toISOString(),
       registrationEndsAt: tournament.registrationEndsAt.toISOString(),
+    })),
+    publicTournaments: context.publicTournaments.map((tournament) => ({
+      id: tournament.id,
+      title: tournament.title,
+      status: tournament.status,
+      startsAt: tournament.startsAt.toISOString(),
+      endsAt: tournament.endsAt?.toISOString() ?? null,
+      registrationEndsAt: tournament.registrationEndsAt.toISOString(),
+      prizePool: tournament.prizePool,
     })),
     personalMatch,
   };
