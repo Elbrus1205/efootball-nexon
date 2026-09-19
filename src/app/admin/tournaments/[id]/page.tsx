@@ -18,6 +18,7 @@ import { requireAnyPermission } from "@/lib/auth/session";
 import { getAvailableClubs } from "@/lib/clubs";
 import { db } from "@/lib/db";
 import { getPlayerDisplayName } from "@/lib/player-name";
+import { schedulePosterRoster, scheduleRoundTitle } from "@/lib/tournaments/schedule-poster";
 
 function stageRoundUnit(stage?: { type: StageType } | null) {
   return stage?.type === StageType.PLAYOFF || stage?.type === StageType.SUPER_CUP ? "Раунд" : "Тур";
@@ -144,17 +145,6 @@ function buildExportRows(
     .map((row, index) => ({ ...row, rank: index + 1 }));
 }
 
-function exportRoundTitle(match: {
-  round: number;
-  stage?: { name: string; type: StageType } | null;
-}) {
-  if (match.stage?.type === StageType.PLAYOFF || match.stage?.type === StageType.SUPER_CUP) {
-    return `${match.stage.name} · ${stageRoundUnit(match.stage)} ${match.round}`;
-  }
-
-  return `${match.round} тур`;
-}
-
 export default async function AdminTournamentWorkspacePage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const session = await requireAnyPermission(["tournaments.createEdit", "tournaments.manageParticipants", "tournaments.manageStructure", "ownTournaments.moderateMatches", "allTournaments.moderateMatches"]);
@@ -168,12 +158,15 @@ export default async function AdminTournamentWorkspacePage(props: { params: Prom
         title: true,
         status: true,
         playoffType: true,
+        participantMode: true,
+        deadlines: { select: { stageId: true, round: true, deadlineAt: true } },
         registrationApplications: {
           where: { status: TournamentApplicationStatus.PENDING },
           select: { id: true },
         },
         participants: {
           select: {
+            rosterMembers: { where: { status: "ACCEPTED" }, select: { status: true, user: { select: { id: true, name: true } } } },
             id: true,
             userId: true,
             clubSlug: true,
@@ -189,6 +182,11 @@ export default async function AdminTournamentWorkspacePage(props: { params: Prom
             stageId: true,
             groupId: true,
             bracketId: true,
+            bracket: true,
+            isThirdPlaceMatch: true,
+            isPenaltyTiebreak: true,
+            isCaptainAssignedTeamMatch: true,
+            lineupPlayers: { select: { side: true, user: { select: { id: true, name: true } } } },
             round: true,
             matchNumber: true,
             status: true,
@@ -223,7 +221,7 @@ export default async function AdminTournamentWorkspacePage(props: { params: Prom
                 user: { select: { id: true, name: true, email: true } },
               },
             },
-            stage: { select: { id: true, name: true, type: true, status: true, orderIndex: true } },
+            stage: { select: { id: true, name: true, type: true, status: true, orderIndex: true, roundsCount: true } },
             group: { select: { id: true, name: true, orderIndex: true } },
           },
           orderBy: [{ round: "asc" }, { matchNumber: "asc" }],
@@ -272,6 +270,7 @@ export default async function AdminTournamentWorkspacePage(props: { params: Prom
   const groupStage = tournament.stages.find((stage) => stage.type === StageType.GROUP_STAGE);
   const playoffStage = tournament.stages.find((stage) => stage.type === StageType.PLAYOFF || stage.type === StageType.SUPER_CUP);
   const clubsBySlug = new Map(availableClubs.map((club) => [club.slug, club]));
+  const exportRosterByEntry = new Map(tournament.participants.map((entry) => [entry.id, entry.rosterMembers]));
   const participantClubMap = new Map(
     tournament.participants.map((entry) => {
       const playerName = getPlayerDisplayName(entry.user);
@@ -298,11 +297,15 @@ export default async function AdminTournamentWorkspacePage(props: { params: Prom
           ? "Игрок 1"
           : "Игрок 2";
     const mappedClub = playerId ? participantClubMap.get(playerId) : null;
+    const roster = tournament.participantMode === "COOP"
+      ? schedulePosterRoster(side, match.lineupPlayers, (entry?.id ? exportRosterByEntry.get(entry.id) : []) ?? [])
+      : null;
 
     return {
-      playerName,
-      clubName: mappedClub?.clubName ?? (entry ? resolveClubName(entry, clubsBySlug, playerName) : playerName),
-      clubBadgePath: mappedClub?.clubBadgePath ?? (entry ? resolveClubBadgePath(entry, clubsBySlug) : null),
+      identity: roster?.identity ?? (side === 1 ? match.player1Id : match.player2Id),
+      playerName: roster?.name ?? (match.isCaptainAssignedTeamMatch && !(side === 1 ? match.player1Id : match.player2Id) ? "Состав не назначен" : playerName),
+      clubName: entry ? resolveClubName(entry, clubsBySlug, playerName) : mappedClub?.clubName ?? playerName,
+      clubBadgePath: (entry ? resolveClubBadgePath(entry, clubsBySlug) : null) ?? mappedClub?.clubBadgePath ?? null,
     };
   };
 
@@ -319,6 +322,7 @@ export default async function AdminTournamentWorkspacePage(props: { params: Prom
     })) ?? [];
 
   const exportRoundMap = new Map<string, ExportScheduleRound>();
+  const exportDeadlines = new Map(tournament.deadlines.map((deadline) => [`${deadline.stageId}:${deadline.round}`, deadline.deadlineAt.toISOString()]));
   for (const match of [...tournament.matches].sort(
     (a, b) =>
       (a.stage?.orderIndex ?? 999) - (b.stage?.orderIndex ?? 999) ||
@@ -326,10 +330,12 @@ export default async function AdminTournamentWorkspacePage(props: { params: Prom
       (a.group?.orderIndex ?? 0) - (b.group?.orderIndex ?? 0) ||
       a.matchNumber - b.matchNumber,
   )) {
-    const key = [match.stageId ?? "stage", match.round].join(":");
+    if (match.status === MatchStatus.CANCELLED || match.isPenaltyTiebreak) continue;
+    const key = [match.stageId ?? "stage", match.round, match.bracket, match.isThirdPlaceMatch ? "bronze" : "main"].join(":");
     const round = exportRoundMap.get(key) ?? {
       key,
-      title: exportRoundTitle(match),
+      title: scheduleRoundTitle(match),
+      deadlineAt: exportDeadlines.get(`${match.stageId}:${match.round}`) ?? null,
       matches: [],
     };
     const player1 = resolveExportSide(match, 1);
@@ -337,6 +343,11 @@ export default async function AdminTournamentWorkspacePage(props: { params: Prom
 
     round.matches.push({
       id: match.id,
+      player1Id: player1.identity,
+      player2Id: player2.identity,
+      participant1EntryId: match.participant1EntryId,
+      participant2EntryId: match.participant2EntryId,
+      groupId: match.groupId,
       groupName: match.group?.name ?? null,
       matchNumber: match.matchNumber,
       player1ClubName: player1.clubName,
@@ -345,7 +356,6 @@ export default async function AdminTournamentWorkspacePage(props: { params: Prom
       player2ClubName: player2.clubName,
       player2ClubBadgePath: player2.clubBadgePath,
       player2Name: player2.playerName,
-      scoreLabel: match.player1Score !== null && match.player2Score !== null ? `${match.player1Score} - ${match.player2Score}` : "VS",
     });
     exportRoundMap.set(key, round);
   }

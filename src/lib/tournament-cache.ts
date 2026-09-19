@@ -13,7 +13,7 @@ const CACHE_TTL_SECONDS = 60 * 60;
 // namespace guarantees that a persistent Next Data Cache cannot serve the
 // pre-repair empty tournament slices while the regular tag invalidation is
 // unavailable to one-off database maintenance scripts.
-const CACHE_KEY_VERSION = "v3";
+const CACHE_KEY_VERSION = "v4";
 
 export function tournamentRulesTag(tournamentId: string) {
   return `tournament-rules:${tournamentId}`;
@@ -111,6 +111,7 @@ async function loadScheduleSlice(tournamentId: string) {
       seriesKey: true,
       legNumber: true,
       isPenaltyTiebreak: true,
+      lineupPlayers: { select: { side: true, user: { select: { id: true, name: true } } } },
       isCaptainAssignedTeamMatch: true,
       isTeamCaptainTiebreak: true,
       isThirdPlaceMatch: true,

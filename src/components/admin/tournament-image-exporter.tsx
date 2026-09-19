@@ -1,7 +1,10 @@
 "use client";
 
-import { CalendarDays, CheckSquare, Download, ImageDown, Layers3, Square } from "lucide-react";
-import { useMemo, useState } from "react";
+import { CalendarDays, CheckSquare, Download, ImageDown, Layers3, Loader2, Square } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { canvasToBlob, downloadFiles, type DownloadFile } from "@/lib/image-download";
+import type { ExportScheduleRound } from "@/lib/tournaments/schedule-poster";
+import { downloadScheduleImages } from "@/lib/tournaments/download-schedule";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -24,24 +27,7 @@ export type ExportGroup = {
   rows: ExportGroupRow[];
 };
 
-export type ExportScheduleMatch = {
-  id: string;
-  groupName: string | null;
-  matchNumber: number;
-  player1ClubName: string;
-  player1ClubBadgePath?: string | null;
-  player1Name: string;
-  player2ClubName: string;
-  player2ClubBadgePath?: string | null;
-  player2Name: string;
-  scoreLabel: string;
-};
-
-export type ExportScheduleRound = {
-  key: string;
-  title: string;
-  matches: ExportScheduleMatch[];
-};
+export type { ExportScheduleRound } from "@/lib/tournaments/schedule-poster";
 
 type CanvasTextOptions = {
   font?: string;
@@ -51,7 +37,6 @@ type CanvasTextOptions = {
 };
 
 const CANVAS_SIZE = 1600;
-const SCHEDULE_MATCHES_PER_PAGE = 20;
 const COLORS = {
   black: "#1D1D1D",
   panel: "#101010",
@@ -347,227 +332,6 @@ async function drawGroupsPage(ctx: CanvasRenderingContext2D, tournamentTitle: st
   drawFooter(ctx, `Группы · ${pageIndex + 1}/${totalPages}`);
 }
 
-async function drawScheduleRow(
-  ctx: CanvasRenderingContext2D,
-  match: ExportScheduleMatch,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  showGroupLabel: boolean,
-) {
-  fillRound(ctx, x, y, width, height, 16, COLORS.panel);
-  strokeRound(ctx, x, y, width, height, 16, "rgba(255,255,255,0.1)", 1.5);
-
-  const badgeSize = 44;
-  await drawClubBadge(ctx, match.player1ClubBadgePath, match.player1ClubName, x + 20, y + 32, badgeSize);
-  await drawClubBadge(ctx, match.player2ClubBadgePath, match.player2ClubName, x + width - 64, y + 32, badgeSize);
-
-  if (showGroupLabel && match.groupName) {
-    text(ctx, match.groupName.toUpperCase(), x + 82, y + 25, 230, {
-      font: "700 13px Inter, Arial, sans-serif",
-      fill: COLORS.goldSoft,
-    });
-  }
-
-  text(ctx, match.player1ClubName, x + 82, y + 52, 210, {
-    font: "800 20px Inter, Arial, sans-serif",
-    fill: COLORS.white,
-  });
-  text(ctx, match.player1Name, x + 82, y + 77, 210, {
-    font: "500 15px Inter, Arial, sans-serif",
-    fill: COLORS.dim,
-  });
-
-  centeredText(ctx, match.scoreLabel, x + width / 2, y + 62, 110, {
-    font: "900 24px Inter, Arial, sans-serif",
-    fill: COLORS.white,
-  });
-
-  text(ctx, match.player2ClubName, x + width - 82, y + 52, 210, {
-    font: "800 20px Inter, Arial, sans-serif",
-    fill: COLORS.white,
-    align: "right",
-  });
-  text(ctx, match.player2Name, x + width - 82, y + 77, 210, {
-    font: "500 15px Inter, Arial, sans-serif",
-    fill: COLORS.dim,
-    align: "right",
-  });
-}
-
-async function drawSchedulePage(
-  ctx: CanvasRenderingContext2D,
-  tournamentTitle: string,
-  round: ExportScheduleRound,
-  matches: ExportScheduleMatch[],
-  pageIndex: number,
-  totalPages: number,
-) {
-  drawBackground(ctx);
-  drawHeader(ctx, tournamentTitle, round.title);
-
-  const marginX = 82;
-  const top = 382;
-  const gapX = 28;
-  const gapY = 14;
-  const rowHeight = 98;
-  const columnWidth = (CANVAS_SIZE - marginX * 2 - gapX) / 2;
-  const seenGroups = new Set<string>();
-
-  for (let index = 0; index < matches.length; index += 1) {
-    const match = matches[index];
-    const column = index >= 10 ? 1 : 0;
-    const row = index % 10;
-    const groupKey = match.groupName ?? "no-group";
-    const showGroupLabel = !seenGroups.has(groupKey);
-    seenGroups.add(groupKey);
-    await drawScheduleRow(ctx, match, marginX + column * (columnWidth + gapX), top + row * (rowHeight + gapY), columnWidth, rowHeight, showGroupLabel);
-  }
-
-  drawFooter(ctx, `${round.title} · ${pageIndex + 1}/${totalPages}`);
-}
-
-type DownloadFile = {
-  name: string;
-  blob: Blob;
-};
-
-const crcTable = Array.from({ length: 256 }, (_, tableIndex) => {
-  let value = tableIndex;
-  for (let bit = 0; bit < 8; bit += 1) {
-    value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
-  }
-  return value >>> 0;
-});
-
-function crc32(bytes: Uint8Array) {
-  let crc = 0xffffffff;
-  for (let index = 0; index < bytes.length; index += 1) {
-    const byte = bytes[index];
-    crc = crcTable[(crc ^ byte) & 0xff] ^ (crc >>> 8);
-  }
-  return (crc ^ 0xffffffff) >>> 0;
-}
-
-function writeUint16(target: number[], value: number) {
-  target.push(value & 0xff, (value >>> 8) & 0xff);
-}
-
-function writeUint32(target: number[], value: number) {
-  target.push(value & 0xff, (value >>> 8) & 0xff, (value >>> 16) & 0xff, (value >>> 24) & 0xff);
-}
-
-function encodeFileName(value: string) {
-  return new TextEncoder().encode(value);
-}
-
-async function createZipBlob(files: DownloadFile[]) {
-  const chunks: Uint8Array[] = [];
-  const centralDirectory: Uint8Array[] = [];
-  let offset = 0;
-
-  for (const file of files) {
-    const nameBytes = encodeFileName(file.name);
-    const data = new Uint8Array(await file.blob.arrayBuffer());
-    const checksum = crc32(data);
-
-    const localHeader: number[] = [];
-    writeUint32(localHeader, 0x04034b50);
-    writeUint16(localHeader, 20);
-    writeUint16(localHeader, 0x0800);
-    writeUint16(localHeader, 0);
-    writeUint16(localHeader, 0);
-    writeUint16(localHeader, 0);
-    writeUint32(localHeader, checksum);
-    writeUint32(localHeader, data.length);
-    writeUint32(localHeader, data.length);
-    writeUint16(localHeader, nameBytes.length);
-    writeUint16(localHeader, 0);
-
-    const localPart = new Uint8Array(localHeader.length + nameBytes.length + data.length);
-    localPart.set(localHeader, 0);
-    localPart.set(nameBytes, localHeader.length);
-    localPart.set(data, localHeader.length + nameBytes.length);
-    chunks.push(localPart);
-
-    const centralHeader: number[] = [];
-    writeUint32(centralHeader, 0x02014b50);
-    writeUint16(centralHeader, 20);
-    writeUint16(centralHeader, 20);
-    writeUint16(centralHeader, 0x0800);
-    writeUint16(centralHeader, 0);
-    writeUint16(centralHeader, 0);
-    writeUint16(centralHeader, 0);
-    writeUint32(centralHeader, checksum);
-    writeUint32(centralHeader, data.length);
-    writeUint32(centralHeader, data.length);
-    writeUint16(centralHeader, nameBytes.length);
-    writeUint16(centralHeader, 0);
-    writeUint16(centralHeader, 0);
-    writeUint16(centralHeader, 0);
-    writeUint16(centralHeader, 0);
-    writeUint32(centralHeader, 0);
-    writeUint32(centralHeader, offset);
-
-    const centralPart = new Uint8Array(centralHeader.length + nameBytes.length);
-    centralPart.set(centralHeader, 0);
-    centralPart.set(nameBytes, centralHeader.length);
-    centralDirectory.push(centralPart);
-
-    offset += localPart.length;
-  }
-
-  const centralDirectorySize = centralDirectory.reduce((sum, item) => sum + item.length, 0);
-  const centralDirectoryOffset = offset;
-  const endHeader: number[] = [];
-  writeUint32(endHeader, 0x06054b50);
-  writeUint16(endHeader, 0);
-  writeUint16(endHeader, 0);
-  writeUint16(endHeader, files.length);
-  writeUint16(endHeader, files.length);
-  writeUint32(endHeader, centralDirectorySize);
-  writeUint32(endHeader, centralDirectoryOffset);
-  writeUint16(endHeader, 0);
-
-  const blobParts: BlobPart[] = [...chunks, ...centralDirectory, new Uint8Array(endHeader)].map((part) => {
-    const copy = new Uint8Array(part.byteLength);
-    copy.set(part);
-    return copy;
-  });
-  return new Blob(blobParts, { type: "application/zip" });
-}
-
-function canvasToBlob(canvas: HTMLCanvasElement) {
-  return new Promise<Blob | null>((resolve) => {
-    canvas.toBlob((blob) => {
-      resolve(blob);
-    }, "image/png");
-  });
-}
-
-function downloadBlob(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-async function downloadFiles(files: DownloadFile[], archiveName: string) {
-  if (!files.length) return;
-  if (files.length === 1) {
-    downloadBlob(files[0].blob, files[0].name);
-    return;
-  }
-
-  const zipBlob = await createZipBlob(files);
-  downloadBlob(zipBlob, archiveName);
-}
-
 function optionButtonClass(active: boolean) {
   return [
     "flex min-h-11 items-center gap-2 rounded-md border px-3 py-2 text-left text-sm transition",
@@ -589,6 +353,9 @@ export function TournamentImageExporter({
   const [selectedGroupIds, setSelectedGroupIds] = useState(() => groups.map((group) => group.id));
   const [selectedRoundKeys, setSelectedRoundKeys] = useState(() => rounds.map((round) => round.key));
   const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(false);
+  const exportLock = useRef(false);
   const selectedGroups = useMemo(() => groups.filter((group) => selectedGroupIds.includes(group.id)), [groups, selectedGroupIds]);
   const selectedRounds = useMemo(() => rounds.filter((round) => selectedRoundKeys.includes(round.key)), [rounds, selectedRoundKeys]);
 
@@ -624,28 +391,23 @@ export function TournamentImageExporter({
   };
 
   const exportSchedule = async () => {
-    if (!selectedRounds.length) return;
-    setStatus("Готовлю PNG расписания...");
-
-    const files: DownloadFile[] = [];
-    for (const round of selectedRounds) {
-      const chunks = chunkArray(round.matches, SCHEDULE_MATCHES_PER_PAGE);
-      for (let index = 0; index < chunks.length; index += 1) {
-        const chunk = chunks[index];
-        const canvas = createCanvas();
-        const ctx = canvas.getContext("2d");
-        if (!ctx) continue;
-
-        await drawSchedulePage(ctx, tournamentTitle, round, chunk, index, chunks.length);
-        const blob = await canvasToBlob(canvas);
-        if (blob) {
-          files.push({ name: `${safeFileName(tournamentTitle)}-${safeFileName(round.title)}-${index + 1}.png`, blob });
-        }
-      }
+    const count = await downloadScheduleImages(selectedRounds, setStatus);
+    setStatus(count > 1 ? `Скачан ZIP: ${count} PNG расписания` : "Расписание PNG скачано.");
+  };
+  const runExport = async (action: () => Promise<void>) => {
+    if (exportLock.current) return;
+    exportLock.current = true;
+    setBusy(true);
+    setError(false);
+    try {
+      await action();
+    } catch {
+      setError(true);
+      setStatus("Не удалось создать изображения. Проверьте соединение и попробуйте скачать меньше туров за раз.");
+    } finally {
+      exportLock.current = false;
+      setBusy(false);
     }
-
-    await downloadFiles(files, `${safeFileName(tournamentTitle)}-schedule.zip`);
-    setStatus(files.length > 1 ? `Скачан ZIP: ${files.length} PNG расписания` : `Скачано: ${files.length} PNG расписания`);
   };
   return (
     <Card className="overflow-hidden rounded-lg border-primary/15 bg-white/[0.045] p-0">
@@ -654,7 +416,7 @@ export function TournamentImageExporter({
           <ImageDown className="h-5 w-5 text-primary" />
           Экспорт PNG
         </CardTitle>
-        <CardDescription>Квадратные компактные картинки для публикаций: группы по 4 на фото, расписание по выбранным турам.</CardDescription>
+        <CardDescription>Чёткие изображения для публикаций: таблицы групп и расписание выбранных туров.</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4 p-4 sm:p-5 xl:grid-cols-2">
         <div className="space-y-3 rounded-lg border border-white/10 bg-black/20 p-3 sm:p-4">
@@ -692,7 +454,7 @@ export function TournamentImageExporter({
             )}
           </div>
 
-          <Button type="button" variant="outline" className="w-full" disabled={!selectedGroups.length} onClick={exportGroups}>
+          <Button type="button" variant="outline" className="w-full" disabled={busy || !selectedGroups.length} onClick={() => runExport(exportGroups)}>
             <Download className="mr-2 h-4 w-4" />
             Скачать группы PNG
           </Button>
@@ -705,7 +467,7 @@ export function TournamentImageExporter({
                 <CalendarDays className="h-4 w-4 text-primary" />
                 Расписание
               </div>
-              <div className="mt-1 text-xs text-zinc-500">Выбери туры, каждый PNG останется квадратным.</div>
+              <div className="mt-1 text-xs text-zinc-500">Ответные встречи — одной парой. Дедлайн и число матчей — на фото.</div>
             </div>
             <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedRoundKeys(selectedRoundKeys.length === rounds.length ? [] : rounds.map((round) => round.key))}>
               {selectedRoundKeys.length === rounds.length ? "Снять" : "Все"}
@@ -733,13 +495,13 @@ export function TournamentImageExporter({
             )}
           </div>
 
-          <Button type="button" variant="outline" className="w-full" disabled={!selectedRounds.length} onClick={exportSchedule}>
-            <Download className="mr-2 h-4 w-4" />
+          <Button type="button" variant="outline" className="w-full" disabled={busy || !selectedRounds.length} onClick={() => runExport(exportSchedule)}>
+            {busy ? <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
             Скачать расписание PNG
           </Button>
         </div>
 
-        {status ? <div className="rounded-md border border-primary/20 bg-primary/10 px-3 py-2 text-sm text-primary xl:col-span-2">{status}</div> : null}
+        {status ? <div role={error ? "alert" : "status"} className={`rounded-md border px-3 py-2 text-sm xl:col-span-2 ${error ? "border-rose-300/20 bg-rose-300/10 text-rose-200" : "border-primary/20 bg-primary/10 text-primary"}`}>{status}</div> : null}
       </CardContent>
     </Card>
   );

@@ -45,6 +45,7 @@ import {
 } from "@/lib/tournaments/captain-team-match-presentation";
 import { isSupersededCaptainTeamSeriesArchive } from "@/lib/tournaments/captain-team-series-assignment";
 import { isUserInactiveForMatch } from "@/lib/tournaments/inactive-participant";
+import { schedulePosterRoster, scheduleRoundTitle } from "@/lib/tournaments/schedule-poster";
 import { isStandingEliminatedRank, relegationStyle } from "@/lib/tournament-standing-colors";
 import { buildStandingHighlightsFromBlueprint } from "@/lib/tournament-standing-highlights";
 import { cn, formatDate } from "@/lib/utils";
@@ -102,34 +103,6 @@ function scheduleMatchTime(match: { scheduledAt?: Date | string | null; createdA
   return new Date(match.scheduledAt ?? match.schedules[0]?.startsAt ?? match.createdAt).getTime();
 }
 
-function playoffRoundLabel(round: number, totalRounds: number) {
-  const roundsRemaining = totalRounds - round;
-
-  if (roundsRemaining <= 0) return "Финал";
-  if (roundsRemaining === 1) return "1/2 финала";
-  if (roundsRemaining === 2) return "1/4 финала";
-  if (roundsRemaining === 3) return "1/8 финала";
-
-  return `1/${2 ** roundsRemaining} финала`;
-}
-
-function scheduleSectionTitle(match: {
-  round: number;
-  bracket?: string | null;
-  isThirdPlaceMatch?: boolean;
-  group?: { name: string; orderIndex?: number | null } | null;
-  stage?: { name: string | null; type?: StageType | null; roundsCount?: number | null } | null;
-}) {
-  if (match.stage?.type === StageType.PLAYOFF || match.stage?.type === StageType.SUPER_CUP) {
-    if (match.isThirdPlaceMatch) return "Матч за 3-е место";
-    if (match.bracket === "lower") return `Нижняя сетка • Раунд ${match.round}`;
-
-    return playoffRoundLabel(match.round, Math.max(match.stage.roundsCount ?? match.round, match.round));
-  }
-
-  return `${match.round} тур`;
-}
-
 function buildScheduleSections<
   T extends {
     id: string;
@@ -170,7 +143,7 @@ function buildScheduleSections<
       } else {
         sections.set(key, {
           key,
-          title: scheduleSectionTitle(match),
+          title: scheduleRoundTitle(match),
           sort: [stageSort, 0, 0, match.round, 0],
           deadlineAt,
           matches: [match],
@@ -191,7 +164,7 @@ function buildScheduleSections<
     } else {
       sections.set(key, {
         key,
-        title: scheduleSectionTitle(match),
+        title: scheduleRoundTitle(match),
         sort: [stageSort, groupSort, bracketSort, match.round, thirdPlaceSort],
         deadlineAt,
         matches: [match],
@@ -845,6 +818,9 @@ export default async function TournamentDetailsPage(
     const entry = resolveMatchEntry(match, side);
     const explicitPlayerId = side === 1 ? match.player1Id : match.player2Id;
     const isUnassignedCaptainMatch = match.isCaptainAssignedTeamMatch && !explicitPlayerId;
+    const roster = tournament.participantMode === "COOP"
+      ? schedulePosterRoster(side, match.lineupPlayers ?? [], (entry?.id ? participantByEntryId.get(entry.id)?.rosterMembers : []) ?? [])
+      : null;
     const playerId = isUnassignedCaptainMatch ? null : explicitPlayerId ?? entry?.userId ?? null;
     const playerName = player
       ? getPlayerDisplayName(player)
@@ -859,6 +835,8 @@ export default async function TournamentDetailsPage(
       playerId,
       playerName,
       showPlayerName: !isUnassignedCaptainMatch,
+      posterPlayerName: roster?.name,
+      posterPlayerId: roster?.identity,
       clubName: entry ? resolveClubName(entry, clubsBySlug, playerName) : mappedClub?.clubName ?? null,
       clubBadgePath: (entry ? resolveClubBadgePath(entry, clubsBySlug) : null) ?? mappedClub?.clubBadgePath ?? null,
       isActive: entry?.isActive ?? mappedClub?.isActive ?? true,
@@ -879,6 +857,10 @@ export default async function TournamentDetailsPage(
       return {
         id: match.id,
         roundKey: [match.stage?.id ?? "stage", match.round].join(":"),
+        participant1EntryId: match.participant1EntryId,
+        participant2EntryId: match.participant2EntryId,
+        isPenaltyTiebreak: match.isPenaltyTiebreak,
+        status: match.status,
         roundLabel: section.title,
         roundSort: match.round,
         matchNumber: match.matchNumber,

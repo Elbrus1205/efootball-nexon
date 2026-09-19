@@ -4,11 +4,14 @@ import { Clock3, Filter, RotateCcw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ClubPlayerLine } from "@/components/tournaments/club-player-line";
 import { TournamentEmptyState } from "@/components/tournaments/tournament-empty-state";
+import { ScheduleDownloadButton } from "@/components/tournaments/schedule-download-button";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 type ScheduleSide = {
+  posterPlayerName?: string;
+  posterPlayerId?: string;
   playerId: string | null;
   playerName: string;
   showPlayerName: boolean;
@@ -20,6 +23,10 @@ type ScheduleSide = {
 
 export type TournamentScheduleMatch = {
   id: string;
+  participant1EntryId: string | null;
+  participant2EntryId: string | null;
+  isPenaltyTiebreak: boolean;
+  status: string;
   roundKey: string;
   roundLabel: string;
   roundSort: number;
@@ -329,6 +336,29 @@ export function TournamentScheduleView({ sections }: { sections: TournamentSched
                       </div>
                     </div>
                   ) : null}
+                  <ScheduleDownloadButton round={{
+                    key: section.key,
+                    title: section.title,
+                    deadlineAt: section.deadlineAt,
+                    matches: section.matches.map((match) => ({
+                      id: match.id,
+                      groupId: match.groupId,
+                      groupName: match.groupName,
+                      matchNumber: match.matchNumber,
+                      player1Id: match.sideOne.posterPlayerId ?? match.sideOne.playerId,
+                      player2Id: match.sideTwo.posterPlayerId ?? match.sideTwo.playerId,
+                      participant1EntryId: match.participant1EntryId,
+                      participant2EntryId: match.participant2EntryId,
+                      player1ClubName: match.sideOne.clubName || match.sideOne.playerName,
+                      player2ClubName: match.sideTwo.clubName || match.sideTwo.playerName,
+                      player1ClubBadgePath: match.sideOne.clubBadgePath,
+                      player2ClubBadgePath: match.sideTwo.clubBadgePath,
+                      player1Name: match.sideOne.posterPlayerName ?? (match.sideOne.showPlayerName ? match.sideOne.playerName : "Состав не назначен"),
+                      player2Name: match.sideTwo.posterPlayerName ?? (match.sideTwo.showPlayerName ? match.sideTwo.playerName : "Состав не назначен"),
+                      isPenaltyTiebreak: match.isPenaltyTiebreak,
+                      status: match.status,
+                    })),
+                  }} />
                 </div>
 
                 <div className="space-y-6">
