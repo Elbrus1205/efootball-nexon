@@ -5,6 +5,7 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { parsePrizePoolValue } from "@/lib/home-stats";
 import { getPlayerRatings } from "@/lib/ratings";
+import { getRatingsPagination } from "@/lib/ratings-pagination";
 
 const ratingsDataLoads = new Map<string, Promise<unknown>>();
 const ratingsDataValues = new Map<string, { expiresAt: number; value: unknown }>();
@@ -47,7 +48,7 @@ function coalesceRatingLoad<T>(key: string, loader: () => Promise<T>) {
 
 export default async function RatingsPage(
   props: {
-    searchParams?: Promise<{ season?: string }>;
+    searchParams?: Promise<{ season?: string; page?: string | string[] }>;
   }
 ) {
   const searchParams = await props.searchParams;
@@ -70,10 +71,12 @@ export default async function RatingsPage(
   ]);
   const ratingPrizePool = Math.floor(prizeTournaments.reduce((sum, tournament) => sum + parsePrizePoolValue(tournament.prizePool), 0) * 0.1);
   const currentUserIndex = session?.user ? ratings.findIndex((player) => player.playerId === session.user.id) : -1;
+  const pagination = getRatingsPagination(ratings.length, searchParams?.page);
 
   return (
     <RatingsView
-      players={ratings.slice(0, 10)}
+      players={ratings.slice(pagination.offset, pagination.end)}
+      page={pagination.page}
       totalPlayers={ratings.length}
       currentPlayer={currentUserIndex >= 0 ? { player: ratings[currentUserIndex], rank: currentUserIndex + 1 } : null}
       seasons={seasons}

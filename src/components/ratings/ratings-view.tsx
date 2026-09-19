@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { ArrowDownRight, ArrowUpRight, ArrowRight, CalendarDays, ChevronDown, Info, Trophy, Users } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, ArrowRight, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Info, Trophy, Users } from "lucide-react";
 import type { Season } from "@prisma/client";
 import { Fragment } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { ProfileStatusBadge } from "@/components/profile/profile-status-badge";
 import type { PlayerRatingRow } from "@/lib/ratings";
+import { getRatingPageNumbers, getRatingsPagination, ratingPageHref } from "@/lib/ratings-pagination";
 import { formatDate } from "@/lib/utils";
 import profile from "@/components/players/player-profile.module.css";
 import styles from "./ratings.module.css";
@@ -15,6 +16,7 @@ type RatingSeason = Pick<Season, "id" | "name" | "isActive" | "startsAt" | "ends
 type RatingsViewProps = {
   players: PlayerRatingRow[];
   totalPlayers: number;
+  page: number;
   currentPlayer: { player: PlayerRatingRow; rank: number } | null;
   seasons: RatingSeason[];
   ratingSeason: RatingSeason | null;
@@ -62,12 +64,13 @@ function SeasonLink({ season, active }: { season: RatingSeason | null; active: b
   );
 }
 
-export function RatingsView({ players, totalPlayers, currentPlayer, seasons, ratingSeason, prizePool }: RatingsViewProps) {
+export function RatingsView({ players, totalPlayers, page, currentPlayer, seasons, ratingSeason, prizePool }: RatingsViewProps) {
   const activeSeasons = seasons.filter((season) => season.isActive);
   const archivedSeasons = seasons.filter((season) => !season.isActive);
   const isArchived = Boolean(ratingSeason && !ratingSeason.isActive);
-  const currentBelowTop = currentPlayer && currentPlayer.rank > players.length;
-  const visiblePlayers = currentBelowTop ? [...players, currentPlayer.player] : players;
+  const pagination = getRatingsPagination(totalPlayers, String(page));
+  const showOwnPosition = currentPlayer && !players.some((player) => player.playerId === currentPlayer.player.playerId);
+  const visiblePlayers = showOwnPosition ? [...players, currentPlayer.player] : players;
   const period = ratingSeason?.name ?? "За всё время";
   const panel = `${profile.panel} ${styles.panel}`;
 
@@ -109,22 +112,22 @@ export function RatingsView({ players, totalPlayers, currentPlayer, seasons, rat
         <Card className={panel}>
           <div className={styles.tableHeading}>
             <div><h2 id="rating-table-heading">Таблица рейтинга</h2><p>{period}</p></div>
-            <span className={styles.topLabel}>Топ-10</span>
+            <span className={styles.topLabel}>{totalPlayers ? `${pagination.offset + 1}–${pagination.end}` : "0"} из {numberFormat.format(totalPlayers)}</span>
           </div>
           {visiblePlayers.length ? (
             <table className={styles.table}>
-              <caption className={styles.srOnly}>Десять лидеров{currentBelowTop ? " и ваша позиция" : ""}. {period}.</caption>
+              <caption className={styles.srOnly}>Рейтинг, страница {pagination.page}{showOwnPosition ? " и ваша позиция" : ""}. {period}.</caption>
               <colgroup><col className={styles.rankColumn} /><col /><col className={styles.statColumn} /><col className={styles.statColumn} /><col className={styles.scoreColumn} /></colgroup>
               <thead><tr><th scope="col"><span aria-hidden="true">#</span><span className={styles.srOnly}>Место</span></th><th scope="col">Игрок</th><th scope="col" className={styles.desktopStat}>Матчи</th><th scope="col" className={styles.desktopStat}>Победы</th><th scope="col" aria-sort="descending">Рейтинг</th></tr></thead>
               <tbody>
                 {visiblePlayers.map((player, index) => {
                   const isOwn = currentPlayer?.player.playerId === player.playerId;
-                  const separated = Boolean(currentBelowTop && index === visiblePlayers.length - 1);
-                  const rank = separated ? currentPlayer!.rank : index + 1;
+                  const separated = Boolean(showOwnPosition && index === visiblePlayers.length - 1);
+                  const rank = separated ? currentPlayer!.rank : pagination.offset + index + 1;
                   return (
                     <Fragment key={player.playerId}>
                       {separated ? <tr className={styles.separator}><td colSpan={5}><span>···</span>Ваша позиция в общем рейтинге</td></tr> : null}
-                      <tr data-own={isOwn}>
+                      <tr data-own={isOwn} data-pinned={separated}>
                         <td><span className={styles.rank} data-place={rank}>{String(rank).padStart(2, "0")}</span></td>
                         <th scope="row">
                           <div className={styles.playerIdentity}>
@@ -148,6 +151,18 @@ export function RatingsView({ players, totalPlayers, currentPlayer, seasons, rat
           ) : (
             <div className={styles.empty}><Trophy size={32} strokeWidth={1.25} aria-hidden="true" /><h3>Здесь начинается история</h3><p>В этом периоде пока нет рейтинга. Первые результаты появятся после подтверждённых матчей.</p><Link href="/tournaments" className={styles.actionLink}>Выбрать турнир<ArrowRight size={16} aria-hidden="true" /></Link></div>
           )}
+          {pagination.totalPages > 1 ? (
+            <nav className={styles.pagination} aria-label="Страницы рейтинга">
+              <span className={styles.pageSummary}>Страница {pagination.page} из {numberFormat.format(pagination.totalPages)}</span>
+              <div className={styles.pageLinks}>
+                {pagination.page > 1 ? <Link href={ratingPageHref(ratingSeason?.id ?? null, pagination.page - 1)} prefetch={false} rel="prev" aria-label="Предыдущая страница"><ChevronLeft size={15} aria-hidden="true" /></Link> : <span className={styles.disabledPage} aria-disabled="true" aria-label="Предыдущая страница"><ChevronLeft size={15} aria-hidden="true" /></span>}
+                {getRatingPageNumbers(pagination.page, pagination.totalPages).map((item) => typeof item === "number" ? (
+                  <Link key={item} href={ratingPageHref(ratingSeason?.id ?? null, item)} prefetch={false} aria-label={`Страница ${item}`} aria-current={item === pagination.page ? "page" : undefined}>{item}</Link>
+                ) : <span key={item} className={styles.pageGap} aria-hidden="true">…</span>)}
+                {pagination.page < pagination.totalPages ? <Link href={ratingPageHref(ratingSeason?.id ?? null, pagination.page + 1)} prefetch={false} rel="next" aria-label="Следующая страница"><ChevronRight size={15} aria-hidden="true" /></Link> : <span className={styles.disabledPage} aria-disabled="true" aria-label="Следующая страница"><ChevronRight size={15} aria-hidden="true" /></span>}
+              </div>
+            </nav>
+          ) : null}
           {visiblePlayers.length ? <div className={styles.tableFoot}><span className={styles.activeDot} aria-hidden="true" />По результатам подтверждённых матчей</div> : null}
         </Card>
       </section>

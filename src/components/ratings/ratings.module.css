@@ -1,3 +1,4 @@
+.page.page { --profile-accent: #a8c5e8; }
 .page { padding-top: 28px; padding-bottom: 48px; }
 .page :is(a, summary, button):focus-visible { outline: 2px solid var(--profile-accent); outline-offset: 4px; }
 .heading { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px 24px; }
@@ -12,7 +13,7 @@
 .periodLinks { flex: 1 1 100%; }
 .seasonLink { display: inline-flex; min-height: 44px; max-width: 100%; align-items: center; flex-wrap: wrap; gap: 7px; padding: 10px 14px; border: 1px solid transparent; border-radius: 11px; background: #ffffff04; color: var(--profile-muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .seasonLink span { min-width: 0; }
-.seasonLink[aria-current="page"] { border-color: #c8b58b33; background: #c8b58b0d; color: var(--profile-accent); }
+.seasonLink[aria-current="page"] { border-color: #a8c5e833; background: #a8c5e80d; color: var(--profile-accent); }
 .seasonLink:hover { color: var(--profile-text); background: #ffffff08; }
 .seasonLink time { color: var(--profile-muted); font-size: 11px; }
 .activeDot { width: 5px; height: 5px; flex-shrink: 0; border-radius: 50%; background: var(--profile-accent); }
@@ -22,8 +23,8 @@
 .archive[open] { flex-basis: 100%; }
 .archive[open] summary > svg:last-child { transform: rotate(180deg); }
 .archiveLinks { padding-top: 6px; }
-.page .avatar { width: 36px; height: 36px; border: 1px solid var(--profile-line); border-radius: 50%; background: #292825; }
-.page .avatarFallback { background: #302e29; color: var(--profile-accent); font-size: 12px; font-weight: 500; }
+.page .avatar { width: 36px; height: 36px; border: 1px solid var(--profile-line); border-radius: 50%; background: #252b34; }
+.page .avatarFallback { background: #293443; color: var(--profile-accent); font-size: 12px; font-weight: 500; }
 .tableSection { min-width: 0; margin-top: 16px; }
 .page .panel { overflow: hidden; border-radius: 18px; }
 .tableHeading { display: flex; align-items: start; justify-content: space-between; gap: 12px; padding: 20px 16px; }
@@ -42,13 +43,13 @@
 .table tr > :last-child { padding-right: 12px; text-align: right; }
 .table tbody tr:not(.separator) { border-bottom: 1px solid var(--profile-line); }
 .table tbody tr:last-child { border-bottom: 0; }
-.table tbody tr[data-own="true"] { background: #c8b58b09; }
+.table tbody tr[data-own="true"] { background: #a8c5e809; }
 .table tbody tr:hover { background: #ffffff03; }
 .table tbody td, .table tbody th { padding-block: 14px; vertical-align: middle; }
 .rank { color: var(--profile-muted); font-size: 11px; font-weight: 500; }
 .rank[data-place="1"] { color: var(--profile-accent); }
 .rank[data-place="2"] { color: #b9c0cb; }
-.rank[data-place="3"] { color: #bd967c; }
+.rank[data-place="3"] { color: #91a7bf; }
 .playerIdentity { display: flex; align-items: center; gap: 9px; min-width: 0; padding-right: 8px; }
 .playerCopy { min-width: 0; }
 .playerLink { display: inline-flex; align-items: center; min-height: 44px; max-width: 100%; color: var(--profile-text); font-size: 12px; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
@@ -65,6 +66,14 @@
 .separator td { padding: 10px 12px !important; color: var(--profile-muted); font-size: 10px; text-align: left !important; background: #ffffff02; }
 .separator span { margin-right: 10px; letter-spacing: .1em; }
 .tableFoot { display: flex; align-items: center; gap: 7px; padding: 14px 16px; border-top: 1px solid var(--profile-line); color: var(--profile-muted); font-size: 10px; line-height: 1.6; }
+.pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 12px 16px; border-top: 1px solid var(--profile-line); }
+.pageSummary { color: var(--profile-muted); font-size: 10px; line-height: 1.6; }
+.pageLinks { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px; min-width: 0; font-variant-numeric: tabular-nums; }
+.pageLinks a, .disabledPage { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; min-height: 44px; padding: 0 5px; border: 1px solid transparent; border-radius: 8px; color: var(--profile-muted); font-size: 11px; }
+.pageLinks a:hover { color: var(--profile-text); background: #a8c5e808; }
+.pageLinks a[aria-current="page"] { border-color: #a8c5e833; background: #a8c5e812; color: var(--profile-accent); }
+.pageLinks .disabledPage { opacity: .3; }
+.pageGap { width: 10px; text-align: center; color: var(--profile-muted); font-size: 10px; }
 .sideHeading { display: flex; align-items: center; gap: 8px; }
 .sideHeading svg { flex-shrink: 0; color: var(--profile-accent); }
 .sideHeading h2 { font-size: 12px; font-weight: 500; }
@@ -73,8 +82,8 @@
 .prizeValue { min-width: 0; margin: 0; color: var(--profile-accent); font-size: clamp(22px, 3vw, 30px); font-weight: 500; line-height: 1.2; letter-spacing: -.04em; overflow-wrap: anywhere; }
 .prizeValue > span { margin-left: 7px; font-size: .65em; }
 .sideCaption { margin-top: 5px; color: var(--profile-muted); font-size: 10px; line-height: 1.5; }
-.actionLink { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; margin-top: 14px; padding: 10px 12px; border: 1px solid #c8b58b26; border-radius: 10px; background: #c8b58b08; color: var(--profile-accent); font-size: 12px; }
-.actionLink:hover { background: #c8b58b12; }
+.actionLink { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; margin-top: 14px; padding: 10px 12px; border: 1px solid #a8c5e826; border-radius: 10px; background: #a8c5e808; color: var(--profile-accent); font-size: 12px; }
+.actionLink:hover { background: #a8c5e812; }
 .actionLink svg { flex-shrink: 0; }
 .note { display: flex; align-items: start; gap: 10px; margin-top: 18px; padding: 4px 6px; color: var(--profile-muted); }
 .note svg { flex-shrink: 0; margin-top: 3px; }
@@ -103,6 +112,8 @@
   .table tr > :last-child { padding-right: 20px; }
 }
 @media (max-width: 639px) {
+  .pagination { justify-content: center; gap: 5px; padding: 10px 12px; }
+  .pageSummary { flex-basis: 100%; text-align: center; }
   /* A colspan row can reserve hidden desktop columns in a fixed-layout table.
      Give mobile rows explicit tracks so the player keeps the available width. */
   .table, .table thead, .table tbody { display: block; }
