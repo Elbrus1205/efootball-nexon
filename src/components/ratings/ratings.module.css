@@ -62,7 +62,6 @@
 .playerCopy { min-width: 0; }
 .playerLink { display: inline-flex; align-items: center; min-height: 44px; max-width: 100%; color: var(--profile-text); font-size: 12px; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
 .playerLink:hover { color: var(--profile-accent); }
-.youLabel { display: block; margin-top: -2px; color: var(--profile-accent); font-size: 10px; font-weight: 400; }
 .statuses { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
 .page .statusBadge { max-width: 100%; min-width: 0; min-height: 0; gap: 4px; padding: 2px 5px !important; border-radius: 5px; font-size: 9px; font-weight: 400; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; box-shadow: none !important; text-shadow: none; animation: none; }
 .statusBadge > span { min-width: 0; }

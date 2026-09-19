@@ -133,8 +133,7 @@ export function RatingsView({ players, totalPlayers, page, currentPlayer, season
                           <div className={styles.playerIdentity}>
                             <PlayerAvatar player={player} />
                             <div className={styles.playerCopy}>
-                              <Link href={`/players/${player.playerId}`} prefetch={false} className={styles.playerLink}>{player.playerName}</Link>
-                              {isOwn ? <span className={styles.youLabel}>Это вы</span> : null}
+                              <Link href={`/players/${player.playerId}`} prefetch={false} className={styles.playerLink} aria-label={isOwn ? `${player.playerName}, ваша позиция в рейтинге` : undefined}>{player.playerName}</Link>
                               {player.selectedStatuses.length ? <div className={styles.statuses}>{player.selectedStatuses.map((status) => <ProfileStatusBadge key={status.id} status={status} className={styles.statusBadge} />)}</div> : null}
                             </div>
                           </div>
