@@ -165,10 +165,11 @@ export function extractTelegramRound(text: string) {
 }
 
 export function isTelegramPersonalMatchQuestion(text: string) {
-  return /с\s+кем|кто\s+(?:мой|у\s+меня)|мой(?:\s+ближайший)?\s+матч|у\s+меня\s+матч|соперник|против\s+кого|когда\s+я\s+играю/iu.test(text);
+  return /с\s+кем|кто\s+(?:(?:мой|у\s+меня)\b|(?:мой\s+)?соперник)|мой(?:\s+ближайший)?\s+матч|у\s+меня\s+матч|мой\s+соперник\s*[?!.]*$|соперник\s+(?:в|на)\s+\d{1,3}(?:-?(?:м|й))?\s+тур|против\s+кого|когда\s+я\s+играю/iu.test(text);
 }
 
 const tournamentTopicPattern = /efootball|nexon|сайт|платформ|аккаунт|вход|авторизац|регист|профил|безопасн|настройк|турнир|кубок|матч|соперник|регламент|правил|дедлайн|расписан|таблиц|сетк|рейтинг|достиж|команд|капитан|состав|игрок|игра(?:ет|ть)?|сч[её]т|результат|пенальт|спор|заявк|плей[- ]?офф|best\s*of|админ|организатор|судья|модератор|уведомлен|навигац|faq|часто\s+задаваем|приз|победител|побед|место|занял|архив|завершен|завершён/i;
+const matchIncidentPattern = /(?:соп\p{L}{0,5}ник|игрок).{0,100}(?:выш\p{L}*|покин\p{L}*|разорвал\p{L}*|отключ\p{L}*|дисконнект\p{L}*)|(?:выш\p{L}*|покин\p{L}*|разорвал\p{L}*|отключ\p{L}*|дисконнект\p{L}*).{0,100}(?:соп\p{L}{0,5}ник|игрок|матч)|разрыв\s+связи/iu;
 const tournamentChatContextPattern = /когда\s+(?:начинаем|играем)|кто\s+(?:сегодня\s+)?играет|где\s+(?:играть|проводится)|во\s+сколько|что\s+по\s+(?:игре|туру|раунду)|когда\s+следующ(?:ая|ий)\s+(?:игра|тур)/i;
 const unrelatedSmallTalkPattern = /^(?:как дела|как ты|всем привет|привет|доброе утро|добрый вечер)[!?؟¿.,\s]*$/i;
 
@@ -190,10 +191,10 @@ export function isTelegramAiRelevantMessage(
   const askMatch = text.match(/^\/ask(?:@[A-Za-z0-9_]+)?(?:\s+([\s\S]*))?$/i);
   if (askMatch) {
     const question = askMatch[1]?.trim();
-    return !question || tournamentTopicPattern.test(question) || Boolean(options?.tournamentChat && tournamentChatContextPattern.test(question));
+    return !question || tournamentTopicPattern.test(question) || matchIncidentPattern.test(question) || Boolean(options?.tournamentChat && tournamentChatContextPattern.test(question));
   }
   if (text.startsWith("/")) return false;
-  if (message.chat?.type === "private") return tournamentTopicPattern.test(text) && !unrelatedSmallTalkPattern.test(text);
+  if (message.chat?.type === "private") return (tournamentTopicPattern.test(text) || matchIncidentPattern.test(text)) && !unrelatedSmallTalkPattern.test(text);
 
   const username = botUsername?.trim().replace(/^@/, "");
   const mentionsBot = username ? new RegExp(`@${username}\\b`, "i").test(text) : false;
@@ -202,10 +203,10 @@ export function isTelegramAiRelevantMessage(
     const textWithoutMention = username ? text.replace(new RegExp(`@${username}\\b`, "ig"), "").trim() : text;
     return Boolean(textWithoutMention)
       && !unrelatedSmallTalkPattern.test(textWithoutMention)
-      && (tournamentTopicPattern.test(textWithoutMention) || Boolean(options?.tournamentChat && tournamentChatContextPattern.test(textWithoutMention)));
+      && (tournamentTopicPattern.test(textWithoutMention) || matchIncidentPattern.test(textWithoutMention) || Boolean(options?.tournamentChat && tournamentChatContextPattern.test(textWithoutMention)));
   }
 
-  if (tournamentTopicPattern.test(text)) return true;
+  if (tournamentTopicPattern.test(text) || matchIncidentPattern.test(text)) return true;
   if (!options?.tournamentChat || unrelatedSmallTalkPattern.test(text)) return false;
   return tournamentChatContextPattern.test(text);
 }
@@ -245,6 +246,47 @@ function rejectWillowAnswer(reason: string, details?: Record<string, unknown>): 
     console.warn("[telegram-ai] grounded answer rejected", { reason, ...details });
   }
   return null;
+}
+
+function resolveRegulationsMatchIncident(text: string, context: TelegramAiContext): TelegramAiAnswer | null {
+  if (!matchIncidentPattern.test(text)) return null;
+
+  const regulations = context.regulations?.body.trim();
+  if (!regulations) return null;
+
+  // Tournament-specific incident rules need the model to resolve their priority over the general regulations.
+  if (context.tournament?.rules && /разрыв\s+связи|умышленн\p{L}*\s+(?:выход|разрыв)|дисконнект/iu.test(context.tournament.rules)) {
+    return null;
+  }
+
+  const hasContinuationRule = /разрыв\p{L}*\s+связи[\s\S]{0,180}матч\s+доигрыва/iu.test(regulations);
+  const hasIntentionalExitRule = /умышленн\p{L}*[\s\S]{0,180}(?:разорвал\p{L}*\s+связь|выш\p{L}*)[\s\S]{0,180}техническ\p{L}*\s+поражен/iu.test(regulations);
+  if (!hasContinuationRule && !hasIntentionalExitRule) return null;
+
+  const scoreMatch = text.match(/(?:сч[её]т\p{L}*\s*)?(\d{1,2})\s*[:\-]\s*(\d{1,2})/iu);
+  const score = scoreMatch ? `${scoreMatch[1]}:${scoreMatch[2]}` : null;
+  const minuteMatch = text.match(/(\d{1,3})(?:-?(?:й|я|ю|ой))?\s*минут/iu);
+  const minute = minuteMatch?.[1] ?? null;
+  const details = [score ? `счёт ${score}` : null, minute ? `выход на ${minute}-й минуте` : null].filter(Boolean).join(" и ");
+
+  const parts = [
+    `Зафиксируйте${details ? ` ${details}` : " произошедшее"}${/рекомендуем\s+всем\s+игрокам\s+записывать\s+экран/iu.test(regulations) ? " на видео" : ""} и сохраните переписку с соперником.`,
+  ];
+  if (hasContinuationRule) {
+    parts.push(`По общему регламенту при разрыве связи матч нужно доиграть${score ? ` с сохранением счёта ${score}` : " с сохранением счёта"}.`);
+  }
+  if (hasIntentionalExitRule) {
+    parts.push("Если соперник вышел умышленно и отказывается продолжать, ему засчитывается техническое поражение.");
+  }
+  const appealWindow = /претензи\p{L}*[\s\S]{0,220}24\s+час/iu.test(regulations) ? " в течение 24 часов" : "";
+  parts.push(`Напишите сопернику о доигровке; при отказе передайте видео и переписку администрации${appealWindow}.`);
+
+  return {
+    answer: parts.join(" "),
+    type: "rules",
+    sourceIds: ["regulations"],
+    confidence: 1,
+  };
 }
 
 function extractContent(payload: WillowResponse) {
@@ -378,10 +420,14 @@ export async function handleTelegramAiMessage(params: {
       ...(params.message.message_thread_id !== undefined ? { messageThreadId: params.message.message_thread_id } : {}),
     });
   };
+  const resolveAnswer = async (question: string) => (
+    (params.resolveQuestion ? await params.resolveQuestion({ text: question, context: params.context }) : null)
+    ?? resolveRegulationsMatchIncident(question, params.context)
+    ?? await (params.ask ?? askWillow)({ text: question, context: params.context })
+  );
 
   if (!commandMatch) {
-    const answer = (params.resolveQuestion ? await params.resolveQuestion({ text, context: params.context }) : null)
-      ?? await (params.ask ?? askWillow)({ text, context: params.context });
+    const answer = await resolveAnswer(text);
     if (!answer) {
       return { handled: true, grounded: false } as const;
     }
@@ -406,8 +452,7 @@ export async function handleTelegramAiMessage(params: {
     return { handled: true, promptedForQuestion: true } as const;
   }
 
-  const answer = (params.resolveQuestion ? await params.resolveQuestion({ text: question, context: params.context }) : null)
-    ?? await (params.ask ?? askWillow)({ text: question, context: params.context });
+  const answer = await resolveAnswer(question);
   if (!answer) {
     await sendReply("данные не найдены. Уточните турнир или обратитесь к основателю Kumyk: @Kumyk007.");
     return { handled: true, grounded: false } as const;

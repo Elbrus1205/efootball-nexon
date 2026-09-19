@@ -8,6 +8,7 @@ import {
   handleTelegramAiMessage,
   isTelegramAbusiveMessage,
   isTelegramAiRelevantMessage,
+  isTelegramPersonalMatchQuestion,
   type TelegramAiContext,
 } from "@/lib/services/telegram-ai";
 
@@ -18,7 +19,7 @@ const context: TelegramAiContext = {
     { name: "Мария", role: "JUDGE", telegramUsername: "@judge_nexon" },
   ],
   regulations: {
-    body: "Общий регламент: при разрыве матч доигрывается.",
+    body: "Общий регламент: при разрыве связи матч доигрывается с сохранением счёта. Если соперник умышленно разорвал связь и отказывается продолжать игру, ему засчитывается техническое поражение. Рекомендуем всем игрокам записывать экран. Претензии рассматриваются администрацией в течение 24 часов после матча.",
     version: "2026-08-24T12:00:00.000Z",
   },
   tournament: {
@@ -139,6 +140,13 @@ test("small talk is ignored while tournament messages are understood without /as
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "@nexon_bot кто мой соперник?" }, "nexon_bot"), true);
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "@nexon_bot какая погода?" }, "nexon_bot", { tournamentChat: true }), false);
   assert.equal(isTelegramAiRelevantMessage({ chat: { type: "supergroup" }, text: "/ask рецепт пасты" }, "nexon_bot", { tournamentChat: true }), false);
+});
+
+test("match incidents are relevant but are not mistaken for opponent lookup", () => {
+  assert.equal(isTelegramAiRelevantMessage({ chat: { type: "private" }, text: "Мой сопреник вышел на 35-й минуте при счёте 4:0, что делать?" }, "nexon_bot"), true);
+  assert.equal(isTelegramAiRelevantMessage({ chat: { type: "private" }, text: "Сопреник вышел, что делать?" }, "nexon_bot"), true);
+  assert.equal(isTelegramPersonalMatchQuestion("Мой соперник вышел на 35-й минуте при счёте 4:0, что делать?"), false);
+  assert.equal(isTelegramPersonalMatchQuestion("Кто мой соперник в 7-м туре?"), true);
 });
 
 test("moderation detects abusive messages without flagging ordinary tournament speech", () => {
@@ -276,6 +284,31 @@ test("a relevant message stays silent when the platform has no confirmed answer"
   assert.equal(result.handled, true);
   assert.equal(result.grounded, false);
   assert.equal(sent, false);
+});
+
+test("a disconnect incident gets a deterministic regulations answer when Willow has no answer", async () => {
+  const sent: Array<Record<string, unknown>> = [];
+  const result = await handleTelegramAiMessage({
+    message: {
+      message_id: 44,
+      chat: { id: 9, type: "private" },
+      from: { first_name: "Анна" },
+      text: "Мой сопреник вышел на 35-й минуте при счёте 4:0, что делать?",
+    },
+    context,
+    resolveQuestion: async () => null,
+    ask: async () => null,
+    send: async (params) => { sent.push(params as unknown as Record<string, unknown>); return {}; },
+  });
+
+  assert.equal(result.handled, true);
+  assert.equal(result.answerType, "rules");
+  assert.deepEqual(result.sourceIds, ["regulations"]);
+  assert.match(String(sent[0]?.text), /4:0/);
+  assert.match(String(sent[0]?.text), /35/);
+  assert.match(String(sent[0]?.text), /доиграть/i);
+  assert.match(String(sent[0]?.text), /техническое поражение/i);
+  assert.match(String(sent[0]?.text), /видео/i);
 });
 
 test("/ask without a question asks the user to enter one", async () => {
