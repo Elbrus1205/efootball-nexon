@@ -2,11 +2,14 @@ import Link from "next/link";
 import { Prisma } from "@prisma/client";
 import { HelpCircle, Search } from "lucide-react";
 import { FaqManager } from "@/components/admin/faq-manager";
+import { FaqCategoryOrder } from "@/components/admin/faq-category-order";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { resolveFaqBlocks } from "@/lib/faq/content";
+import { orderFaqCategories } from "@/lib/faq/category-order";
+import { getFaqCategoryOrder } from "@/lib/faq/category-order-store";
 import styles from "@/components/faq/faq.module.css";
 
 const PAGE_SIZE = 12;
@@ -21,11 +24,12 @@ export default async function AdminFaqPage(props: { searchParams?: Promise<Searc
     ...(query ? { OR: ["title", "answer", "category"].map((field) => ({ [field]: { contains: query, mode: Prisma.QueryMode.insensitive } })) } : {}),
     ...(status ? { isPublished: status === "published" } : {}),
   };
-  const [total, publishedCount, filteredCount, categoryRows] = await Promise.all([
+  const [total, publishedCount, filteredCount, categoryRows, categoryOrder] = await Promise.all([
     db.faqItem.count(),
     db.faqItem.count({ where: { isPublished: true } }),
     db.faqItem.count({ where }),
     db.faqItem.findMany({ select: { category: true }, distinct: ["category"], orderBy: { category: "asc" } }),
+    getFaqCategoryOrder(db),
   ]);
   const pageCount = Math.max(1, Math.ceil(filteredCount / PAGE_SIZE));
   const requestedPage = Number(params.page);
@@ -39,7 +43,7 @@ export default async function AdminFaqPage(props: { searchParams?: Promise<Searc
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }, { id: "asc" }],
     skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE,
   });
-  const categories = categoryRows.map((row) => row.category).filter(Boolean);
+  const categories = orderFaqCategories(categoryRows.map((row) => row.category), categoryOrder);
   const pageUrl = (next: number) => {
     const search = new URLSearchParams({ page: String(next) });
     if (query) search.set("q", query);
@@ -74,6 +78,7 @@ export default async function AdminFaqPage(props: { searchParams?: Promise<Searc
           {page < pageCount ? <Link href={pageUrl(page + 1)}>Далее</Link> : null}
         </div>
       </nav>
+      <FaqCategoryOrder key={JSON.stringify(categories)} categories={categories} />
     </div>
   );
 }

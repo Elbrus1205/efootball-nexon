@@ -6,6 +6,8 @@ import { FaqSearch, type FaqSearchEntry } from "@/components/faq/faq-search";
 import { db } from "@/lib/db";
 import { buildFaqSearchText, resolveFaqBlocks } from "@/lib/faq/content";
 import { profileStatusClassName } from "@/lib/profile-status-style";
+import { orderFaqItems } from "@/lib/faq/category-order";
+import { getFaqCategoryOrder } from "@/lib/faq/category-order-store";
 
 export const revalidate = 300;
 
@@ -37,15 +39,15 @@ function ProfileStatusBadges() {
 }
 
 export default async function FaqPage() {
-  const items = await db.faqItem.findMany({
+  const [items, categoryOrder] = await Promise.all([db.faqItem.findMany({
     where: { isPublished: true },
     include: { attachments: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] } },
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-  });
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+  }), getFaqCategoryOrder(db)]);
 
   const entries: FaqSearchEntry[] = [];
 
-  for (const item of items) {
+  for (const item of orderFaqItems(items, categoryOrder)) {
     const blocks = resolveFaqBlocks(item);
     const category = item.category || "Общее";
     entries.push({

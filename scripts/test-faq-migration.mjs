@@ -10,7 +10,7 @@ nextEnv.loadEnvConfig(process.cwd());
 const sql = readFileSync(new URL("../prisma/migrations/20260920120000_move_static_faq_to_database/migration.sql", import.meta.url), "utf8");
 
 test("FAQ migration preserves content, skips matching IDs/titles and can be repeated safely", async () => {
-  const db = new PrismaClient();
+  const db = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL || process.env.DATABASE_URL });
   try {
     await db.$transaction(async (tx) => {
       await tx.$executeRawUnsafe('CREATE TEMP TABLE "FaqItem" (LIKE public."FaqItem" INCLUDING ALL) ON COMMIT DROP');
@@ -52,4 +52,26 @@ test("FAQ migration preserves content, skips matching IDs/titles and can be repe
   } finally {
     await db.$disconnect();
   }
+});
+
+test("category order migration freezes published sections, appends drafts and preserves later settings", async () => {
+  const db = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL || process.env.DATABASE_URL });
+  const categorySql = readFileSync(new URL("../prisma/migrations/20260920130000_preserve_faq_category_order/migration.sql", import.meta.url), "utf8");
+  try {
+    await db.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe('CREATE TEMP TABLE "FaqItem" (LIKE public."FaqItem" INCLUDING ALL) ON COMMIT DROP');
+      await tx.$executeRawUnsafe('CREATE TEMP TABLE "SiteContent" (LIKE public."SiteContent" INCLUDING ALL) ON COMMIT DROP');
+      await tx.$executeRawUnsafe(`INSERT INTO pg_temp."FaqItem" ("id", "title", "answer", "category", "sortOrder", "isPublished", "updatedAt") VALUES
+        ('a1', 'A1', 'Answer', 'A', 20, true, CURRENT_TIMESTAMP),
+        ('a2', 'A2', 'Answer', 'A', -100, false, CURRENT_TIMESTAMP),
+        ('b1', 'B1', 'Answer', 'B', 10, true, CURRENT_TIMESTAMP),
+        ('d1', 'Draft', 'Answer', 'Draft', -200, false, CURRENT_TIMESTAMP)`);
+      assert.equal(await tx.$executeRawUnsafe(categorySql), 1);
+      const read = () => tx.$queryRawUnsafe(`SELECT "body" FROM pg_temp."SiteContent" WHERE "key" = 'faq:category-order'`);
+      assert.deepEqual(JSON.parse((await read())[0].body), ["B", "A", "Draft"]);
+      await tx.$executeRawUnsafe(`UPDATE pg_temp."SiteContent" SET "body" = '["Draft","A","B"]'`);
+      assert.equal(await tx.$executeRawUnsafe(categorySql), 0);
+      assert.deepEqual(JSON.parse((await read())[0].body), ["Draft", "A", "B"]);
+    }, { timeout: 30_000 });
+  } finally { await db.$disconnect(); }
 });

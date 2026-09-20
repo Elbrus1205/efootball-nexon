@@ -78,8 +78,9 @@ export function FaqItemForm({ action, actionName = "create", submitLabel, catego
             <Input id={`category-${idBase}`} name="category" defaultValue={item?.category ?? "Общее"} list={`categories-${idBase}`} placeholder="Общее" />
           </div>
           <div className={styles.field}>
-            <Label htmlFor={`sort-${idBase}`}>Порядок</Label>
-            <Input id={`sort-${idBase}`} name="sortOrder" type="number" min={-2147483648} max={2147483647} defaultValue={item?.sortOrder ?? 0} />
+            <Label htmlFor={`sort-${idBase}`}>Порядок вопроса</Label>
+            <Input id={`sort-${idBase}`} name="sortOrder" type="number" min={-2147483648} max={2147483647} defaultValue={item?.sortOrder ?? 0} aria-describedby={`sort-hint-${idBase}`} />
+            <p id={`sort-hint-${idBase}`} className={styles.categoryOrderHint}>Внутри раздела: меньше — выше.</p>
           </div>
         </div>
         <datalist id={`categories-${idBase}`}>{categories.map((category) => <option key={category} value={category} />)}</datalist>

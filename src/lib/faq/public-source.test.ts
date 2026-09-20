@@ -6,10 +6,12 @@ import { ProfileStatusTone } from "@prisma/client";
 import * as jsxRuntime from "react/jsx-runtime";
 import ts from "typescript";
 import * as content from "./content";
+import * as categoryOrder from "./category-order";
+import * as categoryOrderStore from "./category-order-store";
 
 type Element = { props: { entries?: { id: string; title: string; blocks: content.FaqBlock[] }[]; children?: Element | Element[] } };
 
-async function pageEntries(rows: { id: string; title: string; answer: string; category: string; contentJson: string | null; attachments: [] }[]) {
+async function pageEntries(rows: { id: string; title: string; answer: string; category: string; contentJson: string | null; attachments: [] }[], savedOrder: string[] = []) {
   const page = readFileSync(new URL("../../app/faq/page.tsx", import.meta.url), "utf8");
   const compiled = ts.transpileModule(page, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
@@ -28,11 +30,13 @@ async function pageEntries(rows: { id: string; title: string; answer: string; ca
         case "@/components/faq/faq-search": return { FaqSearch: component };
         case "@/lib/profile-status-style": return { profileStatusClassName: () => "" };
         case "@/lib/faq/content": return content;
+        case "@/lib/faq/category-order": return categoryOrder;
+        case "@/lib/faq/category-order-store": return categoryOrderStore;
         case "@/lib/services/reliability": return {
           RELIABILITY_MAX_SCORE: 100, RELIABILITY_REGISTRATION_THRESHOLD: 70,
           RELIABILITY_RECOVERY_SCORE_CAP: 80, RELIABILITY_RESTRICTION_DAYS: 30,
         };
-        case "@/lib/db": return { db: { faqItem: { findMany: async (query: { where: { isPublished: boolean } }) => {
+        case "@/lib/db": return { db: { siteContent: { findUnique: async () => ({ body: JSON.stringify(savedOrder) }) }, faqItem: { findMany: async (query: { where: { isPublished: boolean } }) => {
           assert.equal(query.where.isPublished, true);
           return rows;
         } } } };
@@ -65,4 +69,14 @@ test("public FAQ only shows database questions, with the current admin text and 
 
 test("hiding or deleting all database questions leaves no hardcoded public copies", async () => {
   assert.equal((await pageEntries([])).length, 0);
+});
+
+test("public FAQ honors section order without changing question order within a section", async () => {
+  const rows = [
+    { id: "security-first", category: "Security" },
+    { id: "matches-first", category: "Matches" },
+    { id: "security-second", category: "Security" },
+  ].map((row) => ({ ...row, title: row.id, answer: "Answer", contentJson: null, attachments: [] as [] }));
+  const entries = await pageEntries(rows, ["Matches", "Security"]);
+  assert.deepEqual(Array.from(entries, (entry) => entry.id), ["matches-first", "security-first", "security-second"]);
 });

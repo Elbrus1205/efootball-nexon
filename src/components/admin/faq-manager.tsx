@@ -61,7 +61,7 @@ export function FaqManager({ items, categories }: { items: FaqEditableItem[]; ca
                 <div className={styles.meta}><span className={item.isPublished ? styles.published : undefined}>{item.isPublished ? "Опубликован" : "Черновик"}</span><span>·</span><span>{item.category}</span></div>
                 <h3>{item.title}</h3>
                 <p className="line-clamp-1">{blocksToPlainText(item.blocks) || "Ответ с медиафайлами"}</p>
-                <p>Блоков: {item.blocks.length} · Порядок: {item.sortOrder}</p>
+                <p>Блоков: {item.blocks.length} · Порядок в разделе: {item.sortOrder}</p>
               </div>
               <div className={styles.rowActions}>
                 <Button type="button" variant="ghost" className={styles.iconButton} title="Редактировать" aria-label={`Редактировать: ${item.title}`} aria-expanded={editor === item.id} aria-controls={`faq-editor-${item.id}`} disabled={editor !== null || deleting !== null} onClick={() => { setEditor(item.id); setMessage(""); }}><PencilLine size={16} /></Button>
