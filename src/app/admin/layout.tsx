@@ -1,6 +1,7 @@
 import { getAllowedAdminNavHrefs } from "@/lib/role-permissions";
 import { requireAnyPermission } from "@/lib/auth/session";
 import { AdminNav } from "@/components/admin/admin-nav";
+import { AdminPageHeading } from "@/components/admin/admin-page-heading";
 
 export default async function AdminLayout({
   children,
@@ -31,12 +32,12 @@ export default async function AdminLayout({
 
   return (
     <div className="page-shell space-y-6">
-      <div className="space-y-3">
+      <AdminPageHeading><div className="space-y-3">
         <h1 className="font-display text-3xl font-thin text-white sm:text-4xl">Панель управления турнирами</h1>
         <p className="max-w-3xl text-zinc-400">
           Единое пространство для структуры турниров, участников, матчей, расписания и модерации результатов.
         </p>
-      </div>
+      </div></AdminPageHeading>
 
       <AdminNav allowedHrefs={allowedHrefs} />
       {children}

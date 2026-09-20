@@ -78,7 +78,7 @@ export async function normalizeProfileUploadImage(folder: StorageFolder, bytes: 
   if (folder === "lineups") return normalizeBannerImage(bytes, contentType);
   if (folder === "tournaments") return normalizeBannerImage(bytes, contentType);
   if (folder === "divisions") return normalizeBannerImage(bytes, contentType);
-  if (folder === "faq" && contentType !== "application/pdf") return normalizeBannerImage(bytes, contentType);
+  if (folder === "faq" && isProcessableImageType(contentType)) return normalizeBannerImage(bytes, contentType);
   if (folder === "shop-products") return normalizeShopProductImage(bytes, contentType);
   return null;
 }

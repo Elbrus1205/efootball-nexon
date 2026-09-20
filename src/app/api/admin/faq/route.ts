@@ -6,6 +6,9 @@ import { db } from "@/lib/db";
 import { blocksToPlainText, normalizeFaqBlocks, stringifyFaqBlocks } from "@/lib/faq/content";
 
 function redirectToFaq(request: Request, params: Record<string, string>) {
+  if (request.headers.get("accept")?.includes("application/json")) {
+    return NextResponse.json(params.error ? { error: params.error } : { ok: true }, { status: params.error ? 400 : 200 });
+  }
   const url = new URL("/admin/faq", getRequestBaseUrl(request));
 
   for (const [key, value] of Object.entries(params)) {
@@ -21,11 +24,17 @@ function getString(value: FormDataEntryValue | null) {
 
 function parseBlocks(value: FormDataEntryValue | null) {
   if (typeof value !== "string" || !value.trim()) return [];
+  let parsed: unknown;
   try {
-    return normalizeFaqBlocks(JSON.parse(value));
+    parsed = JSON.parse(value);
   } catch {
-    return [];
+    throw new Error("Не удалось прочитать ответ. Проверьте содержание блоков.");
   }
+  const blocks = normalizeFaqBlocks(parsed);
+  if (!Array.isArray(parsed) || parsed.length !== blocks.length) {
+    throw new Error("Заполните все блоки: добавьте текст или корректную ссылку http/https. Пустые блоки можно удалить.");
+  }
+  return blocks;
 }
 
 export async function POST(request: Request) {
@@ -36,6 +45,7 @@ export async function POST(request: Request) {
   const id = getString(formData.get("id"));
 
   try {
+    if (!["create", "update", "delete"].includes(action)) throw new Error("Неизвестное действие FAQ.");
     if (action === "delete") {
       if (!id) throw new Error("FAQ не найден.");
       await db.faqItem.delete({ where: { id } });
@@ -52,8 +62,11 @@ export async function POST(request: Request) {
     const answer = blocksToPlainText(blocks);
 
     if (title.length < 3) throw new Error("Вопрос должен быть не короче 3 символов.");
-    if (!blocks.length || answer.length < 5) {
+    if (!blocks.length) {
       throw new Error("Добавьте хотя бы один содержательный блок ответа.");
+    }
+    if (Number.isFinite(sortOrder) && (sortOrder < -2147483648 || sortOrder > 2147483647)) {
+      throw new Error("Порядок должен быть целым числом от -2147483648 до 2147483647.");
     }
 
     const contentJson = stringifyFaqBlocks(blocks);

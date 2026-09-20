@@ -1,4 +1,6 @@
-import { LifeBuoy } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpRight, LifeBuoy } from "lucide-react";
+import styles from "@/components/faq/faq.module.css";
 import { ProfileStatusTone } from "@prisma/client";
 import { FaqSearch, type FaqSearchEntry } from "@/components/faq/faq-search";
 import { db } from "@/lib/db";
@@ -139,7 +141,7 @@ function ProfileStatusBadges() {
       {profileStatusFaqBadges.map((status) => (
         <span
           key={status.title}
-          className={profileStatusClassName(status.tone, "min-h-7 px-2.5 py-1 text-xs sm:min-h-10 sm:px-4 sm:py-1.5 sm:text-[19px]")}
+          className={profileStatusClassName(status.tone, "min-h-7 px-2.5 py-1 text-xs")}
         >
           {status.title}
         </span>
@@ -184,17 +186,14 @@ export default async function FaqPage() {
   }
 
   return (
-    <div className="page-shell space-y-8">
-      <section className="space-y-3">
-        <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-          <LifeBuoy className="h-3.5 w-3.5" />
-          FAQ
+    <div className={`page-shell ${styles.scope}`}>
+      <section className={styles.hero}>
+        <div>
+          <div className={styles.eyebrow}><LifeBuoy size={15} aria-hidden="true" />Центр помощи · FAQ</div>
+          <h1 className={styles.title}>Помощь игрокам</h1>
+          <p className={styles.intro}>От первого входа до финального свистка. Ответы о профиле, турнирах и матчах — в одном месте.</p>
         </div>
-        <h1 className="font-display text-3xl font-thin text-white sm:text-4xl">Помощь игрокам</h1>
-        <p className="max-w-2xl text-sm leading-6 text-zinc-400">
-          Ответы по регистрации, турнирам, матчам, профилю, безопасности и надёжности. Ищите по словам — поиск смотрит и в
-          вопросах, и в тексте ответов.
-        </p>
+        <Link href="/tournaments" className={styles.heroLink}>К турнирам <ArrowUpRight size={15} aria-hidden="true" /></Link>
       </section>
 
       <FaqSearch entries={entries} />

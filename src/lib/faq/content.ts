@@ -1,4 +1,5 @@
 import { FaqAttachmentKind } from "@prisma/client";
+import { isSafeFaqUrl } from "./media";
 
 /**
  * Rich FAQ content is stored as an ordered list of blocks in `FaqItem.contentJson`.
@@ -48,6 +49,15 @@ export function isAttachmentBlock(block: FaqBlock): block is FaqAttachmentBlock 
   return block.type === "file" || block.type === "link";
 }
 
+export function getFaqContentError(blocks: FaqBlock[]): string | null {
+  if (!blocks.length) return "Добавьте хотя бы один содержательный блок ответа.";
+  for (const [index, block] of blocks.entries()) {
+    if (isTextBlock(block) && !block.text.trim()) return `Блок ${index + 1}: добавьте текст или удалите пустой блок.`;
+    if (!isTextBlock(block) && !isSafeFaqUrl(block.url)) return `Блок ${index + 1}: загрузите файл или укажите корректную ссылку http/https.`;
+  }
+  return null;
+}
+
 /** Coerces arbitrary parsed JSON into a clean, safe list of blocks. */
 export function normalizeFaqBlocks(input: unknown): FaqBlock[] {
   if (!Array.isArray(input)) return [];
@@ -67,7 +77,7 @@ export function normalizeFaqBlocks(input: unknown): FaqBlock[] {
 
     if (type === "image" || type === "video") {
       const url = typeof candidate.url === "string" ? candidate.url.trim() : "";
-      if (!url) continue;
+      if (!isSafeFaqUrl(url)) continue;
       const caption = typeof candidate.caption === "string" ? candidate.caption.trim() : "";
       const mimeType = typeof candidate.mimeType === "string" ? candidate.mimeType.trim() : "";
       blocks.push({ type, url, ...(caption ? { caption } : {}), ...(mimeType ? { mimeType } : {}) });
@@ -76,7 +86,7 @@ export function normalizeFaqBlocks(input: unknown): FaqBlock[] {
 
     if (type === "file" || type === "link") {
       const url = typeof candidate.url === "string" ? candidate.url.trim() : "";
-      if (!url) continue;
+      if (!isSafeFaqUrl(url)) continue;
       const title = typeof candidate.title === "string" && candidate.title.trim() ? candidate.title.trim() : url;
       const mimeType = typeof candidate.mimeType === "string" ? candidate.mimeType.trim() : "";
       blocks.push({ type, url, title, ...(mimeType ? { mimeType } : {}) });

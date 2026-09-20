@@ -7,6 +7,7 @@ import {
   blocksToPlainText,
   buildFaqSearchText,
   matchesFaqQuery,
+  getFaqContentError,
   normalizeFaqBlocks,
   normalizeSearchValue,
   parseFaqBlocks,
@@ -15,6 +16,13 @@ import {
   tokenizeQuery,
   type FaqBlock,
 } from "@/lib/faq/content";
+
+test("FAQ drafts accept media-only answers and identify incomplete blocks before saving", () => {
+  assert.equal(getFaqContentError([{ type: "video", url: "https://cdn.test/instruction.mp4" }]), null);
+  assert.match(getFaqContentError([]) ?? "", /Добавьте хотя бы один/);
+  assert.match(getFaqContentError([{ type: "text", text: "Ответ" }, { type: "image", url: "" }]) ?? "", /Блок 2/);
+  assert.match(getFaqContentError([{ type: "note", text: "  " }]) ?? "", /Блок 1/);
+});
 
 test("normalizeFaqBlocks keeps valid blocks and drops empty or unknown ones", () => {
   const input = [

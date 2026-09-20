@@ -1,12 +1,13 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { Search, SearchX, X } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpRight, BookOpen, Plus, Search, SearchX, X } from "lucide-react";
 import type { FaqBlock } from "@/lib/faq/content";
 import { matchesFaqQuery } from "@/lib/faq/content";
 import { FaqBlocks } from "@/components/faq/faq-blocks";
-import { cn } from "@/lib/utils";
+import styles from "./faq.module.css";
 
 export type FaqSearchEntry = {
   id: string;
@@ -14,7 +15,6 @@ export type FaqSearchEntry = {
   category: string;
   blocks: FaqBlock[];
   searchText: string;
-  /** Optional extra node rendered after the blocks (e.g. profile-status badges). */
   extra?: ReactNode;
 };
 
@@ -22,149 +22,88 @@ const ALL_CATEGORIES = "__all__";
 
 export function FaqSearch({ entries }: { entries: FaqSearchEntry[] }) {
   const [query, setQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string>(ALL_CATEGORIES);
+  const [activeCategory, setActiveCategory] = useState(ALL_CATEGORIES);
   const deferredQuery = useDeferredValue(query);
-
-  useEffect(() => {
-    const mobile = window.matchMedia("(max-width: 639px)");
-    const resetHiddenCategory = () => {
-      if (mobile.matches) setActiveCategory(ALL_CATEGORIES);
-    };
-    resetHiddenCategory();
-    mobile.addEventListener("change", resetHiddenCategory);
-    return () => mobile.removeEventListener("change", resetHiddenCategory);
-  }, []);
-
   const categories = useMemo(() => {
-    const ordered: string[] = [];
-    for (const entry of entries) {
-      if (!ordered.includes(entry.category)) ordered.push(entry.category);
-    }
-    return ordered;
+    const counts = new Map<string, number>();
+    for (const entry of entries) counts.set(entry.category, (counts.get(entry.category) ?? 0) + 1);
+    return [...counts.entries()];
   }, [entries]);
-
-  const filtered = useMemo(() => {
-    return entries.filter((entry) => {
-      if (activeCategory !== ALL_CATEGORIES && entry.category !== activeCategory) return false;
-      return matchesFaqQuery(entry.searchText, deferredQuery);
-    });
-  }, [entries, activeCategory, deferredQuery]);
-
+  const filtered = useMemo(() => entries.filter((entry) =>
+    (activeCategory === ALL_CATEGORIES || entry.category === activeCategory) && matchesFaqQuery(entry.searchText, deferredQuery),
+  ), [entries, activeCategory, deferredQuery]);
   const grouped = useMemo(() => {
     const map = new Map<string, FaqSearchEntry[]>();
     for (const entry of filtered) {
-      const list = map.get(entry.category) ?? [];
-      list.push(entry);
-      map.set(entry.category, list);
+      const group = map.get(entry.category) ?? [];
+      group.push(entry);
+      map.set(entry.category, group);
     }
     return [...map.entries()];
   }, [filtered]);
-
   const hasQuery = deferredQuery.trim().length > 0;
+  const reset = () => { setQuery(""); setActiveCategory(ALL_CATEGORIES); };
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-3">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Поиск по вопросам и ответам..."
-            aria-label="Поиск по FAQ"
-            className="h-14 w-full rounded-2xl border border-white/10 bg-black/30 pl-12 pr-12 text-base text-white outline-none transition duration-200 placeholder:text-zinc-500 hover:border-white/20 focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
-          />
-          {query ? (
-            <button
-              type="button"
-              onClick={() => setQuery("")}
-              aria-label="Очистить поиск"
-              className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          ) : null}
+    <div className={`${styles.scope} ${styles.layout}`}>
+      <aside className={styles.sidebar} aria-label="Разделы FAQ">
+        <p className={styles.navLabel}>Разделы помощи</p>
+        <CategoryChip active={activeCategory === ALL_CATEGORIES} onClick={() => setActiveCategory(ALL_CATEGORIES)} count={entries.length}>Все вопросы</CategoryChip>
+        {categories.map(([category, count]) => <CategoryChip key={category} active={activeCategory === category} onClick={() => setActiveCategory(category)} count={count}>{category}</CategoryChip>)}
+        <div className={styles.help}>
+          <BookOpen size={18} className="mb-3" aria-hidden="true" />
+          <p>Всё о правилах и порядке проведения матчей.</p>
+          <Link href="/regulations">Регламент турниров <ArrowUpRight size={14} aria-hidden="true" /></Link>
         </div>
-
-        {categories.length > 1 ? (
-          <div className="hidden flex-wrap gap-2 sm:flex">
-            <CategoryChip active={activeCategory === ALL_CATEGORIES} onClick={() => setActiveCategory(ALL_CATEGORIES)}>
-              Все
-            </CategoryChip>
-            {categories.map((category) => (
-              <CategoryChip key={category} active={activeCategory === category} onClick={() => setActiveCategory(category)}>
-                {category}
-              </CategoryChip>
-            ))}
-          </div>
-        ) : null}
-
-        {hasQuery ? (
-          <p className="text-xs text-zinc-500" aria-live="polite">
-            {filtered.length ? `Найдено: ${filtered.length}` : "Ничего не найдено"}
-          </p>
-        ) : null}
-      </div>
-
-      {grouped.length ? (
-        <div className="grid gap-6">
+      </aside>
+      <div className={styles.content}>
+        <div className={styles.search}>
+          <Search aria-hidden="true" />
+          <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти ответ на свой вопрос" aria-label="Поиск по FAQ" />
+          {query ? <button type="button" onClick={() => setQuery("")} aria-label="Очистить поиск" className={styles.clear}><X size={16} /></button> : null}
+        </div>
+        <div className={styles.mobileCategories}>
+          <label htmlFor="faq-category">Раздел помощи</label>
+          <select id="faq-category" value={activeCategory} onChange={(event) => setActiveCategory(event.target.value)} className={styles.select}>
+            <option value={ALL_CATEGORIES}>Все вопросы · {entries.length}</option>
+            {categories.map(([category, count]) => <option key={category} value={category}>{category} · {count}</option>)}
+          </select>
+        </div>
+        <div className={styles.results}>
+          <p aria-live="polite">{hasQuery ? `Найдено ответов: ${filtered.length}` : `Вопросов: ${filtered.length} · Выберите, чтобы прочитать ответ`}</p>
+          {hasQuery || activeCategory !== ALL_CATEGORIES ? <button type="button" onClick={reset}>Сбросить</button> : null}
+        </div>
+        {grouped.length ? <div>
           {grouped.map(([category, categoryEntries]) => (
-            <section key={category} className="space-y-3">
-              <h2 className="text-lg font-semibold text-white">{category}</h2>
-              <div className="grid gap-3">
-                {categoryEntries.map((entry) => (
-                  <details
-                    key={entry.id}
-                    open={hasQuery}
-                    className="group rounded-3xl border border-white/10 bg-white/[0.04] p-5 transition open:border-primary/25 open:bg-white/[0.06]"
-                  >
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-semibold text-white">
-                      <span>{entry.title}</span>
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/20 text-lg leading-none text-primary transition group-open:rotate-45">
-                        +
-                      </span>
-                    </summary>
-                    <div className="mt-4">
-                      <FaqBlocks blocks={entry.blocks} />
-                      {entry.extra}
-                    </div>
-                  </details>
-                ))}
+            <section key={category} className={styles.section}>
+              <h2 className={styles.sectionTitle}>{category}<span>{categoryEntries.length}</span></h2>
+              <div className={styles.questions}>
+                {categoryEntries.map((entry, index) => <FaqAnswer key={`${entry.id}-${hasQuery}`} entry={entry} index={index} initiallyOpen={hasQuery} />)}
               </div>
             </section>
           ))}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed border-white/15 bg-black/20 px-6 py-12 text-center">
-          <SearchX className="h-8 w-8 text-zinc-600" />
-          <p className="text-sm text-zinc-400">
-            По запросу ничего не найдено. Попробуйте другие слова или{" "}
-            <button type="button" onClick={() => setQuery("")} className="text-primary underline-offset-2 hover:underline">
-              сбросьте поиск
-            </button>
-            .
-          </p>
-        </div>
-      )}
+        </div> : (
+          <div className={styles.empty}>
+            <SearchX size={26} aria-hidden="true" /><strong>Ничего не найдено</strong>
+            <p>Попробуйте другое слово или выберите другой раздел.</p>
+            <button type="button" onClick={reset}>Показать все вопросы</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-function CategoryChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
+function FaqAnswer({ entry, index, initiallyOpen }: { entry: FaqSearchEntry; index: number; initiallyOpen: boolean }) {
+  const [open, setOpen] = useState(initiallyOpen);
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "min-h-10 rounded-full border px-4 text-sm font-medium transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-        active
-          ? "border-primary/50 bg-primary/15 text-primary"
-          : "border-white/10 bg-white/[0.03] text-zinc-300 hover:border-white/25 hover:text-white",
-      )}
-    >
-      {children}
-    </button>
+    <details className={styles.question} open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary><span className={styles.questionNumber}>{String(index + 1).padStart(2, "0")}</span><span className={styles.questionTitle}>{entry.title}</span><Plus aria-hidden="true" /></summary>
+      {open ? <div className={styles.answer}><FaqBlocks blocks={entry.blocks} />{entry.extra}</div> : null}
+    </details>
   );
+}
+
+function CategoryChip({ active, onClick, children, count }: { active: boolean; onClick: () => void; children: ReactNode; count: number }) {
+  return <button type="button" onClick={onClick} aria-pressed={active} className={styles.category}><span>{children}</span><span>{count}</span></button>;
 }

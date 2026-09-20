@@ -1,100 +1,114 @@
 "use client";
 
-import { useState } from "react";
-import { Eye, EyeOff, Save } from "lucide-react";
-import type { FaqBlock } from "@/lib/faq/content";
+import { useId, useRef, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { Eye, Loader2, PencilLine, Save } from "lucide-react";
+import { getFaqContentError, normalizeFaqBlocks, type FaqBlock } from "@/lib/faq/content";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FaqBlockEditor } from "@/components/admin/faq-block-editor";
+import { FaqBlocks } from "@/components/faq/faq-blocks";
+import styles from "@/components/faq/faq.module.css";
 
+export type FaqEditableItem = {
+  id: string; title: string; category: string; sortOrder: number; isPublished: boolean; blocks: FaqBlock[];
+};
 type FaqItemFormProps = {
-  action: string;
-  actionName?: "create" | "update";
-  submitLabel: string;
-  categories?: string[];
-  item?: {
-    id: string;
-    title: string;
-    category: string;
-    sortOrder: number;
-    isPublished: boolean;
-    blocks: FaqBlock[];
-  };
+  action: string; actionName?: "create" | "update"; submitLabel: string; categories?: string[]; item?: FaqEditableItem;
+  onCancel?: () => void; onSaved?: () => void;
 };
 
-export function FaqItemForm({ action, actionName = "create", submitLabel, categories = [], item }: FaqItemFormProps) {
-  const idBase = item ? item.id : "new";
+export function FaqItemForm({ action, actionName = "create", submitLabel, categories = [], item, onCancel, onSaved }: FaqItemFormProps) {
+  const idBase = useId();
+  const router = useRouter();
+  const initialBlocks = useRef<FaqBlock[]>(item?.blocks ?? [{ type: "text", text: "" }]);
+  const [blocks, setBlocks] = useState(initialBlocks.current);
+  const [title, setTitle] = useState(item?.title ?? "");
   const [published, setPublished] = useState(item?.isPublished ?? true);
+  const [preview, setPreview] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const errorRef = useRef<HTMLParagraphElement>(null);
 
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (saving || uploading) return;
+    setSuccess(false);
+    const validation = title.trim().length < 3 ? "Вопрос должен быть не короче 3 символов." : getFaqContentError(blocks);
+    if (validation) {
+      setError(validation);
+      requestAnimationFrame(() => errorRef.current?.focus());
+      return;
+    }
+    const data = new FormData(event.currentTarget);
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch(action, { method: "POST", body: data, headers: { Accept: "application/json" } });
+      const result: unknown = await response.json().catch(() => null);
+      if (!response.ok || !result || typeof result !== "object" || !("ok" in result) || result.ok !== true) {
+        throw new Error(result && typeof result === "object" && "error" in result && typeof result.error === "string" ? result.error : "Не удалось сохранить FAQ. Проверьте вход в аккаунт и повторите.");
+      }
+      setSuccess(true);
+      router.refresh();
+      onSaved?.();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Не удалось сохранить FAQ. Повторите попытку.");
+      requestAnimationFrame(() => errorRef.current?.focus());
+    } finally {
+      setSaving(false);
+    }
+  };
   return (
-    <form action={action} method="post" className="space-y-5 rounded-3xl border border-white/10 bg-white/[0.03] p-5 sm:p-6">
+    <form action={action} method="post" onSubmit={onSubmit} className={styles.form} aria-busy={saving || uploading}>
       {item ? <input type="hidden" name="id" value={item.id} /> : null}
       <input type="hidden" name="_action" value={actionName} />
       <input type="hidden" name="isPublished" value={String(published)} />
-
-      <div className="grid gap-4 md:grid-cols-[1fr_180px_130px]">
-        <div className="space-y-2">
-          <Label htmlFor={`title-${idBase}`} className="text-zinc-200">
-            Вопрос
-          </Label>
-          <Input id={`title-${idBase}`} name="title" defaultValue={item?.title ?? ""} required placeholder="Как привязать Telegram?" />
+      <fieldset disabled={saving || uploading} className="min-w-0 space-y-5">
+        <div className={styles.fields}>
+          <div className={`${styles.field} ${styles.titleField}`}>
+            <Label htmlFor={`title-${idBase}`}>Вопрос</Label>
+            <Input id={`title-${idBase}`} name="title" value={title} onChange={(event) => setTitle(event.target.value)} required minLength={3} placeholder="Как зарегистрироваться на турнир?" />
+          </div>
+          <div className={styles.field}>
+            <Label htmlFor={`category-${idBase}`}>Раздел</Label>
+            <Input id={`category-${idBase}`} name="category" defaultValue={item?.category ?? "Общее"} list={`categories-${idBase}`} placeholder="Общее" />
+          </div>
+          <div className={styles.field}>
+            <Label htmlFor={`sort-${idBase}`}>Порядок</Label>
+            <Input id={`sort-${idBase}`} name="sortOrder" type="number" min={-2147483648} max={2147483647} defaultValue={item?.sortOrder ?? 0} />
+          </div>
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor={`category-${idBase}`} className="text-zinc-200">
-            Категория
-          </Label>
-          <Input
-            id={`category-${idBase}`}
-            name="category"
-            defaultValue={item?.category ?? "Общее"}
-            list="faq-categories"
-            placeholder="Общее"
-          />
+        <datalist id={`categories-${idBase}`}>{categories.map((category) => <option key={category} value={category} />)}</datalist>
+        <div>
+          <div className={styles.editorHeading}>
+            <h3>Ответ на вопрос</h3>
+            <div className={styles.tabs} aria-label="Режим редактора">
+              <button type="button" aria-pressed={!preview} onClick={() => setPreview(false)}><PencilLine size={14} />Редактор</button>
+              <button type="button" aria-pressed={preview} onClick={() => setPreview(true)}><Eye size={14} />Просмотр</button>
+            </div>
+          </div>
+          <div hidden={preview}>
+            <FaqBlockEditor name="contentJson" initialBlocks={initialBlocks.current} onChange={setBlocks} onUploadingChange={setUploading} />
+          </div>
+          {preview ? <div className={styles.preview}>
+            <h4>{title || "Новый вопрос"}</h4>
+            {normalizeFaqBlocks(blocks).length ? <FaqBlocks blocks={normalizeFaqBlocks(blocks)} /> : <p className={styles.muted}>Добавьте содержание в редакторе — здесь появится готовый ответ.</p>}
+          </div> : null}
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor={`sort-${idBase}`} className="text-zinc-200">
-            Порядок
-          </Label>
-          <Input id={`sort-${idBase}`} name="sortOrder" type="number" defaultValue={item?.sortOrder ?? 0} />
+        <div className={styles.footer}>
+          <label className={styles.publish}><input type="checkbox" checked={published} onChange={(event) => setPublished(event.target.checked)} />Показывать игрокам</label>
+          <div className={styles.formActions}>
+            {onCancel ? <Button type="button" variant="secondary" className={styles.secondaryButton} onClick={onCancel}>Отмена</Button> : null}
+            <Button type="submit" variant="secondary" className={styles.primaryButton}>{saving || uploading ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}{saving ? "Сохранение…" : uploading ? "Загрузка…" : submitLabel}</Button>
+          </div>
         </div>
-      </div>
-
-      {categories.length ? (
-        <datalist id="faq-categories">
-          {categories.map((category) => (
-            <option key={category} value={category} />
-          ))}
-        </datalist>
-      ) : null}
-
-      <div className="space-y-2">
-        <Label className="text-zinc-200">Содержание ответа</Label>
-        <p className="text-xs leading-5 text-zinc-500">
-          Собирайте ответ из блоков: текст, подзаголовки, заметки, фото и видео с подписями, файлы и ссылки. Порядок блоков
-          меняется стрелками.
-        </p>
-        <FaqBlockEditor name="contentJson" initialBlocks={item?.blocks ?? []} />
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
-        <button
-          type="button"
-          onClick={() => setPublished((value) => !value)}
-          className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-black/25 px-4 text-sm font-medium text-white transition duration-200 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-          aria-pressed={published}
-        >
-          {published ? <Eye className="h-4 w-4 text-primary" /> : <EyeOff className="h-4 w-4 text-zinc-400" />}
-          {published ? "Опубликовано" : "Черновик"}
-        </button>
-
-        <Button className="gap-2">
-          <Save className="h-4 w-4" />
-          {submitLabel}
-        </Button>
-      </div>
+      </fieldset>
+      {error ? <p ref={errorRef} tabIndex={-1} role="alert" className={styles.error}>{error}</p> : null}
+      {success ? <p role="status" className={styles.success}>FAQ сохранён.</p> : null}
     </form>
   );
 }

@@ -5,12 +5,13 @@ import { roleHasPermission } from "@/lib/role-permissions";
 import { isStorageConfigured, uploadToStorage, type StorageFolder } from "@/lib/storage/supabase-storage";
 import { getRequiredUploadPermission } from "@/lib/storage/upload-policy";
 import { enforceRateLimit } from "@/lib/request-rate-limit";
+import { FAQ_UPLOAD_MIME_TYPES } from "@/lib/faq/media";
 
 export const runtime = "nodejs";
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/avif", "image/png", "image/jpeg", "image/webp"]);
 const ALLOWED_PROFILE_IMAGE_TYPES = new Set(["image/avif", "image/png", "image/jpeg", "image/webp"]);
-const ALLOWED_FAQ_TYPES = new Set(["image/avif", "image/png", "image/jpeg", "image/webp", "application/pdf"]);
+const ALLOWED_FAQ_TYPES = new Set(FAQ_UPLOAD_MIME_TYPES);
 const ALLOWED_SHOP_EVIDENCE_TYPES = new Set(["image/avif", "image/png", "image/jpeg", "image/webp", "application/pdf", "video/mp4", "video/webm"]);
 
 const FOLDER_RULES: Record<StorageFolder, { maxBytes: number; allowed: Set<string> }> = {

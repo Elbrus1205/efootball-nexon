@@ -12,6 +12,8 @@ const EXTENSION_BY_MIME: Record<string, string> = {
   "image/gif": "gif",
   "image/svg+xml": "svg",
   "application/pdf": "pdf",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
 };
 
 let cachedClient: SupabaseClient | null = null;
