@@ -1,508 +1,116 @@
 "use client";
 
-import { CalendarDays, CheckSquare, Download, ImageDown, Layers3, Loader2, Square } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
-import { canvasToBlob, downloadFiles, type DownloadFile } from "@/lib/image-download";
-import type { ExportScheduleRound } from "@/lib/tournaments/schedule-poster";
+import { Check, Download, ImageDown, Loader2 } from "lucide-react";
+import { useRef, useState } from "react";
 import { downloadScheduleImages } from "@/lib/tournaments/download-schedule";
+import { downloadStandingsImages } from "@/lib/tournaments/standings-poster-canvas";
+import { standingsPosterPages, type ExportGroup } from "@/lib/tournaments/standings-poster";
+import { balancedSchedulePages, schedulePosterCapacity, schedulePosterFixtures, type ExportScheduleRound } from "@/lib/tournaments/schedule-poster";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export type ExportGroupRow = {
-  rank: number;
-  clubName: string;
-  clubBadgePath?: string | null;
-  playerName: string;
-  played: number;
-  wins: number;
-  draws: number;
-  losses: number;
-  goalDifference: number;
-  points: number;
-};
-
-export type ExportGroup = {
-  id: string;
-  name: string;
-  rows: ExportGroupRow[];
-};
-
+export type { ExportGroup, ExportGroupRow } from "@/lib/tournaments/standings-poster";
 export type { ExportScheduleRound } from "@/lib/tournaments/schedule-poster";
 
-type CanvasTextOptions = {
-  font?: string;
-  fill?: string;
-  align?: CanvasTextAlign;
-  baseline?: CanvasTextBaseline;
-};
+const categories = [
+  { id: "groups", label: "Группы", format: "1:1", size: "1600 × 1600" },
+  { id: "leagues", label: "Лиги", format: "1:1", size: "1600 × 1600" },
+  { id: "playoffs", label: "Плей-офф", format: "16:9", size: "1920 × 1080" },
+] as const;
+type Category = typeof categories[number]["id"];
 
-const CANVAS_SIZE = 1600;
-const COLORS = {
-  black: "#1D1D1D",
-  panel: "#101010",
-  panelSoft: "#1D1D1D",
-  line: "#333333",
-  gold: "#21F1A8",
-  goldSoft: "#21F1A8",
-  white: "#F5F5F5",
-  muted: "#C8C8C8",
-  dim: "#7A7A7A",
-};
-
-function chunkArray<T>(items: T[], size: number) {
-  const chunks: T[][] = [];
-  for (let index = 0; index < items.length; index += size) {
-    chunks.push(items.slice(index, index + size));
-  }
-  return chunks;
+function Selection({ active, title, detail, disabled, onClick }: { active: boolean; title: string; detail: string; disabled: boolean; onClick: () => void }) {
+  return <button type="button" aria-pressed={active} disabled={disabled} onClick={onClick}
+    className={`flex min-h-11 min-w-0 items-center gap-2.5 rounded-md border px-3 py-2 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50 ${active ? "border-primary/35 bg-primary/[0.07] text-zinc-100" : "border-white/10 bg-white/[0.02] text-zinc-400 hover:border-white/25"}`}>
+    <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${active ? "border-primary bg-primary text-black" : "border-zinc-600"}`}>{active && <Check className="h-3 w-3" />}</span>
+    <span className="min-w-0"><span className="block break-words text-sm font-medium">{title}</span><span className="mt-0.5 block text-xs text-zinc-500">{detail}</span></span>
+  </button>;
 }
 
-function safeFileName(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-zа-яё0-9]+/gi, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
-}
-
-function createCanvas() {
-  const canvas = document.createElement("canvas");
-  canvas.width = CANVAS_SIZE;
-  canvas.height = CANVAS_SIZE;
-  return canvas;
-}
-
-const imageCache = new Map<string, Promise<HTMLImageElement | null>>();
-
-function loadImage(src?: string | null) {
-  const value = src?.trim();
-  if (!value) return Promise.resolve(null);
-
-  if (!imageCache.has(value)) {
-    imageCache.set(
-      value,
-      new Promise((resolve) => {
-        const image = new Image();
-        image.crossOrigin = "anonymous";
-        image.onload = () => resolve(image);
-        image.onerror = () => resolve(null);
-        image.src = value;
-      }),
-    );
-  }
-
-  return imageCache.get(value)!;
-}
-
-function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
-  const r = Math.min(radius, width / 2, height / 2);
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + width, y, x + width, y + height, r);
-  ctx.arcTo(x + width, y + height, x, y + height, r);
-  ctx.arcTo(x, y + height, x, y, r);
-  ctx.arcTo(x, y, x + width, y, r);
-  ctx.closePath();
-}
-
-function fillRound(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number, fill: string) {
-  roundedRect(ctx, x, y, width, height, radius);
-  ctx.fillStyle = fill;
-  ctx.fill();
-}
-
-function strokeRound(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number, stroke: string, lineWidth = 2) {
-  roundedRect(ctx, x, y, width, height, radius);
-  ctx.strokeStyle = stroke;
-  ctx.lineWidth = lineWidth;
-  ctx.stroke();
-}
-
-function text(ctx: CanvasRenderingContext2D, value: string, x: number, y: number, maxWidth: number, options: CanvasTextOptions = {}) {
-  ctx.font = options.font ?? "24px Inter, Arial, sans-serif";
-  ctx.fillStyle = options.fill ?? COLORS.white;
-  ctx.textAlign = options.align ?? "left";
-  ctx.textBaseline = options.baseline ?? "alphabetic";
-
-  let output = value;
-  while (output.length > 1 && ctx.measureText(output).width > maxWidth) {
-    output = `${output.slice(0, -2)}…`;
-  }
-
-  ctx.fillText(output, x, y);
-}
-
-function centeredText(ctx: CanvasRenderingContext2D, value: string, x: number, y: number, maxWidth: number, options: CanvasTextOptions = {}) {
-  text(ctx, value, x, y, maxWidth, { ...options, align: "center" });
-}
-
-function teamMark(value: string) {
-  const parts = value
-    .replace(/[^A-Za-zА-Яа-яЁё0-9\s-]/g, "")
-    .split(/[\s-]+/)
-    .filter(Boolean);
-
-  if (!parts.length) return "FC";
-  return parts
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-}
-
-async function drawClubBadge(ctx: CanvasRenderingContext2D, src: string | null | undefined, fallback: string, x: number, y: number, size: number) {
-  const radius = Math.max(9, size * 0.22);
-  fillRound(ctx, x, y, size, size, radius, "rgba(33,241,168,0.1)");
-  strokeRound(ctx, x, y, size, size, radius, "rgba(33,241,168,0.28)", 1.5);
-
-  const image = await loadImage(src);
-  if (image) {
-    ctx.save();
-    roundedRect(ctx, x + 5, y + 5, size - 10, size - 10, Math.max(7, size * 0.17));
-    ctx.clip();
-    ctx.drawImage(image, x + 5, y + 5, size - 10, size - 10);
-    ctx.restore();
-    return;
-  }
-
-  centeredText(ctx, teamMark(fallback), x + size / 2, y + size * 0.64, size - 10, {
-    font: `800 ${Math.max(12, Math.round(size * 0.3))}px Inter, Arial, sans-serif`,
-    fill: COLORS.gold,
-  });
-}
-
-function drawBackground(ctx: CanvasRenderingContext2D) {
-  ctx.fillStyle = COLORS.black;
-  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-
-  const gradient = ctx.createRadialGradient(1120, 130, 40, 1120, 130, 980);
-  gradient.addColorStop(0, "rgba(33,241,168, 0.16)");
-  gradient.addColorStop(0.4, "rgba(33,241,168, 0.04)");
-  gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.035)";
-  ctx.lineWidth = 1;
-  for (let position = 90; position < CANVAS_SIZE; position += 90) {
-    ctx.beginPath();
-    ctx.moveTo(position, 0);
-    ctx.lineTo(position - 360, CANVAS_SIZE);
-    ctx.stroke();
-  }
-}
-
-function drawHeader(ctx: CanvasRenderingContext2D, tournamentTitle: string, title: string) {
-  text(ctx, "EFOOTBALL NEXON", 82, 96, 620, {
-    font: "700 34px Inter, Arial, sans-serif",
-    fill: COLORS.white,
-  });
-  text(ctx, "GLOBAL MOBILE CHAMPIONSHIP", 82, 142, 680, {
-    font: "600 20px Inter, Arial, sans-serif",
-    fill: COLORS.gold,
-  });
-  text(ctx, tournamentTitle.toUpperCase(), 82, 226, 900, {
-    font: "300 64px Inter, Arial, sans-serif",
-    fill: COLORS.white,
-  });
-  text(ctx, title, 82, 282, 820, {
-    font: "700 32px Inter, Arial, sans-serif",
-    fill: COLORS.muted,
-  });
-}
-
-function drawFooter(ctx: CanvasRenderingContext2D, pageLabel: string) {
-  ctx.strokeStyle = "rgba(255,255,255,0.08)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(82, 1506);
-  ctx.lineTo(1518, 1506);
-  ctx.stroke();
-
-  text(ctx, "efootball-nexon.com", 82, 1550, 520, {
-    font: "600 24px Inter, Arial, sans-serif",
-    fill: COLORS.muted,
-  });
-  text(ctx, pageLabel, 1518, 1550, 460, {
-    font: "600 24px Inter, Arial, sans-serif",
-    fill: COLORS.dim,
-    align: "right",
-  });
-}
-
-async function drawGroupCard(ctx: CanvasRenderingContext2D, group: ExportGroup, x: number, y: number, width: number, height: number) {
-  fillRound(ctx, x, y, width, height, 24, COLORS.panel);
-  strokeRound(ctx, x, y, width, height, 24, "rgba(33,241,168, 0.34)", 2);
-
-  text(ctx, group.name.toUpperCase(), x + 30, y + 48, width - 60, {
-    font: "800 28px Inter, Arial, sans-serif",
-    fill: COLORS.white,
-  });
-  text(ctx, `${group.rows.length} игроков`, x + width - 30, y + 48, 180, {
-    font: "600 20px Inter, Arial, sans-serif",
-    fill: COLORS.gold,
-    align: "right",
-  });
-
-  const tableTop = y + 84;
-  const rowHeight = Math.min(42, Math.max(28, (height - 132) / Math.max(group.rows.length, 1)));
-  const shownRows = group.rows.slice(0, Math.floor((height - 132) / rowHeight));
-
-  ctx.fillStyle = COLORS.panelSoft;
-  ctx.fillRect(x + 22, tableTop, width - 44, 38);
-
-  const columns = [
-    { label: "#", offset: 26, width: 42, align: "center" as CanvasTextAlign },
-    { label: "Команда", offset: 78, width: width - 374, align: "left" as CanvasTextAlign },
-    { label: "И", offset: width - 280, width: 34, align: "center" as CanvasTextAlign },
-    { label: "В", offset: width - 238, width: 34, align: "center" as CanvasTextAlign },
-    { label: "Н", offset: width - 196, width: 34, align: "center" as CanvasTextAlign },
-    { label: "П", offset: width - 154, width: 34, align: "center" as CanvasTextAlign },
-    { label: "+/-", offset: width - 108, width: 48, align: "center" as CanvasTextAlign },
-    { label: "О", offset: width - 48, width: 38, align: "center" as CanvasTextAlign },
-  ];
-
-  for (const column of columns) {
-    text(ctx, column.label, x + column.offset, tableTop + 25, column.width, {
-      font: "700 16px Inter, Arial, sans-serif",
-      fill: COLORS.dim,
-      align: column.align,
-    });
-  }
-
-  for (let index = 0; index < shownRows.length; index += 1) {
-    const row = shownRows[index];
-    const rowY = tableTop + 38 + index * rowHeight;
-    if (index % 2 === 0) {
-      ctx.fillStyle = "rgba(255,255,255,0.025)";
-      ctx.fillRect(x + 22, rowY, width - 44, rowHeight);
-    }
-
-    const rankColor = row.rank === 1 ? COLORS.gold : row.rank <= 3 ? COLORS.white : COLORS.muted;
-    text(ctx, String(row.rank), x + 48, rowY + rowHeight * 0.65, 42, {
-      font: "800 18px Inter, Arial, sans-serif",
-      fill: rankColor,
-      align: "center",
-    });
-    await drawClubBadge(ctx, row.clubBadgePath, row.clubName, x + 76, rowY + rowHeight * 0.17, 28);
-    text(ctx, row.clubName, x + 112, rowY + rowHeight * 0.48, width - 408, {
-      font: "700 19px Inter, Arial, sans-serif",
-      fill: COLORS.white,
-    });
-    text(ctx, row.playerName, x + 112, rowY + rowHeight * 0.84, width - 408, {
-      font: "500 15px Inter, Arial, sans-serif",
-      fill: COLORS.dim,
-    });
-
-    const values = [row.played, row.wins, row.draws, row.losses, row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference, row.points];
-    const valueOffsets = [width - 280, width - 238, width - 196, width - 154, width - 108, width - 48];
-    values.forEach((value, valueIndex) => {
-      text(ctx, String(value), x + valueOffsets[valueIndex], rowY + rowHeight * 0.66, valueIndex === 4 ? 48 : 38, {
-        font: valueIndex === 5 ? "800 18px Inter, Arial, sans-serif" : "600 17px Inter, Arial, sans-serif",
-        fill: valueIndex === 5 ? COLORS.gold : COLORS.muted,
-        align: "center",
-      });
-    });
-  }
-
-  if (shownRows.length < group.rows.length) {
-    text(ctx, `+${group.rows.length - shownRows.length} игроков`, x + 30, y + height - 26, width - 60, {
-      font: "600 18px Inter, Arial, sans-serif",
-      fill: COLORS.gold,
-    });
-  }
-}
-
-async function drawGroupsPage(ctx: CanvasRenderingContext2D, tournamentTitle: string, groups: ExportGroup[], pageIndex: number, totalPages: number) {
-  drawBackground(ctx);
-  drawHeader(ctx, tournamentTitle, "Таблицы групп");
-
-  const marginX = 82;
-  const top = 382;
-  const gap = 30;
-  const cardWidth = (CANVAS_SIZE - marginX * 2 - gap) / 2;
-  const cardHeight = 520;
-
-  for (let index = 0; index < groups.length; index += 1) {
-    const group = groups[index];
-    const col = index % 2;
-    const row = Math.floor(index / 2);
-    await drawGroupCard(ctx, group, marginX + col * (cardWidth + gap), top + row * (cardHeight + gap), cardWidth, cardHeight);
-  }
-
-  drawFooter(ctx, `Группы · ${pageIndex + 1}/${totalPages}`);
-}
-
-function optionButtonClass(active: boolean) {
-  return [
-    "flex min-h-11 items-center gap-2 rounded-md border px-3 py-2 text-left text-sm transition",
-    active
-      ? "border-primary/55 bg-primary/10 text-white"
-      : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-primary/30 hover:text-white",
-  ].join(" ");
-}
-
-export function TournamentImageExporter({
-  tournamentTitle,
-  groups,
-  rounds,
-}: {
-  tournamentTitle: string;
-  groups: ExportGroup[];
-  rounds: ExportScheduleRound[];
-}) {
+export function TournamentImageExporter({ tournamentTitle, groups, rounds }: { tournamentTitle: string; groups: ExportGroup[]; rounds: ExportScheduleRound[] }) {
+  const [category, setCategory] = useState<Category>(() => categories.find((item) => groups.some((group) => group.kind === item.id) || rounds.some((round) => round.kind === item.id))?.id ?? "groups");
   const [selectedGroupIds, setSelectedGroupIds] = useState(() => groups.map((group) => group.id));
   const [selectedRoundKeys, setSelectedRoundKeys] = useState(() => rounds.map((round) => round.key));
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const exportLock = useRef(false);
-  const selectedGroups = useMemo(() => groups.filter((group) => selectedGroupIds.includes(group.id)), [groups, selectedGroupIds]);
-  const selectedRounds = useMemo(() => rounds.filter((round) => selectedRoundKeys.includes(round.key)), [rounds, selectedRoundKeys]);
+  const visibleGroups = groups.filter((group) => group.kind === category);
+  const visibleRounds = rounds.filter((round) => (round.kind ?? "groups") === category);
+  const selectedGroups = visibleGroups.filter((group) => selectedGroupIds.includes(group.id));
+  const selectedRounds = visibleRounds.filter((round) => selectedRoundKeys.includes(round.key));
+  const tablePages = standingsPosterPages(selectedGroups).length;
+  const schedulePages = selectedRounds.reduce((sum, round) => sum + balancedSchedulePages(schedulePosterFixtures(round.matches), schedulePosterCapacity(round.format)).length, 0);
+  const sections = [...new Set(visibleRounds.map((round) => round.sectionKey ?? "schedule"))].map((key) => ({
+    key, rounds: visibleRounds.filter((round) => (round.sectionKey ?? "schedule") === key),
+  }));
+  const toggle = (items: string[], key: string) => items.includes(key) ? items.filter((id) => id !== key) : [...items, key];
+  const toggleAll = (items: string[], keys: string[]) => keys.every((key) => items.includes(key)) ? items.filter((key) => !keys.includes(key)) : [...new Set([...items, ...keys])];
+  const format = categories.find((item) => item.id === category)!;
 
-  const toggleGroup = (id: string) => {
-    setSelectedGroupIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
-  };
-
-  const toggleRound = (key: string) => {
-    setSelectedRoundKeys((current) => (current.includes(key) ? current.filter((item) => item !== key) : [...current, key]));
-  };
-
-  const exportGroups = async () => {
-    if (!selectedGroups.length) return;
-    setStatus("Готовлю PNG групп...");
-
-    const chunks = chunkArray(selectedGroups, 4);
-    const files: DownloadFile[] = [];
-    for (let index = 0; index < chunks.length; index += 1) {
-      const chunk = chunks[index];
-      const canvas = createCanvas();
-      const ctx = canvas.getContext("2d");
-      if (!ctx) continue;
-
-      await drawGroupsPage(ctx, tournamentTitle, chunk, index, chunks.length);
-      const blob = await canvasToBlob(canvas);
-      if (blob) {
-        files.push({ name: `${safeFileName(tournamentTitle)}-groups-${index + 1}.png`, blob });
-      }
-    }
-
-    await downloadFiles(files, `${safeFileName(tournamentTitle)}-groups.zip`);
-    setStatus(files.length > 1 ? `Скачан ZIP: ${files.length} PNG по группам` : `Скачано: ${files.length} PNG по группам`);
-  };
-
-  const exportSchedule = async () => {
-    const count = await downloadScheduleImages(selectedRounds, setStatus);
-    setStatus(count > 1 ? `Скачан ZIP: ${count} PNG расписания` : "Расписание PNG скачано.");
-  };
-  const runExport = async (action: () => Promise<void>) => {
+  const runExport = async (action: () => Promise<number>) => {
     if (exportLock.current) return;
     exportLock.current = true;
     setBusy(true);
     setError(false);
+    setStatus("Подготавливаю изображения…");
     try {
-      await action();
+      const count = await action();
+      setStatus(count > 1 ? `Готово: ZIP с ${count} изображениями PNG.` : "Готово: изображение PNG скачано.");
     } catch {
       setError(true);
-      setStatus("Не удалось создать изображения. Проверьте соединение и попробуйте скачать меньше туров за раз.");
+      setStatus("Не удалось создать изображения. Попробуйте ещё раз или выберите меньше туров.");
     } finally {
       exportLock.current = false;
       setBusy(false);
     }
   };
-  return (
-    <Card className="overflow-hidden rounded-lg border-primary/15 bg-white/[0.045] p-0">
-      <CardHeader className="mb-0 border-b border-white/10 p-4 sm:p-5">
-        <CardTitle className="flex items-center gap-2">
-          <ImageDown className="h-5 w-5 text-primary" />
-          Экспорт PNG
-        </CardTitle>
-        <CardDescription>Чёткие изображения для публикаций: таблицы групп и расписание выбранных туров.</CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-4 p-4 sm:p-5 xl:grid-cols-2">
-        <div className="space-y-3 rounded-lg border border-white/10 bg-black/20 p-3 sm:p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2 font-medium text-white">
-                <Layers3 className="h-4 w-4 text-primary" />
-                Группы
-              </div>
-              <div className="mt-1 text-xs text-zinc-500">В одной PNG помещается до 4 групп.</div>
-            </div>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedGroupIds(selectedGroupIds.length === groups.length ? [] : groups.map((group) => group.id))}>
-              {selectedGroupIds.length === groups.length ? "Снять" : "Все"}
-            </Button>
+  return <Card className="min-w-0 overflow-hidden rounded-lg border-primary/15 bg-white/[0.045] p-0">
+    <CardHeader className="mb-0 border-b border-white/10 p-4 sm:p-5">
+      <CardTitle className="flex items-center gap-2"><ImageDown className="h-5 w-5 text-primary" />Скачать изображения</CardTitle>
+      <CardDescription>Таблицы и расписания для публикаций. Большие списки автоматически продолжаются на следующем фото.</CardDescription>
+    </CardHeader>
+    <CardContent className="min-w-0 space-y-4 p-3 sm:p-5">
+      <div className="grid grid-cols-3 gap-1 rounded-lg border border-white/10 bg-black/20 p-1" role="group" aria-label="Этапы для экспорта">
+        {categories.map((item) => <button key={item.id} type="button" aria-pressed={category === item.id} disabled={busy} onClick={() => { setCategory(item.id); setStatus(null); }}
+          className={`min-h-11 min-w-0 rounded-md px-1 py-2 text-xs transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary sm:text-sm ${category === item.id ? "bg-white/[0.09] text-white" : "text-zinc-500 hover:text-zinc-200"}`}>
+          <span className="block font-medium">{item.label}</span><span className="mt-0.5 block text-[10px] text-zinc-500 sm:text-xs">{item.format}</span>
+        </button>)}
+      </div>
+      <p className="text-xs leading-relaxed text-zinc-400">{format.size} px · {category === "playoffs" ? "Каждая сетка и раунд — отдельно. Ответные встречи и серии показаны одной парой." : "Каждая группа или лига — отдельно. До 12 участников или пар на фото."} Несколько фото скачиваются одним ZIP.</p>
+      <div className={`grid min-w-0 gap-3 ${category !== "playoffs" ? "xl:grid-cols-2" : ""}`}>
+        {category !== "playoffs" && <section aria-label="Таблицы" className="min-w-0 space-y-3 rounded-lg border border-white/10 bg-black/20 p-3 sm:p-4">
+          <div className="flex items-center justify-between gap-2"><h3 className="text-sm font-medium text-zinc-100">Таблицы</h3>
+            <Button type="button" size="sm" variant="ghost" disabled={busy || !visibleGroups.length} onClick={() => setSelectedGroupIds((current) => toggleAll(current, visibleGroups.map((group) => group.id)))}>{selectedGroups.length === visibleGroups.length ? "Снять все" : "Выбрать все"}</Button>
           </div>
-
-          <div className="grid max-h-56 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
-            {groups.length ? (
-              groups.map((group) => {
-                const active = selectedGroupIds.includes(group.id);
-                const Icon = active ? CheckSquare : Square;
-
-                return (
-                  <button key={group.id} type="button" className={optionButtonClass(active)} onClick={() => toggleGroup(group.id)}>
-                    <Icon className="h-4 w-4 shrink-0 text-primary" />
-                    <span className="min-w-0">
-                      <span className="block truncate font-medium">{group.name}</span>
-                      <span className="block text-xs text-zinc-500">{group.rows.length} игроков</span>
-                    </span>
-                  </button>
-                );
-              })
-            ) : (
-              <div className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-sm text-zinc-500">Группы не найдены.</div>
-            )}
+          <div className="grid max-h-80 gap-2 overflow-y-auto">
+            {visibleGroups.map((group) => <Selection key={group.id} title={group.name} detail={`${group.stageName} · Участников: ${group.rows.length}`} active={selectedGroupIds.includes(group.id)} disabled={busy} onClick={() => setSelectedGroupIds((current) => toggle(current, group.id))} />)}
+            {!visibleGroups.length && <p className="py-4 text-sm text-zinc-500">{category === "leagues" ? "Лиги ещё не созданы." : "Группы ещё не созданы."}</p>}
           </div>
-
-          <Button type="button" variant="outline" className="w-full" disabled={busy || !selectedGroups.length} onClick={() => runExport(exportGroups)}>
-            <Download className="mr-2 h-4 w-4" />
-            Скачать группы PNG
+          <Button type="button" variant="outline" className="w-full text-xs sm:text-sm" disabled={busy || !selectedGroups.length} onClick={() => runExport(() => downloadStandingsImages(tournamentTitle, selectedGroups, setStatus))}>
+            {busy ? <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" /> : <Download className="mr-2 h-4 w-4" />}Таблицы PNG{tablePages ? ` · ${tablePages}` : ""}
           </Button>
-        </div>
-
-        <div className="space-y-3 rounded-lg border border-white/10 bg-black/20 p-3 sm:p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2 font-medium text-white">
-                <CalendarDays className="h-4 w-4 text-primary" />
-                Расписание
+        </section>}
+        <section aria-label="Расписание" className="min-w-0 space-y-3 rounded-lg border border-white/10 bg-black/20 p-3 sm:p-4">
+          <div className="flex items-center justify-between gap-2"><h3 className="text-sm font-medium text-zinc-100">Расписание</h3>
+            <Button type="button" size="sm" variant="ghost" disabled={busy || !visibleRounds.length} onClick={() => setSelectedRoundKeys((current) => toggleAll(current, visibleRounds.map((round) => round.key)))}>{selectedRounds.length === visibleRounds.length ? "Снять все" : "Выбрать все"}</Button>
+          </div>
+          <div className="max-h-80 space-y-4 overflow-y-auto">
+            {sections.map((section) => <div key={section.key} className="space-y-2">
+              <div className="flex min-w-0 items-center justify-between gap-2">
+                <p className="min-w-0 break-words text-xs font-medium text-zinc-400">{section.rounds[0].sectionName || "Туры"}</p>
+                <button type="button" disabled={busy} className="min-h-11 shrink-0 px-1 text-xs text-primary hover:underline" onClick={() => setSelectedRoundKeys((current) => toggleAll(current, section.rounds.map((round) => round.key)))}>{section.rounds.every((round) => selectedRoundKeys.includes(round.key)) ? "Снять" : "Все туры"}</button>
               </div>
-              <div className="mt-1 text-xs text-zinc-500">Ответные встречи — одной парой. Дедлайн и число матчей — на фото.</div>
-            </div>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedRoundKeys(selectedRoundKeys.length === rounds.length ? [] : rounds.map((round) => round.key))}>
-              {selectedRoundKeys.length === rounds.length ? "Снять" : "Все"}
-            </Button>
+              <div className="grid gap-2 sm:grid-cols-2">{section.rounds.map((round) => <Selection key={round.key} title={round.title} detail={`Матчей: ${round.matches.length}`} active={selectedRoundKeys.includes(round.key)} disabled={busy} onClick={() => setSelectedRoundKeys((current) => toggle(current, round.key))} />)}</div>
+            </div>)}
+            {!visibleRounds.length && <p className="py-4 text-sm text-zinc-500">Матчи этого этапа ещё не созданы.</p>}
           </div>
-
-          <div className="grid max-h-56 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
-            {rounds.length ? (
-              rounds.map((round) => {
-                const active = selectedRoundKeys.includes(round.key);
-                const Icon = active ? CheckSquare : Square;
-
-                return (
-                  <button key={round.key} type="button" className={optionButtonClass(active)} onClick={() => toggleRound(round.key)}>
-                    <Icon className="h-4 w-4 shrink-0 text-primary" />
-                    <span className="min-w-0">
-                      <span className="block truncate font-medium">{round.title}</span>
-                      <span className="block text-xs text-zinc-500">{round.matches.length} матчей</span>
-                    </span>
-                  </button>
-                );
-              })
-            ) : (
-              <div className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-sm text-zinc-500">Расписание не найдено.</div>
-            )}
-          </div>
-
-          <Button type="button" variant="outline" className="w-full" disabled={busy || !selectedRounds.length} onClick={() => runExport(exportSchedule)}>
-            {busy ? <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-            Скачать расписание PNG
+          <Button type="button" variant="outline" className="w-full text-xs sm:text-sm" disabled={busy || !selectedRounds.length} onClick={() => runExport(() => downloadScheduleImages(selectedRounds, setStatus))}>
+            {busy ? <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" /> : <Download className="mr-2 h-4 w-4" />}Расписание PNG{schedulePages ? ` · ${schedulePages}` : ""}
           </Button>
-        </div>
-
-        {status ? <div role={error ? "alert" : "status"} className={`rounded-md border px-3 py-2 text-sm xl:col-span-2 ${error ? "border-rose-300/20 bg-rose-300/10 text-rose-200" : "border-primary/20 bg-primary/10 text-primary"}`}>{status}</div> : null}
-      </CardContent>
-    </Card>
-  );
+        </section>
+      </div>
+      {status && <div role={error ? "alert" : "status"} className={`rounded-md border px-3 py-2 text-xs leading-relaxed sm:text-sm ${error ? "border-rose-300/20 bg-rose-300/10 text-rose-200" : "border-primary/20 bg-primary/10 text-primary"}`}>{status}</div>}
+    </CardContent>
+  </Card>;
 }

@@ -19,8 +19,8 @@ function loadBadge(src: string): Promise<HTMLImageElement | null> {
   });
 }
 
-async function loadBadges(matches: SchedulePosterFixture[]) {
-  const paths = [...new Set(matches.flatMap((match) => [match.player1ClubBadgePath, match.player2ClubBadgePath]).filter((path): path is string => Boolean(path)))];
+export async function loadPosterBadges(sources: Array<string | null | undefined>) {
+  const paths = [...new Set(sources.filter((path): path is string => Boolean(path)))];
   const badges = new Map<string, HTMLImageElement | null>();
   // Bound concurrent requests even when a large selection is downloaded.
   const load = async (pending: string[]) => {
@@ -39,11 +39,11 @@ async function loadBadges(matches: SchedulePosterFixture[]) {
   return badges;
 }
 
-export async function renderSchedulePoster(round: ExportScheduleRound, matches: SchedulePosterFixture[], totalMatchCount: number) {
+export async function renderSchedulePoster(round: ExportScheduleRound, matches: SchedulePosterFixture[], totalMatchCount: number, pagination = { page: 1, pageCount: 1 }) {
   if (!matches.length) throw new Error("В выбранном туре нет матчей для изображения.");
   await document.fonts.ready;
-  const badges = await loadBadges(matches);
-  const layout = schedulePosterLayout(matches.length);
+  const badges = await loadPosterBadges(matches.flatMap((match) => [match.player1ClubBadgePath, match.player2ClubBadgePath]));
+  const layout = schedulePosterLayout(matches.length, round.format);
   const canvas = document.createElement("canvas");
   canvas.width = layout.width;
   canvas.height = layout.height;
@@ -105,12 +105,22 @@ export async function renderSchedulePoster(round: ExportScheduleRound, matches: 
   ctx.fillRect(0, 0, layout.width, layout.height);
   ctx.fillStyle = palette.gold;
   ctx.fillRect(64, 57, 48, 4);
-  label(round.title, 64, 145, layout.width - 128, 70);
+  if (round.format) {
+    label("EFOOTBALL NEXON", 132, 68, 500, 24, palette.gold);
+    label(round.tournamentTitle ?? "", layout.width - 64, 68, layout.width - 800, 24, palette.muted, "right", 400);
+    label(round.sectionName ?? "Расписание", 64, 120, layout.width - 128, 30, palette.muted, "left", 400);
+  }
+  const headerOffset = round.format ? 48 : 0;
+  label(round.title, 64, 145 + headerOffset, layout.width - 128, 70);
   ctx.fillStyle = palette.border;
-  ctx.fillRect(64, 184, layout.width - 128, 1);
-  label("ДЕДЛАЙН", 64, 218, 200, 18, palette.gold);
-  label(scheduleDeadlineLabel(round.deadlineAt), 64, 253, 1030, 29, palette.text, "left", 400);
-  label(scheduleMatchCountLabel(totalMatchCount), layout.width - 64, 248, 340, 30, palette.gold, "right");
+  ctx.fillRect(64, 184 + headerOffset, layout.width - 128, 1);
+  label("ДЕДЛАЙН", 64, 218 + headerOffset, 200, 18, palette.gold);
+  label(scheduleDeadlineLabel(round.deadlineAt), 64, 253 + headerOffset, 1030, 29, palette.text, "left", 400);
+  label(scheduleMatchCountLabel(totalMatchCount), layout.width - 64, 248 + headerOffset, 340, 30, palette.gold, "right");
+  if (round.format) {
+    label("РАСПИСАНИЕ МАТЧЕЙ", 64, layout.height - 42, 600, 20, palette.muted, "left", 400);
+    label(`Страница ${pagination.page} / ${pagination.pageCount}`, layout.width - 64, layout.height - 42, 400, 22, palette.gold, "right");
+  }
 
   matches.forEach((match, index) => {
     const { x, y, width, height } = layout.slots[index];
@@ -123,19 +133,20 @@ export async function renderSchedulePoster(round: ExportScheduleRound, matches: 
     ctx.lineWidth = 1;
     ctx.stroke();
     if (matches.length === 1) {
+      const centerY = y + (height - 560) / 2;
       const left = x + width * 0.25;
       const right = x + width * 0.75;
-      badge(match.player1ClubBadgePath, match.player1ClubName, left - 95, y + 78, 190);
-      badge(match.player2ClubBadgePath, match.player2ClubName, right - 95, y + 78, 190);
-      label(match.player1ClubName, left, y + 358, width * 0.42, 52, palette.text, "center");
-      label(match.player2ClubName, right, y + 358, width * 0.42, 52, palette.text, "center");
-      label(match.player1Name, left, y + 416, width * 0.42, 36, palette.muted, "center", 400);
-      label(match.player2Name, right, y + 416, width * 0.42, 36, palette.muted, "center", 400);
-      label("VS", x + width / 2, y + 200, 100, 38, palette.gold, "center");
-      if (match.matchCount > 1) label(`×${match.matchCount}`, x + width / 2, y + 245, 100, 26, palette.muted, "center", 400);
+      badge(match.player1ClubBadgePath, match.player1ClubName, left - 95, centerY + 78, 190);
+      badge(match.player2ClubBadgePath, match.player2ClubName, right - 95, centerY + 78, 190);
+      label(match.player1ClubName, left, centerY + 358, width * 0.42, 52, palette.text, "center");
+      label(match.player2ClubName, right, centerY + 358, width * 0.42, 52, palette.text, "center");
+      label(match.player1Name, left, centerY + 416, width * 0.42, 36, palette.muted, "center", 400);
+      label(match.player2Name, right, centerY + 416, width * 0.42, 36, palette.muted, "center", 400);
+      label("VS", x + width / 2, centerY + 200, 100, 38, palette.gold, "center");
+      if (match.matchCount > 1) label(`×${match.matchCount}`, x + width / 2, centerY + 245, 100, 26, palette.muted, "center", 400);
       return;
     }
-    const contentY = y + (wide ? (height - 148) / 2 : 0);
+    const contentY = y + (height - (wide ? 148 : 174)) / 2;
     const emblemSize = wide ? 76 : 56;
     const inset = 24;
     const emblemY = contentY + (wide ? 36 : 25);
@@ -147,8 +158,8 @@ export async function renderSchedulePoster(round: ExportScheduleRound, matches: 
       label(match.player1ClubName, x + nameInset, contentY + 67, clubWidth, 37);
       label(match.player2ClubName, x + width - nameInset, contentY + 67, clubWidth, 37, palette.text, "right");
     } else {
-      clubLabel(match.player1ClubName, x + nameInset, y + 62, clubWidth, "left");
-      clubLabel(match.player2ClubName, x + width - nameInset, y + 62, clubWidth, "right");
+      clubLabel(match.player1ClubName, x + nameInset, contentY + 62, clubWidth, "left");
+      clubLabel(match.player2ClubName, x + width - nameInset, contentY + 62, clubWidth, "right");
     }
     const nicknameInset = wide ? nameInset : inset;
     const nicknameWidth = width / 2 - nicknameInset - 48;

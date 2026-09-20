@@ -37,11 +37,36 @@ export type ExportScheduleMatch = {
 export type ExportScheduleRound = {
   key: string;
   title: string;
+  tournamentTitle?: string;
+  sectionName?: string;
+  sectionKey?: string;
+  kind?: "groups" | "leagues" | "playoffs";
+  format?: "square" | "landscape";
   deadlineAt: string | null;
   matches: ExportScheduleMatch[];
 };
 
 export type SchedulePosterFixture = ExportScheduleMatch & { matchCount: number };
+
+export function adminScheduleSection(match: {
+  stageId: string | null;
+  groupId: string | null;
+  bracketId: string | null;
+  round: number;
+  bracket: string | null;
+  isThirdPlaceMatch: boolean;
+  stage: { name: string; type: StageType } | null;
+  group: { name: string } | null;
+}): Pick<ExportScheduleRound, "key" | "sectionKey" | "sectionName" | "kind" | "format"> {
+  const playoff = match.stage?.type === StageType.PLAYOFF || match.stage?.type === StageType.SUPER_CUP;
+  return {
+    key: JSON.stringify([match.stageId, match.groupId, match.bracketId, match.round, match.bracket, match.isThirdPlaceMatch]),
+    sectionKey: JSON.stringify([match.stageId, match.groupId, match.bracketId]),
+    sectionName: [match.stage?.name, match.group?.name].filter(Boolean).join(" / "),
+    kind: match.stage?.type === StageType.LEAGUE ? "leagues" : playoff ? "playoffs" : "groups",
+    format: playoff ? "landscape" : "square",
+  };
+}
 
 export function schedulePosterRoster(
   side: number,
@@ -88,15 +113,20 @@ export function balancedSchedulePages<T>(items: T[], capacity = 12): T[][] {
   });
 }
 
-export function schedulePosterLayout(count: number) {
-  const columns = count > 6 ? 2 : 1;
+export function schedulePosterCapacity(format?: ExportScheduleRound["format"]) {
+  return format === "landscape" ? 6 : 12;
+}
+
+export function schedulePosterLayout(count: number, format?: ExportScheduleRound["format"]) {
+  const columns = count > (format === "landscape" ? 3 : 6) ? 2 : 1;
   const rows = Math.ceil(count / columns);
-  const width = 1600;
+  const width = format === "landscape" ? 1920 : 1600;
   const margin = 64;
   const gap = 24;
-  const rowHeight = count === 1 ? 560 : count === 2 ? 280 : count === 3 ? 192 : columns === 1 ? 148 : 174;
-  const top = 286;
-  const height = Math.max(1000, top + rows * (rowHeight + gap) + 48);
+  const top = format ? 340 : 286;
+  const legacyRowHeight = count === 1 ? 560 : count === 2 ? 280 : count === 3 ? 192 : columns === 1 ? 148 : 174;
+  const height = format === "square" ? 1600 : format === "landscape" ? 1080 : Math.max(1000, top + rows * (legacyRowHeight + gap) + 48);
+  const rowHeight = format ? (height - top - 100 - gap * (rows - 1)) / Math.max(rows, 1) : legacyRowHeight;
   const cardWidth = (width - margin * 2 - gap * (columns - 1)) / columns;
   return {
     width, height, columns, rows,
