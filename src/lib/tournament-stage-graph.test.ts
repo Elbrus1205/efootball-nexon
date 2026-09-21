@@ -174,3 +174,12 @@ test("distributes incoming participants across target groups and supports snake 
 
   assert.deepEqual(assignments.map((assignment) => assignment.toDivisionIndex), [1, 2, 3, 3, 2, 1]);
 });
+
+test("playoff slots follow final ranks even when database standings are unordered", () => {
+  const graph = normalizeStageGraph({
+    stages: [{ id: "league", type: "LEAGUE" }, { id: "playoff", type: "PLAYOFF", bracketSize: 32 }],
+    transitions: [{ fromStageId: "league", toStageId: "playoff", fromRank: 1, toRank: 8, toSlotStart: 1, toSlotStep: 2 }],
+  });
+  const assignments = resolveStageGraphAssignments({ graph, fromStageId: "league", standings: [8, 3, 1, 7, 2, 6, 5, 4].map(rank => ({ registrationId: `p${rank}`, rank, divisionIndex: 1 })) });
+  assert.deepEqual(assignments.map(a => [a.registrationId, a.toSlot]), Array.from({ length: 8 }, (_, i) => [`p${i + 1}`, i * 2 + 1]));
+});

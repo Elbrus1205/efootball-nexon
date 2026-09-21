@@ -332,6 +332,14 @@ export function resolveStageGraphAssignments(params: { graph: StageGraphBlueprin
     let candidates: Array<{ registrationId: string; seed?: number | null }> = transition.result === "RANK"
       ? (params.standings ?? []).filter((standing) => standing.rank !== null && transition.fromRank !== null && standing.rank >= transition.fromRank && standing.rank <= (transition.toRank ?? transition.fromRank) && (transition.fromDivisionId === null || standing.divisionId === transition.fromDivisionId) && (transition.fromDivisionIndex === null || standing.divisionIndex === transition.fromDivisionIndex))
       : (params.playoffResults ?? []).filter((result) => result.result === transition.result);
+    if (transition.result === "RANK") {
+      const standings = new Map((params.standings ?? []).map((standing) => [standing.registrationId, standing]));
+      candidates = [...candidates].sort((left, right) => {
+        const a = standings.get(left.registrationId)!;
+        const b = standings.get(right.registrationId)!;
+        return a.divisionIndex - b.divisionIndex || (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER);
+      });
+    }
     if (transition.distribution === "SEED") candidates = [...candidates].sort((left, right) => (left.seed ?? Number.MAX_SAFE_INTEGER) - (right.seed ?? Number.MAX_SAFE_INTEGER));
     if (transition.quantity !== null) candidates = candidates.slice(0, transition.quantity);
     const target = params.graph.stages.find((stage) => stage.id === transition.toStageId);
