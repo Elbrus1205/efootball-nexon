@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import ts from "typescript";
 
 const root = process.cwd();
 const read = (...segments: string[]) => readFileSync(path.join(root, ...segments), "utf8");
@@ -102,4 +103,40 @@ test("telegram callback roster + score paths bust their caches", () => {
   const callbacks = read("src", "lib", "services", "telegram-callbacks.ts");
   assert.match(callbacks, /invalidateTournamentParticipants/);
   assert.match(callbacks, /invalidateTournamentSchedule/);
+});
+
+test("a deployment after repair ignores legacy Redis slices and still invalidates fresh values", async () => {
+  const values = new Map<string, unknown>([
+    ["tournament:cup:rules", { status: "COMPLETED" }],
+    ["tournament:cup:structure", [{ status: "PENDING" }]],
+  ]);
+  let status = "IN_PROGRESS";
+  const deps: Record<string, unknown> = {
+    "next/cache": { unstable_cache: (loader: unknown) => loader, revalidateTag: () => undefined },
+    "@/lib/db": { db: {
+      tournament: { findUnique: async () => ({ status }) },
+      tournamentStage: { findMany: async () => [{ status: "ACTIVE" }] },
+    } },
+    "@/lib/redis": { redisKey: (suffix: string) => suffix },
+    "@/lib/redis-cache": {
+      getOrSetRedisJson: async (key: string, loader: () => Promise<unknown>) => {
+        if (values.has(key)) return values.get(key);
+        const value = await loader(); values.set(key, value); return value;
+      },
+      deleteRedisKey: async (key: string) => { values.delete(key); },
+    },
+  };
+  const cache: {
+    getCachedTournamentRules?: (id: string) => Promise<{ status: string }>;
+    getCachedTournamentStructure?: (id: string) => Promise<{ status: string }[]>;
+    invalidateTournamentRules?: (id: string) => void;
+  } = {};
+  const compiled = ts.transpileModule(read("src", "lib", "tournament-cache.ts"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+  new Function("require", "exports", compiled)((name: string) => deps[name], cache);
+  assert.equal((await cache.getCachedTournamentRules!("cup")).status, "IN_PROGRESS");
+  assert.deepEqual(await cache.getCachedTournamentStructure!("cup"), [{ status: "ACTIVE" }]);
+  status = "COMPLETED";
+  assert.equal((await cache.getCachedTournamentRules!("cup")).status, "IN_PROGRESS");
+  cache.invalidateTournamentRules!("cup");
+  assert.equal((await cache.getCachedTournamentRules!("cup")).status, "COMPLETED");
 });

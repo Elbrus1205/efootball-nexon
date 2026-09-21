@@ -15,6 +15,10 @@ const CACHE_TTL_SECONDS = 60 * 60;
 // unavailable to one-off database maintenance scripts.
 const CACHE_KEY_VERSION = "v5";
 
+function tournamentRedisKey(tournamentId: string, slice: "rules" | "participants" | "schedule" | "structure") {
+  return redisKey(`tournament:${tournamentId}:${slice}:${CACHE_KEY_VERSION}`);
+}
+
 export function tournamentRulesTag(tournamentId: string) {
   return `tournament-rules:${tournamentId}`;
 }
@@ -218,48 +222,48 @@ export function getCachedTournamentRules(tournamentId: string) {
     revalidate: CACHE_TTL_SECONDS,
     tags: [tournamentRulesTag(tournamentId)],
   });
-  return getOrSetRedisJson(redisKey(`tournament:${tournamentId}:rules`), () => load(tournamentId), 60 * 60);
+  return getOrSetRedisJson(tournamentRedisKey(tournamentId, "rules"), () => load(tournamentId), 60 * 60);
 }
 export function getCachedTournamentParticipants(tournamentId: string) {
   const load = unstable_cache(loadParticipantsSlice, ["tournament-participants", CACHE_KEY_VERSION], {
     revalidate: CACHE_TTL_SECONDS,
     tags: [tournamentParticipantsTag(tournamentId)],
   });
-  return getOrSetRedisJson(redisKey(`tournament:${tournamentId}:participants`), () => load(tournamentId), 60 * 60);
+  return getOrSetRedisJson(tournamentRedisKey(tournamentId, "participants"), () => load(tournamentId), 60 * 60);
 }
 export function getCachedTournamentSchedule(tournamentId: string) {
   const load = unstable_cache(loadScheduleSlice, ["tournament-schedule", CACHE_KEY_VERSION], {
     revalidate: CACHE_TTL_SECONDS,
     tags: [tournamentScheduleTag(tournamentId)],
   });
-  return getOrSetRedisJson(redisKey(`tournament:${tournamentId}:schedule`), () => load(tournamentId), 20);
+  return getOrSetRedisJson(tournamentRedisKey(tournamentId, "schedule"), () => load(tournamentId), 20);
 }
 export function getCachedTournamentStructure(tournamentId: string) {
   const load = unstable_cache(loadStructureSlice, ["tournament-structure", CACHE_KEY_VERSION], {
     revalidate: CACHE_TTL_SECONDS,
     tags: [tournamentStructureTag(tournamentId)],
   });
-  return getOrSetRedisJson(redisKey(`tournament:${tournamentId}:structure`), () => load(tournamentId), 60 * 60);
+  return getOrSetRedisJson(tournamentRedisKey(tournamentId, "structure"), () => load(tournamentId), 60 * 60);
 }
 
 // --- Invalidation helpers (call after a successful write) ---
 
 export function invalidateTournamentRules(tournamentId: string) {
   revalidateTag(tournamentRulesTag(tournamentId));
-  void deleteRedisKey(redisKey(`tournament:${tournamentId}:rules`));
+  void deleteRedisKey(tournamentRedisKey(tournamentId, "rules"));
 }
 export function invalidateTournamentParticipants(tournamentId: string) {
   revalidateTag(tournamentParticipantsTag(tournamentId));
-  void deleteRedisKey(redisKey(`tournament:${tournamentId}:participants`));
+  void deleteRedisKey(tournamentRedisKey(tournamentId, "participants"));
 }
 export function invalidateTournamentSchedule(tournamentId: string) {
   revalidateTag(tournamentScheduleTag(tournamentId));
-  void deleteRedisKey(redisKey(`tournament:${tournamentId}:schedule`));
+  void deleteRedisKey(tournamentRedisKey(tournamentId, "schedule"));
   void deleteRedisKeysByPattern(`${redisKey("matches:mine:")}*`);
 }
 export function invalidateTournamentStructure(tournamentId: string) {
   revalidateTag(tournamentStructureTag(tournamentId));
-  void deleteRedisKey(redisKey(`tournament:${tournamentId}:structure`));
+  void deleteRedisKey(tournamentRedisKey(tournamentId, "structure"));
 }
 
 // Busts all four domains at once — for create/delete/regenerate/reset/start
