@@ -66,6 +66,7 @@ export default async function DashboardPage(
       achievements={achievements}
       reliability={reliability}
       podiumHistory={podiumHistory}
+      headToHeadHistory={null}
       basePath="/dashboard"
     />
   );

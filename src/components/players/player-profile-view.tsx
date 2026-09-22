@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/card";
 import { PlayerCareerStatsPanel } from "@/components/players/player-career-stats";
 import { PlayerSocialLinks } from "@/components/players/player-social-links";
 import { PlayerPodiumHistoryPanel } from "@/components/players/player-podium-history";
+import { PlayerHeadToHeadPanel } from "@/components/players/player-head-to-head";
+import type { PlayerHeadToHeadHistory } from "@/lib/services/player-head-to-head";
 import type { PlayerPodiumHistory } from "@/lib/services/player-podium";
 import { ProfileStatusBadge } from "@/components/profile/profile-status-badge";
 import { StatsPeriodSwitcher } from "@/components/players/stats-period-switcher";
@@ -61,6 +63,7 @@ type PlayerProfileViewProps = {
   reliability: ReliabilitySummary | null;
   basePath: string;
   podiumHistory: PlayerPodiumHistory;
+  headToHeadHistory: PlayerHeadToHeadHistory | null;
 };
 
 function AchievementShortcut({ achievements, href }: { achievements: AchievementGroupProgress[]; href: string }) {
@@ -110,7 +113,7 @@ function ReliabilityValue({ reliability }: { reliability: ReliabilitySummary | n
 }
 
 export function PlayerProfileView({
-  user, clubs, seasons, selectedSeason, rating, ratingPlace, careerStats, achievements, reliability, basePath, podiumHistory,
+  user, clubs, seasons, selectedSeason, rating, ratingPlace, careerStats, achievements, reliability, basePath, podiumHistory, headToHeadHistory,
 }: PlayerProfileViewProps) {
   const displayName = getPlayerDisplayName(user);
   const favoriteClub = clubs.find((club) => club.slug === user.favoriteTeam || club.name === user.favoriteTeam) ?? null;
@@ -206,6 +209,7 @@ export function PlayerProfileView({
             periodLabel={periodLabel}
             periodControl={<StatsPeriodSwitcher basePath={basePath} seasons={seasons} selectedSeasonId={selectedSeason?.id ?? null} />}
           />
+          {headToHeadHistory ? <PlayerHeadToHeadPanel history={headToHeadHistory} basePath={basePath} seasonId={selectedSeason?.id} opponentName={displayName} /> : null}
           <PlayerPodiumHistoryPanel history={podiumHistory} basePath={basePath} seasonId={selectedSeason?.id} />
         </div>
       </div>
