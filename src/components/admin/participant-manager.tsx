@@ -152,13 +152,13 @@ export function ParticipantManager({
   );
   const availableAddClubs = clubs.filter((club) => !takenClubSlugs.has(club.slug));
 
-  const searchUsers = useCallback(async (query: string, scope: "general" | "roster" = "general") => {
+  const searchUsers = useCallback(async (query: string, scope: "general" | "roster" | "replace" = "general", targetRegistrationId?: string) => {
     const normalized = normalizeSearch(query);
     if (normalized.length < 2) return [];
 
     const response = await fetch(
       `/api/admin/tournaments/${tournamentId}/available-users?q=${encodeURIComponent(normalized)}${
-        scope === "roster" ? "&scope=roster" : ""
+        scope === "roster" ? "&scope=roster" : scope === "replace" ? `&scope=replace&targetRegistrationId=${encodeURIComponent(targetRegistrationId ?? "")}` : ""
       }`,
     );
     if (!response.ok) return [];
@@ -206,8 +206,9 @@ export function ParticipantManager({
 
     let cancelled = false;
     const timer = window.setTimeout(() => {
-      const scope = openReplacementTargetId.startsWith("member:") || openReplacementTargetId.startsWith("slot:") ? "roster" : "general";
-      searchUsers(normalized, scope).then((items) => {
+      const isRosterReplacement = openReplacementTargetId.startsWith("member:") || openReplacementTargetId.startsWith("slot:");
+      const scope = isRosterReplacement ? "roster" : "replace";
+      searchUsers(normalized, scope, isRosterReplacement ? undefined : openReplacementTargetId).then((items) => {
         if (!cancelled) {
           setReplacementOptionsByParticipant((current) => ({ ...current, [openReplacementTargetId]: items }));
         }

@@ -3,6 +3,7 @@ import { ParticipantStatus, TeamInviteStatus } from "@prisma/client";
 import { assertCanManageTournament } from "@/lib/admin-tournament-access";
 import { requirePermission } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { canReuseActiveParticipant } from "@/lib/tournaments/participant-reuse";
 
 function normalizeQuery(value: string | null) {
   return value?.trim().replace(/^@/, "") ?? "";
@@ -16,6 +17,8 @@ export async function GET(request: Request, props: { params: Promise<{ id: strin
   const { searchParams } = new URL(request.url);
   const query = normalizeQuery(searchParams.get("q"));
   const rosterScope = searchParams.get("scope") === "roster";
+  const replacementScope = searchParams.get("scope") === "replace";
+  const targetRegistrationId = searchParams.get("targetRegistrationId");
 
   if (query.length < 2) {
     return NextResponse.json({ users: [] });
@@ -24,7 +27,15 @@ export async function GET(request: Request, props: { params: Promise<{ id: strin
   const [tournamentParticipants, rosterMembers] = await Promise.all([
     db.tournamentRegistration.findMany({
       where: { tournamentId: params.id, status: { not: ParticipantStatus.REMOVED } },
-      select: { userId: true },
+      select: {
+        id: true,
+        userId: true,
+        tournament: { select: { participantMode: true } },
+        rosterMembers: {
+          where: { status: { in: [TeamInviteStatus.PENDING, TeamInviteStatus.ACCEPTED] } },
+          select: { userId: true },
+        },
+      },
     }),
     db.tournamentRegistrationMember.findMany({
       where: {
@@ -36,10 +47,30 @@ export async function GET(request: Request, props: { params: Promise<{ id: strin
     }),
   ]);
 
+  const reusableActiveUserIds = new Set(
+    replacementScope && targetRegistrationId
+      ? tournamentParticipants
+        .filter((participant) => canReuseActiveParticipant({
+          registrationId: participant.id,
+          userId: participant.userId,
+          participantMode: participant.tournament.participantMode as "SINGLE" | "COOP" | "TEAM",
+          rosterMemberUserIds: participant.rosterMembers.map((member) => member.userId),
+        }, targetRegistrationId))
+        .map((participant) => participant.userId)
+      : [],
+  );
   const excludedUserIds = Array.from(
     new Set([
-      ...(rosterScope ? [] : tournamentParticipants.map((participant) => participant.userId)),
-      ...rosterMembers.map((member) => member.userId),
+      ...(rosterScope
+        ? []
+        : replacementScope
+          ? tournamentParticipants
+            .filter((participant) => !reusableActiveUserIds.has(participant.userId) || participant.id === targetRegistrationId)
+            .map((participant) => participant.userId)
+          : tournamentParticipants.map((participant) => participant.userId)),
+      ...rosterMembers
+        .filter((member) => !replacementScope || !reusableActiveUserIds.has(member.userId))
+        .map((member) => member.userId),
     ]),
   );
   const users = await db.user.findMany({

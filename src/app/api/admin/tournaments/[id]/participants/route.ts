@@ -374,18 +374,6 @@ async function handleParticipantMutation(request: Request, params: { id: string 
       );
     }
 
-    const duplicate = await db.tournamentRegistration.findFirst({
-      where: {
-        tournamentId: params.id,
-        userId: replacementUserId,
-        status: { not: ParticipantStatus.REMOVED },
-      },
-    });
-
-    if (duplicate) {
-      return NextResponse.json({ error: "Этот игрок уже есть в турнире." }, { status: 400 });
-    }
-
     const effectiveParticipantRound =
       (before.tournament?.participantMode ?? TournamentParticipantMode.SINGLE) === TournamentParticipantMode.SINGLE
         ? await getEffectiveParticipantRound(params.id)
@@ -409,12 +397,65 @@ async function handleParticipantMutation(request: Request, params: { id: string 
           tournamentId: params.id,
           id: { not: lockedBefore.id },
           status: { not: ParticipantStatus.REMOVED },
-          OR: [{ userId: replacementUserId }, { clubSlug: clubAssignment.clubSlug }],
+          clubSlug: clubAssignment.clubSlug,
         },
-        select: { userId: true, clubSlug: true },
+        select: { clubSlug: true },
       });
-      if (lockedConflict?.userId === replacementUserId) throw new Error("REPLACEMENT_ALREADY_REGISTERED");
       if (lockedConflict?.clubSlug === clubAssignment.clubSlug) throw new Error("CLUB_ALREADY_TAKEN");
+
+      const duplicateRegistration = await tx.tournamentRegistration.findFirst({
+        where: {
+          tournamentId: params.id,
+          id: { not: lockedBefore.id },
+          userId: replacementUserId,
+          status: { not: ParticipantStatus.REMOVED },
+        },
+        select: {
+          id: true,
+          notes: true,
+          groupId: true,
+          rosterMembers: {
+            where: { status: { in: [TeamInviteStatus.PENDING, TeamInviteStatus.ACCEPTED] } },
+            select: { userId: true },
+          },
+        },
+      });
+      let absorbedRegistrationId: string | null = null;
+      let absorbedGroupId: string | null = null;
+      let absorbedMatches: Array<{
+        id: string;
+        participant1EntryId: string | null;
+        participant2EntryId: string | null;
+        status: MatchStatus;
+        player1Score: number | null;
+        player2Score: number | null;
+        winnerId: string | null;
+      }> = [];
+
+      if (duplicateRegistration) {
+        if (before.tournament.participantMode !== TournamentParticipantMode.SINGLE || duplicateRegistration.rosterMembers.some((member) => member.userId !== replacementUserId)) {
+          throw new Error("REPLACEMENT_ALREADY_REGISTERED");
+        }
+
+        absorbedMatches = await tx.match.findMany({
+          where: {
+            tournamentId: params.id,
+            OR: [{ participant1EntryId: duplicateRegistration.id }, { participant2EntryId: duplicateRegistration.id }],
+          },
+          select: { id: true, participant1EntryId: true, participant2EntryId: true, status: true, player1Score: true, player2Score: true, winnerId: true },
+        });
+        const blockedAbsorbedMatch = absorbedMatches.find((match) =>
+          !replaceableMatchStatuses.includes(match.status) &&
+          match.status !== MatchStatus.CANCELLED &&
+          match.player1Score === null &&
+          match.player2Score === null &&
+          match.winnerId === null,
+        );
+        if (blockedAbsorbedMatch) throw new Error("REPLACEMENT_ALREADY_REGISTERED");
+        await snapshotRegistrationMatchesBeforeReplacement(duplicateRegistration.id, tx);
+        absorbedRegistrationId = duplicateRegistration.id;
+        absorbedGroupId = duplicateRegistration.groupId;
+      }
 
       const replaceableMatches = await tx.match.findMany({
         where: {
@@ -451,6 +492,24 @@ async function handleParticipantMutation(request: Request, params: { id: string 
           notes: removedNotes,
         },
       });
+
+      if (duplicateRegistration) {
+        const duplicateRemovedNotes = [
+          duplicateRegistration.notes?.trim(),
+          `Перенесён в заявку ${lockedBefore.id} ${replacedAt.toISOString()}.`,
+        ]
+          .filter(Boolean)
+          .join("\n");
+        await tx.tournamentRegistration.update({
+          where: { id: duplicateRegistration.id },
+          data: {
+            status: ParticipantStatus.REMOVED,
+            seed: null,
+            stageSeed: null,
+            notes: duplicateRemovedNotes,
+          },
+        });
+      }
 
       const registration = await tx.tournamentRegistration.create({
         data: {
@@ -536,10 +595,26 @@ async function handleParticipantMutation(request: Request, params: { id: string 
         });
       }
 
-      if (replaceableMatches.length) {
+      const absorbedReplaceableMatchIds = absorbedMatches
+        .filter((match) => replaceableMatchStatuses.includes(match.status) && match.player1Score === null && match.player2Score === null && match.winnerId === null)
+        .map((match) => match.id);
+      if (absorbedReplaceableMatchIds.length) {
+        const absorbedId = duplicateRegistration?.id;
+        if (!absorbedId) throw new Error("REPLACEMENT_ALREADY_REGISTERED");
+        await tx.match.updateMany({
+          where: { id: { in: absorbedReplaceableMatchIds }, participant1EntryId: absorbedId },
+          data: { participant1EntryId: registration.id, player1Id: registration.userId },
+        });
+        await tx.match.updateMany({
+          where: { id: { in: absorbedReplaceableMatchIds }, participant2EntryId: absorbedId },
+          data: { participant2EntryId: registration.id, player2Id: registration.userId },
+        });
+      }
+
+      if (replaceableMatches.length || absorbedReplaceableMatchIds.length) {
         await tx.match.updateMany({
           where: {
-            id: { in: replaceableMatches.map((match) => match.id) },
+            id: { in: [...replaceableMatches.map((match) => match.id), ...absorbedReplaceableMatchIds] },
             status: MatchStatus.PENDING,
             player1Id: { not: null },
             player2Id: { not: null },
@@ -551,7 +626,9 @@ async function handleParticipantMutation(request: Request, params: { id: string 
       return {
         before: lockedBefore,
         registration,
-        replacedMatchesCount: replaceableMatches.length,
+        absorbedRegistrationId,
+        absorbedGroupId,
+        replacedMatchesCount: replaceableMatches.length + absorbedReplaceableMatchIds.length,
       };
       });
     } catch (error) {
@@ -562,7 +639,7 @@ async function handleParticipantMutation(request: Request, params: { id: string 
         return NextResponse.json({ error: "Выберите другого игрока для замены." }, { status: 409 });
       }
       if (error instanceof Error && error.message === "REPLACEMENT_ALREADY_REGISTERED") {
-        return NextResponse.json({ error: "Этот игрок уже есть в турнире." }, { status: 409 });
+        return NextResponse.json({ error: "Игрок уже участвует в турнире и его нельзя перенести: у него есть активный состав или незавершённый матч." }, { status: 409 });
       }
       if (error instanceof Error && error.message === "CLUB_ALREADY_TAKEN") {
         return NextResponse.json({ error: "Этот клуб уже занят другим участником." }, { status: 409 });
@@ -574,6 +651,9 @@ async function handleParticipantMutation(request: Request, params: { id: string 
     }
 
     if (replacementResult.before.groupId) {
+      await recalculateGroupStandings(params.id);
+    }
+    if (replacementResult.absorbedGroupId && replacementResult.absorbedGroupId !== replacementResult.before.groupId) {
       await recalculateGroupStandings(params.id);
     }
 
@@ -607,6 +687,7 @@ async function handleParticipantMutation(request: Request, params: { id: string 
       beforeJson: replacementResult.before,
       afterJson: {
         replacementRegistration: replacementResult.registration,
+        absorbedRegistrationId: replacementResult.absorbedRegistrationId,
         replacedMatchesCount: replacementResult.replacedMatchesCount,
       },
     });
