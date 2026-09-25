@@ -13,7 +13,7 @@ const CACHE_TTL_SECONDS = 60 * 60;
 // namespace guarantees that a persistent Next Data Cache cannot serve the
 // pre-repair empty tournament slices while the regular tag invalidation is
 // unavailable to one-off database maintenance scripts.
-const CACHE_KEY_VERSION = "v5";
+const CACHE_KEY_VERSION = "v6";
 
 function tournamentRedisKey(tournamentId: string, slice: "rules" | "participants" | "schedule" | "structure") {
   return redisKey(`tournament:${tournamentId}:${slice}:${CACHE_KEY_VERSION}`);
@@ -202,7 +202,16 @@ async function loadStructureSlice(tournamentId: string) {
       pointsForLoss: true,
       roundsCount: true,
       groups: {
-        select: { id: true, name: true, orderIndex: true, capacity: true },
+        select: {
+          id: true,
+          name: true,
+          orderIndex: true,
+          capacity: true,
+          stageEntries: {
+            select: { registrationId: true },
+            orderBy: { createdAt: "asc" },
+          },
+        },
         orderBy: { orderIndex: "asc" },
       },
       bracket: { select: { id: true } },

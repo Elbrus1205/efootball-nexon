@@ -6,6 +6,7 @@ import {
   getTournamentTabs,
   isTournamentTabValue,
   participantModeLabel,
+  participantsForStageGroup,
   prioritizeCurrentGroup,
   shouldShowOpenMyMatchesAction,
   stagePresentationState,
@@ -65,6 +66,24 @@ test("shows the viewer group first without mutating the official group order", (
   assert.deepEqual(prioritizeCurrentGroup(groups, "b").map((group) => group.id), ["b", "a", "c"]);
   assert.deepEqual(groups.map((group) => group.id), ["a", "b", "c"]);
   assert.deepEqual(prioritizeCurrentGroup(groups, "unknown").map((group) => group.id), ["a", "b", "c"]);
+});
+
+test("keeps a completed national group full after its teams advance to another stage", () => {
+  const historical = participant("historical", "Старый игрок", {
+    status: ParticipantStatus.REMOVED,
+    notes: "replacementRegistrationId:replacement",
+  });
+  const replacement = participant("replacement", "Новый игрок");
+  const steady = participant("steady", "Оставшийся игрок");
+
+  const groupMembers = participantsForStageGroup(
+    [historical, replacement, steady].map((entry) => ({ ...entry, groupId: entry.id === "replacement" ? "europe" : "national" })),
+    ["historical", "steady"],
+  );
+
+  assert.deepEqual(groupMembers.map((entry) => entry.id), ["historical", "replacement", "steady"]);
+  const rows = buildLeagueTable(groupMembers, [], clubs);
+  assert.deepEqual(rows.map((row) => row.playerName), ["Новый игрок", "Оставшийся игрок"]);
 });
 
 test("calculates standings and preserves deterministic tie ordering", () => {

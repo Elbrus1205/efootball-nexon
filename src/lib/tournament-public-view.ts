@@ -70,6 +70,37 @@ export function prioritizeCurrentGroup<T extends { id: string }>(groups: readonl
   return [currentGroup, ...groups.filter((group) => group.id !== currentGroupId)];
 }
 
+/**
+ * Stage entries keep a historical group's participants after a registration
+ * advances to another stage and its current group changes. Include the full
+ * replacement chain so public standings can show the current player for the
+ * historical club while still resolving old match entry ids.
+ */
+export function participantsForStageGroup<T extends { id: string; status?: ParticipantStatus; notes?: string | null }>(
+  participants: readonly T[],
+  stageEntryIds: readonly string[],
+) {
+  const byId = new Map(participants.map((participant) => [participant.id, participant]));
+  const selected = new Set<string>();
+
+  const addChain = (registrationId: string) => {
+    let currentId: string | null = registrationId;
+    while (currentId && !selected.has(currentId)) {
+      selected.add(currentId);
+      const current = byId.get(currentId);
+      currentId = current?.status === ParticipantStatus.REMOVED
+        ? getReplacementRegistrationId(current.notes)
+        : null;
+    }
+  };
+
+  stageEntryIds.forEach(addChain);
+  return [...selected].flatMap((id) => {
+    const participant = byId.get(id);
+    return participant ? [participant] : [];
+  });
+}
+
 export function isTournamentTabValue(value?: string | null): value is TournamentTabValue {
   return Boolean(value && (tournamentTabValues as readonly string[]).includes(value));
 }

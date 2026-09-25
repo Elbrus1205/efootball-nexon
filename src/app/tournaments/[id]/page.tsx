@@ -53,6 +53,7 @@ import {
   buildLeagueTable as buildPublicLeagueTable,
   getTournamentTabs,
   isTournamentTabValue as isPublicTournamentTabValue,
+  participantsForStageGroup,
   participantModeLabel as publicParticipantModeLabel,
   prioritizeCurrentGroup,
   stagePresentationState,
@@ -711,19 +712,6 @@ export default async function TournamentDetailsPage(
     tournament.status !== TournamentStatus.COMPLETED;
 
   const leagueStage = tournament.stages.find((stage) => stage.type === StageType.LEAGUE);
-  const participantsByGroupId = new Map<string, typeof tournament.participants>();
-
-  for (const participant of tournament.participants) {
-    if (!participant.groupId) continue;
-    const bucket = participantsByGroupId.get(participant.groupId) ?? [];
-    bucket.push(participant);
-    participantsByGroupId.set(participant.groupId, bucket);
-  }
-
-  for (const bucket of Array.from(participantsByGroupId.values())) {
-    bucket.sort((a, b) => (a.seed ?? 9999) - (b.seed ?? 9999));
-  }
-
   // Copy before sort: tournament.matches is the shared cached array (mutating it in place would corrupt the cache).
   const visibleMatches = [...activePublicMatches].sort(
     (a, b) =>
@@ -1062,7 +1050,10 @@ export default async function TournamentDetailsPage(
                     <div key={stage.id} className="space-y-4">
                       {orderedGroups.map((group) => {
                     const groupMatches = activePublicMatches.filter((match) => match.groupId === group.id);
-                    const groupMembers = participantsByGroupId.get(group.id) ?? [];
+                    const groupMembers = participantsForStageGroup(
+                      tournament.participants,
+                      group.stageEntries.map((entry) => entry.registrationId),
+                    );
                     const activeMembers = groupMembers.filter((member) => member.status === ParticipantStatus.CONFIRMED);
                     const groupRows = buildPublicLeagueTable(groupMembers, groupMatches, clubsBySlug, stage).map((row) => ({ ...row, isCurrentTeam: row.id === currentUserId }));
                     const groupCapacity = group.capacity ?? stage.participantsPerGroup ?? 0;
