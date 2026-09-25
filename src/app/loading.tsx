@@ -1,12 +1,12 @@
 import styles from "./loading.module.css";
+import { SiteLogoMark } from "@/components/brand/site-logo-mark";
 
 export default function Loading() {
   return (
     <div className={styles.screen} role="status" aria-live="polite" aria-busy="true">
       <div className={styles.panel}>
-        <div className={styles.mark} aria-hidden="true">
-          <span>eF</span>
-          <strong>N</strong>
+        <div className={styles.logoWrap} aria-hidden="true">
+          <SiteLogoMark className={styles.logo} />
         </div>
         <div className={styles.copy}>
           <p>Подождите</p>

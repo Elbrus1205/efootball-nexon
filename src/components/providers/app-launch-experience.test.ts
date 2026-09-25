@@ -66,7 +66,7 @@ test("full-screen launch animation belongs only to the installed app", () => {
   assert.match(routeLoadingStyles, /safe-area-inset/);
   assert.match(styles, /\.splash\s*\{[\s\S]*?display:\s*none/);
   assert.match(styles, /@media\s*\(display-mode:\s*standalone\)[\s\S]*?\.splash\s*\{\s*display:\s*grid/);
-  assert.match(styles, /background-color:\s*#080d16/);
+  assert.match(styles, /background-color:\s*#0d1110/);
 });
 
 test("home page offers the trusted browser install flow instead of a raw APK download", () => {
