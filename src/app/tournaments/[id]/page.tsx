@@ -377,7 +377,6 @@ function StandingsTable({
                   key={row.id}
                   className={cn(
                     visualStyle?.rowClass ?? defaultRowHighlight(index),
-                    isCurrentTeam && "font-medium",
                   )}
                   title={visualStyle ? highlight?.label ?? "Вылет" : undefined}
                 >
@@ -385,7 +384,6 @@ function StandingsTable({
                     <span
                       className={cn(
                         visualStyle?.badgeClass ?? defaultRankBadge(index),
-                        isCurrentTeam && "border border-primary/45 bg-primary/15 text-primary shadow-[0_0_0_2px_rgba(33,241,168,0.12)]",
                       )}
                     >
                       {displayRank}
@@ -400,6 +398,7 @@ function StandingsTable({
         playerName={row.playerName}
         isActive={row.isActive}
         inactiveFromRound={row.inactiveFromRound}
+        isCurrent={isCurrentTeam}
         compact
       />
                     </div>
@@ -1057,7 +1056,6 @@ export default async function TournamentDetailsPage(
                     const activeMembers = groupMembers.filter((member) => member.status === ParticipantStatus.CONFIRMED);
                     const groupRows = buildPublicLeagueTable(groupMembers, groupMatches, clubsBySlug, stage).map((row) => ({ ...row, isCurrentTeam: row.id === currentUserId }));
                     const groupCapacity = group.capacity ?? stage.participantsPerGroup ?? 0;
-                    const isCurrentGroup = group.id === currentGroupId;
                     const emptySlots = showEmptyStructureSlots
                       ? Array.from({ length: Math.max(groupCapacity - activeMembers.length, 0) }, (_, index) => ({ id: `${group.id}-slot-${index + 1}`, position: activeMembers.length + index + 1 }))
                       : [];
@@ -1066,17 +1064,11 @@ export default async function TournamentDetailsPage(
                         key={group.id}
                         className={cn(
                           "min-w-0 overflow-hidden p-0",
-                          isCurrentGroup && "border-primary/30 bg-primary/[0.05] shadow-[0_0_0_1px_rgba(33,241,168,0.1)]",
                         )}
                       >
                         <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5 sm:py-4">
                           <div className="flex min-w-0 items-center gap-2">
                             <h3 className="truncate font-semibold text-white">{group.name}</h3>
-                            {isCurrentGroup ? (
-                              <span className="shrink-0 rounded-full border border-primary/25 bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary">
-                                Моя группа
-                              </span>
-                            ) : null}
                           </div>
                           <span className="text-xs text-zinc-500">{groupRows.length} / {groupCapacity || "—"}</span>
                         </div>

@@ -14,6 +14,7 @@ type ClubPlayerLineProps = {
   stack?: boolean;
   showPlayerName?: boolean;
   isActive?: boolean;
+  isCurrent?: boolean;
   inactiveFromRound?: number | null;
 };
 
@@ -32,6 +33,7 @@ export function ClubPlayerLine({
   stack = false,
   showPlayerName = true,
   isActive = true,
+  isCurrent = false,
   inactiveFromRound = null,
 }: ClubPlayerLineProps) {
   const centered = align === "center";
@@ -49,17 +51,17 @@ export function ClubPlayerLine({
           </div>
         ) : null}
         <div className="min-w-0 max-w-full">
-          <div className={cn("max-w-full break-words text-xs font-medium leading-[1.2] line-clamp-2", isActive ? "text-white" : "text-rose-200")}>{clubName ?? "Клуб не назначен"}</div>
+          <div className={cn("max-w-full break-words text-xs font-medium leading-[1.2] line-clamp-2", isCurrent ? "text-primary" : isActive ? "text-white" : "text-rose-200")}>{clubName ?? "Клуб не назначен"}</div>
           {showPlayerName ? (
             playerId ? (
               <Link
                 href={`/players/${playerId}`}
-                className={cn("mt-0.5 block max-w-full truncate text-[10px] leading-tight underline-offset-4 transition hover:underline", isActive ? "text-zinc-400 hover:text-primary" : "text-rose-300/80 hover:text-rose-100")}
+                className={cn("mt-0.5 block max-w-full truncate text-[10px] leading-tight underline-offset-4 transition hover:underline", isCurrent ? "text-primary/80 hover:text-primary" : isActive ? "text-zinc-400 hover:text-primary" : "text-rose-300/80 hover:text-rose-100")}
               >
                 {playerName}
               </Link>
             ) : (
-              <div className={cn("mt-0.5 max-w-full truncate text-[10px] leading-tight", isActive ? "text-zinc-400" : "text-rose-300/80")}>{playerName}</div>
+              <div className={cn("mt-0.5 max-w-full truncate text-[10px] leading-tight", isCurrent ? "text-primary/80" : isActive ? "text-zinc-400" : "text-rose-300/80")}>{playerName}</div>
             )
           ) : null}
           {!isActive ? (
@@ -95,17 +97,17 @@ export function ClubPlayerLine({
       ) : null}
 
       <div className={`min-w-0 flex-1 ${wrapperClass}`}>
-        <div className={cn("max-w-full font-medium leading-[1.25] line-clamp-2", clubFontClass, isActive ? "text-white" : "text-rose-200")}>{rawName}</div>
+        <div className={cn("max-w-full font-medium leading-[1.25] line-clamp-2", clubFontClass, isCurrent ? "text-primary" : isActive ? "text-white" : "text-rose-200")}>{rawName}</div>
         {showPlayerName ? (
           playerId ? (
             <Link
               href={`/players/${playerId}`}
-              className={cn("mt-0.5 block max-w-full truncate text-xs leading-tight underline-offset-4 transition hover:underline", isActive ? "text-zinc-400 hover:text-primary" : "text-rose-300/80 hover:text-rose-100")}
+              className={cn("mt-0.5 block max-w-full truncate text-xs leading-tight underline-offset-4 transition hover:underline", isCurrent ? "text-primary/80 hover:text-primary" : isActive ? "text-zinc-400 hover:text-primary" : "text-rose-300/80 hover:text-rose-100")}
             >
               {playerName}
             </Link>
           ) : (
-            <div className={cn("mt-0.5 max-w-full truncate text-xs leading-tight", isActive ? "text-zinc-400" : "text-rose-300/80")}>{playerName}</div>
+            <div className={cn("mt-0.5 max-w-full truncate text-xs leading-tight", isCurrent ? "text-primary/80" : isActive ? "text-zinc-400" : "text-rose-300/80")}>{playerName}</div>
           )
         ) : null}
         {!isActive ? (
