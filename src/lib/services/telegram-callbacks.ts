@@ -193,7 +193,6 @@ export async function createCallbackToken(params: {
   action: string;
   matchId?: string;
   tournamentId?: string;
-  shopOrderId?: string;
   payload?: Prisma.InputJsonValue;
   ttlMs?: number;
 }) {
@@ -205,7 +204,6 @@ export async function createCallbackToken(params: {
       action: params.action,
       matchId: params.matchId ?? null,
       tournamentId: params.tournamentId ?? null,
-      shopOrderId: params.shopOrderId ?? null,
       payload: params.payload,
       expiresAt: new Date(Date.now() + (params.ttlMs ?? TOKEN_TTL_MS)),
     },
@@ -332,13 +330,6 @@ async function consumeTokenAction(userId: string, token: string): Promise<Callba
 
   if (record.action === TOKEN_ACTIONS.confirmScore) {
     return confirmScoreFromToken(userId, record);
-  }
-
-  if (record.action.startsWith("SHOP_") && record.shopOrderId) {
-    const { runShopTokenAction } = await import("@/lib/shop/order-workflow-service");
-    await runShopTokenAction(record.action, record.shopOrderId, userId);
-    const toast = record.action === "SHOP_OPEN_DISPUTE" ? "Жалоба отправлена в поддержку." : "Действие с заказом выполнено.";
-    return { toast, clearKeyboard: true };
   }
 
   return { toast: "Действие принято.", clearKeyboard: true };

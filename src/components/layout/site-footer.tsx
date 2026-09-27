@@ -43,7 +43,6 @@ const socialLinks = [
 
 const navigationLinks = [
   { href: "/tournaments", label: "Турниры" },
-  { href: "/shop", label: "Магазин" },
   { href: "/players", label: "Пользователи" },
   { href: "/ratings", label: "Рейтинги" },
   { href: "/regulations", label: "Регламент" },
@@ -52,7 +51,6 @@ const navigationLinks = [
 ];
 
 const legalLinks = [
-  { href: "/shop/legal/rules", label: "Правила магазина" },
   { href: "/privacy", label: "Политика конфиденциальности" },
   { href: "/terms", label: "Пользовательское соглашение" },
   { href: "/consent", label: "Согласие на обработку данных" },

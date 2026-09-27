@@ -37,43 +37,6 @@ async function main() {
       createdById: admin.id,
     },
   });
-
-  await prisma.shopSettings.upsert({
-    where: { id: "default" },
-    update: {},
-    create: {
-      id: "default",
-      isEnabled: false,
-      showHomeBlock: true,
-      termsVersion: "shop-2026-08-26-beks-konami",
-      updatedById: admin.id,
-    },
-  });
-
-  await Promise.all([
-    prisma.shopCategory.upsert({
-      where: { slug: "in-game-donations" },
-      update: {},
-      create: {
-        slug: "in-game-donations",
-        name: "Внутриигровые донаты",
-        description: "Товары, способ получения которых разрешён правилами игры и платформы.",
-        sortOrder: 10,
-        createdById: admin.id,
-      },
-    }),
-    prisma.shopCategory.upsert({
-      where: { slug: "promotional-donations" },
-      update: {},
-      create: {
-        slug: "promotional-donations",
-        name: "Акционные донаты",
-        description: "Ограниченные по времени предложения без искусственной срочности.",
-        sortOrder: 20,
-        createdById: admin.id,
-      },
-    }),
-  ]);
 }
 
 main()

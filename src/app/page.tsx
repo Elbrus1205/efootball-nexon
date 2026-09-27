@@ -7,15 +7,11 @@ import { MatchStatus, ParticipantStatus, TournamentStatus } from "@prisma/client
 import { AndroidDownload } from "@/components/home/android-download";
 import { HomeCarousel } from "@/components/home/home-carousel";
 import { TopPlayers } from "@/components/home/top-players";
-import { ProductCard } from "@/components/shop/product-card";
 import { Reveal } from "@/components/shared/reveal";
 import { db } from "@/lib/db";
 import { getAndroidDownloadUrl, homeLinks } from "@/lib/home-links";
 import { getArchivedHomeStats, HOME_STATS_CACHE_TAG, parsePrizePoolValue } from "@/lib/home-stats";
-import { getShopSettings } from "@/lib/shop/config";
-import { listShopProducts } from "@/lib/shop/catalog";
 import { formatDate } from "@/lib/utils";
-import shopStyles from "@/components/shop/shop.module.css";
 import s from "./home.module.css";
 
 const activeStatuses = [TournamentStatus.REGISTRATION_OPEN, TournamentStatus.REGISTRATION_CLOSED, TournamentStatus.AWAITING_START, TournamentStatus.IN_PROGRESS];
@@ -44,19 +40,6 @@ const getHomeData = unstable_cache(async () => {
   };
 }, ["home-page-data-v6"], { revalidate: 60, tags: [HOME_STATS_CACHE_TAG] });
 
-const getHomeShopData = unstable_cache(async () => {
-  try {
-    const settings = await getShopSettings();
-    const [products] = await Promise.all([
-      settings.isEnabled && settings.showHomeBlock ? listShopProducts({ popularOnly: true, sort: "popular", pageSize: 3 }) : Promise.resolve({ items: [] }),
-    ]);
-    return { items: products.items, currency: settings.currency };
-  } catch (error) {
-    console.warn("Home shop block is unavailable until the shop migration is applied.", error);
-    return null;
-  }
-}, ["home-shop-data-v3"], { revalidate: 120 });
-
 function tournamentCard(tournament: Awaited<ReturnType<typeof getHomeData>>["tournaments"][number], index: number) {
   const percentage = Math.min(100, Math.round((tournament.participantsCount / Math.max(1, tournament.maxParticipants)) * 100));
   return <Link href={`/tournaments/${tournament.id}`} className={s.eventCard} key={tournament.id}>
@@ -82,7 +65,7 @@ function showcaseDate(tournament: Awaited<ReturnType<typeof getHomeData>>["tourn
 }
 
 export default async function HomePage() {
-  const [data, shop] = await Promise.all([getHomeData(), getHomeShopData()]);
+  const data = await getHomeData();
   const featuredTournament = data.tournaments[0];
   const featuredDate = showcaseDate(featuredTournament);
   const stats = [{ value: data.matchesCount, label: "матчей сыграно" }, { value: data.playersCount, label: "игроков в системе" }, { value: data.tournamentsCount, label: "турниров завершено" }, { value: data.awardedPrizePool, label: "выдано призами", suffix: " ₽" }];
@@ -116,8 +99,6 @@ export default async function HomePage() {
     <section className={`${s.section} ${s.rankSection}`} aria-labelledby="rank-title"><div className={s.shell}><div className={s.rankLayout}><Reveal><div className={s.rankIntro}><p className={s.eyebrow}><span /> Таблица игроков</p><h2 id="rank-title">Имя в игре.<br /><em>Место в истории.</em></h2><p className={s.sectionLead}>Рейтинг строится на реальных подтверждённых матчах — без ручных списков и случайных очков.</p><Link href="/ratings" className={s.headerLink}>Весь рейтинг <ArrowUpRight /></Link></div></Reveal><Reveal className={s.rankBoard}><div className={s.boardHeader}><span>TOP PLAYERS</span><span>SEASON / 2026</span></div><Suspense fallback={<div className={s.emptyInline}>Загружаем рейтинг…</div>}><TopPlayers /></Suspense></Reveal></div></div></section>
 
     <section className={`${s.section} ${s.appSection}`} aria-labelledby="app-title"><div className={s.shell}><div className={s.appPanel}><div className={s.appCopy}><p className={s.eyebrow}><span /> Android experience</p><h2 id="app-title">Турниры<br /><em>всегда под рукой.</em></h2><p>Следи за матчами, расписанием и результатами там, где начинается игра.</p><AndroidDownload downloadUrl={getAndroidDownloadUrl()} /></div><div className={s.phone} aria-hidden="true"><div className={s.phoneScreen}><span className={s.phoneNotch} /><div className={s.phoneBrand}>NEXON <small>mobile football</small></div><div className={s.phoneScore}><small>UPCOMING MATCH</small><strong>LIVE</strong><span>TOURNAMENT CENTER</span></div><div className={s.phoneRows}><span /><span /><span /></div></div></div></div></div></section>
-
-    {shop?.items.length ? <section className={s.section} aria-labelledby="shop-title"><div className={s.shell}><div className={s.sectionHeader}><div><p className={s.eyebrow}><span /> Nexon market</p><h2 id="shop-title">Полезное<br /><em>для игры.</em></h2></div><Link href="/shop" className={s.headerLink}>Открыть магазин <ArrowUpRight /></Link></div><div className={shopStyles.grid}>{shop.items.map((product) => <ProductCard key={product.id} product={product} currency={shop.currency} />)}</div></div></section> : null}
 
     <section className={`${s.section} ${s.communitySection}`} aria-labelledby="community-title"><div className={s.shell}><div className={s.communityPanel}><div><p className={s.eyebrow}><span /> Сообщество Nexon</p><h2 id="community-title">Игра продолжается<br /><em>вне поля.</em></h2><p>Анонсы турниров, расписания и новости сезона — в официальном Telegram.</p><Link href={homeLinks.telegram} target="_blank" rel="noreferrer" className={s.primaryButton}>Telegram community <ArrowUpRight /></Link></div><div className={s.communityAside}><MessageCircleMore /><span>OFFICIAL<br />CHANNEL</span><strong>@efootball_nexon</strong></div></div></div></section>
   </div>;

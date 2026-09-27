@@ -13,7 +13,6 @@ import {
   ChevronRight,
   Layers3,
   Megaphone,
-  ShoppingBag,
   SlidersHorizontal,
   ShieldCheck,
   ShieldMinus,
@@ -35,7 +34,6 @@ const items = [
   { href: "/admin/reliability", label: "Надежность", icon: ShieldMinus },
   { href: "/admin/divisions", label: "Дивизион", icon: Layers3 },
   { href: "/admin/broadcasts", label: "Рассылки", icon: Megaphone },
-  { href: "/admin/shop", label: "Магазин", icon: ShoppingBag },
 ];
 
 export function AdminNav({ allowedHrefs }: { allowedHrefs: string[] }) {
