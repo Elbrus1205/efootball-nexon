@@ -86,6 +86,20 @@ test("keeps a completed national group full after its teams advance to another s
   assert.deepEqual(rows.map((row) => row.playerName), ["Новый игрок", "Оставшийся игрок"]);
 });
 
+test("follows legacy transfer notes when resolving a historical group member", () => {
+  const historical = participant("historical", "Old", {
+    status: ParticipantStatus.REMOVED,
+    notes: "\u041f\u0435\u0440\u0435\u043d\u0435\u0441\u0451\u043d \u0432 \u0437\u0430\u044f\u0432\u043a\u0443 replacement",
+  });
+  const replacement = participant("replacement", "LION");
+
+  const groupMembers = participantsForStageGroup([historical, replacement], ["historical"]);
+  const rows = buildLeagueTable(groupMembers, [], clubs);
+
+  assert.deepEqual(groupMembers.map((entry) => entry.id), ["historical", "replacement"]);
+  assert.deepEqual(rows.map((row) => row.playerName), ["LION"]);
+});
+
 test("calculates standings and preserves deterministic tie ordering", () => {
   const rows = buildLeagueTable(
     [participant("a", "Альфа"), participant("b", "Бета"), participant("c", "Вега")],

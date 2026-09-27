@@ -167,7 +167,8 @@ function resolveClubBadgePath(
 }
 
 function getReplacementRegistrationId(notes?: string | null) {
-  return notes?.match(/replacementRegistrationId:([A-Za-z0-9]+)/)?.[1] ?? null;
+  const match = notes?.match(/replacementRegistrationId:([A-Za-z0-9]+)|в (?:состав )?заявк(?:у|и)\s+([A-Za-z0-9]+)/iu);
+  return match?.[1] ?? match?.[2] ?? null;
 }
 
 function resolveReplacementRegistrationId(entryId: string, replacements: Map<string, string>) {
