@@ -8,13 +8,14 @@ import {
 import { resolveEffectiveParticipantRound } from "@/lib/tournaments/effective-participant-round";
 
 const active: InactiveParticipantState = { isActive: true, inactiveFromRound: null };
-const inactiveFromRound12: InactiveParticipantState = { isActive: false, inactiveFromRound: 12 };
+const inactiveFromRound12: InactiveParticipantState = { isActive: false, inactiveFromRound: 12, inactiveSince: new Date("2026-09-13T12:00:00.000Z") };
 
 test("excludes matches from the participant's inactive round for both sides", () => {
-  assert.equal(shouldExcludeMatchFromStatistics(11, inactiveFromRound12, active), false);
-  assert.equal(shouldExcludeMatchFromStatistics(12, inactiveFromRound12, active), true);
-  assert.equal(shouldExcludeMatchFromStatistics(17, active, inactiveFromRound12), true);
-  assert.equal(shouldExcludeMatchFromStatistics(1, active, active, true), true);
+  assert.equal(shouldExcludeMatchFromStatistics(11, inactiveFromRound12, active, new Date("2026-09-13T12:01:00.000Z")), false);
+  assert.equal(shouldExcludeMatchFromStatistics(12, inactiveFromRound12, active, new Date("2026-09-13T12:01:00.000Z")), true);
+  assert.equal(shouldExcludeMatchFromStatistics(12, inactiveFromRound12, active, new Date("2026-09-13T11:59:00.000Z")), false);
+  assert.equal(shouldExcludeMatchFromStatistics(17, active, inactiveFromRound12, new Date("2026-09-13T12:01:00.000Z")), true);
+  assert.equal(shouldExcludeMatchFromStatistics(1, active, active, new Date("2026-09-13T12:01:00.000Z"), true), true);
 });
 
 test("detects inactive direct players and accepted cooperative members", () => {
@@ -34,6 +35,10 @@ test("detects inactive direct players and accepted cooperative members", () => {
   };
 
   assert.equal(isUserInactiveForMatch("inactive-player", 12, sideOne, sideTwo), true);
+  assert.equal(
+    isUserInactiveForMatch("inactive-player", 12, sideOne, sideTwo, new Date("2026-09-13T11:59:00.000Z")),
+    false,
+  );
   assert.equal(isUserInactiveForMatch("inactive-member", 12, { ...sideOne, playerId: "other" }, sideTwo), false);
   assert.equal(
     isUserInactiveForMatch("inactive-member", 12, sideOne, {

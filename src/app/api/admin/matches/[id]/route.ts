@@ -278,6 +278,9 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
   }
 
   if (nextStatus === MatchStatus.CONFIRMED || nextStatus === MatchStatus.FINISHED) {
+    if (nextPlayer1Score !== null && nextPlayer2Score !== null && !before.finishedAt) {
+      data.finishedAt = new Date();
+    }
     try {
       const scoreTied = nextPlayer1Score !== null && nextPlayer2Score !== null && nextPlayer1Score === nextPlayer2Score;
       const scoreEditNeedsPenalty = multiLegPenaltyDecision

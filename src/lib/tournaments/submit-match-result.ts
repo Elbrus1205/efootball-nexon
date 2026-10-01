@@ -42,6 +42,8 @@ async function runSubmissionTransaction(matchId: string, userId: string, body: M
         id: true,
         status: true,
         scheduledAt: true,
+        finishedAt: true,
+        updatedAt: true,
         player1Id: true,
         player2Id: true,
         participant1EntryId: true,
@@ -85,7 +87,8 @@ async function runSubmissionTransaction(matchId: string, userId: string, body: M
     if (match.player1Id !== userId && match.player2Id !== userId) {
       throw new MatchSubmissionWriteError("Отправлять результат могут только участники матча.", 403);
     }
-    if (isUserInactiveForMatch(userId, match.round, { playerId: match.player1Id, entry: match.participant1Entry }, { playerId: match.player2Id, entry: match.participant2Entry })) {
+    const playedAtBeforeInactive = match.finishedAt ?? (match.status === MatchStatus.RESULT_SUBMITTED ? match.updatedAt : null);
+    if (isUserInactiveForMatch(userId, match.round, { playerId: match.player1Id, entry: match.participant1Entry }, { playerId: match.player2Id, entry: match.participant2Entry }, playedAtBeforeInactive)) {
       throw new MatchSubmissionWriteError("Вы не можете подтвердить результат: вы неактивны в этом турнире с указанного тура.", 403);
     }
     if (match.status === MatchStatus.DISPUTED) {
@@ -181,6 +184,7 @@ async function runSubmissionTransaction(matchId: string, userId: string, body: M
           player2Score: player1Submission.player2Score,
           player1PenaltyScore: player1Submission.player1PenaltyScore,
           player2PenaltyScore: player1Submission.player2PenaltyScore,
+          finishedAt: match.finishedAt ?? reviewedAt,
           status: MatchStatus.CONFIRMED,
           winnerId,
           winnerEntryId,

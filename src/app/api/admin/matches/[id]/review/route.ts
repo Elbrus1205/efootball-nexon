@@ -107,6 +107,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       data: {
         player1Score,
         player2Score,
+        finishedAt: match.finishedAt ?? new Date(),
         winnerId,
         winnerEntryId,
         status: MatchStatus.CONFIRMED,

@@ -26,6 +26,18 @@ test("a roster replacement only transfers open matches assigned to the replaced 
   );
 });
 
+test("replacing a member reactivates the registration for subsequent matches", () => {
+  const participantRouteSource = readFileSync(
+    "src/app/api/admin/tournaments/[id]/participants/route.ts",
+    "utf8",
+  );
+
+  assert.match(
+    participantRouteSource,
+    /data: \{ \.\.\.clubAssignment, isActive: true, inactiveFromRound: null, inactiveSince: null \}/,
+  );
+});
+
 test("a roster replacement does not clear another captain's half-filled team slot", () => {
   const branchStart = participantRouteSource.indexOf('if (body.action === "replaceMember"');
   const branchEnd = participantRouteSource.indexOf('if (body.action === "addMember"', branchStart);

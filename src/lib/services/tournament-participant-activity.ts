@@ -1,12 +1,11 @@
-import { AdminActionType, MatchStatus, ParticipantStatus } from "@prisma/client";
+import { AdminActionType, ParticipantStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { invalidatePlayerRatings } from "@/lib/ratings-cache";
 import { logAdminAction } from "@/lib/services/admin-actions";
 import { recalculateGroupStandings } from "@/lib/services/tournaments";
 import { invalidateTournamentAll } from "@/lib/tournament-cache";
 import { getEffectiveParticipantRound } from "@/lib/tournaments/effective-participant-round";
-
-const completedMatchStatuses = [MatchStatus.CONFIRMED, MatchStatus.FINISHED];
+import { reconcileTournamentMatchStatistics } from "@/lib/tournaments/inactive-match-statistics";
 
 export class TournamentParticipantActivityError extends Error {
   constructor(message: string, readonly status = 400) {
@@ -49,6 +48,7 @@ function validateState(
 
 export async function setTournamentParticipantActivity(params: ActivityParams) {
   const effectiveInactiveFromRound = params.active ? undefined : await getEffectiveParticipantRound(params.tournamentId);
+  const inactiveSince = params.active ? null : new Date();
   if (!params.active && (!Number.isInteger(effectiveInactiveFromRound) || effectiveInactiveFromRound! < 1)) {
     throw new TournamentParticipantActivityError("Не удалось определить тур, с которого участник станет неактивным.", 400);
   }
@@ -77,31 +77,18 @@ export async function setTournamentParticipantActivity(params: ActivityParams) {
         : {
             isActive: false,
             inactiveFromRound: effectiveInactiveFromRound!,
-            inactiveSince: new Date(),
+            inactiveSince,
           },
       select: registrationSelect,
     });
 
-    if (!params.active) {
-      await tx.match.updateMany({
-        where: {
-          tournamentId: params.tournamentId,
-          round: { gte: effectiveInactiveFromRound! },
-          OR: [
-            { participant1EntryId: params.registrationId },
-            { participant2EntryId: params.registrationId },
-          ],
-          status: { in: completedMatchStatuses },
-          player1Score: { not: null },
-          player2Score: { not: null },
-        },
-        data: { excludeFromStatistics: true },
-      });
-    }
-
     return updated;
   });
 
+  // Rebuild flags when a participant becomes inactive. Reactivation keeps
+  // historical exclusions intact; only future matches on the active entry
+  // should contribute to statistics.
+  if (!params.active) await reconcileTournamentMatchStatistics(params.tournamentId);
   await recalculateGroupStandings(params.tournamentId);
   invalidatePlayerRatings();
   invalidateTournamentAll(params.tournamentId);

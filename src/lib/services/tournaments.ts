@@ -6024,6 +6024,7 @@ export async function advanceMatch(matchId: string, winnerId: string, loserId?: 
     where: { id: matchId },
     data: {
       winnerId,
+      finishedAt: match.finishedAt ?? new Date(),
       status: MatchStatus.CONFIRMED,
     },
   });

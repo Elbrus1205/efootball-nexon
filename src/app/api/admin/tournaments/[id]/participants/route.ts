@@ -10,11 +10,13 @@ import { applyConfiguredReliabilityPenaltyToUsers, formatReliabilityRegistration
 import { getAcceptedRosterPenaltyUserIds, uniqueReliabilityPenaltyUserIds } from "@/lib/services/reliability-penalty-targets";
 import { snapshotRegistrationMatchesBeforeReplacement } from "@/lib/services/match-lineups";
 import { recalculateGroupStandings } from "@/lib/services/tournaments";
+import { reconcileTournamentMatchStatistics } from "@/lib/tournaments/inactive-match-statistics";
 import {
   setTournamentParticipantActivity,
   TournamentParticipantActivityError,
 } from "@/lib/services/tournament-participant-activity";
 import { invalidateTournamentAll } from "@/lib/tournament-cache";
+import { invalidatePlayerRatings } from "@/lib/ratings-cache";
 import { hasTelegramRegistrationContact } from "@/lib/social-links";
 import { resolveParticipantClub } from "@/lib/tournament-participant-assignment";
 import { getEffectiveParticipantRound } from "@/lib/tournaments/effective-participant-round";
@@ -142,6 +144,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   // this tournament. Done once here so no individual success branch is missed.
   if (response.status < 400) {
     invalidateTournamentAll(params.id);
+    invalidatePlayerRatings();
   }
   return response;
 }
@@ -656,7 +659,7 @@ async function handleParticipantMutation(request: Request, params: { id: string 
     if (replacementResult.absorbedGroupId && replacementResult.absorbedGroupId !== replacementResult.before.groupId) {
       await recalculateGroupStandings(params.id);
     }
-
+    await reconcileTournamentMatchStatistics(params.id);
     if (body.reliabilityPenaltyReasonId) {
       try {
         const penaltyUserIds = getAcceptedRosterPenaltyUserIds(replacementResult.before);
@@ -892,7 +895,7 @@ async function handleParticipantMutation(request: Request, params: { id: string 
 
       await tx.tournamentRegistration.update({
         where: { id: registrationId },
-        data: { ...clubAssignment },
+        data: { ...clubAssignment, isActive: true, inactiveFromRound: null, inactiveSince: null },
       });
 
       return { replacedMatchesCount };

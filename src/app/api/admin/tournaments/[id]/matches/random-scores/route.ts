@@ -139,7 +139,7 @@ function getRandomScoreTournament(tournamentId: string) {
         select: {
           id: true, stageId: true, round: true, matchNumber: true,
           player1Id: true, player2Id: true, participant1EntryId: true, participant2EntryId: true,
-          player1Score: true, player2Score: true, status: true, notes: true,
+          player1Score: true, player2Score: true, finishedAt: true, status: true, notes: true,
           bracketId: true, isPenaltyTiebreak: true, isCaptainAssignedTeamMatch: true, isTeamCaptainTiebreak: true,
           stage: { select: { type: true } },
         },
@@ -216,6 +216,7 @@ export async function POST(_request: Request, props: { params: Promise<{ id: str
     player2Score: number;
     winnerId: string | null;
     winnerEntryId: string | null;
+    finishedAt: Date | null;
     notes: string;
   };
 
@@ -236,16 +237,17 @@ export async function POST(_request: Request, props: { params: Promise<{ id: str
       player2Score,
       winnerId,
       winnerEntryId,
+      finishedAt: match.finishedAt,
       notes: match.notes ? `${match.notes}\nRandom score by admin` : "Random score by admin",
     };
   });
 
   // Save all match updates atomically — if any write fails nothing is persisted
   const updatedMatches = await db.$transaction(
-    scoreData.map(({ id, player1Score, player2Score, winnerId, winnerEntryId, notes }) =>
+    scoreData.map(({ id, player1Score, player2Score, winnerId, winnerEntryId, finishedAt, notes }) =>
       db.match.update({
         where: { id },
-        data: { player1Score, player2Score, winnerId, winnerEntryId, status: MatchStatus.CONFIRMED, notes },
+        data: { player1Score, player2Score, winnerId, winnerEntryId, finishedAt: finishedAt ?? new Date(), status: MatchStatus.CONFIRMED, notes },
       }),
     ),
   );
